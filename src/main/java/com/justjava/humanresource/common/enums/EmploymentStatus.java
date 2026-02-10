@@ -5,5 +5,7 @@ public enum EmploymentStatus {
     CONFIRMED,
     TERMINATED,
     RESIGNED,
-    RETIRED
+    RETIRED,
+    ONBOARDING,
+
 }
