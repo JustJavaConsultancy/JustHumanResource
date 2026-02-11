@@ -1,0 +1,2004 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            200: '#bfdbfe',
+                            300: '#93c5fd',
+                            400: '#60a5fa',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            800: '#1e40af',
+                            900: '#1e3a8a',
+                        },
+                        secondary: {
+                            50: '#f8fafc',
+                            100: '#f1f5f9',
+                            200: '#e2e8f0',
+                            300: '#cbd5e1',
+                            400: '#94a3b8',
+                            500: '#64748b',
+                            600: '#475569',
+                            700: '#334155',
+                            800: '#1e293b',
+                            900: '#0f172a',
+                        }
+                    },
+                    fontFamily: {
+                        'sans': ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                    },
+                    borderRadius: {
+                        'xl': '1rem',
+                        '2xl': '1.5rem',
+                    }
+                },
+            },
+        };
+    </script>
+    <style>
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            overflow-x: hidden;
+        }
+
+        .sidebar-item {
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .sidebar-item.active {
+            background-color: rgba(59, 130, 246, 0.1);
+            color: #3b82f6;
+            border-left: 3px solid #3b82f6;
+        }
+
+        .sidebar-item.active .material-icons-round {
+            color: #3b82f6;
+        }
+
+        .sidebar-item:hover:not(.active) {
+            background-color: rgba(59, 130, 246, 0.05);
+        }
+
+        .dark .sidebar-item.active {
+            background-color: rgba(59, 130, 246, 0.2);
+        }
+
+        .stat-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        .badge {
+            padding: 2px 8px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            border-radius: 9999px;
+        }
+
+        .badge-success {
+            background-color: #dcfce7;
+            color: #16a34a;
+        }
+
+        .badge-warning {
+            background-color: #fef3c7;
+            color: #d97706;
+        }
+
+        .badge-error {
+            background-color: #fee2e2;
+            color: #dc2626;
+        }
+
+        .badge-info {
+            background-color: #dbeafe;
+            color: #2563eb;
+        }
+
+        .progress-bar {
+            height: 8px;
+            border-radius: 4px;
+            overflow: hidden;
+            background-color: #e5e7eb;
+        }
+
+        .dark .progress-bar {
+            background-color: #374151;
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 4px;
+        }
+
+        .sidebar-scroll::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .sidebar-scroll::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .sidebar-scroll::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+
+        .dark .sidebar-scroll::-webkit-scrollbar-thumb {
+            background: #4b5563;
+        }
+
+        .transition-all {
+            transition-property: all;
+            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+            transition-duration: 200ms;
+        }
+
+        .sidebar-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            width: 16rem;
+            z-index: 40;
+            overflow-y: auto;
+        }
+
+        .main-content {
+            margin-left: 16rem;
+            width: calc(100% - 16rem);
+            min-height: 100vh;
+        }
+
+        @media (max-width: 1023px) {
+            .sidebar-container {
+                transform: translateX(-100%);
+            }
+
+            .sidebar-container.open {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                margin-left: 0;
+                width: 100%;
+            }
+        }
+
+        /* KPI Specific Styles */
+        .kpi-tab {
+            padding: 12px 20px;
+            font-weight: 500;
+            color: #6b7280;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .kpi-tab:hover {
+            color: #4b5563;
+        }
+
+        .kpi-tab.active {
+            color: #3b82f6;
+            border-bottom-color: #3b82f6;
+        }
+
+        .dark .kpi-tab {
+            color: #9ca3af;
+        }
+
+        .dark .kpi-tab:hover {
+            color: #d1d5db;
+        }
+
+        .dark .kpi-tab.active {
+            color: #3b82f6;
+        }
+
+        .kpi-score-excellent { background-color: #10b981; }
+        .kpi-score-good { background-color: #3b82f6; }
+        .kpi-score-average { background-color: #f59e0b; }
+        .kpi-score-poor { background-color: #ef4444; }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 0;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .dark .modal-content {
+            background-color: #1f2937;
+        }
+
+        .kpi-item {
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 8px;
+            background: #f9fafb;
+        }
+
+        .dark .kpi-item {
+            border-color: #374151;
+            background: #1f2937;
+        }
+
+        .kpi-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            padding: 8px 0;
+        }
+
+        .kpi-item-content {
+            padding-top: 12px;
+            border-top: 1px solid #e5e7eb;
+            margin-top: 8px;
+        }
+
+        .dark .kpi-item-content {
+            border-top-color: #374151;
+        }
+
+        .weight-input {
+            width: 100px;
+        }
+
+        .total-weight {
+            font-weight: 600;
+            color: #3b82f6;
+        }
+
+        .weight-error {
+            color: #ef4444;
+            font-size: 0.875rem;
+        }
+    </style>
+</head>
+<body>
+<main layout:fragment="content">
+
+    <!-- Tabs -->
+    <div class="border-b border-gray-200 dark:border-gray-700 mb-6">
+        <nav class="flex space-x-6">
+            <button id="tab-definitions" class="kpi-tab active" onclick="switchTab('definitions')">
+                KPI Definitions
+            </button>
+            <button id="tab-assignments" class="kpi-tab" onclick="switchTab('assignments')">
+                KPI Assignments
+            </button>
+            <button id="tab-measurements" class="kpi-tab" onclick="switchTab('measurements')">
+                KPI Measurements
+            </button>
+            <button id="tab-performance" class="kpi-tab" onclick="switchTab('performance')">
+                Performance Dashboard
+            </button>
+        </nav>
+    </div>
+
+    <!-- Stats Grid (unchanged) -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
+        <!-- Total KPI Definitions -->
+        <div class="stat-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6">
+            <div class="flex items-center justify-between mb-4">
+                <div class="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                    <span class="material-icons-round text-blue-600 dark:text-blue-400">checklist</span>
+                </div>
+                <span class="text-sm font-medium text-green-600 flex items-center">
+                            <span class="material-icons-round text-sm mr-1">trending_up</span>
+                            +12%
+                        </span>
+            </div>
+            <h3 class="text-2xl font-bold mb-1" id="totalKpis">24</h3>
+            <p class="text-gray-600 dark:text-gray-400 text-sm">KPI Definitions</p>
+            <div class="mt-3 flex items-center text-xs text-gray-500">
+                <span class="material-icons-round text-xs mr-1">check_circle</span>
+                <span>18 active • 6 inactive</span>
+            </div>
+        </div>
+
+        <!-- Assigned KPIs -->
+        <div class="stat-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6">
+            <div class="flex items-center justify-between mb-4">
+                <div class="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                    <span class="material-icons-round text-green-600 dark:text-green-400">assignment_turned_in</span>
+                </div>
+                <span class="badge badge-info">Tracking</span>
+            </div>
+            <h3 class="text-2xl font-bold mb-1" id="assignedKpis">186</h3>
+            <p class="text-gray-600 dark:text-gray-400 text-sm">Active Assignments</p>
+            <div class="mt-3">
+                <div class="flex justify-between text-xs mb-1">
+                    <span class="text-gray-500">Individual</span>
+                    <span class="font-medium">142</span>
+                </div>
+                <div class="flex justify-between text-xs">
+                    <span class="text-gray-500">Role-based</span>
+                    <span class="font-medium">44</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Avg Performance Score -->
+        <div class="stat-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6">
+            <div class="flex items-center justify-between mb-4">
+                <div class="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                    <span class="material-icons-round text-purple-600 dark:text-purple-400">trending_up</span>
+                </div>
+                <span class="text-sm text-gray-500">This Month</span>
+            </div>
+            <h3 class="text-2xl font-bold mb-1">84.5</h3>
+            <p class="text-gray-600 dark:text-gray-400 text-sm">Avg Performance Score</p>
+            <div class="mt-3">
+                <div class="progress-bar">
+                    <div class="progress-fill bg-purple-500" style="width: 84.5%"></div>
+                </div>
+                <p class="text-xs text-gray-500 mt-1">+2.3% from last month</p>
+            </div>
+        </div>
+
+        <!-- Pending Reviews -->
+        <div class="stat-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6">
+            <div class="flex items-center justify-between mb-4">
+                <div class="p-3 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+                    <span class="material-icons-round text-orange-600 dark:text-orange-400">pending</span>
+                </div>
+                <span class="badge badge-warning">Attention</span>
+            </div>
+            <h3 class="text-2xl font-bold mb-1">28</h3>
+            <p class="text-gray-600 dark:text-gray-400 text-sm">Pending Reviews</p>
+            <div class="mt-3">
+                <div class="flex items-center text-xs text-gray-500">
+                    <span class="material-icons-round text-xs mr-1">schedule</span>
+                    <span>12 overdue, 16 due this week</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div style="display:flex;justify-content:end;margin-bottom:20px">
+        <button onclick="openModal('kpiDefinitionModal')" class="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 flex items-center space-x-2">
+            <span class="material-icons-round text-sm">add</span>
+            <span>Add KPI</span>
+        </button>
+    </div>
+    <!-- KPI Definitions Content (unchanged) -->
+    <div id="content-definitions" class="tab-content">
+        <!-- KPI Definitions Table -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+            <div class="p-4 md:p-6 border-b border-gray-200 dark:border-gray-700">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-lg font-bold">KPI Definitions</h3>
+                    <div class="flex items-center space-x-3">
+                        <div class="relative">
+                            <input type="text" placeholder="Search KPIs..."
+                                   class="pl-10 pr-4 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none w-64">
+                            <span class="material-icons-round text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2">search</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-50 dark:bg-gray-750">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Code</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Name</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Category</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Target Value</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Unit</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200 dark:divide-gray-700" id="kpiDefinitionsTable">
+                    <!-- Data will be populated by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPI Assignments Content (Modified for multiple KPIs) -->
+    <div id="content-assignments" class="tab-content hidden">
+        <div class="mb-6 flex justify-between items-center">
+            <div>
+                <button onclick="openModal('kpiAssignmentModal')" class="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 flex items-center space-x-2">
+                    <span class="material-icons-round text-sm">assignment_add</span>
+                    <span>Assign Multiple KPIs</span>
+                </button>
+            </div>
+            <div class="text-sm text-gray-600 dark:text-gray-400">
+                Total Assignments: <span class="font-bold">186</span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Individual Assignments -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+                <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+                    <h3 class="text-lg font-bold">Individual KPI Assignments</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Multiple KPIs per employee with weights</p>
+                </div>
+                <div class="p-6 overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-50 dark:bg-gray-750">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Employee</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Assigned KPIs</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Total Weight</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Actions</th>
+                        </tr>
+                        </thead>
+                        <tbody id="individualAssignmentsTable">
+                        <!-- Data will be populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Role-based Assignments -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+                <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+                    <h3 class="text-lg font-bold">Role-based KPI Assignments</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Multiple KPIs per role with weights</p>
+                </div>
+                <div class="p-6 overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-50 dark:bg-gray-750">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Job Role</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Assigned KPIs</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Total Weight</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Actions</th>
+                        </tr>
+                        </thead>
+                        <tbody id="roleAssignmentsTable">
+                        <!-- Data will be populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPI Measurements Content (Modified for multiple KPIs) -->
+    <div id="content-measurements" class="tab-content hidden">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+            <!-- Measurement Form for Multiple KPIs -->
+            <div class="lg:col-span-1 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+                <h3 class="text-lg font-bold mb-4">Record KPI Measurements</h3>
+                <form id="measurementForm" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Employee *</label>
+                        <select id="measurementEmployee" onchange="loadEmployeeKPIs()" required
+                                class="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+                            <option value="">Select Employee</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Period *</label>
+                        <select id="measurementPeriod" required
+                                class="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+                            <option value="2024-01">January 2024</option>
+                            <option value="2024-02">February 2024</option>
+                            <option value="2024-03">March 2024</option>
+                        </select>
+                    </div>
+
+                    <div id="kpiMeasurementList" class="space-y-3">
+                        <!-- KPI measurement items will be added here dynamically -->
+                    </div>
+
+                    <button type="button" onclick="recordMultipleMeasurements()" class="w-full bg-primary-600 text-white py-2 rounded-lg hover:bg-primary-700">
+                        Record All Measurements
+                    </button>
+                </form>
+            </div>
+
+            <!-- Recent Measurements -->
+            <div class="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+                <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+                    <h3 class="text-lg font-bold">Recent KPI Measurements</h3>
+                </div>
+                <div class="p-6 overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-50 dark:bg-gray-750">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Employee</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Period</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">KPIs Measured</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Avg Score</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Weighted Score</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Actions</th>
+                        </tr>
+                        </thead>
+                        <tbody id="measurementsTable">
+                        <!-- Data will be populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Performance Dashboard Content (unchanged) -->
+    <div id="content-performance" class="tab-content hidden">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+            <!-- Performance Chart -->
+            <div class="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+                <h3 class="text-lg font-bold mb-6">Performance Overview</h3>
+                <div id="performanceChart" class="h-80"></div>
+            </div>
+
+            <!-- Top Performers -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+                <h3 class="text-lg font-bold mb-6">Top Performers</h3>
+                <div class="space-y-4" id="topPerformersList">
+                    <!-- Data will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Department Performance -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+            <h3 class="text-lg font-bold mb-6">Department Performance</h3>
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-50 dark:bg-gray-750">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Department</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Avg KPI Score</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Employees</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Top Performer</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Performance Trend</th>
+                    </tr>
+                    </thead>
+                    <tbody id="departmentPerformanceTable">
+                    <!-- Data will be populated by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPI Definition Modal (unchanged) -->
+    <div id="kpiDefinitionModal" class="modal">
+        <div class="modal-content">
+            <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+                <h3 class="text-lg font-bold">Add KPI Definition</h3>
+            </div>
+            <form id="kpiDefinitionForm" class="p-6 space-y-4">
+                <input type="hidden" id="kpiId">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Code *</label>
+                        <input type="text" id="kpiCode" required
+                               class="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Name *</label>
+                        <input type="text" id="kpiName" required
+                               class="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Description</label>
+                    <textarea id="kpiDescription" rows="3"
+                              class="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none"></textarea>
+                </div>
+                <div class="grid grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Category *</label>
+                        <select id="kpiCategory" required
+                                class="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+                            <option value="">Select Category</option>
+                            <option value="PRODUCTIVITY">Productivity</option>
+                            <option value="ATTENDANCE">Attendance</option>
+                            <option value="QUALITY">Quality</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Target Value *</label>
+                        <input type="number" step="0.01" id="kpiTarget" required
+                               class="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Unit *</label>
+                        <select id="kpiUnit" required
+                                class="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+                            <option value="">Select Unit</option>
+                            <option value="PERCENTAGE">Percentage</option>
+                            <option value="NUMBER">Number</option>
+                            <option value="HOURS">Hours</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="flex items-center">
+                    <input type="checkbox" id="kpiActive" class="w-4 h-4 text-primary-600 rounded focus:ring-primary-500" checked>
+                    <label class="ml-2 text-sm text-gray-700 dark:text-gray-300">Active</label>
+                </div>
+            </form>
+            <div class="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3">
+                <button onclick="closeModal('kpiDefinitionModal')" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
+                    Cancel
+                </button>
+                <button onclick="saveKpiDefinition()" class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
+                    Save KPI
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPI Assignment Modal (Modified for multiple KPIs) -->
+    <div id="kpiAssignmentModal" class="modal">
+        <div class="modal-content">
+            <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+                <h3 class="text-lg font-bold">Assign Multiple KPIs</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Add multiple KPIs with weights (total must equal 1.0)</p>
+            </div>
+            <form id="kpiAssignmentForm" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Assign To</label>
+                    <div class="space-y-3">
+                        <div class="flex items-center">
+                            <input type="radio" id="assignEmployee" name="assignTo" value="employee" checked
+                                   class="w-4 h-4 text-primary-600 focus:ring-primary-500">
+                            <label for="assignEmployee" class="ml-2 text-sm">Individual Employee</label>
+                        </div>
+                        <div class="flex items-center">
+                            <input type="radio" id="assignRole" name="assignTo" value="role"
+                                   class="w-4 h-4 text-primary-600 focus:ring-primary-500">
+                            <label for="assignRole" class="ml-2 text-sm">Job Role</label>
+                        </div>
+                    </div>
+                </div>
+                <div id="employeeAssignment" class="assignment-option">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Employee *</label>
+                    <select id="assignmentEmployee" required
+                            class="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+                        <option value="">Select Employee</option>
+                    </select>
+                </div>
+                <div id="roleAssignment" class="assignment-option hidden">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Job Role *</label>
+                    <select id="assignmentRole"
+                            class="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+                        <option value="">Select Job Role</option>
+                        <option value="SOFTWARE_ENGINEER">Software Engineer</option>
+                        <option value="SALES_MANAGER">Sales Manager</option>
+                        <option value="HR_MANAGER">HR Manager</option>
+                        <option value="PRODUCT_MANAGER">Product Manager</option>
+                        <option value="MARKETING_SPECIALIST">Marketing Specialist</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">KPIs with Weights *</label>
+                    <div id="assignmentKpisContainer" class="space-y-3">
+                        <!-- KPI items will be added here -->
+                    </div>
+                    <button type="button" onclick="addKpiAssignmentRow()" class="mt-3 text-primary-600 hover:text-primary-800 flex items-center space-x-1">
+                        <span class="material-icons-round text-sm">add_circle</span>
+                        <span class="text-sm">Add Another KPI</span>
+                    </button>
+                </div>
+
+                <div class="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <div>
+                        <span class="text-sm text-gray-600 dark:text-gray-400">Total Weight:</span>
+                        <span id="totalWeight" class="ml-2 total-weight">0.00</span>
+                        <span id="weightError" class="ml-2 weight-error hidden">Total must be 1.0</span>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" id="assignmentMandatory" class="w-4 h-4 text-primary-600 rounded focus:ring-primary-500">
+                        <label class="ml-2 text-sm text-gray-700 dark:text-gray-300">Mandatory</label>
+                    </div>
+                </div>
+            </form>
+            <div class="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3">
+                <button onclick="closeModal('kpiAssignmentModal')" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
+                    Cancel
+                </button>
+                <button onclick="saveMultipleKpiAssignments()" class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
+                    Assign KPIs
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Enhanced Data Structures
+        let kpiDefinitions = [
+            {
+                id: 1,
+                code: 'KPI001',
+                name: 'Sales Target Achievement',
+                description: 'Percentage of monthly sales target achieved',
+                category: 'PRODUCTIVITY',
+                targetValue: 100,
+                unit: 'PERCENTAGE',
+                active: true
+            },
+            {
+                id: 2,
+                code: 'KPI002',
+                name: 'Attendance Rate',
+                description: 'Percentage of days present in the month',
+                category: 'ATTENDANCE',
+                targetValue: 95,
+                unit: 'PERCENTAGE',
+                active: true
+            },
+            {
+                id: 3,
+                code: 'KPI003',
+                name: 'Customer Satisfaction Score',
+                description: 'Average customer satisfaction rating',
+                category: 'QUALITY',
+                targetValue: 4.5,
+                unit: 'NUMBER',
+                active: true
+            },
+            {
+                id: 4,
+                code: 'KPI004',
+                name: 'Project Delivery On Time',
+                description: 'Percentage of projects delivered on schedule',
+                category: 'PRODUCTIVITY',
+                targetValue: 90,
+                unit: 'PERCENTAGE',
+                active: true
+            },
+            {
+                id: 5,
+                code: 'KPI005',
+                name: 'Training Hours Completed',
+                description: 'Total professional development hours completed',
+                category: 'PRODUCTIVITY',
+                targetValue: 40,
+                unit: 'HOURS',
+                active: true
+            }
+        ];
+
+        // Updated structure to support multiple KPIs per assignment
+        let kpiAssignments = [
+            {
+                id: 1,
+                employeeId: 1,
+                assignments: [
+                    { kpiId: 1, weight: 0.3 },
+                    { kpiId: 3, weight: 0.4 },
+                    { kpiId: 4, weight: 0.3 }
+                ],
+                mandatory: true,
+                type: 'employee'
+            },
+            {
+                id: 2,
+                employeeId: 2,
+                assignments: [
+                    { kpiId: 2, weight: 0.5 },
+                    { kpiId: 5, weight: 0.5 }
+                ],
+                mandatory: true,
+                type: 'employee'
+            },
+            {
+                id: 3,
+                jobRole: 'SALES_MANAGER',
+                assignments: [
+                    { kpiId: 1, weight: 0.6 },
+                    { kpiId: 3, weight: 0.4 }
+                ],
+                mandatory: false,
+                type: 'role'
+            }
+        ];
+
+        // Updated structure for multiple measurements per period
+        let kpiMeasurements = [
+            {
+                id: 1,
+                employeeId: 1,
+                period: '2024-01',
+                measurements: [
+                    { kpiId: 1, actualValue: 85, score: 85 },
+                    { kpiId: 3, actualValue: 4.2, score: 84 },
+                    { kpiId: 4, actualValue: 88, score: 88 }
+                ],
+                recordedAt: '2024-01-31T10:30:00',
+                weightedScore: 85.3
+            },
+            {
+                id: 2,
+                employeeId: 2,
+                period: '2024-01',
+                measurements: [
+                    { kpiId: 2, actualValue: 98, score: 98 },
+                    { kpiId: 5, actualValue: 35, score: 87.5 }
+                ],
+                recordedAt: '2024-01-31T11:45:00',
+                weightedScore: 92.75
+            }
+        ];
+
+        let employees = [
+            { id: 1, name: 'John Doe', department: 'Sales', jobRole: 'SALES_MANAGER' },
+            { id: 2, name: 'Jane Smith', department: 'Engineering', jobRole: 'SOFTWARE_ENGINEER' },
+            { id: 3, name: 'Mike Johnson', department: 'Marketing', jobRole: 'MARKETING_SPECIALIST' },
+            { id: 4, name: 'Sarah Williams', department: 'HR', jobRole: 'HR_MANAGER' },
+            { id: 5, name: 'David Brown', department: 'Product', jobRole: 'PRODUCT_MANAGER' }
+        ];
+
+        // Tab Management
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.add('hidden');
+            });
+
+            document.querySelectorAll('.kpi-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            document.getElementById(`content-${tabName}`).classList.remove('hidden');
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+
+            if (tabName === 'definitions') {
+                loadKpiDefinitions();
+            } else if (tabName === 'assignments') {
+                loadKpiAssignments();
+            } else if (tabName === 'measurements') {
+                loadKpiMeasurements();
+                loadEmployeeOptions();
+            } else if (tabName === 'performance') {
+                loadPerformanceDashboard();
+            }
+        }
+
+        // Modal Management
+        function openModal(modalId) {
+            document.getElementById(modalId).style.display = 'block';
+            document.body.style.overflow = 'hidden';
+
+            if (modalId === 'kpiDefinitionModal') {
+                resetKpiForm();
+            } else if (modalId === 'kpiAssignmentModal') {
+                resetAssignmentForm();
+                loadEmployeeOptionsForAssignment();
+                addKpiAssignmentRow();
+                setupAssignmentToggle();
+            }
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+
+        // KPI Definitions Management (unchanged)
+        function loadKpiDefinitions() {
+            const table = document.getElementById('kpiDefinitionsTable');
+            table.innerHTML = '';
+
+            kpiDefinitions.forEach(kpi => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="font-medium">${kpi.code}</div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="font-medium">${kpi.name}</div>
+                        <div class="text-sm text-gray-500">${kpi.description}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 py-1 text-xs rounded-full ${getCategoryClass(kpi.category)}">
+                            ${getCategoryLabel(kpi.category)}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        ${kpi.targetValue} ${getUnitSymbol(kpi.unit)}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        ${getUnitLabel(kpi.unit)}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 py-1 text-xs rounded-full ${kpi.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}">
+                            ${kpi.active ? 'Active' : 'Inactive'}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        <button onclick="editKpiDefinition(${kpi.id})" class="text-primary-600 hover:text-primary-900 mr-3">
+                            <span class="material-icons-round text-sm">edit</span>
+                        </button>
+                        <button onclick="deleteKpiDefinition(${kpi.id})" class="text-red-600 hover:text-red-900">
+                            <span class="material-icons-round text-sm">delete</span>
+                        </button>
+                        <button onclick="assignKpi(${kpi.id})" class="text-blue-600 hover:text-blue-900 ml-3">
+                            <span class="material-icons-round text-sm">assignment</span>
+                        </button>
+                    </td>
+                `;
+                table.appendChild(row);
+            });
+        }
+
+        function getCategoryClass(category) {
+            const classes = {
+                'PRODUCTIVITY': 'bg-blue-100 text-blue-800',
+                'ATTENDANCE': 'bg-green-100 text-green-800',
+                'QUALITY': 'bg-purple-100 text-purple-800'
+            };
+            return classes[category] || 'bg-gray-100 text-gray-800';
+        }
+
+        function getCategoryLabel(category) {
+            const labels = {
+                'PRODUCTIVITY': 'Productivity',
+                'ATTENDANCE': 'Attendance',
+                'QUALITY': 'Quality'
+            };
+            return labels[category] || category;
+        }
+
+        function getUnitLabel(unit) {
+            const labels = {
+                'PERCENTAGE': 'Percentage',
+                'NUMBER': 'Number',
+                'HOURS': 'Hours'
+            };
+            return labels[unit] || unit;
+        }
+
+        function getUnitSymbol(unit) {
+            const symbols = {
+                'PERCENTAGE': '%',
+                'NUMBER': '',
+                'HOURS': 'h'
+            };
+            return symbols[unit] || '';
+        }
+
+        function resetKpiForm() {
+            document.getElementById('kpiDefinitionForm').reset();
+            document.getElementById('kpiId').value = '';
+            document.getElementById('kpiActive').checked = true;
+        }
+
+        function editKpiDefinition(id) {
+            const kpi = kpiDefinitions.find(k => k.id === id);
+            if (!kpi) return;
+
+            document.getElementById('kpiId').value = kpi.id;
+            document.getElementById('kpiCode').value = kpi.code;
+            document.getElementById('kpiName').value = kpi.name;
+            document.getElementById('kpiDescription').value = kpi.description;
+            document.getElementById('kpiCategory').value = kpi.category;
+            document.getElementById('kpiTarget').value = kpi.targetValue;
+            document.getElementById('kpiUnit').value = kpi.unit;
+            document.getElementById('kpiActive').checked = kpi.active;
+
+            openModal('kpiDefinitionModal');
+        }
+
+        function saveKpiDefinition() {
+            const form = document.getElementById('kpiDefinitionForm');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            const id = document.getElementById('kpiId').value;
+            const kpiData = {
+                code: document.getElementById('kpiCode').value,
+                name: document.getElementById('kpiName').value,
+                description: document.getElementById('kpiDescription').value,
+                category: document.getElementById('kpiCategory').value,
+                targetValue: parseFloat(document.getElementById('kpiTarget').value),
+                unit: document.getElementById('kpiUnit').value,
+                active: document.getElementById('kpiActive').checked
+            };
+
+            if (id) {
+                const index = kpiDefinitions.findIndex(k => k.id === parseInt(id));
+                if (index !== -1) {
+                    kpiDefinitions[index] = { ...kpiDefinitions[index], ...kpiData };
+                }
+            } else {
+                const newId = kpiDefinitions.length > 0 ? Math.max(...kpiDefinitions.map(k => k.id)) + 1 : 1;
+                kpiDefinitions.push({ id: newId, ...kpiData });
+            }
+
+            closeModal('kpiDefinitionModal');
+            loadKpiDefinitions();
+            showNotification('KPI saved successfully!', 'success');
+        }
+
+        function deleteKpiDefinition(id) {
+            if (confirm('Are you sure you want to delete this KPI?')) {
+                kpiDefinitions = kpiDefinitions.filter(k => k.id !== id);
+                loadKpiDefinitions();
+                showNotification('KPI deleted successfully!', 'success');
+            }
+        }
+
+        // Enhanced KPI Assignment Management for multiple KPIs
+        function resetAssignmentForm() {
+            document.getElementById('kpiAssignmentForm').reset();
+            document.getElementById('assignmentKpisContainer').innerHTML = '';
+            document.getElementById('totalWeight').textContent = '0.00';
+            document.getElementById('weightError').classList.add('hidden');
+        }
+
+        function loadEmployeeOptionsForAssignment() {
+            const select = document.getElementById('assignmentEmployee');
+            select.innerHTML = '<option value="">Select Employee</option>';
+
+            employees.forEach(emp => {
+                const option = document.createElement('option');
+                option.value = emp.id;
+                option.textContent = emp.name;
+                select.appendChild(option);
+            });
+        }
+
+        function addKpiAssignmentRow(kpiId = '', weight = '') {
+            const container = document.getElementById('assignmentKpisContainer');
+            const rowId = Date.now();
+
+            const row = document.createElement('div');
+            row.className = 'kpi-item';
+            row.innerHTML = `
+                <div class="kpi-item-header" onclick="toggleKpiItem(${rowId})">
+                    <div class="flex items-center space-x-2">
+                        <span class="material-icons-round text-sm">expand_more</span>
+                        <span>KPI Assignment</span>
+                    </div>
+                    <button type="button" onclick="removeKpiAssignmentRow(${rowId}, event)" class="text-red-600 hover:text-red-900">
+                        <span class="material-icons-round text-sm">delete</span>
+                    </button>
+                </div>
+                <div id="kpi-content-${rowId}" class="kpi-item-content hidden">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">KPI</label>
+                            <select class="kpi-select w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none" onchange="updateTotalWeight()">
+                                <option value="">Select KPI</option>
+                                ${kpiDefinitions.filter(k => k.active).map(k =>
+                                    `<option value="${k.id}" ${kpiId == k.id ? 'selected' : ''}>${k.code} - ${k.name}</option>`
+                                ).join('')}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Weight (0-1)</label>
+                            <input type="number" step="0.01" min="0" max="1" value="${weight}"
+                                   class="weight-input w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none"
+                                   onchange="updateTotalWeight()" oninput="updateTotalWeight()">
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.appendChild(row);
+            updateTotalWeight();
+        }
+
+        function toggleKpiItem(rowId) {
+            const content = document.getElementById(`kpi-content-${rowId}`);
+            const icon = content.parentElement.querySelector('.material-icons-round');
+            content.classList.toggle('hidden');
+            icon.textContent = content.classList.contains('hidden') ? 'expand_more' : 'expand_less';
+        }
+
+        function removeKpiAssignmentRow(rowId, event) {
+            event.stopPropagation();
+            const element = document.querySelector(`#kpi-content-${rowId}`).parentElement;
+            element.remove();
+            updateTotalWeight();
+        }
+
+        function updateTotalWeight() {
+            const weightInputs = document.querySelectorAll('.weight-input');
+            let total = 0;
+
+            weightInputs.forEach(input => {
+                const value = parseFloat(input.value) || 0;
+                total += value;
+            });
+
+            const totalWeightElement = document.getElementById('totalWeight');
+            const weightErrorElement = document.getElementById('weightError');
+
+            totalWeightElement.textContent = total.toFixed(2);
+
+            if (Math.abs(total - 1.0) > 0.001) {
+                totalWeightElement.classList.add('text-red-600');
+                weightErrorElement.classList.remove('hidden');
+            } else {
+                totalWeightElement.classList.remove('text-red-600');
+                weightErrorElement.classList.add('hidden');
+            }
+        }
+
+        function setupAssignmentToggle() {
+            const assignEmployee = document.getElementById('assignEmployee');
+            const assignRole = document.getElementById('assignRole');
+            const employeeDiv = document.getElementById('employeeAssignment');
+            const roleDiv = document.getElementById('roleAssignment');
+
+            assignEmployee.addEventListener('change', () => {
+                if (assignEmployee.checked) {
+                    employeeDiv.classList.remove('hidden');
+                    roleDiv.classList.add('hidden');
+                }
+            });
+
+            assignRole.addEventListener('change', () => {
+                if (assignRole.checked) {
+                    employeeDiv.classList.add('hidden');
+                    roleDiv.classList.remove('hidden');
+                }
+            });
+        }
+
+        function loadKpiAssignments() {
+            const individualTable = document.getElementById('individualAssignmentsTable');
+            const roleTable = document.getElementById('roleAssignmentsTable');
+
+            individualTable.innerHTML = '';
+            roleTable.innerHTML = '';
+
+            // Group assignments by employee/role
+            const individualGroups = {};
+            const roleGroups = {};
+
+            kpiAssignments.forEach(assignment => {
+                if (assignment.type === 'employee') {
+                    if (!individualGroups[assignment.employeeId]) {
+                        individualGroups[assignment.employeeId] = [];
+                    }
+                    individualGroups[assignment.employeeId].push(assignment);
+                } else {
+                    if (!roleGroups[assignment.jobRole]) {
+                        roleGroups[assignment.jobRole] = [];
+                    }
+                    roleGroups[assignment.jobRole].push(assignment);
+                }
+            });
+
+            // Display individual assignments
+            Object.entries(individualGroups).forEach(([employeeId, assignments]) => {
+                const employee = employees.find(e => e.id === parseInt(employeeId));
+                if (employee) {
+                    let totalWeight = 0;
+                    let kpiNames = [];
+
+                    assignments.forEach(assignment => {
+                        assignment.assignments.forEach(a => {
+                            const kpi = kpiDefinitions.find(k => k.id === a.kpiId);
+                            if (kpi) {
+                                kpiNames.push(kpi.name);
+                                totalWeight += a.weight;
+                            }
+                        });
+                    });
+
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td class="px-4 py-3">
+                            <div class="font-medium">${employee.name}</div>
+                            <div class="text-sm text-gray-500">${employee.department}</div>
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="text-sm">${kpiNames.slice(0, 3).join(', ')}${kpiNames.length > 3 ? '...' : ''}</div>
+                            <div class="text-xs text-gray-500">${kpiNames.length} KPIs assigned</div>
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
+                                ${totalWeight.toFixed(2)}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <button onclick="viewAssignmentDetails(${employeeId}, 'employee')" class="text-primary-600 hover:text-primary-900 mr-3">
+                                <span class="material-icons-round text-sm">visibility</span>
+                            </button>
+                            <button onclick="editAssignment(${employeeId}, 'employee')" class="text-blue-600 hover:text-blue-900 mr-3">
+                                <span class="material-icons-round text-sm">edit</span>
+                            </button>
+                            <button onclick="deleteAllAssignments(${employeeId}, 'employee')" class="text-red-600 hover:text-red-900">
+                                <span class="material-icons-round text-sm">delete</span>
+                            </button>
+                        </td>
+                    `;
+                    individualTable.appendChild(row);
+                }
+            });
+
+            // Display role assignments
+            Object.entries(roleGroups).forEach(([role, assignments]) => {
+                let totalWeight = 0;
+                let kpiNames = [];
+
+                assignments.forEach(assignment => {
+                    assignment.assignments.forEach(a => {
+                        const kpi = kpiDefinitions.find(k => k.id === a.kpiId);
+                        if (kpi) {
+                            kpiNames.push(kpi.name);
+                            totalWeight += a.weight;
+                        }
+                    });
+                });
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="px-4 py-3">
+                        <div class="font-medium">${getJobRoleLabel(role)}</div>
+                    </td>
+                    <td class="px-4 py-3">
+                        <div class="text-sm">${kpiNames.slice(0, 3).join(', ')}${kpiNames.length > 3 ? '...' : ''}</div>
+                        <div class="text-xs text-gray-500">${kpiNames.length} KPIs assigned</div>
+                    </td>
+                    <td class="px-4 py-3">
+                        <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
+                            ${totalWeight.toFixed(2)}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3">
+                        <button onclick="viewAssignmentDetails('${role}', 'role')" class="text-primary-600 hover:text-primary-900 mr-3">
+                            <span class="material-icons-round text-sm">visibility</span>
+                        </button>
+                        <button onclick="editAssignment('${role}', 'role')" class="text-blue-600 hover:text-blue-900 mr-3">
+                            <span class="material-icons-round text-sm">edit</span>
+                        </button>
+                        <button onclick="deleteAllAssignments('${role}', 'role')" class="text-red-600 hover:text-red-900">
+                            <span class="material-icons-round text-sm">delete</span>
+                        </button>
+                    </td>
+                `;
+                roleTable.appendChild(row);
+            });
+        }
+
+        function getJobRoleLabel(role) {
+            const labels = {
+                'SOFTWARE_ENGINEER': 'Software Engineer',
+                'SALES_MANAGER': 'Sales Manager',
+                'HR_MANAGER': 'HR Manager',
+                'PRODUCT_MANAGER': 'Product Manager',
+                'MARKETING_SPECIALIST': 'Marketing Specialist'
+            };
+            return labels[role] || role;
+        }
+
+        function saveMultipleKpiAssignments() {
+            const form = document.getElementById('kpiAssignmentForm');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            const totalWeight = parseFloat(document.getElementById('totalWeight').textContent);
+            if (Math.abs(totalWeight - 1.0) > 0.001) {
+                alert('Total weight must equal 1.0');
+                return;
+            }
+
+            const isEmployee = document.getElementById('assignEmployee').checked;
+            const kpiSelects = document.querySelectorAll('.kpi-select');
+            const weightInputs = document.querySelectorAll('.weight-input');
+
+            const assignments = [];
+            kpiSelects.forEach((select, index) => {
+                if (select.value && weightInputs[index].value) {
+                    assignments.push({
+                        kpiId: parseInt(select.value),
+                        weight: parseFloat(weightInputs[index].value)
+                    });
+                }
+            });
+
+            if (assignments.length === 0) {
+                alert('Please add at least one KPI');
+                return;
+            }
+
+            const newAssignment = {
+                id: kpiAssignments.length > 0 ? Math.max(...kpiAssignments.map(a => a.id)) + 1 : 1,
+                assignments: assignments,
+                mandatory: document.getElementById('assignmentMandatory').checked,
+                type: isEmployee ? 'employee' : 'role'
+            };
+
+            if (isEmployee) {
+                const employeeId = parseInt(document.getElementById('assignmentEmployee').value);
+                newAssignment.employeeId = employeeId;
+
+                // Remove existing assignments for this employee
+                kpiAssignments = kpiAssignments.filter(a =>
+                    !(a.type === 'employee' && a.employeeId === employeeId)
+                );
+            } else {
+                const role = document.getElementById('assignmentRole').value;
+                newAssignment.jobRole = role;
+
+                // Remove existing assignments for this role
+                kpiAssignments = kpiAssignments.filter(a =>
+                    !(a.type === 'role' && a.jobRole === role)
+                );
+            }
+
+            kpiAssignments.push(newAssignment);
+            closeModal('kpiAssignmentModal');
+            loadKpiAssignments();
+            showNotification('KPIs assigned successfully!', 'success');
+        }
+
+        function viewAssignmentDetails(id, type) {
+            const assignments = kpiAssignments.filter(a =>
+                type === 'employee' ? a.employeeId === id : a.jobRole === id
+            );
+
+            let details = '';
+            let totalWeight = 0;
+
+            assignments.forEach(assignment => {
+                assignment.assignments.forEach(a => {
+                    const kpi = kpiDefinitions.find(k => k.id === a.kpiId);
+                    if (kpi) {
+                        details += `${kpi.name}: ${(a.weight * 100).toFixed(0)}%\n`;
+                        totalWeight += a.weight;
+                    }
+                });
+            });
+
+            const title = type === 'employee'
+                ? employees.find(e => e.id === id)?.name
+                : getJobRoleLabel(id);
+
+            alert(`${title} - KPI Assignments\n\n${details}\nTotal Weight: ${totalWeight.toFixed(2)}`);
+        }
+
+        function editAssignment(id, type) {
+            const assignments = kpiAssignments.filter(a =>
+                type === 'employee' ? a.employeeId === id : a.jobRole === id
+            );
+
+            if (assignments.length === 0) return;
+
+            openModal('kpiAssignmentModal');
+
+            // Set assignment type
+            if (type === 'employee') {
+                document.getElementById('assignEmployee').checked = true;
+                document.getElementById('assignmentEmployee').value = id;
+                document.getElementById('employeeAssignment').classList.remove('hidden');
+                document.getElementById('roleAssignment').classList.add('hidden');
+            } else {
+                document.getElementById('assignRole').checked = true;
+                document.getElementById('assignmentRole').value = id;
+                document.getElementById('employeeAssignment').classList.add('hidden');
+                document.getElementById('roleAssignment').classList.remove('hidden');
+            }
+
+            // Clear existing rows
+            document.getElementById('assignmentKpisContainer').innerHTML = '';
+
+            // Add rows for each KPI assignment
+            assignments.forEach(assignment => {
+                assignment.assignments.forEach(a => {
+                    addKpiAssignmentRow(a.kpiId, a.weight);
+                });
+            });
+
+            // Remove existing assignments for this employee/role
+            kpiAssignments = kpiAssignments.filter(a =>
+                type === 'employee' ? a.employeeId !== id : a.jobRole !== id
+            );
+        }
+
+        function deleteAllAssignments(id, type) {
+            if (confirm(`Are you sure you want to remove all KPI assignments?`)) {
+                kpiAssignments = kpiAssignments.filter(a =>
+                    type === 'employee' ? a.employeeId !== id : a.jobRole !== id
+                );
+                loadKpiAssignments();
+                showNotification('Assignments removed!', 'success');
+            }
+        }
+
+        // Enhanced KPI Measurements Management for multiple KPIs
+        function loadEmployeeOptions() {
+            const select = document.getElementById('measurementEmployee');
+            select.innerHTML = '<option value="">Select Employee</option>';
+
+            employees.forEach(emp => {
+                const option = document.createElement('option');
+                option.value = emp.id;
+                option.textContent = emp.name;
+                select.appendChild(option);
+            });
+        }
+
+        function loadEmployeeKPIs() {
+            const employeeId = document.getElementById('measurementEmployee').value;
+            if (!employeeId) return;
+
+            const assignments = kpiAssignments.filter(a =>
+                a.type === 'employee' && a.employeeId === parseInt(employeeId)
+            );
+
+            const container = document.getElementById('kpiMeasurementList');
+            container.innerHTML = '';
+
+            assignments.forEach(assignment => {
+                assignment.assignments.forEach(a => {
+                    const kpi = kpiDefinitions.find(k => k.id === a.kpiId);
+                    if (kpi) {
+                        const div = document.createElement('div');
+                        div.className = 'kpi-item';
+                        div.innerHTML = `
+                            <div class="kpi-item-header" onclick="toggleMeasurementItem(${kpi.id})">
+                                <div class="flex items-center space-x-2">
+                                    <span class="material-icons-round text-sm">expand_more</span>
+                                    <span>${kpi.name}</span>
+                                </div>
+                                <div class="text-sm text-gray-500">Weight: ${(a.weight * 100).toFixed(0)}%</div>
+                            </div>
+                            <div id="measurement-content-${kpi.id}" class="kpi-item-content hidden">
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Target Value</label>
+                                        <input type="text" value="${kpi.targetValue} ${getUnitSymbol(kpi.unit)}"
+                                               class="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg" disabled>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Weight</label>
+                                        <input type="text" value="${(a.weight * 100).toFixed(0)}%"
+                                               class="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg" disabled>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-2 gap-4 mt-3">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Actual Value *</label>
+                                        <input type="number" step="0.01" data-kpi-id="${kpi.id}"
+                                               class="measurement-actual w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Score (0-100) *</label>
+                                        <input type="number" min="0" max="100" data-kpi-id="${kpi.id}"
+                                               class="measurement-score w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        container.appendChild(div);
+                    }
+                });
+            });
+        }
+
+        function toggleMeasurementItem(kpiId) {
+            const content = document.getElementById(`measurement-content-${kpiId}`);
+            const icon = content.parentElement.querySelector('.material-icons-round');
+            content.classList.toggle('hidden');
+            icon.textContent = content.classList.contains('hidden') ? 'expand_more' : 'expand_less';
+        }
+
+        function loadKpiMeasurements() {
+            const table = document.getElementById('measurementsTable');
+            table.innerHTML = '';
+
+            loadEmployeeOptions();
+
+            kpiMeasurements.forEach(measurement => {
+                const employee = employees.find(e => e.id === measurement.employeeId);
+                if (employee) {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td class="px-4 py-3">
+                            <div class="font-medium">${employee.name}</div>
+                            <div class="text-sm text-gray-500">${employee.department}</div>
+                        </td>
+                        <td class="px-4 py-3">${formatPeriod(measurement.period)}</td>
+                        <td class="px-4 py-3">
+                            <div class="text-sm">${measurement.measurements.length} KPIs</div>
+                            <div class="text-xs text-gray-500">Click to view details</div>
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="flex items-center">
+                                <div class="w-16 bg-gray-200 rounded-full h-2 mr-2">
+                                    <div class="h-2 rounded-full ${getScoreClass(measurement.weightedScore)}"
+                                         style="width: ${measurement.weightedScore}%"></div>
+                                </div>
+                                <span>${measurement.weightedScore.toFixed(1)}/100</span>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="flex items-center">
+                                <div class="w-16 bg-gray-200 rounded-full h-2 mr-2">
+                                    <div class="h-2 rounded-full ${getScoreClass(measurement.weightedScore)}"
+                                         style="width: ${measurement.weightedScore}%"></div>
+                                </div>
+                                <span>${measurement.weightedScore.toFixed(1)}</span>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3">
+                            <button onclick="viewMeasurementDetails(${measurement.id})" class="text-primary-600 hover:text-primary-900 mr-3">
+                                <span class="material-icons-round text-sm">visibility</span>
+                            </button>
+                            <button onclick="editMeasurement(${measurement.id})" class="text-blue-600 hover:text-blue-900">
+                                <span class="material-icons-round text-sm">edit</span>
+                            </button>
+                        </td>
+                    `;
+                    table.appendChild(row);
+                }
+            });
+        }
+
+        function recordMultipleMeasurements() {
+            const employeeId = document.getElementById('measurementEmployee').value;
+            const period = document.getElementById('measurementPeriod').value;
+
+            if (!employeeId) {
+                alert('Please select an employee');
+                return;
+            }
+
+            const actualInputs = document.querySelectorAll('.measurement-actual');
+            const scoreInputs = document.querySelectorAll('.measurement-score');
+
+            if (actualInputs.length === 0) {
+                alert('No KPIs assigned to this employee');
+                return;
+            }
+
+            let hasError = false;
+            actualInputs.forEach(input => {
+                if (!input.value) {
+                    hasError = true;
+                }
+            });
+
+            scoreInputs.forEach(input => {
+                if (!input.value || input.value < 0 || input.value > 100) {
+                    hasError = true;
+                }
+            });
+
+            if (hasError) {
+                alert('Please fill in all required fields with valid values (score 0-100)');
+                return;
+            }
+
+            const measurements = [];
+            let weightedScore = 0;
+            let totalWeight = 0;
+
+            // Get assignments for this employee
+            const assignments = kpiAssignments.filter(a =>
+                a.type === 'employee' && a.employeeId === parseInt(employeeId)
+            );
+
+            // Process each measurement
+            actualInputs.forEach(input => {
+                const kpiId = parseInt(input.getAttribute('data-kpi-id'));
+                const actualValue = parseFloat(input.value);
+                const scoreInput = document.querySelector(`.measurement-score[data-kpi-id="${kpiId}"]`);
+                const score = scoreInput ? parseFloat(scoreInput.value) : 0;
+
+                measurements.push({
+                    kpiId: kpiId,
+                    actualValue: actualValue,
+                    score: score
+                });
+
+                // Find weight for this KPI
+                assignments.forEach(assignment => {
+                    const kpiAssignment = assignment.assignments.find(a => a.kpiId === kpiId);
+                    if (kpiAssignment) {
+                        weightedScore += score * kpiAssignment.weight;
+                        totalWeight += kpiAssignment.weight;
+                    }
+                });
+            });
+
+            // Normalize weighted score
+            weightedScore = totalWeight > 0 ? weightedScore / totalWeight : 0;
+
+            const newMeasurement = {
+                id: kpiMeasurements.length > 0 ? Math.max(...kpiMeasurements.map(m => m.id)) + 1 : 1,
+                employeeId: parseInt(employeeId),
+                period: period,
+                measurements: measurements,
+                recordedAt: new Date().toISOString(),
+                weightedScore: weightedScore
+            };
+
+            // Remove existing measurement for same employee and period
+            kpiMeasurements = kpiMeasurements.filter(m =>
+                !(m.employeeId === parseInt(employeeId) && m.period === period)
+            );
+
+            kpiMeasurements.push(newMeasurement);
+
+            // Reset form
+            document.getElementById('measurementForm').reset();
+            document.getElementById('kpiMeasurementList').innerHTML = '';
+
+            loadKpiMeasurements();
+            showNotification('Measurements recorded successfully!', 'success');
+        }
+
+        function viewMeasurementDetails(id) {
+            const measurement = kpiMeasurements.find(m => m.id === id);
+            if (!measurement) return;
+
+            const employee = employees.find(e => e.id === measurement.employeeId);
+            let details = `${employee?.name} - ${formatPeriod(measurement.period)}\n\n`;
+
+            measurement.measurements.forEach(m => {
+                const kpi = kpiDefinitions.find(k => k.id === m.kpiId);
+                if (kpi) {
+                    details += `${kpi.name}:\n`;
+                    details += `  Actual: ${m.actualValue} ${getUnitSymbol(kpi.unit)}\n`;
+                    details += `  Score: ${m.score}/100\n\n`;
+                }
+            });
+
+            details += `Weighted Score: ${measurement.weightedScore.toFixed(1)}/100`;
+
+            alert(details);
+        }
+
+        function editMeasurement(id) {
+            const measurement = kpiMeasurements.find(m => m.id === id);
+            if (!measurement) return;
+
+            // Set form values
+            document.getElementById('measurementEmployee').value = measurement.employeeId;
+            document.getElementById('measurementPeriod').value = measurement.period;
+
+            // Load KPIs
+            loadEmployeeKPIs();
+
+            // Populate values
+            setTimeout(() => {
+                measurement.measurements.forEach(m => {
+                    const actualInput = document.querySelector(`.measurement-actual[data-kpi-id="${m.kpiId}"]`);
+                    const scoreInput = document.querySelector(`.measurement-score[data-kpi-id="${m.kpiId}"]`);
+
+                    if (actualInput) actualInput.value = m.actualValue;
+                    if (scoreInput) scoreInput.value = m.score;
+                });
+            }, 100);
+
+            // Switch to measurements tab
+            switchTab('measurements');
+
+            // Remove the measurement being edited
+            kpiMeasurements = kpiMeasurements.filter(m => m.id !== id);
+        }
+
+        function formatPeriod(period) {
+            const [year, month] = period.split('-');
+            const date = new Date(year, month - 1);
+            return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+        }
+
+        function getScoreClass(score) {
+            if (score >= 80) return 'kpi-score-excellent';
+            if (score >= 60) return 'kpi-score-good';
+            if (score >= 40) return 'kpi-score-average';
+            return 'kpi-score-poor';
+        }
+
+        // Performance Dashboard (unchanged)
+        function loadPerformanceDashboard() {
+            loadTopPerformers();
+            loadDepartmentPerformance();
+            renderPerformanceChart();
+        }
+
+        function loadTopPerformers() {
+            const container = document.getElementById('topPerformersList');
+            container.innerHTML = '';
+
+            const employeeScores = {};
+
+            kpiMeasurements.forEach(measurement => {
+                if (!employeeScores[measurement.employeeId]) {
+                    employeeScores[measurement.employeeId] = { total: 0, count: 0 };
+                }
+                employeeScores[measurement.employeeId].total += measurement.weightedScore;
+                employeeScores[measurement.employeeId].count++;
+            });
+
+            const topPerformers = Object.entries(employeeScores)
+                .map(([empId, data]) => {
+                    const employee = employees.find(e => e.id === parseInt(empId));
+                    return {
+                        employee,
+                        avgScore: data.total / data.count
+                    };
+                })
+                .filter(item => item.employee)
+                .sort((a, b) => b.avgScore - a.avgScore)
+                .slice(0, 5);
+
+            topPerformers.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = 'flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 rounded-lg';
+                div.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 ${getRankColor(index)} text-white rounded-full flex items-center justify-center font-bold">
+                            ${index + 1}
+                        </div>
+                        <div>
+                            <p class="font-medium">${item.employee.name}</p>
+                            <p class="text-sm text-gray-500">${item.employee.department}</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <p class="font-bold text-lg">${item.avgScore.toFixed(1)}</p>
+                        <p class="text-xs text-gray-500">Avg Score</p>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function getRankColor(index) {
+            const colors = [
+                'bg-yellow-500', // 1st
+                'bg-gray-400',   // 2nd
+                'bg-amber-700',  // 3rd
+                'bg-blue-500',   // 4th
+                'bg-purple-500'  // 5th
+            ];
+            return colors[index] || 'bg-gray-300';
+        }
+
+        function loadDepartmentPerformance() {
+            const table = document.getElementById('departmentPerformanceTable');
+            table.innerHTML = '';
+
+            const deptScores = {};
+
+            kpiMeasurements.forEach(measurement => {
+                const employee = employees.find(e => e.id === measurement.employeeId);
+                if (employee) {
+                    if (!deptScores[employee.department]) {
+                        deptScores[employee.department] = { total: 0, count: 0, employees: new Set(), topScore: 0, topEmployee: '' };
+                    }
+                    deptScores[employee.department].total += measurement.weightedScore;
+                    deptScores[employee.department].count++;
+                    deptScores[employee.department].employees.add(employee.id);
+
+                    if (measurement.weightedScore > deptScores[employee.department].topScore) {
+                        deptScores[employee.department].topScore = measurement.weightedScore;
+                        deptScores[employee.department].topEmployee = employee.name;
+                    }
+                }
+            });
+
+            Object.entries(deptScores).forEach(([dept, data]) => {
+                const avgScore = data.total / data.count;
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="px-4 py-3 font-medium">${dept}</td>
+                    <td class="px-4 py-3">
+                        <div class="flex items-center">
+                            <div class="w-24 bg-gray-200 rounded-full h-2 mr-2">
+                                <div class="h-2 rounded-full ${getScoreClass(avgScore)}"
+                                     style="width: ${avgScore}%"></div>
+                            </div>
+                            <span>${avgScore.toFixed(1)}/100</span>
+                        </div>
+                    </td>
+                    <td class="px-4 py-3">${data.employees.size}</td>
+                    <td class="px-4 py-3">${data.topEmployee}</td>
+                    <td class="px-4 py-3">
+                        <span class="material-icons-round ${avgScore >= 70 ? 'text-green-500' : 'text-red-500'}">
+                            ${avgScore >= 70 ? 'trending_up' : 'trending_down'}
+                        </span>
+                    </td>
+                `;
+                table.appendChild(row);
+            });
+        }
+
+        function renderPerformanceChart() {
+            const categories = ['PRODUCTIVITY', 'ATTENDANCE', 'QUALITY'];
+            const data = categories.map(cat => {
+                const kpiIds = kpiDefinitions.filter(k => k.category === cat).map(k => k.id);
+                let totalScore = 0;
+                let count = 0;
+
+                kpiMeasurements.forEach(measurement => {
+                    measurement.measurements.forEach(m => {
+                        if (kpiIds.includes(m.kpiId)) {
+                            totalScore += m.score;
+                            count++;
+                        }
+                    });
+                });
+
+                return count > 0 ? totalScore / count : 0;
+            });
+
+            const options = {
+                series: [{
+                    name: 'Average Score',
+                    data: data
+                }],
+                chart: {
+                    type: 'bar',
+                    height: '100%',
+                    toolbar: { show: false }
+                },
+                plotOptions: {
+                    bar: {
+                        borderRadius: 4,
+                        horizontal: false,
+                        columnWidth: '70%',
+                    }
+                },
+                dataLabels: { enabled: false },
+                xaxis: {
+                    categories: ['Productivity', 'Attendance', 'Quality']
+                },
+                yaxis: {
+                    title: { text: 'Average Score' },
+                    max: 100
+                },
+                colors: ['#3b82f6']
+            };
+
+            const chart = new ApexCharts(document.querySelector("#performanceChart"), options);
+            chart.render();
+        }
+
+        // Utility Functions
+        function showNotification(message, type) {
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
+                type === 'success' ? 'bg-green-100 text-green-800 border border-green-200' :
+                'bg-red-100 text-red-800 border border-red-200'
+            }`;
+            notification.innerHTML = `
+                <div class="flex items-center space-x-3">
+                    <span class="material-icons-round">${type === 'success' ? 'check_circle' : 'error'}</span>
+                    <span>${message}</span>
+                </div>
+            `;
+
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            loadKpiDefinitions();
+            loadKpiAssignments();
+
+            // Close modals when clicking outside
+            window.onclick = function(event) {
+                if (event.target.classList.contains('modal')) {
+                    event.target.style.display = 'none';
+                    document.body.style.overflow = 'auto';
+                }
+            }
+
+            // Mobile Sidebar Toggle
+            const menuToggle = document.getElementById('menuToggle');
+            const mobileOverlay = document.getElementById('mobileOverlay');
+            const sidebar = document.querySelector('.sidebar-container');
+
+            menuToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('open');
+                mobileOverlay.classList.toggle('hidden');
+                document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : 'auto';
+            });
+
+            mobileOverlay.addEventListener('click', () => {
+                sidebar.classList.remove('open');
+                mobileOverlay.classList.add('hidden');
+                document.body.style.overflow = 'auto';
+            });
+
+            // Theme Toggle
+            const themeToggle = document.getElementById('themeToggle');
+            const themeIcon = themeToggle.querySelector('.material-icons-round');
+
+            themeToggle.addEventListener('click', () => {
+                const isDark = document.documentElement.classList.toggle('dark');
+                themeIcon.textContent = isDark ? 'light_mode' : 'dark_mode';
+                localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            });
+
+            // Initialize theme
+            if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+                themeIcon.textContent = 'light_mode';
+            }
+
+            // Sidebar navigation active state
+            document.querySelectorAll('.sidebar-item').forEach(item => {
+                item.addEventListener('click', function(e) {
+                    if (this.getAttribute('href') === '#') {
+                        e.preventDefault();
+                    }
+
+                    document.querySelectorAll('.sidebar-item').forEach(nav => {
+                        nav.classList.remove('active');
+                    });
+
+                    this.classList.add('active');
+
+                    if (window.innerWidth < 1024) {
+                        sidebar.classList.remove('open');
+                        mobileOverlay.classList.add('hidden');
+                        document.body.style.overflow = 'auto';
+                    }
+                });
+            });
+
+            // Close sidebar on window resize
+            window.addEventListener('resize', () => {
+                if (window.innerWidth >= 1024) {
+                    sidebar.classList.remove('open');
+                    mobileOverlay.classList.add('hidden');
+                    document.body.style.overflow = 'auto';
+                }
+            });
+        });
+    </script>
+</main>
+</body>
+</html>
