@@ -11,7 +11,10 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDate;
@@ -19,6 +22,9 @@ import java.time.LocalDate;
 @Getter
 @Setter
 @Entity
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
 @Table(name = "employees")
 public class Employee extends BaseEntity {
 
@@ -33,12 +39,15 @@ public class Employee extends BaseEntity {
 
     private String email;
 
+    private String phoneNumber;
+
     private LocalDate dateOfHire;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private EmploymentStatus employmentStatus;
 
+    @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private RecordStatus status = RecordStatus.ACTIVE;
@@ -54,4 +63,7 @@ public class Employee extends BaseEntity {
     @ManyToOne(optional = false)
     @JoinColumn(name = "pay_group_id")
     private PayGroup payGroup;
+
+    private boolean payrollEnabled;
+
 }

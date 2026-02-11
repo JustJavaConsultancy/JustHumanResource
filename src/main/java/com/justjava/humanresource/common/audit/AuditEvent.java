@@ -4,11 +4,13 @@ import com.justjava.humanresource.common.entity.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 
+@Builder
 @Getter
 @Setter
+@NoArgsConstructor
+@AllArgsConstructor
 @Entity
 @Table(name = "audit_events")
 public class AuditEvent extends BaseEntity {
@@ -27,4 +29,8 @@ public class AuditEvent extends BaseEntity {
 
     @Column(nullable = false)
     private String performedBy;
+
+    public Long getEntityId() {
+        return entityId;
+    }
 }
