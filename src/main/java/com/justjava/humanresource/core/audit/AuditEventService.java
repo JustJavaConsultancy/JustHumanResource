@@ -1,4 +1,4 @@
-package com.justjava.humanresource.common.audit;
+package com.justjava.humanresource.core.audit;
 
 public interface AuditEventService {
 

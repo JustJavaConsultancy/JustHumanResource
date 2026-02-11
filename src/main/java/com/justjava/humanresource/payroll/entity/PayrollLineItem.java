@@ -1,7 +1,7 @@
 package com.justjava.humanresource.payroll.entity;
 
 
-import com.justjava.humanresource.common.entity.BaseEntity;
+import com.justjava.humanresource.core.entity.BaseEntity;
 import com.justjava.humanresource.hr.entity.Employee;
 import com.justjava.humanresource.payroll.enums.PayComponentType;
 import jakarta.persistence.Column;

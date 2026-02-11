@@ -1,4 +1,4 @@
-package com.justjava.humanresource.common.config;
+package com.justjava.humanresource.core.config;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;

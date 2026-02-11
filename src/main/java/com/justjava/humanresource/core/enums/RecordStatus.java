@@ -1,4 +1,4 @@
-package com.justjava.humanresource.common.enums;
+package com.justjava.humanresource.core.enums;
 
 public enum RecordStatus {
     ACTIVE,

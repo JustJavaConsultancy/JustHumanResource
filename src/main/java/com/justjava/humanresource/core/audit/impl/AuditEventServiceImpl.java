@@ -1,8 +1,8 @@
-package com.justjava.humanresource.common.audit.impl;
+package com.justjava.humanresource.core.audit.impl;
 
-import com.justjava.humanresource.common.audit.AuditEvent;
-import com.justjava.humanresource.common.audit.AuditEventRepository;
-import com.justjava.humanresource.common.audit.AuditEventService;
+import com.justjava.humanresource.core.audit.AuditEvent;
+import com.justjava.humanresource.core.audit.AuditEventRepository;
+import com.justjava.humanresource.core.audit.AuditEventService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

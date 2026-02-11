@@ -1,6 +1,7 @@
 package com.justjava.humanresource.hr.service;
 
-import com.justjava.humanresource.common.enums.EmploymentStatus;
+import com.justjava.humanresource.core.enums.EmploymentStatus;
+import com.justjava.humanresource.hr.dto.EmployeeDTO;
 import com.justjava.humanresource.hr.entity.Employee;
 import com.justjava.humanresource.hr.entity.PayGroup;
 
@@ -12,7 +13,7 @@ public interface EmployeeService {
      * EXISTING (UNCHANGED)
      * ========================= */
 
-    Employee createEmployee(Employee employee);
+    Employee createEmployee(EmployeeDTO employee);
 
     Employee getByEmployeeNumber(String employeeNumber);
 
