@@ -1,6 +1,6 @@
 package com.justjava.humanresource.kpi.entity;
 
-import com.justjava.humanresource.common.entity.BaseEntity;
+import com.justjava.humanresource.core.entity.BaseEntity;
 import com.justjava.humanresource.kpi.enums.KpiCategory;
 import com.justjava.humanresource.kpi.enums.KpiUnit;
 import jakarta.persistence.Column;

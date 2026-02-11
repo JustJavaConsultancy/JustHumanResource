@@ -1,4 +1,4 @@
-package com.justjava.humanresource.common.exception;
+package com.justjava.humanresource.core.exception;
 
 
 public class ResourceNotFoundException extends CustomException {

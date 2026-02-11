@@ -1,4 +1,4 @@
-package com.justjava.humanresource.common.audit;
+package com.justjava.humanresource.core.audit;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 

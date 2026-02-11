@@ -1,6 +1,6 @@
 package com.justjava.humanresource.payroll.entity;
 
-import com.justjava.humanresource.common.entity.BaseEntity;
+import com.justjava.humanresource.core.entity.BaseEntity;
 import com.justjava.humanresource.hr.entity.Employee;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

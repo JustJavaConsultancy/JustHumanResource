@@ -1,7 +1,7 @@
 package com.justjava.humanresource.payroll.statutory.entity;
 
-import com.justjava.humanresource.common.entity.BaseEntity;
-import com.justjava.humanresource.common.enums.RecordStatus;
+import com.justjava.humanresource.core.entity.BaseEntity;
+import com.justjava.humanresource.core.enums.RecordStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;

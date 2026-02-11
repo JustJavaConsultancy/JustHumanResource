@@ -1,7 +1,6 @@
-package com.justjava.humanresource.config;
+package com.justjava.humanresource.core.config;
 
 
-import com.justjava.humanresource.aau.AuthenticationManager;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.ControllerAdvice;

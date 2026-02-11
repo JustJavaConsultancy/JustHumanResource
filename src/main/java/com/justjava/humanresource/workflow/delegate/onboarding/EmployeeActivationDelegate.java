@@ -1,6 +1,6 @@
 package com.justjava.humanresource.workflow.delegate.onboarding;
 
-import com.justjava.humanresource.common.enums.EmploymentStatus;
+import com.justjava.humanresource.core.enums.EmploymentStatus;
 import com.justjava.humanresource.hr.entity.Employee;
 import com.justjava.humanresource.hr.repository.EmployeeRepository;
 import com.justjava.humanresource.onboarding.entity.EmployeeOnboarding;

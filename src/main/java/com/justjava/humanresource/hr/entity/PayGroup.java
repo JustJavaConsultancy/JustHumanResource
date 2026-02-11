@@ -1,8 +1,8 @@
 package com.justjava.humanresource.hr.entity;
 
-import com.justjava.humanresource.common.entity.BaseEntity;
-import com.justjava.humanresource.common.enums.PayFrequency;
-import com.justjava.humanresource.common.enums.RecordStatus;
+import com.justjava.humanresource.core.entity.BaseEntity;
+import com.justjava.humanresource.core.enums.PayFrequency;
+import com.justjava.humanresource.core.enums.RecordStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

@@ -1,6 +1,6 @@
-package com.justjava.humanresource.common.audit;
+package com.justjava.humanresource.core.audit;
 
-import com.justjava.humanresource.common.entity.BaseEntity;
+import com.justjava.humanresource.core.entity.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
