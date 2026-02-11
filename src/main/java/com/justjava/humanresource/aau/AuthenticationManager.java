@@ -16,4 +16,17 @@ public class AuthenticationManager {
         return defaultOidcUser.getClaims().get(fieldName);
     }
 
+    public boolean isEmployee() {
+        List<String> groups = (List<String>) this.get("groups");
+        if (groups == null) {
+            return false;
+        }
+        return groups.contains("/employees");
+    }
+
+    public Object getAllAttributes() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        DefaultOidcUser defaultOidcUser = (DefaultOidcUser) authentication.getPrincipal();
+        return defaultOidcUser.getClaims();
+    }
 }
