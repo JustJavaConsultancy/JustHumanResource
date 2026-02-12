@@ -1,11 +1,13 @@
 package com.justjava.humanresource.hr.service.impl;
 
-import com.justjava.humanresource.common.enums.EmploymentStatus;
-import com.justjava.humanresource.common.exception.ResourceNotFoundException;
+import com.justjava.humanresource.core.enums.EmploymentStatus;
+import com.justjava.humanresource.core.exception.ResourceNotFoundException;
+import com.justjava.humanresource.hr.dto.EmployeeDTO;
 import com.justjava.humanresource.hr.entity.Employee;
 import com.justjava.humanresource.hr.entity.JobStep;
 import com.justjava.humanresource.hr.entity.PayGroup;
 import com.justjava.humanresource.hr.event.SalaryChangedEvent;
+import com.justjava.humanresource.hr.mapper.EmployeeMapper;
 import com.justjava.humanresource.hr.repository.EmployeeRepository;
 import com.justjava.humanresource.hr.repository.JobStepRepository;
 import com.justjava.humanresource.hr.service.EmployeeService;
@@ -23,13 +25,16 @@ public class EmployeeServiceImpl implements EmployeeService {
     private final EmployeeRepository employeeRepository;
     private final JobStepRepository jobStepRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final EmployeeMapper employeeMapper;
 
     /* =========================
      * EXISTING BEHAVIOR (UNCHANGED)
      * ========================= */
 
     @Override
-    public Employee createEmployee(Employee employee) {
+    public Employee createEmployee(EmployeeDTO dto) {
+        Employee employee = employeeMapper.toEntity(dto);
+
         Employee saved = employeeRepository.save(employee);
 
         /*

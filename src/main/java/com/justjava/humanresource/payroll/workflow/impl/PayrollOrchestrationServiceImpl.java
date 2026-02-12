@@ -1,8 +1,8 @@
 package com.justjava.humanresource.payroll.workflow.impl;
 
-import com.justjava.humanresource.common.enums.PayrollRunStatus;
-import com.justjava.humanresource.common.exception.InvalidOperationException;
-import com.justjava.humanresource.common.exception.ResourceNotFoundException;
+import com.justjava.humanresource.core.enums.PayrollRunStatus;
+import com.justjava.humanresource.core.exception.InvalidOperationException;
+import com.justjava.humanresource.core.exception.ResourceNotFoundException;
 import com.justjava.humanresource.hr.entity.Employee;
 import com.justjava.humanresource.hr.repository.EmployeeRepository;
 import com.justjava.humanresource.payroll.entity.PayrollRun;

@@ -1,5 +1,6 @@
 package com.justjava.humanresource.payroll.controller;
 
+import com.justjava.humanresource.hr.dto.EmployeeDTO;
 import com.justjava.humanresource.hr.entity.Employee;
 import com.justjava.humanresource.hr.entity.PayGroup;
 import com.justjava.humanresource.hr.repository.PayGroupRepository;
@@ -29,7 +30,7 @@ public class PayrollTestController {
        ============================================================ */
 
     @PostMapping("/employee")
-    public Employee createEmployee(@RequestBody Employee employee) {
+    public Employee createEmployee(@RequestBody EmployeeDTO employee) {
         return employeeService.createEmployee(employee);
     }
 

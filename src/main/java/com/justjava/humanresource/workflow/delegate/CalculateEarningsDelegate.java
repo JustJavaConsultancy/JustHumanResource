@@ -1,6 +1,6 @@
 package com.justjava.humanresource.workflow.delegate;
 
-import com.justjava.humanresource.common.exception.InvalidOperationException;
+import com.justjava.humanresource.core.exception.InvalidOperationException;
 import com.justjava.humanresource.payroll.workflow.PayrollOrchestrationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

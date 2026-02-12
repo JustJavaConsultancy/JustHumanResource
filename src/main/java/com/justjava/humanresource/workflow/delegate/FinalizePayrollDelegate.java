@@ -1,6 +1,6 @@
 package com.justjava.humanresource.workflow.delegate;
 
-import com.justjava.humanresource.common.exception.InvalidOperationException;
+import com.justjava.humanresource.core.exception.InvalidOperationException;
 import com.justjava.humanresource.payroll.entity.PayrollRun;
 import com.justjava.humanresource.payroll.repositories.PayrollRunRepository;
 import com.justjava.humanresource.payroll.service.PaySlipService;

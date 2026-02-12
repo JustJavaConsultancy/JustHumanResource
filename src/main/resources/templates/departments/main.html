@@ -1,0 +1,1312 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+  <script>
+    tailwind.config = {
+        darkMode: "class",
+        theme: {
+            extend: {
+                colors: {
+                    primary: {
+                        50: '#eff6ff',
+                        100: '#dbeafe',
+                        200: '#bfdbfe',
+                        300: '#93c5fd',
+                        400: '#60a5fa',
+                        500: '#3b82f6',
+                        600: '#2563eb',
+                        700: '#1d4ed8',
+                        800: '#1e40af',
+                        900: '#1e3a8a',
+                    },
+                    secondary: {
+                        50: '#f8fafc',
+                        100: '#f1f5f9',
+                        200: '#e2e8f0',
+                        300: '#cbd5e1',
+                        400: '#94a3b8',
+                        500: '#64748b',
+                        600: '#475569',
+                        700: '#334155',
+                        800: '#1e293b',
+                        900: '#0f172a',
+                    }
+                },
+                fontFamily: {
+                    'sans': ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                },
+                borderRadius: {
+                    'xl': '1rem',
+                    '2xl': '1.5rem',
+                }
+            },
+        },
+    };
+  </script>
+  <style>
+    * {
+        font-family: 'Inter', sans-serif;
+    }
+
+    body {
+        overflow-x: hidden;
+    }
+
+    .sidebar-item {
+        transition: all 0.2s ease;
+        position: relative;
+    }
+
+    .sidebar-item.active {
+        background-color: rgba(59, 130, 246, 0.1);
+        color: #3b82f6;
+        border-left: 3px solid #3b82f6;
+    }
+
+    .sidebar-item.active .material-icons-round {
+        color: #3b82f6;
+    }
+
+    .sidebar-item:hover:not(.active) {
+        background-color: rgba(59, 130, 246, 0.05);
+    }
+
+    .dark .sidebar-item.active {
+        background-color: rgba(59, 130, 246, 0.2);
+    }
+
+    .badge {
+        padding: 2px 8px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        border-radius: 9999px;
+    }
+
+    .badge-success {
+        background-color: #dcfce7;
+        color: #16a34a;
+    }
+
+    .badge-error {
+        background-color: #fee2e2;
+        color: #dc2626;
+    }
+
+    .badge-info {
+        background-color: #dbeafe;
+        color: #2563eb;
+    }
+
+    .form-input {
+        border: 1px solid #e2e8f0;
+        border-radius: 0.5rem;
+        padding: 0.75rem;
+        width: 100%;
+        transition: border-color 0.2s;
+    }
+
+    .form-input:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .modal-backdrop {
+        background-color: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(4px);
+    }
+
+    .sidebar-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        width: 16rem;
+        z-index: 40;
+        overflow-y: auto;
+    }
+
+    .main-content {
+        margin-left: 16rem;
+        width: calc(100% - 16rem);
+        min-height: 100vh;
+    }
+
+    @media (max-width: 1023px) {
+        .sidebar-container {
+            transform: translateX(-100%);
+        }
+
+        .sidebar-container.open {
+            transform: translateX(0);
+        }
+
+        .main-content {
+            margin-left: 0;
+            width: 100%;
+        }
+    }
+
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: #f1f5f9;
+        border-radius: 3px;
+    }
+
+    .dark .custom-scrollbar::-webkit-scrollbar-track {
+        background: #1e293b;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 3px;
+    }
+
+    .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #475569;
+    }
+
+    .progress-bar {
+        height: 8px;
+        border-radius: 4px;
+        overflow: hidden;
+        background-color: #e5e7eb;
+    }
+
+    .dark .progress-bar {
+        background-color: #374151;
+    }
+
+    .progress-fill {
+        height: 100%;
+        border-radius: 4px;
+    }
+
+    .department-stats-card {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .department-stats-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+    }
+
+    .department-color-engineering { background-color: #3b82f6; }
+    .department-color-sales { background-color: #10b981; }
+    .department-color-marketing { background-color: #8b5cf6; }
+    .department-color-hr { background-color: #f59e0b; }
+    .department-color-finance { background-color: #ef4444; }
+    .department-color-operations { background-color: #6366f1; }
+
+    .department-badge {
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-weight: 500;
+        font-size: 0.75rem;
+    }
+
+    .status-active {
+        background-color: #dcfce7;
+        color: #16a34a;
+    }
+
+    .status-inactive {
+        background-color: #f1f5f9;
+        color: #64748b;
+    }
+  </style>
+</head>
+<body>
+<main layout:fragment="content">
+
+  <!-- Stats Grid -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
+    <!-- Total Departments -->
+    <div class="department-stats-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6">
+      <div class="flex items-center justify-between mb-4">
+        <div class="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+          <span class="material-icons-round text-blue-600 dark:text-blue-400">business</span>
+        </div>
+        <span class="text-sm font-medium text-green-600 flex items-center">
+                            <span class="material-icons-round text-sm mr-1">trending_up</span>
+                            +2
+                        </span>
+      </div>
+      <h3 class="text-2xl font-bold mb-1" id="totalDepartments">12</h3>
+      <p class="text-gray-600 dark:text-gray-400 text-sm">Total Departments</p>
+      <div class="mt-3 flex items-center text-xs text-gray-500">
+        <span class="material-icons-round text-xs mr-1">check_circle</span>
+        <span>10 active • 2 inactive</span>
+      </div>
+    </div>
+
+    <!-- Active Departments -->
+    <div class="department-stats-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6">
+      <div class="flex items-center justify-between mb-4">
+        <div class="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
+          <span class="material-icons-round text-green-600 dark:text-green-400">check_circle</span>
+        </div>
+        <span class="badge badge-success">Active</span>
+      </div>
+      <h3 class="text-2xl font-bold mb-1" id="activeDepartments">10</h3>
+      <p class="text-gray-600 dark:text-gray-400 text-sm">Active Departments</p>
+      <div class="mt-3">
+        <div class="progress-bar">
+          <div class="progress-fill bg-green-500" style="width: 83%"></div>
+        </div>
+        <p class="text-xs text-gray-500 mt-1">83% of all departments</p>
+      </div>
+    </div>
+
+    <!-- Total Employees -->
+    <div class="department-stats-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6">
+      <div class="flex items-center justify-between mb-4">
+        <div class="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+          <span class="material-icons-round text-purple-600 dark:text-purple-400">people</span>
+        </div>
+        <span class="text-sm text-gray-500">Organization</span>
+      </div>
+      <h3 class="text-2xl font-bold mb-1">1,248</h3>
+      <p class="text-gray-600 dark:text-gray-400 text-sm">Total Employees</p>
+      <div class="mt-3">
+        <div class="flex items-center text-xs text-gray-500">
+          <span class="material-icons-round text-xs mr-1">show_chart</span>
+          <span>Avg. 104 per department</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Largest Department -->
+    <div class="department-stats-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6">
+      <div class="flex items-center justify-between mb-4">
+        <div class="p-3 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+          <span class="material-icons-round text-orange-600 dark:text-orange-400">leaderboard</span>
+        </div>
+        <span class="badge badge-info">Largest</span>
+      </div>
+      <h3 class="text-2xl font-bold mb-1">324</h3>
+      <p class="text-gray-600 dark:text-gray-400 text-sm">Engineering Department</p>
+      <div class="mt-3">
+        <div class="flex items-center text-xs text-gray-500">
+          <span class="material-icons-round text-xs mr-1">pie_chart</span>
+          <span>26% of total employees</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;justify-content:end;margin-bottom:20px">
+    <button onclick="openModal('addDepartmentModal')" class="hidden md:flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">
+      <span class="material-icons-round text-sm">add</span>
+      <span>Add Department</span>
+    </button>
+  </div>
+  <!-- Department Overview -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 mb-6">
+    <div class="flex items-center justify-between mb-6">
+      <h3 class="text-lg font-bold">Department Overview</h3>
+      <button onclick="openModal('addDepartmentModal')" class="md:hidden p-2 bg-primary-600 text-white rounded-lg">
+        <span class="material-icons-round">add</span>
+      </button>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <!-- Engineering Department Card -->
+      <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-lg flex items-center justify-center department-color-engineering">
+              <span class="material-icons-round text-white">engineering</span>
+            </div>
+            <div>
+              <h4 class="font-bold">Engineering</h4>
+              <p class="text-sm text-gray-500">ENG</p>
+            </div>
+          </div>
+          <span class="status-active department-badge">Active</span>
+        </div>
+        <div class="space-y-2">
+          <div class="flex justify-between text-sm">
+            <span class="text-gray-500">Employees</span>
+            <span class="font-bold">324</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-gray-500">Avg. KPI Score</span>
+            <span class="font-bold text-green-600">84/100</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-gray-500">Vacancies</span>
+            <span class="font-bold">12</span>
+          </div>
+        </div>
+        <div class="flex justify-between mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <button onclick="viewDepartmentDetails('ENG')" class="text-primary-600 hover:text-primary-700 text-sm font-medium">View Details</button>
+          <div class="flex space-x-2">
+            <button onclick="editDepartment('ENG')" class="text-gray-500 hover:text-gray-700">
+              <span class="material-icons-round text-sm">edit</span>
+            </button>
+            <button onclick="deleteDepartment('ENG')" class="text-red-500 hover:text-red-700">
+              <span class="material-icons-round text-sm">delete</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sales Department Card -->
+      <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-lg flex items-center justify-center department-color-sales">
+              <span class="material-icons-round text-white">trending_up</span>
+            </div>
+            <div>
+              <h4 class="font-bold">Sales</h4>
+              <p class="text-sm text-gray-500">SAL</p>
+            </div>
+          </div>
+          <span class="status-active department-badge">Active</span>
+        </div>
+        <div class="space-y-2">
+          <div class="flex justify-between text-sm">
+            <span class="text-gray-500">Employees</span>
+            <span class="font-bold">156</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-gray-500">Avg. KPI Score</span>
+            <span class="font-bold text-green-600">92/100</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-gray-500">Vacancies</span>
+            <span class="font-bold">8</span>
+          </div>
+        </div>
+        <div class="flex justify-between mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <button onclick="viewDepartmentDetails('SAL')" class="text-primary-600 hover:text-primary-700 text-sm font-medium">View Details</button>
+          <div class="flex space-x-2">
+            <button onclick="editDepartment('SAL')" class="text-gray-500 hover:text-gray-700">
+              <span class="material-icons-round text-sm">edit</span>
+            </button>
+            <button onclick="deleteDepartment('SAL')" class="text-red-500 hover:text-red-700">
+              <span class="material-icons-round text-sm">delete</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Marketing Department Card -->
+      <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-lg flex items-center justify-center department-color-marketing">
+              <span class="material-icons-round text-white">campaign</span>
+            </div>
+            <div>
+              <h4 class="font-bold">Marketing</h4>
+              <p class="text-sm text-gray-500">MRK</p>
+            </div>
+          </div>
+          <span class="status-active department-badge">Active</span>
+        </div>
+        <div class="space-y-2">
+          <div class="flex justify-between text-sm">
+            <span class="text-gray-500">Employees</span>
+            <span class="font-bold">89</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-gray-500">Avg. KPI Score</span>
+            <span class="font-bold text-yellow-600">76/100</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-gray-500">Vacancies</span>
+            <span class="font-bold">5</span>
+          </div>
+        </div>
+        <div class="flex justify-between mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <button onclick="viewDepartmentDetails('MRK')" class="text-primary-600 hover:text-primary-700 text-sm font-medium">View Details</button>
+          <div class="flex space-x-2">
+            <button onclick="editDepartment('MRK')" class="text-gray-500 hover:text-gray-700">
+              <span class="material-icons-round text-sm">edit</span>
+            </button>
+            <button onclick="deleteDepartment('MRK')" class="text-red-500 hover:text-red-700">
+              <span class="material-icons-round text-sm">delete</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- HR Department Card -->
+      <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-lg flex items-center justify-center department-color-hr">
+              <span class="material-icons-round text-white">people</span>
+            </div>
+            <div>
+              <h4 class="font-bold">Human Resources</h4>
+              <p class="text-sm text-gray-500">HRD</p>
+            </div>
+          </div>
+          <span class="status-active department-badge">Active</span>
+        </div>
+        <div class="space-y-2">
+          <div class="flex justify-between text-sm">
+            <span class="text-gray-500">Employees</span>
+            <span class="font-bold">42</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-gray-500">Avg. KPI Score</span>
+            <span class="font-bold text-green-600">88/100</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-gray-500">Vacancies</span>
+            <span class="font-bold">3</span>
+          </div>
+        </div>
+        <div class="flex justify-between mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <button onclick="viewDepartmentDetails('HRD')" class="text-primary-600 hover:text-primary-700 text-sm font-medium">View Details</button>
+          <div class="flex space-x-2">
+            <button onclick="editDepartment('HRD')" class="text-gray-500 hover:text-gray-700">
+              <span class="material-icons-round text-sm">edit</span>
+            </button>
+            <button onclick="deleteDepartment('HRD')" class="text-red-500 hover:text-red-700">
+              <span class="material-icons-round text-sm">delete</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Finance Department Card -->
+      <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-lg flex items-center justify-center department-color-finance">
+              <span class="material-icons-round text-white">account_balance</span>
+            </div>
+            <div>
+              <h4 class="font-bold">Finance</h4>
+              <p class="text-sm text-gray-500">FIN</p>
+            </div>
+          </div>
+          <span class="status-inactive department-badge">Inactive</span>
+        </div>
+        <div class="space-y-2">
+          <div class="flex justify-between text-sm">
+            <span class="text-gray-500">Employees</span>
+            <span class="font-bold">38</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-gray-500">Avg. KPI Score</span>
+            <span class="font-bold text-green-600">85/100</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-gray-500">Vacancies</span>
+            <span class="font-bold">2</span>
+          </div>
+        </div>
+        <div class="flex justify-between mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <button onclick="viewDepartmentDetails('FIN')" class="text-primary-600 hover:text-primary-700 text-sm font-medium">View Details</button>
+          <div class="flex space-x-2">
+            <button onclick="editDepartment('FIN')" class="text-gray-500 hover:text-gray-700">
+              <span class="material-icons-round text-sm">edit</span>
+            </button>
+            <button onclick="deleteDepartment('FIN')" class="text-red-500 hover:text-red-700">
+              <span class="material-icons-round text-sm">delete</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Operations Department Card -->
+      <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-lg flex items-center justify-center department-color-operations">
+              <span class="material-icons-round text-white">settings</span>
+            </div>
+            <div>
+              <h4 class="font-bold">Operations</h4>
+              <p class="text-sm text-gray-500">OPS</p>
+            </div>
+          </div>
+          <span class="status-active department-badge">Active</span>
+        </div>
+        <div class="space-y-2">
+          <div class="flex justify-between text-sm">
+            <span class="text-gray-500">Employees</span>
+            <span class="font-bold">203</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-gray-500">Avg. KPI Score</span>
+            <span class="font-bold text-green-600">88/100</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-gray-500">Vacancies</span>
+            <span class="font-bold">17</span>
+          </div>
+        </div>
+        <div class="flex justify-between mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <button onclick="viewDepartmentDetails('OPS')" class="text-primary-600 hover:text-primary-700 text-sm font-medium">View Details</button>
+          <div class="flex space-x-2">
+            <button onclick="editDepartment('OPS')" class="text-gray-500 hover:text-gray-700">
+              <span class="material-icons-round text-sm">edit</span>
+            </button>
+            <button onclick="deleteDepartment('OPS')" class="text-red-500 hover:text-red-700">
+              <span class="material-icons-round text-sm">delete</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Department Details Table -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+    <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+      <div class="flex items-center justify-between">
+        <h3 class="text-lg font-bold">Department Details</h3>
+        <div class="flex items-center space-x-3">
+          <button onclick="exportDepartments()" class="p-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+            <span class="material-icons-round text-sm">download</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="overflow-x-auto custom-scrollbar">
+      <table class="w-full">
+        <thead class="bg-gray-50 dark:bg-gray-750">
+        <tr>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Code</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Department Name</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total Employees</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Vacancies</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Avg. KPI Score</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+        </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200 dark:divide-gray-700" id="departmentsTable">
+        <!-- Data will be populated by JavaScript -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Add/Edit Department Modal -->
+  <div id="addDepartmentModal" class="fixed inset-0 z-50 hidden">
+    <div class="modal-backdrop fixed inset-0"></div>
+    <div class="fixed inset-0 flex items-center justify-center p-4 custom-scrollbar">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-lg">
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+          <div class="flex justify-between items-center">
+            <h3 class="text-xl font-bold" id="modalTitle">Add New Department</h3>
+            <button onclick="closeModal('addDepartmentModal')" class="text-gray-400 hover:text-gray-600">
+              <span class="material-icons-round">close</span>
+            </button>
+          </div>
+        </div>
+
+        <form id="departmentForm" class="p-6">
+          <input type="hidden" id="departmentId">
+
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium mb-2">Department Code *</label>
+              <input type="text" id="departmentCode" required
+                     class="form-input"
+                     placeholder="Enter unique department code (e.g., ENG, SAL)">
+              <p class="text-xs text-gray-500 mt-1">Unique identifier for the department</p>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium mb-2">Department Name *</label>
+              <input type="text" id="departmentName" required
+                     class="form-input"
+                     placeholder="Enter department name">
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium mb-2">Status *</label>
+              <div class="space-y-2">
+                <label class="flex items-center">
+                  <input type="radio" name="status" value="ACTIVE" checked class="text-primary-600">
+                  <span class="ml-2">Active</span>
+                </label>
+                <label class="flex items-center">
+                  <input type="radio" name="status" value="INACTIVE" class="text-primary-600">
+                  <span class="ml-2">Inactive</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex justify-end space-x-3 pt-6 mt-6 border-t border-gray-200 dark:border-gray-700">
+            <button type="button" onclick="closeModal('addDepartmentModal')" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
+              Cancel
+            </button>
+            <button type="submit" class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
+              Save Department
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Department Details Modal -->
+  <div id="departmentDetailModal" class="fixed inset-0 z-50 hidden">
+    <div class="modal-backdrop fixed inset-0"></div>
+    <div class="fixed inset-0 flex items-center justify-center p-4 custom-scrollbar">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+          <div class="flex justify-between items-center">
+            <div>
+              <h3 class="text-xl font-bold" id="detailDepartmentName">Engineering Department</h3>
+              <p class="text-gray-600 dark:text-gray-400">Department Code: <span id="detailDepartmentCode">ENG</span></p>
+            </div>
+            <div class="flex space-x-2">
+              <button onclick="editDepartmentFromDetails()" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
+                Edit
+              </button>
+              <button onclick="closeModal('departmentDetailModal')" class="text-gray-400 hover:text-gray-600">
+                <span class="material-icons-round">close</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="p-6">
+          <!-- Stats Cards -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-gray-50 dark:bg-gray-750 rounded-xl p-6">
+              <div class="flex items-center justify-between mb-4">
+                <span class="text-sm font-medium text-gray-500">Total Employees</span>
+                <span class="material-icons-round text-blue-600">people</span>
+              </div>
+              <h4 class="text-3xl font-bold mb-2" id="detailTotalEmployees">324</h4>
+              <div class="flex items-center text-sm text-gray-500">
+                <span class="material-icons-round text-xs mr-1">trending_up</span>
+                <span>+12 this quarter</span>
+              </div>
+            </div>
+
+            <div class="bg-gray-50 dark:bg-gray-750 rounded-xl p-6">
+              <div class="flex items-center justify-between mb-4">
+                <span class="text-sm font-medium text-gray-500">Current Vacancies</span>
+                <span class="material-icons-round text-yellow-600">work</span>
+              </div>
+              <h4 class="text-3xl font-bold mb-2" id="detailVacancies">12</h4>
+              <div class="flex items-center text-sm text-gray-500">
+                <span class="material-icons-round text-xs mr-1">schedule</span>
+                <span>8 urgent positions</span>
+              </div>
+            </div>
+
+            <div class="bg-gray-50 dark:bg-gray-750 rounded-xl p-6">
+              <div class="flex items-center justify-between mb-4">
+                <span class="text-sm font-medium text-gray-500">Avg. KPI Score</span>
+                <span class="material-icons-round text-green-600">assessment</span>
+              </div>
+              <h4 class="text-3xl font-bold mb-2" id="detailAvgKPI">84/100</h4>
+              <div class="flex items-center text-sm text-gray-500">
+                <span class="material-icons-round text-xs mr-1">show_chart</span>
+                <span>+2.3 from last quarter</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Employee Distribution -->
+          <div class="mb-8">
+            <h4 class="font-bold mb-4">Employee Distribution by Grade</h4>
+            <div class="space-y-3">
+              <div>
+                <div class="flex justify-between text-sm mb-1">
+                  <span>Grade 1-3 (Junior)</span>
+                  <span class="font-bold">84 employees (26%)</span>
+                </div>
+                <div class="progress-bar">
+                  <div class="progress-fill bg-blue-500" style="width: 26%"></div>
+                </div>
+              </div>
+              <div>
+                <div class="flex justify-between text-sm mb-1">
+                  <span>Grade 4-6 (Mid)</span>
+                  <span class="font-bold">192 employees (59%)</span>
+                </div>
+                <div class="progress-bar">
+                  <div class="progress-fill bg-green-500" style="width: 59%"></div>
+                </div>
+              </div>
+              <div>
+                <div class="flex justify-between text-sm mb-1">
+                  <span>Grade 7+ (Senior)</span>
+                  <span class="font-bold">48 employees (15%)</span>
+                </div>
+                <div class="progress-bar">
+                  <div class="progress-fill bg-purple-500" style="width: 15%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Department Information -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h4 class="font-bold mb-4">Department Information</h4>
+              <div class="space-y-3">
+                <div>
+                  <label class="text-sm text-gray-500 dark:text-gray-400">Status</label>
+                  <p id="detailStatus" class="font-medium"></p>
+                </div>
+                <div>
+                  <label class="text-sm text-gray-500 dark:text-gray-400">Date Created</label>
+                  <p id="detailCreatedDate" class="font-medium">January 15, 2020</p>
+                </div>
+                <div>
+                  <label class="text-sm text-gray-500 dark:text-gray-400">Last Updated</label>
+                  <p id="detailUpdatedDate" class="font-medium">December 1, 2023</p>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h4 class="font-bold mb-4">Performance Metrics</h4>
+              <div class="space-y-3">
+                <div>
+                  <label class="text-sm text-gray-500 dark:text-gray-400">On Leave Today</label>
+                  <p id="detailOnLeave" class="font-medium">12 employees</p>
+                </div>
+                <div>
+                  <label class="text-sm text-gray-500 dark:text-gray-400">Probation Period</label>
+                  <p id="detailProbation" class="font-medium">8 employees</p>
+                </div>
+                <div>
+                  <label class="text-sm text-gray-500 dark:text-gray-400">Monthly Turnover</label>
+                  <p id="detailTurnover" class="font-medium">1.2%</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recent Activities -->
+          <div class="mt-8">
+            <h4 class="font-bold mb-4">Recent Department Activities</h4>
+            <div class="space-y-4">
+              <div class="flex items-start space-x-3">
+                <div class="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center">
+                  <span class="material-icons-round text-sm">person_add</span>
+                </div>
+                <div class="flex-1">
+                  <p class="text-sm font-medium">New hires this month</p>
+                  <p class="text-xs text-gray-500">5 new employees joined the department</p>
+                  <p class="text-xs text-gray-400 mt-1">December 15, 2023</p>
+                </div>
+              </div>
+              <div class="flex items-start space-x-3">
+                <div class="w-8 h-8 bg-green-100 text-green-600 rounded-full flex items-center justify-center">
+                  <span class="material-icons-round text-sm">trending_up</span>
+                </div>
+                <div class="flex-1">
+                  <p class="text-sm font-medium">Promotions processed</p>
+                  <p class="text-xs text-gray-500">3 employees promoted within the department</p>
+                  <p class="text-xs text-gray-400 mt-1">December 10, 2023</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div id="deleteConfirmationModal" class="fixed inset-0 z-50 hidden">
+    <div class="modal-backdrop fixed inset-0"></div>
+    <div class="fixed inset-0 flex items-center justify-center p-4">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md p-6">
+        <div class="text-center">
+          <div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <span class="material-icons-round text-xl">warning</span>
+          </div>
+          <h3 class="text-lg font-bold mb-2">Delete Department</h3>
+          <p class="text-gray-600 dark:text-gray-400 mb-6" id="deleteMessage">
+            Are you sure you want to delete this department? This action cannot be undone.
+          </p>
+          <div class="flex justify-center space-x-3">
+            <button onclick="closeModal('deleteConfirmationModal')" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
+              Cancel
+            </button>
+            <button onclick="confirmDeleteDepartment()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+              Delete Department
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Department Data matching your entity structure
+    let departments = [
+        {
+            id: 1,
+            code: 'ENG',
+            name: 'Engineering',
+            status: 'ACTIVE',
+            createdDate: '2020-01-15',
+            updatedDate: '2023-12-01',
+            totalEmployees: 324,
+            vacancies: 12,
+            avgKPI: 84
+        },
+        {
+            id: 2,
+            code: 'SAL',
+            name: 'Sales',
+            status: 'ACTIVE',
+            createdDate: '2020-01-15',
+            updatedDate: '2023-11-28',
+            totalEmployees: 156,
+            vacancies: 8,
+            avgKPI: 92
+        },
+        {
+            id: 3,
+            code: 'MRK',
+            name: 'Marketing',
+            status: 'ACTIVE',
+            createdDate: '2020-02-10',
+            updatedDate: '2023-11-30',
+            totalEmployees: 89,
+            vacancies: 5,
+            avgKPI: 76
+        },
+        {
+            id: 4,
+            code: 'HRD',
+            name: 'Human Resources',
+            status: 'ACTIVE',
+            createdDate: '2020-01-20',
+            updatedDate: '2023-12-05',
+            totalEmployees: 42,
+            vacancies: 3,
+            avgKPI: 88
+        },
+        {
+            id: 5,
+            code: 'FIN',
+            name: 'Finance',
+            status: 'INACTIVE',
+            createdDate: '2020-03-05',
+            updatedDate: '2023-11-15',
+            totalEmployees: 38,
+            vacancies: 2,
+            avgKPI: 85
+        },
+        {
+            id: 6,
+            code: 'OPS',
+            name: 'Operations',
+            status: 'ACTIVE',
+            createdDate: '2020-02-01',
+            updatedDate: '2023-11-25',
+            totalEmployees: 203,
+            vacancies: 17,
+            avgKPI: 88
+        }
+    ];
+
+    // Track department to delete
+    let departmentToDelete = null;
+
+    // Initialize the page
+    document.addEventListener('DOMContentLoaded', function() {
+        loadDepartmentsTable();
+        updateStats();
+
+        // Mobile Sidebar Toggle
+        const menuToggle = document.getElementById('menuToggle');
+        const mobileOverlay = document.getElementById('mobileOverlay');
+        const sidebar = document.querySelector('.sidebar-container');
+
+        menuToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('open');
+            mobileOverlay.classList.toggle('hidden');
+            document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : 'auto';
+        });
+
+        mobileOverlay.addEventListener('click', () => {
+            sidebar.classList.remove('open');
+            mobileOverlay.classList.add('hidden');
+            document.body.style.overflow = 'auto';
+        });
+
+        // Theme Toggle
+        const themeToggle = document.getElementById('themeToggle');
+        const themeIcon = themeToggle.querySelector('.material-icons-round');
+
+        themeToggle.addEventListener('click', () => {
+            const isDark = document.documentElement.classList.toggle('dark');
+            themeIcon.textContent = isDark ? 'light_mode' : 'dark_mode';
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        });
+
+        // Initialize theme
+        if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+            themeIcon.textContent = 'light_mode';
+        }
+
+        // Sidebar navigation active state
+        document.querySelectorAll('.sidebar-item').forEach(item => {
+            item.addEventListener('click', function(e) {
+                if (this.getAttribute('href') === '#') {
+                    e.preventDefault();
+                }
+
+                document.querySelectorAll('.sidebar-item').forEach(nav => {
+                    nav.classList.remove('active');
+                });
+
+                this.classList.add('active');
+
+                if (window.innerWidth < 1024) {
+                    sidebar.classList.remove('open');
+                    mobileOverlay.classList.add('hidden');
+                    document.body.style.overflow = 'auto';
+                }
+            });
+        });
+
+        // Close sidebar on window resize
+        window.addEventListener('resize', () => {
+            if (window.innerWidth >= 1024) {
+                sidebar.classList.remove('open');
+                mobileOverlay.classList.add('hidden');
+                document.body.style.overflow = 'auto';
+            }
+        });
+
+        // Search functionality
+        document.getElementById('searchInput')?.addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            filterDepartments(searchTerm);
+        });
+
+        // Department form submission
+        document.getElementById('departmentForm')?.addEventListener('submit', function(e) {
+            e.preventDefault();
+            saveDepartment();
+        });
+    });
+
+    // Load departments into table
+    function loadDepartmentsTable() {
+        const table = document.getElementById('departmentsTable');
+        table.innerHTML = '';
+
+        departments.forEach(dept => {
+            const row = document.createElement('tr');
+            row.className = 'hover:bg-gray-50 dark:hover:bg-gray-750 cursor-pointer';
+            row.onclick = () => viewDepartmentDetails(dept.code);
+
+            row.innerHTML = `
+                <td class="px-6 py-4">
+                    <div class="font-medium">${dept.code}</div>
+                </td>
+                <td class="px-6 py-4">
+                    <div class="font-medium">${dept.name}</div>
+                </td>
+                <td class="px-6 py-4">
+                    <span class="${dept.status === 'ACTIVE' ? 'status-active' : 'status-inactive'} department-badge">
+                        ${dept.status === 'ACTIVE' ? 'Active' : 'Inactive'}
+                    </span>
+                </td>
+                <td class="px-6 py-4">
+                    <div class="font-medium">${dept.totalEmployees}</div>
+                </td>
+                <td class="px-6 py-4">
+                    <div class="font-medium">${dept.vacancies}</div>
+                </td>
+                <td class="px-6 py-4">
+                    <div class="flex items-center">
+                        <div class="w-16 bg-gray-200 rounded-full h-2 mr-2">
+                            <div class="h-2 rounded-full ${getKPIColor(dept.avgKPI)}"
+                                 style="width: ${dept.avgKPI}%"></div>
+                        </div>
+                        <span>${dept.avgKPI}/100</span>
+                    </div>
+                </td>
+                <td class="px-6 py-4">
+                    <div class="flex space-x-2" onclick="event.stopPropagation()">
+                        <button onclick="editDepartment('${dept.code}')" class="text-gray-500 hover:text-gray-700">
+                            <span class="material-icons-round text-sm">edit</span>
+                        </button>
+                        <button onclick="deleteDepartment('${dept.code}')" class="text-red-500 hover:text-red-700">
+                            <span class="material-icons-round text-sm">delete</span>
+                        </button>
+                    </div>
+                </td>
+            `;
+            table.appendChild(row);
+        });
+    }
+
+    // Update statistics
+    function updateStats() {
+        const totalDepartments = departments.length;
+        const activeDepartments = departments.filter(d => d.status === 'ACTIVE').length;
+
+        document.getElementById('totalDepartments').textContent = totalDepartments;
+        document.getElementById('activeDepartments').textContent = activeDepartments;
+    }
+
+    // Filter departments
+    function filterDepartments(searchTerm) {
+        const rows = document.querySelectorAll('#departmentsTable tr');
+
+        rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            if (text.includes(searchTerm)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    }
+
+    // Modal functions
+    function openModal(modalId) {
+        document.getElementById(modalId).classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal(modalId) {
+        document.getElementById(modalId).classList.add('hidden');
+        document.body.style.overflow = 'auto';
+    }
+
+    // Close modal on backdrop click
+    document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+        backdrop.addEventListener('click', function() {
+            this.parentElement.classList.add('hidden');
+            document.body.style.overflow = 'auto';
+        });
+    });
+
+    // Open add department modal
+    function openAddDepartmentModal() {
+        document.getElementById('modalTitle').textContent = 'Add New Department';
+        document.getElementById('departmentForm').reset();
+        document.getElementById('departmentId').value = '';
+        openModal('addDepartmentModal');
+    }
+
+    // Edit department
+    function editDepartment(code) {
+        const dept = departments.find(d => d.code === code);
+        if (!dept) return;
+
+        document.getElementById('modalTitle').textContent = 'Edit Department';
+        document.getElementById('departmentId').value = dept.id;
+        document.getElementById('departmentCode').value = dept.code;
+        document.getElementById('departmentName').value = dept.name;
+
+        // Set status radio button
+        document.querySelector(`input[name="status"][value="${dept.status}"]`).checked = true;
+
+        openModal('addDepartmentModal');
+    }
+
+    // Edit from details modal
+    function editDepartmentFromDetails() {
+        const code = document.getElementById('detailDepartmentCode').textContent;
+        closeModal('departmentDetailModal');
+        editDepartment(code);
+    }
+
+    // Save department
+    function saveDepartment() {
+        const id = document.getElementById('departmentId').value;
+        const code = document.getElementById('departmentCode').value.trim().toUpperCase();
+        const name = document.getElementById('departmentName').value.trim();
+        const status = document.querySelector('input[name="status"]:checked').value;
+
+        // Validate
+        if (!code || !name) {
+            alert('Please fill in all required fields');
+            return;
+        }
+
+        // Check for duplicate code (if new department or code changed)
+        if (!id || departments.find(d => d.id == id)?.code !== code) {
+            if (departments.some(d => d.code === code)) {
+                alert('Department code must be unique');
+                return;
+            }
+        }
+
+        if (id) {
+            // Update existing department
+            const index = departments.findIndex(d => d.id == id);
+            if (index !== -1) {
+                departments[index] = {
+                    ...departments[index],
+                    code,
+                    name,
+                    status,
+                    updatedDate: new Date().toISOString().split('T')[0]
+                };
+            }
+        } else {
+            // Add new department
+            const newId = departments.length > 0 ? Math.max(...departments.map(d => d.id)) + 1 : 1;
+            departments.push({
+                id: newId,
+                code,
+                name,
+                status,
+                createdDate: new Date().toISOString().split('T')[0],
+                updatedDate: new Date().toISOString().split('T')[0],
+                totalEmployees: 0,
+                vacancies: 0,
+                avgKPI: 0
+            });
+        }
+
+        closeModal('addDepartmentModal');
+        loadDepartmentsTable();
+        updateStats();
+        showNotification('Department saved successfully!', 'success');
+    }
+
+    // View department details
+    function viewDepartmentDetails(code) {
+        const dept = departments.find(d => d.code === code);
+        if (!dept) return;
+
+        // Set basic info
+        document.getElementById('detailDepartmentName').textContent = dept.name;
+        document.getElementById('detailDepartmentCode').textContent = dept.code;
+
+        // Set stats
+        document.getElementById('detailTotalEmployees').textContent = dept.totalEmployees;
+        document.getElementById('detailVacancies').textContent = dept.vacancies;
+        document.getElementById('detailAvgKPI').textContent = `${dept.avgKPI}/100`;
+
+        // Set status
+        const statusElement = document.getElementById('detailStatus');
+        statusElement.textContent = dept.status === 'ACTIVE' ? 'Active' : 'Inactive';
+        statusElement.className = dept.status === 'ACTIVE' ? 'status-active department-badge inline-block' : 'status-inactive department-badge inline-block';
+
+        // Set dates
+        document.getElementById('detailCreatedDate').textContent = formatDate(dept.createdDate);
+        document.getElementById('detailUpdatedDate').textContent = formatDate(dept.updatedDate);
+
+        // Set additional details (simulated data)
+        document.getElementById('detailOnLeave').textContent = `${Math.floor(dept.totalEmployees * 0.04)} employees`;
+        document.getElementById('detailProbation').textContent = `${Math.floor(dept.totalEmployees * 0.03)} employees`;
+        document.getElementById('detailTurnover').textContent = '1.2%';
+
+        openModal('departmentDetailModal');
+    }
+
+    // Delete department
+    function deleteDepartment(code) {
+        const dept = departments.find(d => d.code === code);
+        if (!dept) return;
+
+        departmentToDelete = code;
+        document.getElementById('deleteMessage').textContent = `Are you sure you want to delete the "${dept.name}" department? This action cannot be undone.`;
+        openModal('deleteConfirmationModal');
+    }
+
+    // Confirm delete
+    function confirmDeleteDepartment() {
+        if (!departmentToDelete) return;
+
+        departments = departments.filter(d => d.code !== departmentToDelete);
+        loadDepartmentsTable();
+        updateStats();
+        closeModal('deleteConfirmationModal');
+        showNotification('Department deleted successfully!', 'success');
+        departmentToDelete = null;
+    }
+
+    // Export departments
+    function exportDepartments() {
+        const data = JSON.stringify(departments, null, 2);
+        const blob = new Blob([data], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'departments-export.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        showNotification('Departments exported successfully!', 'success');
+    }
+
+    // Utility functions
+    function getKPIColor(score) {
+        if (score >= 90) return 'bg-green-500';
+        if (score >= 80) return 'bg-blue-500';
+        if (score >= 70) return 'bg-yellow-500';
+        return 'bg-red-500';
+    }
+
+    function formatDate(dateString) {
+        if (!dateString) return 'N/A';
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+    }
+
+    function showNotification(message, type) {
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
+            type === 'success' ? 'bg-green-100 text-green-800 border border-green-200' :
+            'bg-red-100 text-red-800 border border-red-200'
+        }`;
+        notification.innerHTML = `
+            <div class="flex items-center space-x-3">
+                <span class="material-icons-round">${type === 'success' ? 'check_circle' : 'error'}</span>
+                <span>${message}</span>
+            </div>
+        `;
+
+        document.body.appendChild(notification);
+
+        // Remove after 3 seconds
+        setTimeout(() => {
+            notification.remove();
+        }, 3000);
+    }
+
+    // Update window object for onclick handlers
+    window.openModal = openModal;
+    window.closeModal = closeModal;
+    window.viewDepartmentDetails = viewDepartmentDetails;
+    window.editDepartment = editDepartment;
+    window.deleteDepartment = deleteDepartment;
+    window.editDepartmentFromDetails = editDepartmentFromDetails;
+    window.confirmDeleteDepartment = confirmDeleteDepartment;
+    window.exportDepartments = exportDepartments;
+  </script>
+</main>
+</body>
+</html>

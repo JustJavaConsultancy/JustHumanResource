@@ -1,6 +1,6 @@
 package com.justjava.humanresource.payroll.statutory.service.impl;
 
-import com.justjava.humanresource.common.enums.RecordStatus;
+import com.justjava.humanresource.core.enums.RecordStatus;
 import com.justjava.humanresource.payroll.statutory.entity.PayeTaxBand;
 import com.justjava.humanresource.payroll.statutory.repositories.PayeTaxBandRepository;
 import com.justjava.humanresource.payroll.statutory.service.PayeCalculatorService;
