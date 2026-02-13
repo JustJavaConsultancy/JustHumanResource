@@ -4,8 +4,8 @@
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layout}">
 <head>
-    <meta charset="UTF-8">
-    <title>Title</title>
+  <meta charset="UTF-8">
+  <title>Title</title>
   <script>
     tailwind.config = {
         darkMode: "class",
@@ -222,6 +222,15 @@
         background-color: #f1f5f9;
         color: #64748b;
     }
+
+    /* Spinner animation */
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+    .animate-spin {
+        animation: spin 1s linear infinite;
+    }
   </style>
 </head>
 <body>
@@ -304,7 +313,7 @@
   </div>
 
   <div style="display:flex;justify-content:end;margin-bottom:20px">
-    <button onclick="openModal('addDepartmentModal')" class="hidden md:flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">
+    <button onclick="openAddDepartmentModal()" class="hidden md:flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">
       <span class="material-icons-round text-sm">add</span>
       <span>Add Department</span>
     </button>
@@ -313,7 +322,7 @@
   <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 mb-6">
     <div class="flex items-center justify-between mb-6">
       <h3 class="text-lg font-bold">Department Overview</h3>
-      <button onclick="openModal('addDepartmentModal')" class="md:hidden p-2 bg-primary-600 text-white rounded-lg">
+      <button onclick="openAddDepartmentModal()" class="md:hidden p-2 bg-primary-600 text-white rounded-lg">
         <span class="material-icons-round">add</span>
       </button>
     </div>
@@ -600,35 +609,29 @@
     </div>
   </div>
 
-  <!-- Add/Edit Department Modal -->
+  <!-- ADD Department Modal -->
   <div id="addDepartmentModal" class="fixed inset-0 z-50 hidden">
     <div class="modal-backdrop fixed inset-0"></div>
     <div class="fixed inset-0 flex items-center justify-center p-4 custom-scrollbar">
       <div class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-lg">
         <div class="p-6 border-b border-gray-200 dark:border-gray-700">
           <div class="flex justify-between items-center">
-            <h3 class="text-xl font-bold" id="modalTitle">Add New Department</h3>
+            <h3 class="text-xl font-bold">Add New Department</h3>
             <button onclick="closeModal('addDepartmentModal')" class="text-gray-400 hover:text-gray-600">
               <span class="material-icons-round">close</span>
             </button>
           </div>
         </div>
 
-        <form id="departmentForm" class="p-6">
-          <input type="hidden" id="departmentId">
+        <!-- Fixed th:action and method -->
+        <form th:action="@{/addDepartment}" method="post" id="addDepartmentForm" class="p-6">
+          <!-- Hidden field for status (will be set before submit) -->
+          <input type="hidden" id="addDepartmentStatus" value="ACTIVE">
 
           <div class="space-y-4">
             <div>
-              <label class="block text-sm font-medium mb-2">Department Code *</label>
-              <input type="text" id="departmentCode" required
-                     class="form-input"
-                     placeholder="Enter unique department code (e.g., ENG, SAL)">
-              <p class="text-xs text-gray-500 mt-1">Unique identifier for the department</p>
-            </div>
-
-            <div>
               <label class="block text-sm font-medium mb-2">Department Name *</label>
-              <input type="text" id="departmentName" required
+              <input type="text" name="departmentName" id="addDepartmentName" required
                      class="form-input"
                      placeholder="Enter department name">
             </div>
@@ -636,12 +639,13 @@
             <div>
               <label class="block text-sm font-medium mb-2">Status *</label>
               <div class="space-y-2">
+                <!-- Radios have NO name attribute (as requested) -->
                 <label class="flex items-center">
-                  <input type="radio" name="status" value="ACTIVE" checked class="text-primary-600">
+                  <input type="radio" value="ACTIVE" checked class="text-primary-600">
                   <span class="ml-2">Active</span>
                 </label>
                 <label class="flex items-center">
-                  <input type="radio" name="status" value="INACTIVE" class="text-primary-600">
+                  <input type="radio" value="INACTIVE" class="text-primary-600">
                   <span class="ml-2">Inactive</span>
                 </label>
               </div>
@@ -654,6 +658,70 @@
             </button>
             <button type="submit" class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
               Save Department
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- EDIT Department Modal -->
+  <div id="editDepartmentModal" class="fixed inset-0 z-50 hidden">
+    <div class="modal-backdrop fixed inset-0"></div>
+    <div class="fixed inset-0 flex items-center justify-center p-4 custom-scrollbar">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-lg">
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+          <div class="flex justify-between items-center">
+            <h3 class="text-xl font-bold">Edit Department</h3>
+            <button onclick="closeModal('editDepartmentModal')" class="text-gray-400 hover:text-gray-600">
+              <span class="material-icons-round">close</span>
+            </button>
+          </div>
+        </div>
+
+        <form id="editDepartmentForm" class="p-6" th:action="@{/updateDepartment}" method="post">
+          <input type="hidden" id="editDepartmentId" name="id">
+          <!-- Hidden field for status -->
+          <input type="hidden" name="status" id="editDepartmentStatus" value="ACTIVE">
+
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium mb-2">Department Code *</label>
+              <input type="text" id="editDepartmentCode" name="code" required
+                     class="form-input"
+                     placeholder="Enter unique department code (e.g., ENG, SAL)">
+              <p class="text-xs text-gray-500 mt-1">Unique identifier for the department</p>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium mb-2">Department Name *</label>
+              <input type="text" id="editDepartmentName" name="name" required
+                     class="form-input"
+                     placeholder="Enter department name">
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium mb-2">Status *</label>
+              <div class="space-y-2">
+                <!-- Radios have NO name -->
+                <label class="flex items-center">
+                  <input type="radio" value="ACTIVE" checked class="text-primary-600">
+                  <span class="ml-2">Active</span>
+                </label>
+                <label class="flex items-center">
+                  <input type="radio" value="INACTIVE" class="text-primary-600">
+                  <span class="ml-2">Inactive</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex justify-end space-x-3 pt-6 mt-6 border-t border-gray-200 dark:border-gray-700">
+            <button type="button" onclick="closeModal('editDepartmentModal')" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
+              Cancel
+            </button>
+            <button type="submit" class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
+              Update Department
             </button>
           </div>
         </form>
@@ -854,7 +922,7 @@
   </div>
 
   <script>
-    // Department Data matching your entity structure
+    // Department Data matching your entity structure (used for client-side display)
     let departments = [
         {
             id: 1,
@@ -937,32 +1005,38 @@
         const mobileOverlay = document.getElementById('mobileOverlay');
         const sidebar = document.querySelector('.sidebar-container');
 
-        menuToggle.addEventListener('click', () => {
-            sidebar.classList.toggle('open');
-            mobileOverlay.classList.toggle('hidden');
-            document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : 'auto';
-        });
+        if (menuToggle) {
+            menuToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('open');
+                mobileOverlay.classList.toggle('hidden');
+                document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : 'auto';
+            });
+        }
 
-        mobileOverlay.addEventListener('click', () => {
-            sidebar.classList.remove('open');
-            mobileOverlay.classList.add('hidden');
-            document.body.style.overflow = 'auto';
-        });
+        if (mobileOverlay) {
+            mobileOverlay.addEventListener('click', () => {
+                sidebar.classList.remove('open');
+                mobileOverlay.classList.add('hidden');
+                document.body.style.overflow = 'auto';
+            });
+        }
 
         // Theme Toggle
         const themeToggle = document.getElementById('themeToggle');
-        const themeIcon = themeToggle.querySelector('.material-icons-round');
+        const themeIcon = themeToggle?.querySelector('.material-icons-round');
 
-        themeToggle.addEventListener('click', () => {
-            const isDark = document.documentElement.classList.toggle('dark');
-            themeIcon.textContent = isDark ? 'light_mode' : 'dark_mode';
-            localStorage.setItem('theme', isDark ? 'dark' : 'light');
-        });
+        if (themeToggle) {
+            themeToggle.addEventListener('click', () => {
+                const isDark = document.documentElement.classList.toggle('dark');
+                themeIcon.textContent = isDark ? 'light_mode' : 'dark_mode';
+                localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            });
+        }
 
         // Initialize theme
         if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
             document.documentElement.classList.add('dark');
-            themeIcon.textContent = 'light_mode';
+            if (themeIcon) themeIcon.textContent = 'light_mode';
         }
 
         // Sidebar navigation active state
@@ -979,8 +1053,8 @@
                 this.classList.add('active');
 
                 if (window.innerWidth < 1024) {
-                    sidebar.classList.remove('open');
-                    mobileOverlay.classList.add('hidden');
+                    sidebar?.classList.remove('open');
+                    mobileOverlay?.classList.add('hidden');
                     document.body.style.overflow = 'auto';
                 }
             });
@@ -989,8 +1063,8 @@
         // Close sidebar on window resize
         window.addEventListener('resize', () => {
             if (window.innerWidth >= 1024) {
-                sidebar.classList.remove('open');
-                mobileOverlay.classList.add('hidden');
+                sidebar?.classList.remove('open');
+                mobileOverlay?.classList.add('hidden');
                 document.body.style.overflow = 'auto';
             }
         });
@@ -1001,14 +1075,56 @@
             filterDepartments(searchTerm);
         });
 
-        // Department form submission
-        document.getElementById('departmentForm')?.addEventListener('submit', function(e) {
-            e.preventDefault();
-            saveDepartment();
+        // Add form submission – now with validation, button disable, and actual POST
+        document.getElementById('addDepartmentForm')?.addEventListener('submit', function(e) {
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const name = document.getElementById('addDepartmentName').value.trim();
+
+            // Validate
+            if (!name) {
+                alert('Please fill in all required fields');
+                e.preventDefault(); // stop submission
+                return;
+            }
+
+            // Set the hidden status field based on selected radio
+            const selectedRadio = document.querySelector('#addDepartmentModal input[type="radio"]:checked');
+            if (selectedRadio) {
+                document.getElementById('addDepartmentStatus').value = selectedRadio.value;
+            }
+
+            // Disable button to prevent double submission
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="material-icons-round text-sm animate-spin">sync</span> Saving...';
+
+            // Allow form to submit normally (no preventDefault)
+        });
+
+        // Edit form submission – similar handling
+        document.getElementById('editDepartmentForm')?.addEventListener('submit', function(e) {
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const code = document.getElementById('editDepartmentCode').value.trim();
+            const name = document.getElementById('editDepartmentName').value.trim();
+
+            if (!code || !name) {
+                alert('Please fill in all required fields');
+                e.preventDefault();
+                return;
+            }
+
+            const selectedRadio = document.querySelector('#editDepartmentModal input[type="radio"]:checked');
+            if (selectedRadio) {
+                document.getElementById('editDepartmentStatus').value = selectedRadio.value;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="material-icons-round text-sm animate-spin">sync</span> Updating...';
+
+            // Allow form to submit
         });
     });
 
-    // Load departments into table
+    // Load departments into table (client-side)
     function loadDepartmentsTable() {
         const table = document.getElementById('departmentsTable');
         table.innerHTML = '';
@@ -1102,28 +1218,40 @@
         });
     });
 
-    // Open add department modal
+    // Open add department modal – reset button state
     function openAddDepartmentModal() {
-        document.getElementById('modalTitle').textContent = 'Add New Department';
-        document.getElementById('departmentForm').reset();
-        document.getElementById('departmentId').value = '';
+        document.getElementById('addDepartmentForm').reset();
+        // Reset hidden status to default ACTIVE
+        document.getElementById('addDepartmentStatus').value = 'ACTIVE';
+        const btn = document.querySelector('#addDepartmentForm button[type="submit"]');
+        btn.disabled = false;
+        btn.innerHTML = 'Save Department';
         openModal('addDepartmentModal');
     }
 
-    // Edit department
+    // Edit department – populate edit modal and reset button
     function editDepartment(code) {
         const dept = departments.find(d => d.code === code);
         if (!dept) return;
 
-        document.getElementById('modalTitle').textContent = 'Edit Department';
-        document.getElementById('departmentId').value = dept.id;
-        document.getElementById('departmentCode').value = dept.code;
-        document.getElementById('departmentName').value = dept.name;
+        document.getElementById('editDepartmentId').value = dept.id;
+        document.getElementById('editDepartmentCode').value = dept.code;
+        document.getElementById('editDepartmentName').value = dept.name;
 
         // Set status radio button
-        document.querySelector(`input[name="status"][value="${dept.status}"]`).checked = true;
+        const statusRadios = document.querySelectorAll('#editDepartmentModal input[type="radio"]');
+        statusRadios.forEach(radio => {
+            radio.checked = (radio.value === dept.status);
+        });
+        // Update hidden status field
+        document.getElementById('editDepartmentStatus').value = dept.status;
 
-        openModal('addDepartmentModal');
+        // Reset submit button
+        const btn = document.querySelector('#editDepartmentForm button[type="submit"]');
+        btn.disabled = false;
+        btn.innerHTML = 'Update Department';
+
+        openModal('editDepartmentModal');
     }
 
     // Edit from details modal
@@ -1133,85 +1261,24 @@
         editDepartment(code);
     }
 
-    // Save department
-    function saveDepartment() {
-        const id = document.getElementById('departmentId').value;
-        const code = document.getElementById('departmentCode').value.trim().toUpperCase();
-        const name = document.getElementById('departmentName').value.trim();
-        const status = document.querySelector('input[name="status"]:checked').value;
-
-        // Validate
-        if (!code || !name) {
-            alert('Please fill in all required fields');
-            return;
-        }
-
-        // Check for duplicate code (if new department or code changed)
-        if (!id || departments.find(d => d.id == id)?.code !== code) {
-            if (departments.some(d => d.code === code)) {
-                alert('Department code must be unique');
-                return;
-            }
-        }
-
-        if (id) {
-            // Update existing department
-            const index = departments.findIndex(d => d.id == id);
-            if (index !== -1) {
-                departments[index] = {
-                    ...departments[index],
-                    code,
-                    name,
-                    status,
-                    updatedDate: new Date().toISOString().split('T')[0]
-                };
-            }
-        } else {
-            // Add new department
-            const newId = departments.length > 0 ? Math.max(...departments.map(d => d.id)) + 1 : 1;
-            departments.push({
-                id: newId,
-                code,
-                name,
-                status,
-                createdDate: new Date().toISOString().split('T')[0],
-                updatedDate: new Date().toISOString().split('T')[0],
-                totalEmployees: 0,
-                vacancies: 0,
-                avgKPI: 0
-            });
-        }
-
-        closeModal('addDepartmentModal');
-        loadDepartmentsTable();
-        updateStats();
-        showNotification('Department saved successfully!', 'success');
-    }
-
     // View department details
     function viewDepartmentDetails(code) {
         const dept = departments.find(d => d.code === code);
         if (!dept) return;
 
-        // Set basic info
         document.getElementById('detailDepartmentName').textContent = dept.name;
         document.getElementById('detailDepartmentCode').textContent = dept.code;
-
-        // Set stats
         document.getElementById('detailTotalEmployees').textContent = dept.totalEmployees;
         document.getElementById('detailVacancies').textContent = dept.vacancies;
         document.getElementById('detailAvgKPI').textContent = `${dept.avgKPI}/100`;
 
-        // Set status
         const statusElement = document.getElementById('detailStatus');
         statusElement.textContent = dept.status === 'ACTIVE' ? 'Active' : 'Inactive';
         statusElement.className = dept.status === 'ACTIVE' ? 'status-active department-badge inline-block' : 'status-inactive department-badge inline-block';
 
-        // Set dates
         document.getElementById('detailCreatedDate').textContent = formatDate(dept.createdDate);
         document.getElementById('detailUpdatedDate').textContent = formatDate(dept.updatedDate);
 
-        // Set additional details (simulated data)
         document.getElementById('detailOnLeave').textContent = `${Math.floor(dept.totalEmployees * 0.04)} employees`;
         document.getElementById('detailProbation').textContent = `${Math.floor(dept.totalEmployees * 0.03)} employees`;
         document.getElementById('detailTurnover').textContent = '1.2%';
@@ -1229,7 +1296,7 @@
         openModal('deleteConfirmationModal');
     }
 
-    // Confirm delete
+    // Confirm delete (client-side only)
     function confirmDeleteDepartment() {
         if (!departmentToDelete) return;
 
@@ -1276,7 +1343,6 @@
     }
 
     function showNotification(message, type) {
-        // Create notification element
         const notification = document.createElement('div');
         notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
             type === 'success' ? 'bg-green-100 text-green-800 border border-green-200' :
@@ -1290,8 +1356,6 @@
         `;
 
         document.body.appendChild(notification);
-
-        // Remove after 3 seconds
         setTimeout(() => {
             notification.remove();
         }, 3000);
@@ -1306,6 +1370,7 @@
     window.editDepartmentFromDetails = editDepartmentFromDetails;
     window.confirmDeleteDepartment = confirmDeleteDepartment;
     window.exportDepartments = exportDepartments;
+    window.openAddDepartmentModal = openAddDepartmentModal;
   </script>
 </main>
 </body>
