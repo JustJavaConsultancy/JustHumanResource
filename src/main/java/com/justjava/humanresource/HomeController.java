@@ -1,6 +1,6 @@
 package com.justjava.humanresource;
 
-import com.justjava.humanresource.aau.AuthenticationManager;
+import com.justjava.humanresource.core.config.AuthenticationManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;

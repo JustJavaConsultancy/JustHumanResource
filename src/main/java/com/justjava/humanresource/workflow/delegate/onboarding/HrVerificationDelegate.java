@@ -6,21 +6,23 @@ import com.justjava.humanresource.onboarding.repositories.EmployeeOnboardingRepo
 import lombok.RequiredArgsConstructor;
 import org.flowable.engine.delegate.DelegateExecution;
 import org.flowable.engine.delegate.JavaDelegate;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-@Component
+@Component("hrVerificationDelegate")
 @RequiredArgsConstructor
 public class HrVerificationDelegate implements JavaDelegate {
 
-    private final EmployeeOnboardingRepository onboardingRepository;
+    @Autowired
+    EmployeeOnboardingRepository onboardingRepository;
 
     @Override
     public void execute(DelegateExecution execution) {
 
-        String processInstanceId = execution.getProcessInstanceId();
+        Long onboardingId = (Long) execution.getVariable("onboardingId");
 
         EmployeeOnboarding onboarding =
-                onboardingRepository.findByProcessInstanceId(processInstanceId)
+                onboardingRepository.findById(onboardingId)
                         .orElseThrow();
 
         onboarding.setStatus(OnboardingStatus.HR_VERIFIED);

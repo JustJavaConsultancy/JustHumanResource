@@ -8,7 +8,7 @@ import org.flowable.engine.delegate.DelegateExecution;
 import org.flowable.engine.delegate.JavaDelegate;
 import org.springframework.stereotype.Component;
 
-@Component
+@Component("DocumentVerificationDelegate")
 @RequiredArgsConstructor
 public class DocumentVerificationDelegate implements JavaDelegate {
 
@@ -17,9 +17,10 @@ public class DocumentVerificationDelegate implements JavaDelegate {
     @Override
     public void execute(DelegateExecution execution) {
 
+        Long onboardingId = (Long) execution.getVariable("onboardingId");
+
         EmployeeOnboarding onboarding =
-                onboardingRepository
-                        .findByProcessInstanceId(execution.getProcessInstanceId())
+                onboardingRepository.findById(onboardingId)
                         .orElseThrow();
 
         onboarding.setStatus(OnboardingStatus.DOCS_VERIFIED);

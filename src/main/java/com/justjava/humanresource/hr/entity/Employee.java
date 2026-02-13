@@ -11,13 +11,11 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
+import org.springframework.data.annotation.CreatedDate;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Getter
 @Setter
@@ -25,6 +23,7 @@ import java.time.LocalDate;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
+@ToString
 @Table(name = "employees")
 public class Employee extends BaseEntity {
 
@@ -64,6 +63,16 @@ public class Employee extends BaseEntity {
     @JoinColumn(name = "pay_group_id")
     private PayGroup payGroup;
 
+    /** Payroll still independent */
     private boolean payrollEnabled;
+
+    /** KPI readiness flag */
+    private boolean kpiEnabled;
+    @Column(updatable = false)
+
+    @CreatedDate
+    private LocalDateTime createdAt;
+
+    private LocalDateTime activatedAt;
 
 }

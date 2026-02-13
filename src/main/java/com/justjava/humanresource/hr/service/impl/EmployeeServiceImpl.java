@@ -34,20 +34,18 @@ public class EmployeeServiceImpl implements EmployeeService {
     @Override
     public Employee createEmployee(EmployeeDTO dto) {
         Employee employee = employeeMapper.toEntity(dto);
-
-        Employee saved = employeeRepository.save(employee);
-
-        /*
-         * First salary assignment is treated as a salary change.
-         * This intentionally triggers first payroll.
-         */
-        eventPublisher.publishEvent(
-                new SalaryChangedEvent(saved, LocalDate.now())
-        );
-
-        return saved;
+        return employeeRepository.save(employee);
     }
+    public Employee createAndActivateEmployee(EmployeeDTO dto) {
 
+        Employee employee = createEmployee(dto);
+
+        return changeEmploymentStatus(
+                employee.getId(),
+                EmploymentStatus.ACTIVE,
+                LocalDate.now()
+        );
+    }
     @Override
     public Employee getByEmployeeNumber(String employeeNumber) {
         return employeeRepository.findByEmployeeNumber(employeeNumber)

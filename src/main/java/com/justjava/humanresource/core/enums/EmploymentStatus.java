@@ -7,5 +7,6 @@ public enum EmploymentStatus {
     RESIGNED,
     RETIRED,
     ONBOARDING,
+    ACTIVE,
 
 }
