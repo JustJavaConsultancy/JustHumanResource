@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" xmlns:th="http://www.w3.org/1999/xhtml"
+      layout:decorate="layouts/employeeLayout">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+  <script>
+    tailwind.config = {
+        darkMode: "class",
+        theme: {
+            extend: {
+                colors: {
+                    primary: {
+                        50: '#eff6ff',
+                        100: '#dbeafe',
+                        200: '#bfdbfe',
+                        300: '#93c5fd',
+                        400: '#60a5fa',
+                        500: '#3b82f6',
+                        600: '#2563eb',
+                        700: '#1d4ed8',
+                        800: '#1e40af',
+                        900: '#1e3a8a',
+                    },
+                    secondary: {
+                        50: '#f8fafc',
+                        100: '#f1f5f9',
+                        200: '#e2e8f0',
+                        300: '#cbd5e1',
+                        400: '#94a3b8',
+                        500: '#64748b',
+                        600: '#475569',
+                        700: '#334155',
+                        800: '#1e293b',
+                        900: '#0f172a',
+                    }
+                },
+                fontFamily: {
+                    'sans': ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                },
+                borderRadius: {
+                    'xl': '1rem',
+                    '2xl': '1.5rem',
+                },
+                boxShadow: {
+                    'card': '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)',
+                    'card-hover': '0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.02)',
+                }
+            },
+        },
+    };
+  </script>
+  <style>
+    * {
+        font-family: 'Inter', sans-serif;
+    }
+
+    body {
+        overflow-x: hidden;
+    }
+
+    .sidebar-item {
+        transition: all 0.2s ease;
+        position: relative;
+    }
+
+    .sidebar-item.active {
+        background-color: rgba(59, 130, 246, 0.08);
+        color: #2563eb;
+        border-left: 3px solid #2563eb;
+        font-weight: 500;
+    }
+
+    .sidebar-item.active .material-icons-round {
+        color: #2563eb;
+    }
+
+    .sidebar-item:hover:not(.active) {
+        background-color: rgba(59, 130, 246, 0.04);
+    }
+
+    .dark .sidebar-item.active {
+        background-color: rgba(59, 130, 246, 0.15);
+        color: #60a5fa;
+    }
+
+    .dark .sidebar-item.active .material-icons-round {
+        color: #60a5fa;
+    }
+
+    .badge {
+        padding: 0.25rem 0.75rem;
+        font-size: 0.7rem;
+        font-weight: 600;
+        border-radius: 9999px;
+        letter-spacing: 0.025em;
+        text-transform: uppercase;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .badge-success {
+        background-color: #dcfce7;
+        color: #15803d;
+    }
+
+    .badge-warning {
+        background-color: #fef3c7;
+        color: #b45309;
+    }
+
+    .badge-error {
+        background-color: #fee2e2;
+        color: #b91c1c;
+    }
+
+    .badge-info {
+        background-color: #dbeafe;
+        color: #1e40af;
+    }
+
+    .badge-neutral {
+        background-color: #f3f4f6;
+        color: #4b5563;
+    }
+
+    .dark .badge-success {
+        background-color: #14532d;
+        color: #86efac;
+    }
+
+    .dark .badge-warning {
+        background-color: #92400e;
+        color: #fde68a;
+    }
+
+    .dark .badge-error {
+        background-color: #7f1d1d;
+        color: #fecaca;
+    }
+
+    .dark .badge-info {
+        background-color: #1e3a8a;
+        color: #bfdbfe;
+    }
+
+    /* Custom scrollbar */
+    .sidebar-scroll::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    .sidebar-scroll::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .sidebar-scroll::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+
+    .dark .sidebar-scroll::-webkit-scrollbar-thumb {
+        background: #4b5563;
+    }
+
+    /* Fixed sidebar */
+    .sidebar-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        width: 16rem;
+        z-index: 40;
+        overflow-y: auto;
+    }
+
+    .main-content {
+        margin-left: 16rem;
+        width: calc(100% - 16rem);
+        min-height: 100vh;
+    }
+
+    @media (max-width: 1023px) {
+        .sidebar-container {
+            transform: translateX(-100%);
+        }
+
+        .sidebar-container.open {
+            transform: translateX(0);
+        }
+
+        .main-content {
+            margin-left: 0;
+            width: 100%;
+        }
+    }
+
+    /* Card styles */
+    .leave-card {
+        background-color: white;
+        border-radius: 1rem;
+        border: 1px solid #e5e7eb;
+        transition: box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+
+    .dark .leave-card {
+        background-color: #1f2937;
+        border-color: #374151;
+    }
+
+    .leave-card:hover {
+        border-color: #d1d5db;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+    }
+
+    .dark .leave-card:hover {
+        border-color: #4b5563;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
+    }
+
+    .section-title {
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #6b7280;
+    }
+
+    .dark .section-title {
+        color: #9ca3af;
+    }
+
+    /* Modal styles */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 100;
+        padding: 1rem;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.2s ease, visibility 0.2s ease;
+    }
+
+    .modal-overlay.active {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    .modal-container {
+        max-width: 32rem;
+        width: 100%;
+        max-height: 90vh;
+        overflow-y: auto;
+        background-color: white;
+        border-radius: 1rem;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.02);
+        transform: scale(0.95);
+        transition: transform 0.2s ease;
+    }
+
+    .dark .modal-container {
+        background-color: #1f2937;
+        border: 1px solid #374151;
+    }
+
+    .modal-overlay.active .modal-container {
+        transform: scale(1);
+    }
+
+    .table-header {
+        background-color: #f9fafb;
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #6b7280;
+    }
+
+    .dark .table-header {
+        background-color: #111827;
+        color: #9ca3af;
+    }
+
+    .table-row:hover {
+        background-color: #f9fafb;
+    }
+
+    .dark .table-row:hover {
+        background-color: #1e293b;
+    }
+  </style>
+</head>
+<body>
+<main layout:fragment="content">
+
+  <!-- Header with Request Button -->
+  <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+    <div>
+      <h3 class="text-lg font-bold text-gray-900 dark:text-white">Leave Overview</h3>
+      <p class="text-sm text-gray-500 dark:text-gray-400">Current leave year: Jan 2025 – Dec 2025</p>
+    </div>
+    <button id="requestLeaveBtn" class="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-sm font-medium transition-colors flex items-center justify-center shadow-sm">
+      <span class="material-icons-round text-sm mr-2">add</span> Request Leave
+    </button>
+  </div>
+
+  <!-- Leave Balance Cards -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5 mb-6">
+    <!-- Annual Leave -->
+    <div class="leave-card p-5">
+      <div class="flex items-center justify-between mb-3">
+        <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
+          <span class="material-icons-round text-blue-600 dark:text-blue-400">beach_access</span>
+        </div>
+        <span class="text-xs text-gray-500 dark:text-gray-400">Annual</span>
+      </div>
+      <p class="text-2xl font-bold text-gray-900 dark:text-white">16 <span class="text-sm font-normal text-gray-500">days</span></p>
+      <div class="mt-2">
+        <div class="flex items-center justify-between text-xs mb-1">
+          <span class="text-gray-500">Used: 9 days</span>
+          <span class="font-medium text-gray-700 dark:text-gray-300">25 total</span>
+        </div>
+        <div class="progress-bar h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+          <div class="progress-fill bg-blue-600 h-full rounded-full" style="width: 36%"></div>
+        </div>
+      </div>
+    </div>
+    <!-- Sick Leave -->
+    <div class="leave-card p-5">
+      <div class="flex items-center justify-between mb-3">
+        <div class="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center">
+          <span class="material-icons-round text-green-600 dark:text-green-400">healing</span>
+        </div>
+        <span class="text-xs text-gray-500 dark:text-gray-400">Sick</span>
+      </div>
+      <p class="text-2xl font-bold text-gray-900 dark:text-white">8 <span class="text-sm font-normal text-gray-500">days</span></p>
+      <div class="mt-2">
+        <div class="flex items-center justify-between text-xs mb-1">
+          <span class="text-gray-500">Used: 4 days</span>
+          <span class="font-medium text-gray-700 dark:text-gray-300">12 total</span>
+        </div>
+        <div class="progress-bar h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+          <div class="progress-fill bg-green-600 h-full rounded-full" style="width: 33%"></div>
+        </div>
+      </div>
+    </div>
+    <!-- Unpaid Leave -->
+    <div class="leave-card p-5">
+      <div class="flex items-center justify-between mb-3">
+        <div class="w-10 h-10 bg-orange-100 dark:bg-orange-900/30 rounded-xl flex items-center justify-center">
+          <span class="material-icons-round text-orange-600 dark:text-orange-400">money_off</span>
+        </div>
+        <span class="text-xs text-gray-500 dark:text-gray-400">Unpaid</span>
+      </div>
+      <p class="text-2xl font-bold text-gray-900 dark:text-white">5 <span class="text-sm font-normal text-gray-500">days</span></p>
+      <div class="mt-2">
+        <div class="flex items-center justify-between text-xs mb-1">
+          <span class="text-gray-500">Used: 2 days</span>
+          <span class="font-medium text-gray-700 dark:text-gray-300">7 total</span>
+        </div>
+        <div class="progress-bar h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+          <div class="progress-fill bg-orange-600 h-full rounded-full" style="width: 28%"></div>
+        </div>
+      </div>
+    </div>
+    <!-- Maternity/Paternity -->
+    <div class="leave-card p-5">
+      <div class="flex items-center justify-between mb-3">
+        <div class="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center">
+          <span class="material-icons-round text-purple-600 dark:text-purple-400">family_restroom</span>
+        </div>
+        <span class="text-xs text-gray-500 dark:text-gray-400">Maternity</span>
+      </div>
+      <p class="text-2xl font-bold text-gray-900 dark:text-white">0 <span class="text-sm font-normal text-gray-500">days</span></p>
+      <div class="mt-2">
+        <div class="flex items-center justify-between text-xs mb-1">
+          <span class="text-gray-500">Used: 0 days</span>
+          <span class="font-medium text-gray-700 dark:text-gray-300">90 total</span>
+        </div>
+        <div class="progress-bar h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+          <div class="progress-fill bg-purple-600 h-full rounded-full" style="width: 0%"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Requests + Upcoming Leave -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+    <!-- Recent Requests Table (2/3 width) -->
+    <div class="lg:col-span-2">
+      <div class="leave-card p-5 md:p-6">
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center space-x-2">
+            <span class="material-icons-round text-primary-600 dark:text-primary-400">history</span>
+            <h4 class="section-title mb-0">Recent Leave Requests</h4>
+          </div>
+          <a href="#" class="text-primary-600 hover:text-primary-700 text-sm font-medium flex items-center">
+            View Full History
+            <span class="material-icons-round text-sm ml-1">arrow_forward</span>
+          </a>
+        </div>
+
+        <div class="overflow-x-auto -mx-5 md:-mx-6 px-5 md:px-6 pb-1">
+          <table class="w-full min-w-[600px]">
+            <thead>
+            <tr class="table-header border-b border-gray-200 dark:border-gray-700">
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Leave Type</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Start Date</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">End Date</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Days</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Status</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Actions</th>
+            </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+            <tr class="table-row">
+              <td class="px-4 py-3.5 text-sm">
+                                            <span class="flex items-center">
+                                                <span class="material-icons-round text-blue-500 text-sm mr-1.5">beach_access</span>
+                                                Annual Leave
+                                            </span>
+              </td>
+              <td class="px-4 py-3.5 text-sm">21 Mar 2025</td>
+              <td class="px-4 py-3.5 text-sm">25 Mar 2025</td>
+              <td class="px-4 py-3.5 text-sm font-medium">5</td>
+              <td class="px-4 py-3.5">
+                <span class="badge badge-success">Approved (Paid)</span>
+              </td>
+              <td class="px-4 py-3.5">
+                <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                  <span class="material-icons-round text-sm">more_vert</span>
+                </button>
+              </td>
+            </tr>
+            <tr class="table-row">
+              <td class="px-4 py-3.5 text-sm">
+                                            <span class="flex items-center">
+                                                <span class="material-icons-round text-green-500 text-sm mr-1.5">healing</span>
+                                                Sick Leave
+                                            </span>
+              </td>
+              <td class="px-4 py-3.5 text-sm">10 Feb 2025</td>
+              <td class="px-4 py-3.5 text-sm">10 Feb 2025</td>
+              <td class="px-4 py-3.5 text-sm font-medium">1</td>
+              <td class="px-4 py-3.5">
+                <span class="badge badge-error">Rejected</span>
+              </td>
+              <td class="px-4 py-3.5">
+                <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                  <span class="material-icons-round text-sm">more_vert</span>
+                </button>
+              </td>
+            </tr>
+            <tr class="table-row">
+              <td class="px-4 py-3.5 text-sm">
+                                            <span class="flex items-center">
+                                                <span class="material-icons-round text-orange-500 text-sm mr-1.5">money_off</span>
+                                                Unpaid Leave
+                                            </span>
+              </td>
+              <td class="px-4 py-3.5 text-sm">05 Jan 2025</td>
+              <td class="px-4 py-3.5 text-sm">06 Jan 2025</td>
+              <td class="px-4 py-3.5 text-sm font-medium">2</td>
+              <td class="px-4 py-3.5">
+                <span class="badge badge-success">Approved (Unpaid)</span>
+              </td>
+              <td class="px-4 py-3.5">
+                <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                  <span class="material-icons-round text-sm">more_vert</span>
+                </button>
+              </td>
+            </tr>
+            <tr class="table-row">
+              <td class="px-4 py-3.5 text-sm">
+                                            <span class="flex items-center">
+                                                <span class="material-icons-round text-blue-500 text-sm mr-1.5">beach_access</span>
+                                                Annual Leave
+                                            </span>
+              </td>
+              <td class="px-4 py-3.5 text-sm">15 Dec 2024</td>
+              <td class="px-4 py-3.5 text-sm">20 Dec 2024</td>
+              <td class="px-4 py-3.5 text-sm font-medium">6</td>
+              <td class="px-4 py-3.5">
+                <span class="badge badge-success">Approved (Paid)</span>
+              </td>
+              <td class="px-4 py-3.5">
+                <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                  <span class="material-icons-round text-sm">more_vert</span>
+                </button>
+              </td>
+            </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Upcoming Leave / Quick Summary (1/3 width) -->
+    <div class="lg:col-span-1">
+      <div class="leave-card p-5 md:p-6 h-full">
+        <div class="flex items-center space-x-2 mb-4">
+          <span class="material-icons-round text-primary-600 dark:text-primary-400">upcoming</span>
+          <h4 class="section-title mb-0">Upcoming Leave</h4>
+        </div>
+
+        <div class="flex flex-col items-center justify-center py-4">
+          <span class="material-icons-round text-gray-300 dark:text-gray-600 text-5xl mb-2">event_busy</span>
+          <p class="text-gray-500 dark:text-gray-400 text-sm text-center">No upcoming leave scheduled</p>
+          <button id="quickRequestBtn" class="mt-3 text-primary-600 hover:text-primary-700 text-sm font-medium flex items-center">
+            <span class="material-icons-round text-sm mr-1">add_circle</span> Request Leave
+          </button>
+        </div>
+
+        <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <div class="flex items-center justify-between text-sm">
+            <span class="text-gray-600 dark:text-gray-300">Leave taken this year</span>
+            <span class="font-semibold text-gray-900 dark:text-white">15 days</span>
+          </div>
+          <div class="flex items-center justify-between text-sm mt-2">
+            <span class="text-gray-600 dark:text-gray-300">Pending requests</span>
+            <span class="font-semibold text-yellow-600 dark:text-yellow-400">0</span>
+          </div>
+          <div class="flex items-center justify-between text-sm mt-2">
+            <span class="text-gray-600 dark:text-gray-300">Remaining (Annual)</span>
+            <span class="font-semibold text-gray-900 dark:text-white">16 days</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leave Policy Summary -->
+  <div class="leave-card p-5 md:p-6">
+    <div class="flex items-start justify-between">
+      <div class="flex items-start space-x-3">
+        <div class="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+          <span class="material-icons-round text-blue-600 dark:text-blue-400 text-sm">description</span>
+        </div>
+        <div>
+          <h4 class="text-sm font-semibold text-gray-900 dark:text-white mb-1">Leave Policy Summary</h4>
+          <p class="text-xs text-gray-500 dark:text-gray-400">Annual leave: 25 days/year · Sick leave: 12 days/year · Unpaid leave: at manager's discretion · Carryover max 5 days</p>
+          <a href="#" class="inline-flex items-center text-primary-600 hover:text-primary-700 text-xs font-medium mt-2">
+            View Full Policy
+            <span class="material-icons-round text-xs ml-1">open_in_new</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== MODAL: Request Leave ========== -->
+  <div id="requestLeaveModal" class="modal-overlay">
+    <div class="modal-container p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-bold text-gray-900 dark:text-white">Request Leave</h3>
+        <button class="close-modal text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+          <span class="material-icons-round">close</span>
+        </button>
+      </div>
+      <form class="space-y-4">
+        <div>
+          <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Leave Type</label>
+          <select class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none">
+            <option>Annual Leave</option>
+            <option>Sick Leave</option>
+            <option>Unpaid Leave</option>
+            <option>Maternity Leave</option>
+            <option>Paternity Leave</option>
+          </select>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Start Date</label>
+            <input type="date" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-primary-500">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">End Date</label>
+            <input type="date" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-primary-500">
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Number of Days</label>
+          <input type="number" placeholder="Auto-calculated" readonly class="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Reason / Comments</label>
+          <textarea rows="3" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-primary-500" placeholder="Please provide a reason for your leave request"></textarea>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Attachment (optional)</label>
+          <div class="flex items-center space-x-2">
+            <label class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer flex items-center justify-center">
+              <span class="material-icons-round text-sm mr-1">attach_file</span> Choose File
+              <input type="file" class="hidden">
+            </label>
+            <span class="text-xs text-gray-500">No file chosen</span>
+          </div>
+        </div>
+      </form>
+      <div class="flex justify-end space-x-3 mt-6">
+        <button class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 close-modal">Cancel</button>
+        <button class="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700">Submit Request</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ========== MODAL CONTROL ==========
+    const modal = document.getElementById('requestLeaveModal');
+
+    // Open modal
+    function openModal() {
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+
+    // Close modal
+    function closeModal() {
+        modal.classList.remove('active');
+        document.body.style.overflow = 'auto';
+    }
+
+    // Attach open events
+    document.getElementById('requestLeaveBtn').addEventListener('click', (e) => {
+        e.preventDefault();
+        openModal();
+    });
+    document.getElementById('quickRequestBtn').addEventListener('click', (e) => {
+        e.preventDefault();
+        openModal();
+    });
+
+    // Close via close buttons
+    document.querySelectorAll('.close-modal').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            closeModal();
+        });
+    });
+
+    // Close when clicking overlay
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+
+    // Prevent closing when clicking inside modal container
+    document.querySelector('.modal-container').addEventListener('click', (e) => {
+        e.stopPropagation();
+    });
+
+    // ========== MOBILE SIDEBAR ==========
+    const menuToggle = document.getElementById('menuToggle');
+    const mobileOverlay = document.getElementById('mobileOverlay');
+    const sidebar = document.querySelector('.sidebar-container');
+
+    if (menuToggle && mobileOverlay && sidebar) {
+        menuToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('open');
+            mobileOverlay.classList.toggle('hidden');
+            document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : 'auto';
+        });
+
+        mobileOverlay.addEventListener('click', () => {
+            sidebar.classList.remove('open');
+            mobileOverlay.classList.add('hidden');
+            document.body.style.overflow = 'auto';
+        });
+    }
+
+    // ========== THEME TOGGLE ==========
+    const themeToggle = document.getElementById('themeToggle');
+    const themeIcon = themeToggle.querySelector('.material-icons-round');
+
+    themeToggle.addEventListener('click', () => {
+        const isDark = document.documentElement.classList.toggle('dark');
+        themeIcon.textContent = isDark ? 'light_mode' : 'dark_mode';
+        localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    });
+
+    // Initialize theme
+    if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+        themeIcon.textContent = 'light_mode';
+    }
+
+    // Sidebar active state
+    document.querySelectorAll('.sidebar-item').forEach(item => {
+        item.addEventListener('click', function(e) {
+            if (this.getAttribute('href') === '#') {
+                e.preventDefault();
+            }
+            document.querySelectorAll('.sidebar-item').forEach(nav => {
+                nav.classList.remove('active');
+            });
+            this.classList.add('active');
+
+            if (window.innerWidth < 1024) {
+                sidebar.classList.remove('open');
+                mobileOverlay.classList.add('hidden');
+                document.body.style.overflow = 'auto';
+            }
+        });
+    });
+
+    // Close sidebar on window resize
+    window.addEventListener('resize', () => {
+        if (window.innerWidth >= 1024) {
+            sidebar?.classList.remove('open');
+            mobileOverlay?.classList.add('hidden');
+            document.body.style.overflow = 'auto';
+        }
+    });
+  </script>
+</main>
+</body>
+</html>

@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" xmlns:th="http://www.w3.org/1999/xhtml"
+      layout:decorate="layouts/employeeLayout">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+  <script>
+    tailwind.config = {
+        darkMode: "class",
+        theme: {
+            extend: {
+                colors: {
+                    primary: {
+                        50: '#eff6ff',
+                        100: '#dbeafe',
+                        200: '#bfdbfe',
+                        300: '#93c5fd',
+                        400: '#60a5fa',
+                        500: '#3b82f6',
+                        600: '#2563eb',
+                        700: '#1d4ed8',
+                        800: '#1e40af',
+                        900: '#1e3a8a',
+                    },
+                    secondary: {
+                        50: '#f8fafc',
+                        100: '#f1f5f9',
+                        200: '#e2e8f0',
+                        300: '#cbd5e1',
+                        400: '#94a3b8',
+                        500: '#64748b',
+                        600: '#475569',
+                        700: '#334155',
+                        800: '#1e293b',
+                        900: '#0f172a',
+                    }
+                },
+                fontFamily: {
+                    'sans': ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                },
+                borderRadius: {
+                    'xl': '1rem',
+                    '2xl': '1.5rem',
+                },
+                boxShadow: {
+                    'card': '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)',
+                    'card-hover': '0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.02)',
+                }
+            },
+        },
+    };
+  </script>
+  <style>
+    * {
+        font-family: 'Inter', sans-serif;
+    }
+
+    body {
+        overflow-x: hidden;
+    }
+
+    .sidebar-item {
+        transition: all 0.2s ease;
+        position: relative;
+    }
+
+    .sidebar-item.active {
+        background-color: rgba(59, 130, 246, 0.08);
+        color: #2563eb;
+        border-left: 3px solid #2563eb;
+        font-weight: 500;
+    }
+
+    .sidebar-item.active .material-icons-round {
+        color: #2563eb;
+    }
+
+    .sidebar-item:hover:not(.active) {
+        background-color: rgba(59, 130, 246, 0.04);
+    }
+
+    .dark .sidebar-item.active {
+        background-color: rgba(59, 130, 246, 0.15);
+        color: #60a5fa;
+    }
+
+    .dark .sidebar-item.active .material-icons-round {
+        color: #60a5fa;
+    }
+
+    .badge {
+        padding: 0.25rem 0.75rem;
+        font-size: 0.7rem;
+        font-weight: 600;
+        border-radius: 9999px;
+        letter-spacing: 0.025em;
+        text-transform: uppercase;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .badge-success {
+        background-color: #dcfce7;
+        color: #15803d;
+    }
+
+    .badge-warning {
+        background-color: #fef3c7;
+        color: #b45309;
+    }
+
+    .badge-error {
+        background-color: #fee2e2;
+        color: #b91c1c;
+    }
+
+    .badge-info {
+        background-color: #dbeafe;
+        color: #1e40af;
+    }
+
+    .badge-neutral {
+        background-color: #f3f4f6;
+        color: #4b5563;
+    }
+
+    .dark .badge-success {
+        background-color: #14532d;
+        color: #86efac;
+    }
+
+    .dark .badge-warning {
+        background-color: #92400e;
+        color: #fde68a;
+    }
+
+    .dark .badge-error {
+        background-color: #7f1d1d;
+        color: #fecaca;
+    }
+
+    .dark .badge-info {
+        background-color: #1e3a8a;
+        color: #bfdbfe;
+    }
+
+    .dark .badge-neutral {
+        background-color: #374151;
+        color: #d1d5db;
+    }
+
+    /* Custom scrollbar */
+    .sidebar-scroll::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    .sidebar-scroll::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .sidebar-scroll::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+
+    .dark .sidebar-scroll::-webkit-scrollbar-thumb {
+        background: #4b5563;
+    }
+
+    /* Fixed sidebar */
+    .sidebar-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        width: 16rem;
+        z-index: 40;
+        overflow-y: auto;
+    }
+
+    .main-content {
+        margin-left: 16rem;
+        width: calc(100% - 16rem);
+        min-height: 100vh;
+    }
+
+    @media (max-width: 1023px) {
+        .sidebar-container {
+            transform: translateX(-100%);
+        }
+
+        .sidebar-container.open {
+            transform: translateX(0);
+        }
+
+        .main-content {
+            margin-left: 0;
+            width: 100%;
+        }
+    }
+
+    /* Card styles */
+    .document-card {
+        background-color: white;
+        border-radius: 1rem;
+        border: 1px solid #e5e7eb;
+        transition: box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+
+    .dark .document-card {
+        background-color: #1f2937;
+        border-color: #374151;
+    }
+
+    .section-title {
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #6b7280;
+    }
+
+    .dark .section-title {
+        color: #9ca3af;
+    }
+
+    .table-header {
+        background-color: #f9fafb;
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #6b7280;
+    }
+
+    .dark .table-header {
+        background-color: #111827;
+        color: #9ca3af;
+    }
+
+    .table-row:hover {
+        background-color: #f9fafb;
+    }
+
+    .dark .table-row:hover {
+        background-color: #1e293b;
+    }
+
+    /* Modal styles */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 100;
+        padding: 1rem;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.2s ease, visibility 0.2s ease;
+    }
+
+    .modal-overlay.active {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    .modal-container {
+        max-width: 36rem;
+        width: 100%;
+        max-height: 90vh;
+        overflow-y: auto;
+        background-color: white;
+        border-radius: 1rem;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.02);
+        transform: scale(0.95);
+        transition: transform 0.2s ease;
+    }
+
+    .dark .modal-container {
+        background-color: #1f2937;
+        border: 1px solid #374151;
+    }
+
+    .modal-overlay.active .modal-container {
+        transform: scale(1);
+    }
+  </style>
+</head>
+<body>
+<main layout:fragment="content">
+
+  <!-- Documents Summary Header -->
+  <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+    <div class="flex items-center space-x-3">
+      <div class="w-10 h-10 bg-indigo-100 dark:bg-indigo-900/30 rounded-xl flex items-center justify-center">
+        <span class="material-icons-round text-indigo-600 dark:text-indigo-400">folder</span>
+      </div>
+      <div>
+        <h3 class="text-lg font-bold text-gray-900 dark:text-white">Document Center</h3>
+        <p class="text-xs text-gray-500 dark:text-gray-400">Total documents: 8 · Last updated: 15 Mar 2025</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+                    <span class="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium flex items-center">
+                        <span class="material-icons-round text-sm mr-1">storage</span> 12.4 MB used
+                    </span>
+    </div>
+  </div>
+
+  <!-- Quick Stats Cards -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5 mb-6">
+    <!-- Contracts -->
+    <div class="document-card p-5">
+      <div class="flex items-center justify-between mb-2">
+        <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
+          <span class="material-icons-round text-blue-600 dark:text-blue-400">description</span>
+        </div>
+        <span class="text-xs text-gray-500 dark:text-gray-400">2 files</span>
+      </div>
+      <p class="text-lg font-semibold text-gray-900 dark:text-white">Contracts</p>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Employment · Offer Letter</p>
+    </div>
+    <!-- Tax & Finance -->
+    <div class="document-card p-5">
+      <div class="flex items-center justify-between mb-2">
+        <div class="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center">
+          <span class="material-icons-round text-green-600 dark:text-green-400">receipt</span>
+        </div>
+        <span class="text-xs text-gray-500 dark:text-gray-400">3 files</span>
+      </div>
+      <p class="text-lg font-semibold text-gray-900 dark:text-white">Tax & Finance</p>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Payslips · Tax Certificates</p>
+    </div>
+    <!-- HR Documents -->
+    <div class="document-card p-5">
+      <div class="flex items-center justify-between mb-2">
+        <div class="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center">
+          <span class="material-icons-round text-purple-600 dark:text-purple-400">badge</span>
+        </div>
+        <span class="text-xs text-gray-500 dark:text-gray-400">2 files</span>
+      </div>
+      <p class="text-lg font-semibold text-gray-900 dark:text-white">HR Documents</p>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">ID Card · Performance Reviews</p>
+    </div>
+    <!-- Benefits -->
+    <div class="document-card p-5">
+      <div class="flex items-center justify-between mb-2">
+        <div class="w-10 h-10 bg-amber-100 dark:bg-amber-900/30 rounded-xl flex items-center justify-center">
+          <span class="material-icons-round text-amber-600 dark:text-amber-400">health_and_safety</span>
+        </div>
+        <span class="text-xs text-gray-500 dark:text-gray-400">1 file</span>
+      </div>
+      <p class="text-lg font-semibold text-gray-900 dark:text-white">Benefits</p>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Health Insurance</p>
+    </div>
+  </div>
+
+  <!-- Category Tabs (filter) -->
+  <div class="flex items-center space-x-2 mb-4 overflow-x-auto pb-2">
+    <button class="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium">All Documents</button>
+    <button class="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600">Contracts</button>
+    <button class="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600">Tax & Finance</button>
+    <button class="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600">HR Documents</button>
+    <button class="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600">Benefits</button>
+    <button class="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600">Others</button>
+  </div>
+
+  <!-- Documents List Table -->
+  <div class="document-card p-5 md:p-6">
+    <div class="flex items-center justify-between mb-4">
+      <div class="flex items-center space-x-2">
+        <span class="material-icons-round text-primary-600 dark:text-primary-400">folder_open</span>
+        <h4 class="section-title mb-0">All Documents</h4>
+      </div>
+      <span class="text-xs text-gray-500 dark:text-gray-400">8 items</span>
+    </div>
+
+    <div class="overflow-x-auto -mx-5 md:-mx-6 px-5 md:px-6 pb-1">
+      <table class="w-full min-w-[700px]">
+        <thead>
+        <tr class="table-header border-b border-gray-200 dark:border-gray-700">
+          <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Document Name</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Category</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Uploaded</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Size</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Status</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Actions</th>
+        </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+        <!-- Employment Contract -->
+        <tr class="table-row">
+          <td class="px-4 py-3.5">
+            <div class="flex items-center space-x-3">
+              <span class="material-icons-round text-red-500 text-lg">picture_as_pdf</span>
+              <div>
+                <p class="text-sm font-medium text-gray-900 dark:text-white">Employment Contract.pdf</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Signed 12 Apr 2021</p>
+              </div>
+            </div>
+          </td>
+          <td class="px-4 py-3.5 text-sm">Contracts</td>
+          <td class="px-4 py-3.5 text-sm">12 Apr 2021</td>
+          <td class="px-4 py-3.5 text-sm">1.2 MB</td>
+          <td class="px-4 py-3.5">
+            <span class="badge badge-success">Active</span>
+          </td>
+          <td class="px-4 py-3.5">
+            <div class="flex items-center space-x-2">
+              <button class="text-gray-500 hover:text-primary-600 view-doc-btn" data-doc="Employment Contract">
+                <span class="material-icons-round text-sm">visibility</span>
+              </button>
+              <button class="text-gray-500 hover:text-primary-600">
+                <span class="material-icons-round text-sm">download</span>
+              </button>
+            </div>
+          </td>
+        </tr>
+        <!-- Offer Letter -->
+        <tr class="table-row">
+          <td class="px-4 py-3.5">
+            <div class="flex items-center space-x-3">
+              <span class="material-icons-round text-red-500 text-lg">picture_as_pdf</span>
+              <div>
+                <p class="text-sm font-medium text-gray-900 dark:text-white">Offer Letter.pdf</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Issued 01 Apr 2021</p>
+              </div>
+            </div>
+          </td>
+          <td class="px-4 py-3.5 text-sm">Contracts</td>
+          <td class="px-4 py-3.5 text-sm">01 Apr 2021</td>
+          <td class="px-4 py-3.5 text-sm">0.8 MB</td>
+          <td class="px-4 py-3.5">
+            <span class="badge badge-success">Active</span>
+          </td>
+          <td class="px-4 py-3.5">
+            <div class="flex items-center space-x-2">
+              <button class="text-gray-500 hover:text-primary-600 view-doc-btn" data-doc="Offer Letter">
+                <span class="material-icons-round text-sm">visibility</span>
+              </button>
+              <button class="text-gray-500 hover:text-primary-600">
+                <span class="material-icons-round text-sm">download</span>
+              </button>
+            </div>
+          </td>
+        </tr>
+        <!-- Payslip Mar 2025 -->
+        <tr class="table-row">
+          <td class="px-4 py-3.5">
+            <div class="flex items-center space-x-3">
+              <span class="material-icons-round text-red-500 text-lg">picture_as_pdf</span>
+              <div>
+                <p class="text-sm font-medium text-gray-900 dark:text-white">Payslip_Mar2025.pdf</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Period: March 2025</p>
+              </div>
+            </div>
+          </td>
+          <td class="px-4 py-3.5 text-sm">Tax & Finance</td>
+          <td class="px-4 py-3.5 text-sm">31 Mar 2025</td>
+          <td class="px-4 py-3.5 text-sm">0.5 MB</td>
+          <td class="px-4 py-3.5">
+            <span class="badge badge-success">Current</span>
+          </td>
+          <td class="px-4 py-3.5">
+            <div class="flex items-center space-x-2">
+              <button class="text-gray-500 hover:text-primary-600 view-doc-btn" data-doc="Payslip March 2025">
+                <span class="material-icons-round text-sm">visibility</span>
+              </button>
+              <button class="text-gray-500 hover:text-primary-600">
+                <span class="material-icons-round text-sm">download</span>
+              </button>
+            </div>
+          </td>
+        </tr>
+        <!-- Tax Certificate 2024 -->
+        <tr class="table-row">
+          <td class="px-4 py-3.5">
+            <div class="flex items-center space-x-3">
+              <span class="material-icons-round text-red-500 text-lg">picture_as_pdf</span>
+              <div>
+                <p class="text-sm font-medium text-gray-900 dark:text-white">Tax_Certificate_2024.pdf</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Year Ended Dec 2024</p>
+              </div>
+            </div>
+          </td>
+          <td class="px-4 py-3.5 text-sm">Tax & Finance</td>
+          <td class="px-4 py-3.5 text-sm">15 Jan 2025</td>
+          <td class="px-4 py-3.5 text-sm">0.6 MB</td>
+          <td class="px-4 py-3.5">
+            <span class="badge badge-neutral">Archived</span>
+          </td>
+          <td class="px-4 py-3.5">
+            <div class="flex items-center space-x-2">
+              <button class="text-gray-500 hover:text-primary-600 view-doc-btn" data-doc="Tax Certificate 2024">
+                <span class="material-icons-round text-sm">visibility</span>
+              </button>
+              <button class="text-gray-500 hover:text-primary-600">
+                <span class="material-icons-round text-sm">download</span>
+              </button>
+            </div>
+          </td>
+        </tr>
+        <!-- ID Card -->
+        <tr class="table-row">
+          <td class="px-4 py-3.5">
+            <div class="flex items-center space-x-3">
+              <span class="material-icons-round text-blue-500 text-lg">image</span>
+              <div>
+                <p class="text-sm font-medium text-gray-900 dark:text-white">Employee_ID_Card.jpg</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Issued 20 Apr 2021</p>
+              </div>
+            </div>
+          </td>
+          <td class="px-4 py-3.5 text-sm">HR Documents</td>
+          <td class="px-4 py-3.5 text-sm">20 Apr 2021</td>
+          <td class="px-4 py-3.5 text-sm">2.3 MB</td>
+          <td class="px-4 py-3.5">
+            <span class="badge badge-success">Active</span>
+          </td>
+          <td class="px-4 py-3.5">
+            <div class="flex items-center space-x-2">
+              <button class="text-gray-500 hover:text-primary-600 view-doc-btn" data-doc="ID Card">
+                <span class="material-icons-round text-sm">visibility</span>
+              </button>
+              <button class="text-gray-500 hover:text-primary-600">
+                <span class="material-icons-round text-sm">download</span>
+              </button>
+            </div>
+          </td>
+        </tr>
+        <!-- Performance Review Q4 2024 -->
+        <tr class="table-row">
+          <td class="px-4 py-3.5">
+            <div class="flex items-center space-x-3">
+              <span class="material-icons-round text-red-500 text-lg">picture_as_pdf</span>
+              <div>
+                <p class="text-sm font-medium text-gray-900 dark:text-white">Performance_Review_Q4_2024.pdf</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Rating: 4.2/5</p>
+              </div>
+            </div>
+          </td>
+          <td class="px-4 py-3.5 text-sm">HR Documents</td>
+          <td class="px-4 py-3.5 text-sm">10 Jan 2025</td>
+          <td class="px-4 py-3.5 text-sm">0.9 MB</td>
+          <td class="px-4 py-3.5">
+            <span class="badge badge-success">Current</span>
+          </td>
+          <td class="px-4 py-3.5">
+            <div class="flex items-center space-x-2">
+              <button class="text-gray-500 hover:text-primary-600 view-doc-btn" data-doc="Performance Review">
+                <span class="material-icons-round text-sm">visibility</span>
+              </button>
+              <button class="text-gray-500 hover:text-primary-600">
+                <span class="material-icons-round text-sm">download</span>
+              </button>
+            </div>
+          </td>
+        </tr>
+        <!-- Health Insurance -->
+        <tr class="table-row">
+          <td class="px-4 py-3.5">
+            <div class="flex items-center space-x-3">
+              <span class="material-icons-round text-red-500 text-lg">picture_as_pdf</span>
+              <div>
+                <p class="text-sm font-medium text-gray-900 dark:text-white">Health_Insurance_Certificate.pdf</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Valid until Dec 2025</p>
+              </div>
+            </div>
+          </td>
+          <td class="px-4 py-3.5 text-sm">Benefits</td>
+          <td class="px-4 py-3.5 text-sm">01 Jan 2025</td>
+          <td class="px-4 py-3.5 text-sm">1.1 MB</td>
+          <td class="px-4 py-3.5">
+            <span class="badge badge-success">Active</span>
+          </td>
+          <td class="px-4 py-3.5">
+            <div class="flex items-center space-x-2">
+              <button class="text-gray-500 hover:text-primary-600 view-doc-btn" data-doc="Health Insurance">
+                <span class="material-icons-round text-sm">visibility</span>
+              </button>
+              <button class="text-gray-500 hover:text-primary-600">
+                <span class="material-icons-round text-sm">download</span>
+              </button>
+            </div>
+          </td>
+        </tr>
+        <!-- Training Certificate -->
+        <tr class="table-row">
+          <td class="px-4 py-3.5">
+            <div class="flex items-center space-x-3">
+              <span class="material-icons-round text-red-500 text-lg">picture_as_pdf</span>
+              <div>
+                <p class="text-sm font-medium text-gray-900 dark:text-white">Digital_Marketing_Certificate.pdf</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Completed Aug 2024</p>
+              </div>
+            </div>
+          </td>
+          <td class="px-4 py-3.5 text-sm">Others</td>
+          <td class="px-4 py-3.5 text-sm">15 Aug 2024</td>
+          <td class="px-4 py-3.5 text-sm">1.5 MB</td>
+          <td class="px-4 py-3.5">
+            <span class="badge badge-neutral">Archived</span>
+          </td>
+          <td class="px-4 py-3.5">
+            <div class="flex items-center space-x-2">
+              <button class="text-gray-500 hover:text-primary-600 view-doc-btn" data-doc="Training Certificate">
+                <span class="material-icons-round text-sm">visibility</span>
+              </button>
+              <button class="text-gray-500 hover:text-primary-600">
+                <span class="material-icons-round text-sm">download</span>
+              </button>
+            </div>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Additional Information -->
+  <div class="mt-6 text-center text-xs text-gray-500 dark:text-gray-400">
+    <span class="material-icons-round text-xs align-text-bottom mr-1">lock</span>
+    Documents are provided by HR. For missing documents, please contact HR support.
+  </div>
+
+  <!-- ========== MODAL: Document Preview ========== -->
+  <div id="documentPreviewModal" class="modal-overlay">
+    <div class="modal-container p-6">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center space-x-3">
+          <span class="material-icons-round text-red-500 text-2xl">picture_as_pdf</span>
+          <h3 class="text-lg font-bold text-gray-900 dark:text-white" id="modal-doc-title">Employment Contract.pdf</h3>
+        </div>
+        <button class="close-modal text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+          <span class="material-icons-round">close</span>
+        </button>
+      </div>
+
+      <!-- Document Preview Placeholder -->
+      <div class="bg-gray-100 dark:bg-gray-800 rounded-lg p-8 mb-4 flex flex-col items-center justify-center min-h-[300px] border border-gray-200 dark:border-gray-700">
+        <span class="material-icons-round text-gray-400 text-6xl mb-3">description</span>
+        <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">Document preview is not available in demo</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400">File: <span id="modal-doc-filename">Employment_Contract.pdf</span> · 1.2 MB</p>
+      </div>
+
+      <!-- Document Info -->
+      <div class="grid grid-cols-2 gap-3 mb-4 text-sm">
+        <div>
+          <p class="text-xs text-gray-500">Category</p>
+          <p class="font-medium" id="modal-doc-category">Contracts</p>
+        </div>
+        <div>
+          <p class="text-xs text-gray-500">Uploaded</p>
+          <p class="font-medium" id="modal-doc-date">12 Apr 2021</p>
+        </div>
+        <div>
+          <p class="text-xs text-gray-500">Status</p>
+          <p id="modal-doc-status"><span class="badge badge-success">Active</span></p>
+        </div>
+        <div>
+          <p class="text-xs text-gray-500">Size</p>
+          <p class="font-medium" id="modal-doc-size">1.2 MB</p>
+        </div>
+      </div>
+
+      <div class="flex justify-end space-x-3 mt-2">
+        <button class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700">
+          <span class="material-icons-round text-sm mr-1 align-middle">download</span> Download
+        </button>
+        <button class="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 close-modal">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ========== DOCUMENT PREVIEW MODAL ==========
+    const previewModal = document.getElementById('documentPreviewModal');
+
+    // Sample document data for modal
+    const documentData = {
+        "Employment Contract": {
+            title: "Employment Contract.pdf",
+            filename: "Employment_Contract.pdf",
+            category: "Contracts",
+            date: "12 Apr 2021",
+            status: "Active",
+            statusClass: "badge-success",
+            size: "1.2 MB"
+        },
+        "Offer Letter": {
+            title: "Offer Letter.pdf",
+            filename: "Offer_Letter.pdf",
+            category: "Contracts",
+            date: "01 Apr 2021",
+            status: "Active",
+            statusClass: "badge-success",
+            size: "0.8 MB"
+        },
+        "Payslip March 2025": {
+            title: "Payslip_Mar2025.pdf",
+            filename: "Payslip_Mar2025.pdf",
+            category: "Tax & Finance",
+            date: "31 Mar 2025",
+            status: "Current",
+            statusClass: "badge-success",
+            size: "0.5 MB"
+        },
+        "Tax Certificate 2024": {
+            title: "Tax_Certificate_2024.pdf",
+            filename: "Tax_Certificate_2024.pdf",
+            category: "Tax & Finance",
+            date: "15 Jan 2025",
+            status: "Archived",
+            statusClass: "badge-neutral",
+            size: "0.6 MB"
+        },
+        "ID Card": {
+            title: "Employee_ID_Card.jpg",
+            filename: "Employee_ID_Card.jpg",
+            category: "HR Documents",
+            date: "20 Apr 2021",
+            status: "Active",
+            statusClass: "badge-success",
+            size: "2.3 MB"
+        },
+        "Performance Review": {
+            title: "Performance_Review_Q4_2024.pdf",
+            filename: "Performance_Review_Q4_2024.pdf",
+            category: "HR Documents",
+            date: "10 Jan 2025",
+            status: "Current",
+            statusClass: "badge-success",
+            size: "0.9 MB"
+        },
+        "Health Insurance": {
+            title: "Health_Insurance_Certificate.pdf",
+            filename: "Health_Insurance_Certificate.pdf",
+            category: "Benefits",
+            date: "01 Jan 2025",
+            status: "Active",
+            statusClass: "badge-success",
+            size: "1.1 MB"
+        },
+        "Training Certificate": {
+            title: "Digital_Marketing_Certificate.pdf",
+            filename: "Digital_Marketing_Certificate.pdf",
+            category: "Others",
+            date: "15 Aug 2024",
+            status: "Archived",
+            statusClass: "badge-neutral",
+            size: "1.5 MB"
+        }
+    };
+
+    function openPreviewModal(docKey) {
+        const data = documentData[docKey] || documentData["Employment Contract"];
+
+        document.getElementById('modal-doc-title').textContent = data.title;
+        document.getElementById('modal-doc-filename').textContent = data.filename;
+        document.getElementById('modal-doc-category').textContent = data.category;
+        document.getElementById('modal-doc-date').textContent = data.date;
+        document.getElementById('modal-doc-status').innerHTML = `<span class="badge ${data.statusClass}">${data.status}</span>`;
+        document.getElementById('modal-doc-size').textContent = data.size;
+
+        previewModal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+
+    // Attach click events to view buttons
+    document.querySelectorAll('.view-doc-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const docName = btn.getAttribute('data-doc');
+            openPreviewModal(docName);
+        });
+    });
+
+    // Close modal
+    function closePreviewModal() {
+        previewModal.classList.remove('active');
+        document.body.style.overflow = 'auto';
+    }
+
+    // Close via close buttons
+    document.querySelectorAll('.close-modal').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            closePreviewModal();
+        });
+    });
+
+    // Close when clicking overlay
+    previewModal.addEventListener('click', (e) => {
+        if (e.target === previewModal) {
+            closePreviewModal();
+        }
+    });
+
+    // Prevent closing when clicking inside modal container
+    document.querySelector('.modal-container').addEventListener('click', (e) => {
+        e.stopPropagation();
+    });
+
+    // ========== MOBILE SIDEBAR ==========
+    const menuToggle = document.getElementById('menuToggle');
+    const mobileOverlay = document.getElementById('mobileOverlay');
+    const sidebar = document.querySelector('.sidebar-container');
+
+    if (menuToggle && mobileOverlay && sidebar) {
+        menuToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('open');
+            mobileOverlay.classList.toggle('hidden');
+            document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : 'auto';
+        });
+
+        mobileOverlay.addEventListener('click', () => {
+            sidebar.classList.remove('open');
+            mobileOverlay.classList.add('hidden');
+            document.body.style.overflow = 'auto';
+        });
+    }
+
+    // ========== THEME TOGGLE ==========
+    const themeToggle = document.getElementById('themeToggle');
+    const themeIcon = themeToggle.querySelector('.material-icons-round');
+
+    themeToggle.addEventListener('click', () => {
+        const isDark = document.documentElement.classList.toggle('dark');
+        themeIcon.textContent = isDark ? 'light_mode' : 'dark_mode';
+        localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    });
+
+    // Initialize theme
+    if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+        themeIcon.textContent = 'light_mode';
+    }
+
+    // Sidebar active state
+    document.querySelectorAll('.sidebar-item').forEach(item => {
+        item.addEventListener('click', function(e) {
+            if (this.getAttribute('href') === '#') {
+                e.preventDefault();
+            }
+            document.querySelectorAll('.sidebar-item').forEach(nav => {
+                nav.classList.remove('active');
+            });
+            this.classList.add('active');
+
+            if (window.innerWidth < 1024) {
+                sidebar.classList.remove('open');
+                mobileOverlay.classList.add('hidden');
+                document.body.style.overflow = 'auto';
+            }
+        });
+    });
+
+    // Close sidebar on window resize
+    window.addEventListener('resize', () => {
+        if (window.innerWidth >= 1024) {
+            sidebar?.classList.remove('open');
+            mobileOverlay?.classList.add('hidden');
+            document.body.style.overflow = 'auto';
+        }
+    });
+  </script>
+</main>
+</body>
+</html>
