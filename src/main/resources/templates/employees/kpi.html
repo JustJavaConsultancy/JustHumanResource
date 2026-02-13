@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" xmlns:th="http://www.w3.org/1999/xhtml"
+      layout:decorate="layouts/employeeLayout">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+  <script>
+    tailwind.config = {
+        darkMode: "class",
+        theme: {
+            extend: {
+                colors: {
+                    primary: {
+                        50: '#eff6ff',
+                        100: '#dbeafe',
+                        200: '#bfdbfe',
+                        300: '#93c5fd',
+                        400: '#60a5fa',
+                        500: '#3b82f6',
+                        600: '#2563eb',
+                        700: '#1d4ed8',
+                        800: '#1e40af',
+                        900: '#1e3a8a',
+                    },
+                    secondary: {
+                        50: '#f8fafc',
+                        100: '#f1f5f9',
+                        200: '#e2e8f0',
+                        300: '#cbd5e1',
+                        400: '#94a3b8',
+                        500: '#64748b',
+                        600: '#475569',
+                        700: '#334155',
+                        800: '#1e293b',
+                        900: '#0f172a',
+                    }
+                },
+                fontFamily: {
+                    'sans': ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                },
+                borderRadius: {
+                    'xl': '1rem',
+                    '2xl': '1.5rem',
+                },
+                boxShadow: {
+                    'card': '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)',
+                    'card-hover': '0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.02)',
+                }
+            },
+        },
+    };
+  </script>
+  <style>
+    * {
+        font-family: 'Inter', sans-serif;
+    }
+
+    body {
+        overflow-x: hidden;
+    }
+
+    .sidebar-item {
+        transition: all 0.2s ease;
+        position: relative;
+    }
+
+    .sidebar-item.active {
+        background-color: rgba(59, 130, 246, 0.08);
+        color: #2563eb;
+        border-left: 3px solid #2563eb;
+        font-weight: 500;
+    }
+
+    .sidebar-item.active .material-icons-round {
+        color: #2563eb;
+    }
+
+    .sidebar-item:hover:not(.active) {
+        background-color: rgba(59, 130, 246, 0.04);
+    }
+
+    .dark .sidebar-item.active {
+        background-color: rgba(59, 130, 246, 0.15);
+        color: #60a5fa;
+    }
+
+    .dark .sidebar-item.active .material-icons-round {
+        color: #60a5fa;
+    }
+
+    .badge {
+        padding: 0.25rem 0.75rem;
+        font-size: 0.7rem;
+        font-weight: 600;
+        border-radius: 9999px;
+        letter-spacing: 0.025em;
+        text-transform: uppercase;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .badge-success {
+        background-color: #dcfce7;
+        color: #15803d;
+    }
+
+    .badge-warning {
+        background-color: #fef3c7;
+        color: #b45309;
+    }
+
+    .badge-error {
+        background-color: #fee2e2;
+        color: #b91c1c;
+    }
+
+    .badge-info {
+        background-color: #dbeafe;
+        color: #1e40af;
+    }
+
+    .badge-neutral {
+        background-color: #f3f4f6;
+        color: #4b5563;
+    }
+
+    .dark .badge-success {
+        background-color: #14532d;
+        color: #86efac;
+    }
+
+    .dark .badge-warning {
+        background-color: #92400e;
+        color: #fde68a;
+    }
+
+    .dark .badge-error {
+        background-color: #7f1d1d;
+        color: #fecaca;
+    }
+
+    .dark .badge-info {
+        background-color: #1e3a8a;
+        color: #bfdbfe;
+    }
+
+    .dark .badge-neutral {
+        background-color: #374151;
+        color: #d1d5db;
+    }
+
+    /* Custom scrollbar */
+    .sidebar-scroll::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    .sidebar-scroll::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .sidebar-scroll::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+
+    .dark .sidebar-scroll::-webkit-scrollbar-thumb {
+        background: #4b5563;
+    }
+
+    /* Fixed sidebar */
+    .sidebar-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        width: 16rem;
+        z-index: 40;
+        overflow-y: auto;
+    }
+
+    .main-content {
+        margin-left: 16rem;
+        width: calc(100% - 16rem);
+        min-height: 100vh;
+    }
+
+    @media (max-width: 1023px) {
+        .sidebar-container {
+            transform: translateX(-100%);
+        }
+
+        .sidebar-container.open {
+            transform: translateX(0);
+        }
+
+        .main-content {
+            margin-left: 0;
+            width: 100%;
+        }
+    }
+
+    /* Card styles */
+    .kpi-card {
+        background-color: white;
+        border-radius: 1rem;
+        border: 1px solid #e5e7eb;
+        transition: box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+
+    .dark .kpi-card {
+        background-color: #1f2937;
+        border-color: #374151;
+    }
+
+    .section-title {
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #6b7280;
+    }
+
+    .dark .section-title {
+        color: #9ca3af;
+    }
+
+    .progress-bar {
+        height: 8px;
+        border-radius: 4px;
+        overflow: hidden;
+        background-color: #e5e7eb;
+    }
+
+    .dark .progress-bar {
+        background-color: #374151;
+    }
+
+    .progress-fill {
+        height: 100%;
+        border-radius: 4px;
+        transition: width 0.3s ease;
+    }
+
+    .kpi-label {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.85rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .table-header {
+        background-color: #f9fafb;
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #6b7280;
+    }
+
+    .dark .table-header {
+        background-color: #111827;
+        color: #9ca3af;
+    }
+
+    .table-row:hover {
+        background-color: #f9fafb;
+    }
+
+    .dark .table-row:hover {
+        background-color: #1e293b;
+    }
+  </style>
+</head>
+<body>
+<main layout:fragment="content">
+
+  <!-- Period Selector & Overall Score -->
+  <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+    <div class="flex items-center space-x-3">
+      <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
+        <span class="material-icons-round text-blue-600 dark:text-blue-400">assessment</span>
+      </div>
+      <div>
+        <h3 class="text-lg font-bold text-gray-900 dark:text-white">Performance Summary</h3>
+        <p class="text-xs text-gray-500 dark:text-gray-400">Last updated: 31 Mar 2025</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-3">
+      <span class="text-sm text-gray-600 dark:text-gray-400">Period:</span>
+      <select class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none">
+        <option selected>March 2025</option>
+        <option>February 2025</option>
+        <option>January 2025</option>
+        <option>Q1 2025</option>
+        <option>Q4 2024</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Overall Score Card -->
+  <div class="kpi-card p-5 md:p-6 mb-6 bg-gradient-to-r from-primary-50 to-blue-50 dark:from-gray-800 dark:to-gray-750 border border-primary-100 dark:border-primary-900">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div class="flex items-center space-x-4">
+        <div class="w-16 h-16 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center shadow-md">
+          <span class="text-3xl font-bold text-primary-600 dark:text-primary-400">84.5</span>
+        </div>
+        <div>
+          <p class="text-sm text-gray-600 dark:text-gray-300">Overall KPI Score</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Weighted average of all assigned KPIs</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-6">
+        <div class="text-center">
+          <span class="text-xs text-gray-500 dark:text-gray-400">Target</span>
+          <p class="text-lg font-semibold text-gray-900 dark:text-white">80.0</p>
+        </div>
+        <div class="text-center">
+          <span class="text-xs text-gray-500 dark:text-gray-400">Status</span>
+          <p class="text-lg font-semibold text-green-600 dark:text-green-400">Exceeds</p>
+        </div>
+        <div class="text-center">
+          <span class="text-xs text-gray-500 dark:text-gray-400">Rank</span>
+          <p class="text-lg font-semibold text-gray-900 dark:text-white">Top 15%</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPI Details Grid -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+    <!-- Left column - KPI List (2/3 width) -->
+    <div class="lg:col-span-2">
+      <div class="kpi-card p-5 md:p-6">
+        <div class="flex items-center justify-between mb-5">
+          <div class="flex items-center space-x-2">
+            <span class="material-icons-round text-primary-600 dark:text-primary-400">list</span>
+            <h4 class="section-title mb-0">Your KPIs – March 2025</h4>
+          </div>
+          <span class="text-xs text-gray-500 dark:text-gray-400">Weighted score: 84.5</span>
+        </div>
+
+        <div class="space-y-5">
+          <!-- KPI 1: Productivity -->
+          <div>
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-2">
+                <span class="font-medium text-gray-900 dark:text-white">Productivity</span>
+                <span class="badge badge-info text-xs">Category: Productivity</span>
+              </div>
+              <span class="text-sm font-semibold text-gray-900 dark:text-white">92%</span>
+            </div>
+            <div class="flex items-center justify-between text-xs text-gray-500 mt-1">
+              <span>Score: 92/100</span>
+              <span>Weight: 0.5 (50%)</span>
+              <span>Target: 80%</span>
+            </div>
+            <div class="mt-2">
+              <div class="progress-bar">
+                <div class="progress-fill bg-primary-600" style="width: 92%"></div>
+              </div>
+              <div class="flex justify-end mt-1">
+                <span class="text-xs font-medium text-green-600">+12% above target</span>
+              </div>
+            </div>
+            <div class="mt-2 text-xs text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-gray-700 pt-2">
+                                    <span class="flex items-center">
+                                        <span class="material-icons-round text-xs mr-1">info</span>
+                                        Measured by tasks completed vs. goal
+                                    </span>
+            </div>
+          </div>
+
+          <!-- KPI 2: Attendance -->
+          <div>
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-2">
+                <span class="font-medium text-gray-900 dark:text-white">Attendance</span>
+                <span class="badge badge-info text-xs">Category: Attendance</span>
+              </div>
+              <span class="text-sm font-semibold text-gray-900 dark:text-white">90%</span>
+            </div>
+            <div class="flex items-center justify-between text-xs text-gray-500 mt-1">
+              <span>Score: 90/100</span>
+              <span>Weight: 0.3 (30%)</span>
+              <span>Target: 95%</span>
+            </div>
+            <div class="mt-2">
+              <div class="progress-bar">
+                <div class="progress-fill bg-green-600" style="width: 90%"></div>
+              </div>
+              <div class="flex justify-end mt-1">
+                <span class="text-xs font-medium text-yellow-600">-5% below target</span>
+              </div>
+            </div>
+            <div class="mt-2 text-xs text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-gray-700 pt-2">
+                                    <span class="flex items-center">
+                                        <span class="material-icons-round text-xs mr-1">info</span>
+                                        Attendance rate (excluding approved leave)
+                                    </span>
+            </div>
+          </div>
+
+          <!-- KPI 3: Quality -->
+          <div>
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-2">
+                <span class="font-medium text-gray-900 dark:text-white">Quality</span>
+                <span class="badge badge-info text-xs">Category: Quality</span>
+              </div>
+              <span class="text-sm font-semibold text-gray-900 dark:text-white">72%</span>
+            </div>
+            <div class="flex items-center justify-between text-xs text-gray-500 mt-1">
+              <span>Score: 72/100</span>
+              <span>Weight: 0.2 (20%)</span>
+              <span>Target: 85%</span>
+            </div>
+            <div class="mt-2">
+              <div class="progress-bar">
+                <div class="progress-fill bg-yellow-600" style="width: 72%"></div>
+              </div>
+              <div class="flex justify-end mt-1">
+                <span class="text-xs font-medium text-red-600">-13% below target</span>
+              </div>
+            </div>
+            <div class="mt-2 text-xs text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-gray-700 pt-2">
+                                    <span class="flex items-center">
+                                        <span class="material-icons-round text-xs mr-1">info</span>
+                                        Error rate & customer feedback score
+                                    </span>
+            </div>
+          </div>
+
+          <!-- KPI 4: Innovation (no measurement yet) -->
+          <div class="opacity-70">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-2">
+                <span class="font-medium text-gray-900 dark:text-white">Innovation</span>
+                <span class="badge badge-neutral text-xs">Category: Innovation</span>
+              </div>
+              <span class="text-sm font-semibold text-gray-500 dark:text-gray-400">—</span>
+            </div>
+            <div class="flex items-center justify-between text-xs text-gray-500 mt-1">
+              <span>No measurement yet</span>
+              <span>Weight: 0.1 (10%)</span>
+              <span>Target: 5 ideas</span>
+            </div>
+            <div class="mt-2">
+              <div class="progress-bar bg-gray-200 dark:bg-gray-700">
+                <div class="progress-fill bg-gray-400" style="width: 0%"></div>
+              </div>
+            </div>
+            <div class="mt-2 text-xs text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-gray-700 pt-2">
+                                    <span class="flex items-center">
+                                        <span class="material-icons-round text-xs mr-1">hourglass_empty</span>
+                                        Pending evaluation at end of quarter
+                                    </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <div class="flex items-center justify-between text-sm">
+            <span class="text-gray-600 dark:text-gray-300">Total Weight</span>
+            <span class="font-semibold text-gray-900 dark:text-white">1.0 (100%)</span>
+          </div>
+          <div class="flex items-center justify-between text-sm mt-1">
+            <span class="text-gray-600 dark:text-gray-300">Achieved Score</span>
+            <span class="font-semibold text-primary-600 dark:text-primary-400">84.5</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right column - KPI Definitions & Info -->
+    <div class="lg:col-span-1 space-y-6">
+      <!-- KPI Categories Overview -->
+      <div class="kpi-card p-5 md:p-6">
+        <div class="flex items-center space-x-2 mb-4">
+          <span class="material-icons-round text-primary-600 dark:text-primary-400">category</span>
+          <h4 class="section-title mb-0">KPI Categories</h4>
+        </div>
+        <div class="space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center">
+              <span class="w-2 h-2 bg-primary-600 rounded-full mr-2"></span>
+              <span class="text-sm">Productivity</span>
+            </div>
+            <span class="text-xs font-medium text-gray-700 dark:text-gray-300">1 KPI</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <div class="flex items-center">
+              <span class="w-2 h-2 bg-green-600 rounded-full mr-2"></span>
+              <span class="text-sm">Attendance</span>
+            </div>
+            <span class="text-xs font-medium text-gray-700 dark:text-gray-300">1 KPI</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <div class="flex items-center">
+              <span class="w-2 h-2 bg-yellow-600 rounded-full mr-2"></span>
+              <span class="text-sm">Quality</span>
+            </div>
+            <span class="text-xs font-medium text-gray-700 dark:text-gray-300">1 KPI</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <div class="flex items-center">
+              <span class="w-2 h-2 bg-purple-600 rounded-full mr-2"></span>
+              <span class="text-sm">Innovation</span>
+            </div>
+            <span class="text-xs font-medium text-gray-700 dark:text-gray-300">1 KPI</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI Legend / Info -->
+      <div class="kpi-card p-5 md:p-6">
+        <div class="flex items-center space-x-2 mb-4">
+          <span class="material-icons-round text-primary-600 dark:text-primary-400">info</span>
+          <h4 class="section-title mb-0">How KPIs are calculated</h4>
+        </div>
+        <p class="text-xs text-gray-600 dark:text-gray-400 mb-3">
+          Your overall score is a weighted average of all assigned KPIs. Each KPI is normalized to a score out of 100 based on actual vs. target.
+        </p>
+        <div class="space-y-2 text-xs">
+          <div class="flex items-start">
+            <span class="material-icons-round text-green-600 text-sm mr-1.5 mt-0.5">check_circle</span>
+            <span class="text-gray-600 dark:text-gray-400">Scores above 100 are capped at 100</span>
+          </div>
+          <div class="flex items-start">
+            <span class="material-icons-round text-blue-600 text-sm mr-1.5 mt-0.5">timeline</span>
+            <span class="text-gray-600 dark:text-gray-400">KPIs without measurement are excluded</span>
+          </div>
+          <div class="flex items-start">
+            <span class="material-icons-round text-orange-600 text-sm mr-1.5 mt-0.5">update</span>
+            <span class="text-gray-600 dark:text-gray-400">Scores are updated monthly by HR</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Department Benchmark -->
+      <div class="kpi-card p-5 md:p-6">
+        <div class="flex items-center space-x-2 mb-4">
+          <span class="material-icons-round text-primary-600 dark:text-primary-400">insights</span>
+          <h4 class="section-title mb-0">Department Average</h4>
+        </div>
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-sm text-gray-600 dark:text-gray-300">Marketing</span>
+          <span class="text-lg font-bold text-gray-900 dark:text-white">81.2</span>
+        </div>
+        <div class="flex items-center justify-between text-xs">
+          <span class="text-gray-500">Your score</span>
+          <span class="font-medium text-green-600">+3.3 above dept</span>
+        </div>
+        <div class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-gray-500">Company average</span>
+            <span class="font-medium text-gray-900 dark:text-white">78.5</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Performance History Table -->
+  <div class="kpi-card p-5 md:p-6">
+    <div class="flex items-center justify-between mb-4">
+      <div class="flex items-center space-x-2">
+        <span class="material-icons-round text-primary-600 dark:text-primary-400">history</span>
+        <h4 class="section-title mb-0">Performance History</h4>
+      </div>
+      <a href="#" class="text-primary-600 hover:text-primary-700 text-sm font-medium flex items-center">
+        View Full History
+        <span class="material-icons-round text-sm ml-1">arrow_forward</span>
+      </a>
+    </div>
+
+    <div class="overflow-x-auto -mx-5 md:-mx-6 px-5 md:px-6 pb-1">
+      <table class="w-full min-w-[500px]">
+        <thead>
+        <tr class="table-header border-b border-gray-200 dark:border-gray-700">
+          <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Period</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Productivity</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Attendance</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Quality</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Innovation</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Overall</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Status</th>
+        </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+        <tr class="table-row">
+          <td class="px-4 py-3.5 text-sm font-medium">Mar 2025</td>
+          <td class="px-4 py-3.5 text-sm">92</td>
+          <td class="px-4 py-3.5 text-sm">90</td>
+          <td class="px-4 py-3.5 text-sm">72</td>
+          <td class="px-4 py-3.5 text-sm text-gray-400">—</td>
+          <td class="px-4 py-3.5 text-sm font-semibold">84.5</td>
+          <td class="px-4 py-3.5">
+            <span class="badge badge-success">Exceeds</span>
+          </td>
+        </tr>
+        <tr class="table-row">
+          <td class="px-4 py-3.5 text-sm font-medium">Feb 2025</td>
+          <td class="px-4 py-3.5 text-sm">88</td>
+          <td class="px-4 py-3.5 text-sm">92</td>
+          <td class="px-4 py-3.5 text-sm">75</td>
+          <td class="px-4 py-3.5 text-sm text-gray-400">—</td>
+          <td class="px-4 py-3.5 text-sm font-semibold">85.0</td>
+          <td class="px-4 py-3.5">
+            <span class="badge badge-success">Exceeds</span>
+          </td>
+        </tr>
+        <tr class="table-row">
+          <td class="px-4 py-3.5 text-sm font-medium">Jan 2025</td>
+          <td class="px-4 py-3.5 text-sm">85</td>
+          <td class="px-4 py-3.5 text-sm">88</td>
+          <td class="px-4 py-3.5 text-sm">70</td>
+          <td class="px-4 py-3.5 text-sm text-gray-400">—</td>
+          <td class="px-4 py-3.5 text-sm font-semibold">81.8</td>
+          <td class="px-4 py-3.5">
+            <span class="badge badge-warning">Meets</span>
+          </td>
+        </tr>
+        <tr class="table-row">
+          <td class="px-4 py-3.5 text-sm font-medium">Dec 2024</td>
+          <td class="px-4 py-3.5 text-sm">90</td>
+          <td class="px-4 py-3.5 text-sm">85</td>
+          <td class="px-4 py-3.5 text-sm">78</td>
+          <td class="px-4 py-3.5 text-sm text-gray-400">—</td>
+          <td class="px-4 py-3.5 text-sm font-semibold">85.2</td>
+          <td class="px-4 py-3.5">
+            <span class="badge badge-success">Exceeds</span>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Additional Info: No edit buttons, only view -->
+  <div class="mt-6 text-center text-xs text-gray-500 dark:text-gray-400">
+    <span class="material-icons-round text-xs align-text-bottom mr-1">lock</span>
+    KPI data is provided by HR. For questions, contact your manager or HR representative.
+  </div>
+
+  <script>
+    // ========== MOBILE SIDEBAR ==========
+    const menuToggle = document.getElementById('menuToggle');
+    const mobileOverlay = document.getElementById('mobileOverlay');
+    const sidebar = document.querySelector('.sidebar-container');
+
+    if (menuToggle && mobileOverlay && sidebar) {
+        menuToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('open');
+            mobileOverlay.classList.toggle('hidden');
+            document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : 'auto';
+        });
+
+        mobileOverlay.addEventListener('click', () => {
+            sidebar.classList.remove('open');
+            mobileOverlay.classList.add('hidden');
+            document.body.style.overflow = 'auto';
+        });
+    }
+
+    // ========== THEME TOGGLE ==========
+    const themeToggle = document.getElementById('themeToggle');
+    const themeIcon = themeToggle.querySelector('.material-icons-round');
+
+    themeToggle.addEventListener('click', () => {
+        const isDark = document.documentElement.classList.toggle('dark');
+        themeIcon.textContent = isDark ? 'light_mode' : 'dark_mode';
+        localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    });
+
+    // Initialize theme
+    if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+        themeIcon.textContent = 'light_mode';
+    }
+
+    // Sidebar active state
+    document.querySelectorAll('.sidebar-item').forEach(item => {
+        item.addEventListener('click', function(e) {
+            if (this.getAttribute('href') === '#') {
+                e.preventDefault();
+            }
+            document.querySelectorAll('.sidebar-item').forEach(nav => {
+                nav.classList.remove('active');
+            });
+            this.classList.add('active');
+
+            if (window.innerWidth < 1024) {
+                sidebar.classList.remove('open');
+                mobileOverlay.classList.add('hidden');
+                document.body.style.overflow = 'auto';
+            }
+        });
+    });
+
+    // Close sidebar on window resize
+    window.addEventListener('resize', () => {
+        if (window.innerWidth >= 1024) {
+            sidebar?.classList.remove('open');
+            mobileOverlay?.classList.add('hidden');
+            document.body.style.overflow = 'auto';
+        }
+    });
+  </script>
+</main>
+</body>
+</html>

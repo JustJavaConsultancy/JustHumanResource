@@ -1,0 +1,1071 @@
+<!DOCTYPE html>
+<html xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" xmlns:th="http://www.w3.org/1999/xhtml"
+      layout:decorate="layouts/employeeLayout">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            200: '#bfdbfe',
+                            300: '#93c5fd',
+                            400: '#60a5fa',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            800: '#1e40af',
+                            900: '#1e3a8a',
+                        },
+                        secondary: {
+                            50: '#f8fafc',
+                            100: '#f1f5f9',
+                            200: '#e2e8f0',
+                            300: '#cbd5e1',
+                            400: '#94a3b8',
+                            500: '#64748b',
+                            600: '#475569',
+                            700: '#334155',
+                            800: '#1e293b',
+                            900: '#0f172a',
+                        }
+                    },
+                    fontFamily: {
+                        'sans': ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                    },
+                    borderRadius: {
+                        'xl': '1rem',
+                        '2xl': '1.5rem',
+                    },
+                    boxShadow: {
+                        'card': '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)',
+                        'card-hover': '0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.02)',
+                    }
+                },
+            },
+        };
+    </script>
+    <style>
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            overflow-x: hidden;
+        }
+
+        .sidebar-item {
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .sidebar-item.active {
+            background-color: rgba(59, 130, 246, 0.08);
+            color: #2563eb;
+            border-left: 3px solid #2563eb;
+            font-weight: 500;
+        }
+
+        .sidebar-item.active .material-icons-round {
+            color: #2563eb;
+        }
+
+        .sidebar-item:hover:not(.active) {
+            background-color: rgba(59, 130, 246, 0.04);
+        }
+
+        .dark .sidebar-item.active {
+            background-color: rgba(59, 130, 246, 0.15);
+            color: #60a5fa;
+        }
+
+        .dark .sidebar-item.active .material-icons-round {
+            color: #60a5fa;
+        }
+
+        .badge {
+            padding: 0.25rem 0.75rem;
+            font-size: 0.7rem;
+            font-weight: 600;
+            border-radius: 9999px;
+            letter-spacing: 0.025em;
+            text-transform: uppercase;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .badge-success {
+            background-color: #dcfce7;
+            color: #15803d;
+        }
+
+        .badge-info {
+            background-color: #dbeafe;
+            color: #1e40af;
+        }
+
+        .badge-neutral {
+            background-color: #f3f4f6;
+            color: #4b5563;
+        }
+
+        .dark .badge-success {
+            background-color: #14532d;
+            color: #86efac;
+        }
+
+        .dark .badge-info {
+            background-color: #1e3a8a;
+            color: #bfdbfe;
+        }
+
+        .dark .badge-neutral {
+            background-color: #374151;
+            color: #d1d5db;
+        }
+
+        /* Custom scrollbar for sidebar */
+        .sidebar-scroll::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .sidebar-scroll::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .sidebar-scroll::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+
+        .dark .sidebar-scroll::-webkit-scrollbar-thumb {
+            background: #4b5563;
+        }
+
+        /* Fixed sidebar */
+        .sidebar-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            width: 16rem;
+            z-index: 40;
+            overflow-y: auto;
+        }
+
+        .main-content {
+            margin-left: 16rem;
+            width: calc(100% - 16rem);
+            min-height: 100vh;
+        }
+
+        @media (max-width: 1023px) {
+            .sidebar-container {
+                transform: translateX(-100%);
+            }
+
+            .sidebar-container.open {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                margin-left: 0;
+                width: 100%;
+            }
+        }
+
+        /* Card styles */
+        .profile-card {
+            background-color: white;
+            border-radius: 1rem;
+            border: 1px solid #e5e7eb;
+            transition: box-shadow 0.2s ease, border-color 0.2s ease;
+        }
+
+        .dark .profile-card {
+            background-color: #1f2937;
+            border-color: #374151;
+        }
+
+        .profile-section-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #6b7280;
+            margin-bottom: 1rem;
+        }
+
+        .dark .profile-section-title {
+            color: #9ca3af;
+        }
+
+        .info-label {
+            font-size: 0.75rem;
+            color: #6b7280;
+            margin-bottom: 0.25rem;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+        }
+
+        .dark .info-label {
+            color: #9ca3af;
+        }
+
+        .info-value {
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: #111827;
+        }
+
+        .dark .info-value {
+            color: #f3f4f6;
+        }
+
+        .divider {
+            border-top: 1px solid #e5e7eb;
+            margin: 1.5rem 0;
+        }
+
+        .dark .divider {
+            border-top-color: #374151;
+        }
+
+        /* Modal styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            padding: 1rem;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.2s ease, visibility 0.2s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-container {
+            max-width: 32rem;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            background-color: white;
+            border-radius: 1rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.02);
+            transform: scale(0.95);
+            transition: transform 0.2s ease;
+        }
+
+        .dark .modal-container {
+            background-color: #1f2937;
+            border: 1px solid #374151;
+        }
+
+        .modal-overlay.active .modal-container {
+            transform: scale(1);
+        }
+    </style>
+</head>
+<body>
+<!-- Main Profile Content -->
+<main layout:fragment="content">
+
+    <!-- Profile Header Card -->
+    <div class="profile-card p-5 md:p-6 mb-6">
+        <div class="flex flex-col md:flex-row md:items-start gap-6">
+            <!-- Avatar with edit button -->
+            <div class="flex-shrink-0">
+                <div class="relative">
+                    <img src="https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=120&h=120&q=80"
+                         class="w-24 h-24 md:w-28 md:h-28 rounded-xl object-cover ring-4 ring-gray-100 dark:ring-gray-700">
+                    <button id="editPhotoBtn" class="absolute bottom-0 right-0 bg-white dark:bg-gray-800 rounded-full p-1.5 shadow-md border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <span class="material-icons-round text-primary-600 dark:text-primary-400 text-sm">camera_alt</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Basic info -->
+            <div class="flex-1">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                    <div>
+                        <h3 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Jane Okafor</h3>
+                        <div class="flex flex-wrap items-center gap-2 mt-2">
+                            <span class="badge badge-info">Grade 3 · Step 2</span>
+                            <span class="badge badge-success">Active</span>
+                            <span class="text-sm text-gray-500 dark:text-gray-400 flex items-center">
+                                        <span class="material-icons-round text-xs mr-1">badge</span> EMP-2021-042
+                                    </span>
+                        </div>
+                    </div>
+                    <button id="editProfileBtn" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center md:self-start shadow-sm">
+                        <span class="material-icons-round text-sm mr-1">edit</span> Edit Profile
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-5">
+                    <div class="flex items-start space-x-2">
+                        <span class="material-icons-round text-gray-400 text-sm mt-0.5">work</span>
+                        <div>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Job Title</p>
+                            <p class="text-sm font-medium">Marketing Specialist</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start space-x-2">
+                        <span class="material-icons-round text-gray-400 text-sm mt-0.5">business</span>
+                        <div>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Department</p>
+                            <p class="text-sm font-medium">Marketing</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start space-x-2">
+                        <span class="material-icons-round text-gray-400 text-sm mt-0.5">calendar_today</span>
+                        <div>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Date of Hire</p>
+                            <p class="text-sm font-medium">12 April 2021</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Two column layout for detailed sections -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Left column - Personal & Contact -->
+        <div class="lg:col-span-2 space-y-6">
+            <!-- Personal Information -->
+            <div class="profile-card p-5 md:p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center space-x-2">
+                        <span class="material-icons-round text-primary-600 dark:text-primary-400">person_outline</span>
+                        <h4 class="profile-section-title mb-0">Personal Information</h4>
+                    </div>
+                    <button id="editPersonalInfoBtn" class="text-primary-600 hover:text-primary-700 text-sm font-medium flex items-center">
+                        <span class="material-icons-round text-sm mr-1">edit</span> Edit
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div>
+                        <p class="info-label">Full Name</p>
+                        <p class="info-value">Jane Okafor</p>
+                    </div>
+                    <div>
+                        <p class="info-label">Email Address</p>
+                        <p class="info-value">jane.okafo@company.com</p>
+                    </div>
+                    <div>
+                        <p class="info-label">Phone Number</p>
+                        <p class="info-value">+234 801 234 5678</p>
+                    </div>
+                    <div>
+                        <p class="info-label">Date of Birth</p>
+                        <p class="info-value">15 May 1990</p>
+                    </div>
+                    <div>
+                        <p class="info-label">Gender</p>
+                        <p class="info-value">Female</p>
+                    </div>
+                    <div>
+                        <p class="info-label">Marital Status</p>
+                        <p class="info-value">Married</p>
+                    </div>
+                    <div class="md:col-span-2">
+                        <p class="info-label">Residential Address</p>
+                        <p class="info-value">14 Admiralty Way, Lekki Phase 1, Lagos</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Employment Details -->
+            <div class="profile-card p-5 md:p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center space-x-2">
+                        <span class="material-icons-round text-primary-600 dark:text-primary-400">work_outline</span>
+                        <h4 class="profile-section-title mb-0">Employment Details</h4>
+                    </div>
+                    <button id="editEmploymentBtn" class="text-primary-600 hover:text-primary-700 text-sm font-medium flex items-center">
+                        <span class="material-icons-round text-sm mr-1">edit</span> Edit
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div>
+                        <p class="info-label">Employee Number</p>
+                        <p class="info-value">EMP-2021-042</p>
+                    </div>
+                    <div>
+                        <p class="info-label">Employment Status</p>
+                        <p class="info-value"><span class="badge badge-success text-xs">Active</span> (Permanent)</p>
+                    </div>
+                    <div>
+                        <p class="info-label">Date of Hire</p>
+                        <p class="info-value">12 Apr 2021</p>
+                    </div>
+                    <div>
+                        <p class="info-label">Probation End Date</p>
+                        <p class="info-value">11 Oct 2021 (Completed)</p>
+                    </div>
+                    <div>
+                        <p class="info-label">Department</p>
+                        <p class="info-value">Marketing</p>
+                    </div>
+                    <div>
+                        <p class="info-label">Job Role</p>
+                        <p class="info-value">Marketing Specialist</p>
+                    </div>
+                    <div>
+                        <p class="info-label">Job Grade / Step</p>
+                        <p class="info-value">Grade 3 · Step 2</p>
+                    </div>
+                    <div>
+                        <p class="info-label">Pay Group</p>
+                        <p class="info-value">PG4 - Marketing</p>
+                    </div>
+                    <div>
+                        <p class="info-label">Report To</p>
+                        <p class="info-value">Michael Adenuga (Marketing Manager)</p>
+                    </div>
+                    <div>
+                        <p class="info-label">Work Location</p>
+                        <p class="info-value">Lagos HQ</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Emergency Contact -->
+            <div class="profile-card p-5 md:p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center space-x-2">
+                        <span class="material-icons-round text-primary-600 dark:text-primary-400">contact_emergency</span>
+                        <h4 class="profile-section-title mb-0">Emergency Contact</h4>
+                    </div>
+                    <button id="editEmergencyBtn" class="text-primary-600 hover:text-primary-700 text-sm font-medium flex items-center">
+                        <span class="material-icons-round text-sm mr-1">edit</span> Edit
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div>
+                        <p class="info-label">Full Name</p>
+                        <p class="info-value">Chidi Okafor</p>
+                    </div>
+                    <div>
+                        <p class="info-label">Relationship</p>
+                        <p class="info-value">Spouse</p>
+                    </div>
+                    <div>
+                        <p class="info-label">Phone Number</p>
+                        <p class="info-value">+234 802 345 6789</p>
+                    </div>
+                    <div>
+                        <p class="info-label">Alternative Phone</p>
+                        <p class="info-value">+234 803 456 7890</p>
+                    </div>
+                    <div class="md:col-span-2">
+                        <p class="info-label">Email</p>
+                        <p class="info-value">chidi.okafor@email.com</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right column - Quick stats & Bank details -->
+        <div class="space-y-6">
+            <!-- Compensation Summary Card -->
+            <div class="profile-card p-5 md:p-6">
+                <div class="flex items-center space-x-2 mb-4">
+                    <span class="material-icons-round text-primary-600 dark:text-primary-400">payments</span>
+                    <h4 class="profile-section-title mb-0">Compensation</h4>
+                </div>
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-750 rounded-lg">
+                        <span class="text-sm text-gray-600 dark:text-gray-300">Basic Salary</span>
+                        <span class="font-semibold text-gray-900 dark:text-white">₦450,000</span>
+                    </div>
+                    <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-750 rounded-lg">
+                        <span class="text-sm text-gray-600 dark:text-gray-300">Gross Pay</span>
+                        <span class="font-semibold text-green-600 dark:text-green-400">₦620,000</span>
+                    </div>
+                    <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-750 rounded-lg">
+                        <span class="text-sm text-gray-600 dark:text-gray-300">Net Pay</span>
+                        <span class="font-semibold text-primary-600 dark:text-primary-400">₦540,000</span>
+                    </div>
+                    <div class="border-t border-gray-200 dark:border-gray-700 pt-3 mt-1">
+                        <a href="#" class="text-primary-600 hover:text-primary-700 text-sm font-medium flex items-center justify-between">
+                            View Full Payslip
+                            <span class="material-icons-round text-sm">arrow_forward</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bank Account Details -->
+            <div class="profile-card p-5 md:p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center space-x-2">
+                        <span class="material-icons-round text-primary-600 dark:text-primary-400">account_balance</span>
+                        <h4 class="profile-section-title mb-0">Bank Details</h4>
+                    </div>
+                    <button id="editBankBtn" class="text-primary-600 hover:text-primary-700 text-sm font-medium flex items-center">
+                        <span class="material-icons-round text-sm mr-1">edit</span> Edit
+                    </button>
+                </div>
+
+                <div class="space-y-3">
+                    <div>
+                        <p class="info-label">Account Holder</p>
+                        <p class="info-value">Jane Okafor</p>
+                    </div>
+                    <div>
+                        <p class="info-label">Bank Name</p>
+                        <p class="info-value">First Bank of Nigeria</p>
+                    </div>
+                    <div>
+                        <p class="info-label">Account Number</p>
+                        <p class="info-value">**** **** 3456</p>
+                        <p class="text-xs text-gray-500 mt-0.5">(last 4 digits displayed for security)</p>
+                    </div>
+                    <div>
+                        <p class="info-label">Account Type</p>
+                        <p class="info-value">Savings</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Links / Documents -->
+            <div class="profile-card p-5 md:p-6">
+                <div class="flex items-center space-x-2 mb-4">
+                    <span class="material-icons-round text-primary-600 dark:text-primary-400">description</span>
+                    <h4 class="profile-section-title mb-0">Documents</h4>
+                </div>
+                <div class="space-y-2">
+                    <a href="#" class="flex items-center p-2 hover:bg-gray-50 dark:hover:bg-gray-750 rounded-lg transition-colors">
+                        <span class="material-icons-round text-gray-500 mr-3 text-sm">picture_as_pdf</span>
+                        <span class="text-sm font-medium">Employment Contract.pdf</span>
+                        <span class="material-icons-round text-gray-400 ml-auto text-sm">download</span>
+                    </a>
+                    <a href="#" class="flex items-center p-2 hover:bg-gray-50 dark:hover:bg-gray-750 rounded-lg transition-colors">
+                        <span class="material-icons-round text-gray-500 mr-3 text-sm">image</span>
+                        <span class="text-sm font-medium">ID Card.jpg</span>
+                        <span class="material-icons-round text-gray-400 ml-auto text-sm">download</span>
+                    </a>
+                    <a href="#" class="flex items-center p-2 hover:bg-gray-50 dark:hover:bg-gray-750 rounded-lg transition-colors">
+                        <span class="material-icons-round text-gray-500 mr-3 text-sm">description</span>
+                        <span class="text-sm font-medium">Tax Certificate.pdf</span>
+                        <span class="material-icons-round text-gray-400 ml-auto text-sm">download</span>
+                    </a>
+                </div>
+                <div class="mt-3 pt-2 border-t border-gray-200 dark:border-gray-700">
+                    <a href="#" class="text-primary-600 hover:text-primary-700 text-sm font-medium flex items-center justify-between">
+                        View All Documents
+                        <span class="material-icons-round text-sm">arrow_forward</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="mt-6 grid grid-cols-1 gap-6">
+        <div class="profile-card p-5 md:p-6">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center space-x-2">
+                    <span class="material-icons-round text-primary-600 dark:text-primary-400">history</span>
+                    <h4 class="profile-section-title mb-0">Recent Activity</h4>
+                </div>
+                <a href="#" class="text-primary-600 hover:text-primary-700 text-sm font-medium">View All</a>
+            </div>
+            <div class="space-y-3">
+                <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-750 rounded-lg">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
+                            <span class="material-icons-round text-green-600 dark:text-green-400 text-sm">check</span>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium">Leave approved</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Annual PTO · 5 days (21–25 Mar 2025)</p>
+                        </div>
+                    </div>
+                    <span class="text-xs text-gray-500">2 days ago</span>
+                </div>
+                <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-750 rounded-lg">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
+                            <span class="material-icons-round text-blue-600 dark:text-blue-400 text-sm">trending_up</span>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium">Promotion approved</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Grade 2 → Grade 3 · Step 2</p>
+                        </div>
+                    </div>
+                    <span class="text-xs text-gray-500">01 Jun 2024</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ========== MODALS ========== -->
+
+    <!-- Modal: Edit Photo -->
+    <div id="editPhotoModal" class="modal-overlay">
+        <div class="modal-container p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold text-gray-900 dark:text-white">Update Profile Photo</h3>
+                <button class="close-modal text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                    <span class="material-icons-round">close</span>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <div class="flex justify-center">
+                    <div class="relative">
+                        <img src="https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=120&h=120&q=80"
+                             class="w-32 h-32 rounded-xl object-cover ring-4 ring-gray-100 dark:ring-gray-700">
+                    </div>
+                </div>
+                <div class="flex flex-col items-center space-y-2">
+                    <label class="w-full px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-medium text-center cursor-pointer">
+                        Choose New Photo
+                        <input type="file" accept="image/*" class="hidden">
+                    </label>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">JPG, PNG or GIF up to 5MB</p>
+                </div>
+            </div>
+            <div class="flex justify-end space-x-3 mt-6">
+                <button class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 close-modal">Cancel</button>
+                <button class="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Edit Profile (Header) -->
+    <div id="editProfileModal" class="modal-overlay">
+        <div class="modal-container p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold text-gray-900 dark:text-white">Edit Profile</h3>
+                <button class="close-modal text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                    <span class="material-icons-round">close</span>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">First Name</label>
+                        <input type="text" value="Jane" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Last Name</label>
+                        <input type="text" value="Okafor" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Job Title</label>
+                    <input type="text" value="Marketing Specialist" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Department</label>
+                    <select class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none">
+                        <option selected>Marketing</option>
+                        <option>Engineering</option>
+                        <option>Sales</option>
+                        <option>Operations</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Employee Number</label>
+                    <input type="text" value="EMP-2021-042" readonly class="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-sm">
+                </div>
+            </div>
+            <div class="flex justify-end space-x-3 mt-6">
+                <button class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 close-modal">Cancel</button>
+                <button class="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Edit Personal Information -->
+    <div id="editPersonalInfoModal" class="modal-overlay">
+        <div class="modal-container p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold text-gray-900 dark:text-white">Edit Personal Information</h3>
+                <button class="close-modal text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                    <span class="material-icons-round">close</span>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Full Name</label>
+                        <input type="text" value="Jane Okafor" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Email Address</label>
+                        <input type="email" value="jane.okafo@company.com" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Phone Number</label>
+                        <input type="tel" value="+234 801 234 5678" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Date of Birth</label>
+                        <input type="date" value="1990-05-15" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Gender</label>
+                        <select class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+                            <option selected>Female</option>
+                            <option>Male</option>
+                            <option>Other</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Marital Status</label>
+                        <select class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+                            <option>Single</option>
+                            <option selected>Married</option>
+                            <option>Divorced</option>
+                            <option>Widowed</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Residential Address</label>
+                    <textarea rows="2" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">14 Admiralty Way, Lekki Phase 1, Lagos</textarea>
+                </div>
+            </div>
+            <div class="flex justify-end space-x-3 mt-6">
+                <button class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 close-modal">Cancel</button>
+                <button class="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Edit Employment Details -->
+    <div id="editEmploymentModal" class="modal-overlay">
+        <div class="modal-container p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold text-gray-900 dark:text-white">Edit Employment Details</h3>
+                <button class="close-modal text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                    <span class="material-icons-round">close</span>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Department</label>
+                        <select class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+                            <option selected>Marketing</option>
+                            <option>Engineering</option>
+                            <option>Sales</option>
+                            <option>Operations</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Job Role</label>
+                        <input type="text" value="Marketing Specialist" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Job Grade</label>
+                        <select class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+                            <option>Grade 1</option>
+                            <option>Grade 2</option>
+                            <option selected>Grade 3</option>
+                            <option>Grade 4</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Step Level</label>
+                        <select class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+                            <option>Step 1</option>
+                            <option selected>Step 2</option>
+                            <option>Step 3</option>
+                            <option>Step 4</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Pay Group</label>
+                    <select class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+                        <option selected>PG4 - Marketing</option>
+                        <option>PG1 - Executive</option>
+                        <option>PG2 - Engineering</option>
+                        <option>PG3 - Sales</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Report To</label>
+                        <input type="text" value="Michael Adenuga" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Work Location</label>
+                        <input type="text" value="Lagos HQ" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Employment Status</label>
+                    <select class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+                        <option selected>Active (Permanent)</option>
+                        <option>Probation</option>
+                        <option>Contract</option>
+                        <option>Intern</option>
+                    </select>
+                </div>
+            </div>
+            <div class="flex justify-end space-x-3 mt-6">
+                <button class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 close-modal">Cancel</button>
+                <button class="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Edit Emergency Contact -->
+    <div id="editEmergencyModal" class="modal-overlay">
+        <div class="modal-container p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold text-gray-900 dark:text-white">Edit Emergency Contact</h3>
+                <button class="close-modal text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                    <span class="material-icons-round">close</span>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Full Name</label>
+                        <input type="text" value="Chidi Okafor" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Relationship</label>
+                        <select class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+                            <option selected>Spouse</option>
+                            <option>Parent</option>
+                            <option>Sibling</option>
+                            <option>Friend</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Phone Number</label>
+                    <input type="tel" value="+234 802 345 6789" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Alternative Phone</label>
+                    <input type="tel" value="+234 803 456 7890" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Email Address</label>
+                    <input type="email" value="chidi.okafor@email.com" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+                </div>
+            </div>
+            <div class="flex justify-end space-x-3 mt-6">
+                <button class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 close-modal">Cancel</button>
+                <button class="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Edit Bank Details -->
+    <div id="editBankModal" class="modal-overlay">
+        <div class="modal-container p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold text-gray-900 dark:text-white">Edit Bank Details</h3>
+                <button class="close-modal text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                    <span class="material-icons-round">close</span>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Account Holder Name</label>
+                    <input type="text" value="Jane Okafor" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Bank Name</label>
+                    <input type="text" value="First Bank of Nigeria" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Account Number</label>
+                    <input type="text" value="**** **** 3456" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Account Type</label>
+                    <select class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+                        <option selected>Savings</option>
+                        <option>Current</option>
+                        <option>Domiciliary</option>
+                    </select>
+                </div>
+            </div>
+            <div class="flex justify-end space-x-3 mt-6">
+                <button class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 close-modal">Cancel</button>
+                <button class="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ========== MODAL CONTROL ==========
+        const modals = {
+            editPhoto: document.getElementById('editPhotoModal'),
+            editProfile: document.getElementById('editProfileModal'),
+            editPersonalInfo: document.getElementById('editPersonalInfoModal'),
+            editEmployment: document.getElementById('editEmploymentModal'),
+            editEmergency: document.getElementById('editEmergencyModal'),
+            editBank: document.getElementById('editBankModal')
+        };
+
+        // Open modal
+        function openModal(modal) {
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        // Close modal
+        function closeModal(modal) {
+            modal.classList.remove('active');
+            document.body.style.overflow = 'auto';
+        }
+
+        // Close all modals (for overlay click)
+        function closeAllModals() {
+            Object.values(modals).forEach(modal => {
+                modal.classList.remove('active');
+            });
+            document.body.style.overflow = 'auto';
+        }
+
+        // Attach open events to buttons
+        document.getElementById('editPhotoBtn').addEventListener('click', (e) => {
+            e.preventDefault();
+            openModal(modals.editPhoto);
+        });
+        document.getElementById('editProfileBtn').addEventListener('click', (e) => {
+            e.preventDefault();
+            openModal(modals.editProfile);
+        });
+        document.getElementById('editPersonalInfoBtn').addEventListener('click', (e) => {
+            e.preventDefault();
+            openModal(modals.editPersonalInfo);
+        });
+        document.getElementById('editEmploymentBtn').addEventListener('click', (e) => {
+            e.preventDefault();
+            openModal(modals.editEmployment);
+        });
+        document.getElementById('editEmergencyBtn').addEventListener('click', (e) => {
+            e.preventDefault();
+            openModal(modals.editEmergency);
+        });
+        document.getElementById('editBankBtn').addEventListener('click', (e) => {
+            e.preventDefault();
+            openModal(modals.editBank);
+        });
+
+        // Close modal via close buttons and overlay clicks
+        document.querySelectorAll('.close-modal').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const modal = e.target.closest('.modal-overlay');
+                if (modal) closeModal(modal);
+            });
+        });
+
+        // Close when clicking overlay (background)
+        Object.values(modals).forEach(modal => {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    closeModal(modal);
+                }
+            });
+        });
+
+        // Prevent closing when clicking inside modal container
+        document.querySelectorAll('.modal-container').forEach(container => {
+            container.addEventListener('click', (e) => e.stopPropagation());
+        });
+
+        // Mobile Sidebar Toggle
+        const menuToggle = document.getElementById('menuToggle');
+        const mobileOverlay = document.getElementById('mobileOverlay');
+        const sidebar = document.querySelector('.sidebar-container');
+
+        if (menuToggle && mobileOverlay && sidebar) {
+            menuToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('open');
+                mobileOverlay.classList.toggle('hidden');
+                document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : 'auto';
+            });
+
+            mobileOverlay.addEventListener('click', () => {
+                sidebar.classList.remove('open');
+                mobileOverlay.classList.add('hidden');
+                document.body.style.overflow = 'auto';
+            });
+        }
+
+        // Theme Toggle
+        const themeToggle = document.getElementById('themeToggle');
+        const themeIcon = themeToggle.querySelector('.material-icons-round');
+
+        themeToggle.addEventListener('click', () => {
+            const isDark = document.documentElement.classList.toggle('dark');
+            themeIcon.textContent = isDark ? 'light_mode' : 'dark_mode';
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        });
+
+        // Initialize theme
+        if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+            themeIcon.textContent = 'light_mode';
+        }
+
+        // Sidebar active state
+        document.querySelectorAll('.sidebar-item').forEach(item => {
+            item.addEventListener('click', function(e) {
+                if (this.getAttribute('href') === '#') {
+                    e.preventDefault();
+                }
+                document.querySelectorAll('.sidebar-item').forEach(nav => {
+                    nav.classList.remove('active');
+                });
+                this.classList.add('active');
+
+                if (window.innerWidth < 1024) {
+                    sidebar.classList.remove('open');
+                    mobileOverlay.classList.add('hidden');
+                    document.body.style.overflow = 'auto';
+                }
+            });
+        });
+
+        // Close sidebar on window resize
+        window.addEventListener('resize', () => {
+            if (window.innerWidth >= 1024) {
+                sidebar?.classList.remove('open');
+                mobileOverlay?.classList.add('hidden');
+                document.body.style.overflow = 'auto';
+            }
+        });
+    </script>
+</main>
+</body>
+</html>

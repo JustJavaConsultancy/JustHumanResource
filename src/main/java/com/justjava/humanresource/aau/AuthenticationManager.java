@@ -1,17 +1,18 @@
-package com.justjava.humanresource.core.config;
+package com.justjava.humanresource.aau;
 
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.core.oidc.user.DefaultOidcUser;
+import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
+@Component("coreAuthenticationManager")
 public class AuthenticationManager {
     public Object get(String fieldName){
         Authentication authentication=SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null) return null;
         DefaultOidcUser defaultOidcUser = (DefaultOidcUser) authentication.getPrincipal();
 //        System.out.println(" The token here =="+defaultOidcUser.getClaims());
         return defaultOidcUser.getClaims().get(fieldName);

@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" xmlns:th="http://www.w3.org/1999/xhtml"
+      layout:decorate="layouts/employeeLayout">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+  <script>
+    tailwind.config = {
+        darkMode: "class",
+        theme: {
+            extend: {
+                colors: {
+                    primary: {
+                        50: '#eff6ff',
+                        100: '#dbeafe',
+                        200: '#bfdbfe',
+                        300: '#93c5fd',
+                        400: '#60a5fa',
+                        500: '#3b82f6',
+                        600: '#2563eb',
+                        700: '#1d4ed8',
+                        800: '#1e40af',
+                        900: '#1e3a8a',
+                    },
+                    secondary: {
+                        50: '#f8fafc',
+                        100: '#f1f5f9',
+                        200: '#e2e8f0',
+                        300: '#cbd5e1',
+                        400: '#94a3b8',
+                        500: '#64748b',
+                        600: '#475569',
+                        700: '#334155',
+                        800: '#1e293b',
+                        900: '#0f172a',
+                    }
+                },
+                fontFamily: {
+                    'sans': ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                },
+                borderRadius: {
+                    'xl': '1rem',
+                    '2xl': '1.5rem',
+                },
+                boxShadow: {
+                    'card': '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)',
+                    'card-hover': '0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.02)',
+                }
+            },
+        },
+    };
+  </script>
+  <style>
+    * {
+        font-family: 'Inter', sans-serif;
+    }
+
+    body {
+        overflow-x: hidden;
+    }
+
+    .sidebar-item {
+        transition: all 0.2s ease;
+        position: relative;
+    }
+
+    .sidebar-item.active {
+        background-color: rgba(59, 130, 246, 0.08);
+        color: #2563eb;
+        border-left: 3px solid #2563eb;
+        font-weight: 500;
+    }
+
+    .sidebar-item.active .material-icons-round {
+        color: #2563eb;
+    }
+
+    .sidebar-item:hover:not(.active) {
+        background-color: rgba(59, 130, 246, 0.04);
+    }
+
+    .dark .sidebar-item.active {
+        background-color: rgba(59, 130, 246, 0.15);
+        color: #60a5fa;
+    }
+
+    .dark .sidebar-item.active .material-icons-round {
+        color: #60a5fa;
+    }
+
+    .badge {
+        padding: 0.25rem 0.75rem;
+        font-size: 0.7rem;
+        font-weight: 600;
+        border-radius: 9999px;
+        letter-spacing: 0.025em;
+        text-transform: uppercase;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .badge-success {
+        background-color: #dcfce7;
+        color: #15803d;
+    }
+
+    .badge-warning {
+        background-color: #fef3c7;
+        color: #b45309;
+    }
+
+    .badge-error {
+        background-color: #fee2e2;
+        color: #b91c1c;
+    }
+
+    .badge-info {
+        background-color: #dbeafe;
+        color: #1e40af;
+    }
+
+    .badge-neutral {
+        background-color: #f3f4f6;
+        color: #4b5563;
+    }
+
+    .dark .badge-success {
+        background-color: #14532d;
+        color: #86efac;
+    }
+
+    .dark .badge-warning {
+        background-color: #92400e;
+        color: #fde68a;
+    }
+
+    .dark .badge-error {
+        background-color: #7f1d1d;
+        color: #fecaca;
+    }
+
+    .dark .badge-info {
+        background-color: #1e3a8a;
+        color: #bfdbfe;
+    }
+
+    .dark .badge-neutral {
+        background-color: #374151;
+        color: #d1d5db;
+    }
+
+    /* Custom scrollbar */
+    .sidebar-scroll::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    .sidebar-scroll::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .sidebar-scroll::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+
+    .dark .sidebar-scroll::-webkit-scrollbar-thumb {
+        background: #4b5563;
+    }
+
+    /* Fixed sidebar */
+    .sidebar-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        width: 16rem;
+        z-index: 40;
+        overflow-y: auto;
+    }
+
+    .main-content {
+        margin-left: 16rem;
+        width: calc(100% - 16rem);
+        min-height: 100vh;
+    }
+
+    @media (max-width: 1023px) {
+        .sidebar-container {
+            transform: translateX(-100%);
+        }
+
+        .sidebar-container.open {
+            transform: translateX(0);
+        }
+
+        .main-content {
+            margin-left: 0;
+            width: 100%;
+        }
+    }
+
+    /* Card styles */
+    .promotion-card {
+        background-color: white;
+        border-radius: 1rem;
+        border: 1px solid #e5e7eb;
+        transition: box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+
+    .dark .promotion-card {
+        background-color: #1f2937;
+        border-color: #374151;
+    }
+
+    .section-title {
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #6b7280;
+    }
+
+    .dark .section-title {
+        color: #9ca3af;
+    }
+
+    .table-header {
+        background-color: #f9fafb;
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #6b7280;
+    }
+
+    .dark .table-header {
+        background-color: #111827;
+        color: #9ca3af;
+    }
+
+    .table-row:hover {
+        background-color: #f9fafb;
+    }
+
+    .dark .table-row:hover {
+        background-color: #1e293b;
+    }
+  </style>
+</head>
+<body>
+<!-- Main Promotions Content -->
+<main layout:fragment="content">
+
+  <!-- Promotion Summary Header -->
+  <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+    <div class="flex items-center space-x-3">
+      <div class="w-10 h-10 bg-amber-100 dark:bg-amber-900/30 rounded-xl flex items-center justify-center">
+        <span class="material-icons-round text-amber-600 dark:text-amber-400">trending_up</span>
+      </div>
+      <div>
+        <h3 class="text-lg font-bold text-gray-900 dark:text-white">Career Progress</h3>
+        <p class="text-xs text-gray-500 dark:text-gray-400">Current position: Grade 3 · Step 2 (since Jun 2024)</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+                    <span class="px-3 py-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded-lg text-sm font-medium flex items-center">
+                        <span class="material-icons-round text-sm mr-1">celebration</span> 2 promotions
+                    </span>
+    </div>
+  </div>
+
+  <!-- Stats Cards -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5 mb-6">
+    <!-- Total Promotions -->
+    <div class="promotion-card p-5">
+      <div class="flex items-center justify-between mb-2">
+        <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
+          <span class="material-icons-round text-blue-600 dark:text-blue-400">stars</span>
+        </div>
+        <span class="text-xs text-gray-500 dark:text-gray-400">Career</span>
+      </div>
+      <p class="text-2xl font-bold text-gray-900 dark:text-white">2</p>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Total promotions</p>
+    </div>
+    <!-- Last Promotion Date -->
+    <div class="promotion-card p-5">
+      <div class="flex items-center justify-between mb-2">
+        <div class="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center">
+          <span class="material-icons-round text-green-600 dark:text-green-400">event</span>
+        </div>
+        <span class="text-xs text-gray-500 dark:text-gray-400">Latest</span>
+      </div>
+      <p class="text-2xl font-bold text-gray-900 dark:text-white">Jun 2024</p>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Grade 2 → Grade 3</p>
+    </div>
+    <!-- Average Appraisal Score -->
+    <div class="promotion-card p-5">
+      <div class="flex items-center justify-between mb-2">
+        <div class="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center">
+          <span class="material-icons-round text-purple-600 dark:text-purple-400">assessment</span>
+        </div>
+        <span class="text-xs text-gray-500 dark:text-gray-400">Avg. Score</span>
+      </div>
+      <p class="text-2xl font-bold text-gray-900 dark:text-white">89.5</p>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">/ 100 across promotions</p>
+    </div>
+    <!-- Time in Current Grade -->
+    <div class="promotion-card p-5">
+      <div class="flex items-center justify-between mb-2">
+        <div class="w-10 h-10 bg-amber-100 dark:bg-amber-900/30 rounded-xl flex items-center justify-center">
+          <span class="material-icons-round text-amber-600 dark:text-amber-400">hourglass_top</span>
+        </div>
+        <span class="text-xs text-gray-500 dark:text-gray-400">Current grade</span>
+      </div>
+      <p class="text-2xl font-bold text-gray-900 dark:text-white">9 mo</p>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Since last promotion</p>
+    </div>
+  </div>
+
+  <!-- Pending Promotion Request (if any) -->
+  <div class="promotion-card p-5 mb-6 border border-yellow-200 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-900/20">
+    <div class="flex items-start justify-between">
+      <div class="flex items-start space-x-3">
+        <div class="w-8 h-8 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg flex items-center justify-center mt-0.5">
+          <span class="material-icons-round text-yellow-600 dark:text-yellow-400">pending</span>
+        </div>
+        <div>
+          <h4 class="text-sm font-semibold text-gray-900 dark:text-white">Pending Promotion Request</h4>
+          <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">Grade 3 · Step 2 → Grade 4 · Step 1 · Submitted on 10 Mar 2025</p>
+          <div class="flex items-center mt-2">
+            <span class="badge badge-warning text-xs">Under Review</span>
+            <span class="text-xs text-gray-500 ml-2">Appraisal score: 84.5</span>
+          </div>
+        </div>
+      </div>
+      <button class="text-primary-600 hover:text-primary-700 text-xs font-medium">
+        View Details
+      </button>
+    </div>
+  </div>
+
+  <!-- Promotion History Table -->
+  <div class="promotion-card p-5 md:p-6">
+    <div class="flex items-center justify-between mb-4">
+      <div class="flex items-center space-x-2">
+        <span class="material-icons-round text-primary-600 dark:text-primary-400">history</span>
+        <h4 class="section-title mb-0">Promotion History</h4>
+      </div>
+      <span class="text-xs text-gray-500 dark:text-gray-400">2 records</span>
+    </div>
+
+    <div class="overflow-x-auto -mx-5 md:-mx-6 px-5 md:px-6 pb-1">
+      <table class="w-full min-w-[650px]">
+        <thead>
+        <tr class="table-header border-b border-gray-200 dark:border-gray-700">
+          <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Effective Date</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">From</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">To</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Appraisal Score</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Salary Change</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Status</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Approved By</th>
+        </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+        <tr class="table-row">
+          <td class="px-4 py-3.5 text-sm font-medium">01 Jun 2024</td>
+          <td class="px-4 py-3.5">
+            <span class="badge badge-info bg-blue-50 dark:bg-blue-900/50">Grade 2 · Step 4</span>
+          </td>
+          <td class="px-4 py-3.5">
+            <span class="badge badge-success bg-green-50 dark:bg-green-900/50">Grade 3 · Step 2</span>
+          </td>
+          <td class="px-4 py-3.5 text-sm font-semibold">87/100</td>
+          <td class="px-4 py-3.5 text-sm">₦380k → ₦450k</td>
+          <td class="px-4 py-3.5">
+            <span class="badge badge-success">Approved</span>
+          </td>
+          <td class="px-4 py-3.5 text-sm">Michael Adenuga</td>
+        </tr>
+        <tr class="table-row">
+          <td class="px-4 py-3.5 text-sm font-medium">15 Jan 2022</td>
+          <td class="px-4 py-3.5">
+            <span class="badge badge-info bg-blue-50 dark:bg-blue-900/50">Grade 1 · Step 1</span>
+          </td>
+          <td class="px-4 py-3.5">
+            <span class="badge badge-success bg-green-50 dark:bg-green-900/50">Grade 2 · Step 4</span>
+          </td>
+          <td class="px-4 py-3.5 text-sm font-semibold">92/100</td>
+          <td class="px-4 py-3.5 text-sm">₦250k → ₦380k</td>
+          <td class="px-4 py-3.5">
+            <span class="badge badge-success">Approved</span>
+          </td>
+          <td class="px-4 py-3.5 text-sm">Sarah Johnson</td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Promotion Timeline (Visual) -->
+  <div class="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2">
+      <div class="promotion-card p-5 md:p-6">
+        <div class="flex items-center space-x-2 mb-4">
+          <span class="material-icons-round text-primary-600 dark:text-primary-400">timeline</span>
+          <h4 class="section-title mb-0">Career Timeline</h4>
+        </div>
+        <div class="relative ml-2">
+          <!-- Timeline line -->
+          <div class="absolute left-2 top-2 bottom-2 w-0.5 bg-gray-200 dark:bg-gray-700"></div>
+
+          <!-- Timeline items -->
+          <div class="space-y-5">
+            <!-- Current -->
+            <div class="relative pl-8">
+              <div class="absolute left-0 w-4 h-4 bg-primary-600 rounded-full border-2 border-white dark:border-gray-800"></div>
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-sm font-semibold text-gray-900 dark:text-white">Current Position</p>
+                  <p class="text-xs text-gray-600 dark:text-gray-400">Grade 3 · Step 2 · Marketing Specialist</p>
+                </div>
+                <span class="text-xs text-gray-500">Since Jun 2024</span>
+              </div>
+            </div>
+            <!-- Promotion 1 -->
+            <div class="relative pl-8">
+              <div class="absolute left-0 w-4 h-4 bg-green-600 rounded-full border-2 border-white dark:border-gray-800"></div>
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-sm font-semibold text-gray-900 dark:text-white">Promotion to Grade 3</p>
+                  <p class="text-xs text-gray-600 dark:text-gray-400">Grade 2 → Grade 3 · Appraisal: 87/100</p>
+                </div>
+                <span class="text-xs text-gray-500">Jun 2024</span>
+              </div>
+            </div>
+            <!-- Promotion 2 -->
+            <div class="relative pl-8">
+              <div class="absolute left-0 w-4 h-4 bg-green-600 rounded-full border-2 border-white dark:border-gray-800"></div>
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-sm font-semibold text-gray-900 dark:text-white">Promotion to Grade 2</p>
+                  <p class="text-xs text-gray-600 dark:text-gray-400">Grade 1 → Grade 2 · Appraisal: 92/100</p>
+                </div>
+                <span class="text-xs text-gray-500">Jan 2022</span>
+              </div>
+            </div>
+            <!-- Date of Hire -->
+            <div class="relative pl-8">
+              <div class="absolute left-0 w-4 h-4 bg-gray-400 rounded-full border-2 border-white dark:border-gray-800"></div>
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-sm font-semibold text-gray-900 dark:text-white">Date of Hire</p>
+                  <p class="text-xs text-gray-600 dark:text-gray-400">Joined as Grade 1 · Step 1</p>
+                </div>
+                <span class="text-xs text-gray-500">Apr 2021</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right column - Promotion Eligibility & Info -->
+    <div class="lg:col-span-1 space-y-6">
+      <!-- Next Promotion Eligibility -->
+      <div class="promotion-card p-5 md:p-6">
+        <div class="flex items-center space-x-2 mb-3">
+          <span class="material-icons-round text-primary-600 dark:text-primary-400">insights</span>
+          <h4 class="section-title mb-0">Next Promotion</h4>
+        </div>
+        <div class="text-center py-2">
+          <span class="material-icons-round text-gray-300 dark:text-gray-600 text-4xl mb-2">hourglass_empty</span>
+          <p class="text-sm font-medium text-gray-900 dark:text-white">Eligibility in 3 months</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Minimum 12 months in current grade required</p>
+          <div class="mt-3 p-3 bg-gray-50 dark:bg-gray-750 rounded-lg">
+            <div class="flex justify-between text-xs">
+              <span>Time in grade</span>
+              <span class="font-medium">9 / 12 months</span>
+            </div>
+            <div class="progress-bar h-1.5 mt-1">
+              <div class="progress-fill bg-primary-600 h-full rounded-full" style="width: 75%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Promotion Criteria -->
+      <div class="promotion-card p-5 md:p-6">
+        <div class="flex items-center space-x-2 mb-3">
+          <span class="material-icons-round text-primary-600 dark:text-primary-400">rule</span>
+          <h4 class="section-title mb-0">Promotion Criteria</h4>
+        </div>
+        <ul class="space-y-2 text-xs">
+          <li class="flex items-start">
+            <span class="material-icons-round text-green-600 text-sm mr-1.5">check_circle</span>
+            <span>Minimum 12 months in current grade</span>
+          </li>
+          <li class="flex items-start">
+            <span class="material-icons-round text-green-600 text-sm mr-1.5">check_circle</span>
+            <span>KPI score ≥ 80 for last 2 quarters</span>
+          </li>
+          <li class="flex items-start">
+            <span class="material-icons-round text-green-600 text-sm mr-1.5">check_circle</span>
+            <span>No active disciplinary actions</span>
+          </li>
+          <li class="flex items-start">
+            <span class="material-icons-round text-gray-400 text-sm mr-1.5">radio_button_unchecked</span>
+            <span>Manager recommendation</span>
+          </li>
+        </ul>
+        <div class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+          <p class="text-xs text-gray-500">Your current KPI: 84.5 ✓</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Additional Information (Read-only) -->
+  <div class="mt-6 text-center text-xs text-gray-500 dark:text-gray-400">
+    <span class="material-icons-round text-xs align-text-bottom mr-1">lock</span>
+    Promotion history is based on approved requests. For questions, contact HR.
+  </div>
+
+  <script>
+    // ========== MOBILE SIDEBAR ==========
+    const menuToggle = document.getElementById('menuToggle');
+    const mobileOverlay = document.getElementById('mobileOverlay');
+    const sidebar = document.querySelector('.sidebar-container');
+
+    if (menuToggle && mobileOverlay && sidebar) {
+        menuToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('open');
+            mobileOverlay.classList.toggle('hidden');
+            document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : 'auto';
+        });
+
+        mobileOverlay.addEventListener('click', () => {
+            sidebar.classList.remove('open');
+            mobileOverlay.classList.add('hidden');
+            document.body.style.overflow = 'auto';
+        });
+    }
+
+    // ========== THEME TOGGLE ==========
+    const themeToggle = document.getElementById('themeToggle');
+    const themeIcon = themeToggle.querySelector('.material-icons-round');
+
+    themeToggle.addEventListener('click', () => {
+        const isDark = document.documentElement.classList.toggle('dark');
+        themeIcon.textContent = isDark ? 'light_mode' : 'dark_mode';
+        localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    });
+
+    // Initialize theme
+    if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+        themeIcon.textContent = 'light_mode';
+    }
+
+    // Sidebar active state
+    document.querySelectorAll('.sidebar-item').forEach(item => {
+        item.addEventListener('click', function(e) {
+            if (this.getAttribute('href') === '#') {
+                e.preventDefault();
+            }
+            document.querySelectorAll('.sidebar-item').forEach(nav => {
+                nav.classList.remove('active');
+            });
+            this.classList.add('active');
+
+            if (window.innerWidth < 1024) {
+                sidebar.classList.remove('open');
+                mobileOverlay.classList.add('hidden');
+                document.body.style.overflow = 'auto';
+            }
+        });
+    });
+
+    // Close sidebar on window resize
+    window.addEventListener('resize', () => {
+        if (window.innerWidth >= 1024) {
+            sidebar?.classList.remove('open');
+            mobileOverlay?.classList.add('hidden');
+            document.body.style.overflow = 'auto';
+        }
+    });
+  </script>
+</main>
+</body>
+</html>
