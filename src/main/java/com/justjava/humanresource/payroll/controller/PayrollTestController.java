@@ -10,6 +10,8 @@ import com.justjava.humanresource.hr.repository.PayGroupRepository;
 import com.justjava.humanresource.hr.service.EmployeeService;
 import com.justjava.humanresource.onboarding.dto.StartEmployeeOnboardingCommand;
 import com.justjava.humanresource.onboarding.service.EmployeeOnboardingService;
+import com.justjava.humanresource.payroll.entity.Allowance;
+import com.justjava.humanresource.payroll.entity.Deduction;
 import com.justjava.humanresource.payroll.entity.PayrollRun;
 import com.justjava.humanresource.payroll.repositories.PayrollRunRepository;
 import com.justjava.humanresource.payroll.service.PayrollChangeOrchestrator;
@@ -61,6 +63,34 @@ public class PayrollTestController {
     @GetMapping("/setup/pension-schemes")
     public List<PensionScheme> getActivePensionSchemes() {
         return payrollSetupService.getActivePensionSchemes();
+    }
+
+    /* ============================================================
+   ALLOWANCE SETUP
+   ============================================================ */
+
+    @PostMapping("/setup/allowance")
+    public Allowance createAllowance(@RequestBody Allowance allowance) {
+        return payrollSetupService.createAllowance(allowance);
+    }
+
+    @GetMapping("/setup/allowances")
+    public List<Allowance> getAllowances() {
+        return payrollSetupService.getActiveAllowances();
+    }
+
+/* ============================================================
+   DEDUCTION SETUP
+   ============================================================ */
+
+    @PostMapping("/setup/deduction")
+    public Deduction createDeduction(@RequestBody Deduction deduction) {
+        return payrollSetupService.createDeduction(deduction);
+    }
+
+    @GetMapping("/setup/deductions")
+    public List<Deduction> getDeductions() {
+        return payrollSetupService.getActiveDeductions();
     }
 
     @GetMapping("/setup/validate")
