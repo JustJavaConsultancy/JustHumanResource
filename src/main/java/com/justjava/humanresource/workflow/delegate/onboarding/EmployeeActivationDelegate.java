@@ -35,13 +35,14 @@ public class EmployeeActivationDelegate implements JavaDelegate {
          * 3. Publishes SalaryChangedEvent
          * 4. Payroll listener reacts automatically
          */
-        employeeService.changeEmploymentStatus(
+        execution.setVariable("employeeActivated", true);
+/*        employeeService.changeEmploymentStatus(
                 employeeId,
                 EmploymentStatus.ACTIVE,
                 LocalDate.now()
-        );
+        );*/
 
-        execution.setVariable("employeeActivated", true);
+
     }
 }
 

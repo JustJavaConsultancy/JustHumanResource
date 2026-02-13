@@ -1,5 +1,7 @@
 package com.justjava.humanresource.payroll.controller;
 
+
+import com.justjava.humanresource.core.enums.EmploymentStatus;
 import com.justjava.humanresource.hr.dto.EmployeeDTO;
 import com.justjava.humanresource.hr.dto.EmployeeOnboardingResponseDTO;
 import com.justjava.humanresource.hr.entity.Employee;
@@ -7,11 +9,13 @@ import com.justjava.humanresource.hr.entity.PayGroup;
 import com.justjava.humanresource.hr.repository.PayGroupRepository;
 import com.justjava.humanresource.hr.service.EmployeeService;
 import com.justjava.humanresource.onboarding.dto.StartEmployeeOnboardingCommand;
-import com.justjava.humanresource.onboarding.entity.EmployeeOnboarding;
 import com.justjava.humanresource.onboarding.service.EmployeeOnboardingService;
 import com.justjava.humanresource.payroll.entity.PayrollRun;
 import com.justjava.humanresource.payroll.repositories.PayrollRunRepository;
 import com.justjava.humanresource.payroll.service.PayrollChangeOrchestrator;
+import com.justjava.humanresource.payroll.service.PayrollSetupService;
+import com.justjava.humanresource.payroll.statutory.entity.PayeTaxBand;
+import com.justjava.humanresource.payroll.statutory.entity.PensionScheme;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
@@ -29,13 +33,50 @@ public class PayrollTestController {
     private final PayGroupRepository payGroupRepository;
     private final PayrollRunRepository payrollRunRepository;
     private final PayrollChangeOrchestrator payrollChangeOrchestrator;
+    private final PayrollSetupService payrollSetupService;
 
     /* ============================================================
-       EMPLOYEE CREATION
+       PAYROLL SETUP SECTION
        ============================================================ */
-/* ============================================================
-   EMPLOYEE ONBOARDING (FLOWABLE PROCESS)
-   ============================================================ */
+
+    @PostMapping("/setup/paye-band")
+    public PayeTaxBand createPayeBand(@RequestBody PayeTaxBand band) {
+        return payrollSetupService.createPayeTaxBand(band);
+    }
+
+    @GetMapping("/setup/paye-band")
+    public List<PayeTaxBand> getActivePayeBands(
+            @RequestParam
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate date) {
+
+        return payrollSetupService.getActivePayeBands(date);
+    }
+
+    @PostMapping("/setup/pension-scheme")
+    public PensionScheme createPensionScheme(@RequestBody PensionScheme scheme) {
+        return payrollSetupService.createPensionScheme(scheme);
+    }
+
+    @GetMapping("/setup/pension-schemes")
+    public List<PensionScheme> getActivePensionSchemes() {
+        return payrollSetupService.getActivePensionSchemes();
+    }
+
+    @GetMapping("/setup/validate")
+    public String validatePayrollReadiness(
+            @RequestParam
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate payrollDate) {
+
+        payrollSetupService.validatePayrollSystemReadiness(payrollDate);
+
+        return "Payroll system ready for date: " + payrollDate;
+    }
+
+    /* ============================================================
+       EMPLOYEE ONBOARDING (FLOWABLE PROCESS)
+       ============================================================ */
 
     @PostMapping("/onboarding")
     public EmployeeOnboardingResponseDTO startOnboarding(
@@ -46,7 +87,6 @@ public class PayrollTestController {
                 command,
                 initiatedBy
         );
-
     }
 
     @PostMapping("/employee")
@@ -67,7 +107,8 @@ public class PayrollTestController {
     public Employee changePayGroup(
             @PathVariable Long employeeId,
             @PathVariable Long payGroupId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            @RequestParam
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
             LocalDate effectiveDate) {
 
         PayGroup payGroup = payGroupRepository.findById(payGroupId)
@@ -81,14 +122,15 @@ public class PayrollTestController {
     }
 
     /* ============================================================
-       JOB STEP CHANGE (SALARY CHANGE)
+       JOB STEP CHANGE
        ============================================================ */
 
     @PostMapping("/employee/{employeeId}/change-jobstep/{jobStepId}")
     public Employee changeJobStep(
             @PathVariable Long employeeId,
             @PathVariable Long jobStepId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            @RequestParam
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
             LocalDate effectiveDate) {
 
         return employeeService.changeJobStep(
@@ -97,15 +139,29 @@ public class PayrollTestController {
                 effectiveDate
         );
     }
+    /* ============================================================
+       JOB STEP CHANGE
+       ============================================================ */
+
+    @PostMapping("/employee/{employeeId}/change-status")
+    public Employee changeStatus(
+            @PathVariable Long employeeId) {
+
+        return employeeService.changeEmploymentStatus(
+                employeeId, EmploymentStatus.ACTIVE,
+                LocalDate.now()
+        );
+    }
 
     /* ============================================================
-       MANUAL PAYROLL TRIGGER (FOR TESTING)
+       MANUAL PAYROLL TRIGGER
        ============================================================ */
 
     @PostMapping("/employee/{employeeId}/run-payroll")
     public String triggerPayroll(
             @PathVariable Long employeeId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            @RequestParam
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
             LocalDate payrollDate) {
 
         payrollChangeOrchestrator.recalculateForEmployee(
@@ -128,54 +184,9 @@ public class PayrollTestController {
                 .toList();
     }
 
-    /* ============================================================
-       VIEW SINGLE PAYROLL RUN
-       ============================================================ */
-
     @GetMapping("/run/{runId}")
     public PayrollRun getPayrollRun(@PathVariable Long runId) {
         return payrollRunRepository.findById(runId)
                 .orElseThrow();
     }
 }
-/**
- 🧪 What You Can Now Test
- 1️⃣ Employee Onboarding
- POST /api/test/payroll/employee
-
-
- → Creates employee
- → Triggers SalaryChangedEvent
- → Starts Flowable process
- → Generates first PayrollRun
- → Generates first PaySlip
-
- 2️⃣ Change Pay Group
- POST /api/test/payroll/employee/1/change-paygroup/3?effectiveDate=2026-02-01
-
-
- → Domain event
- → Message correlation
- → Payroll recalculated
- → New PayrollRun
-
- 3️⃣ Change Salary (Job Step)
- POST /api/test/payroll/employee/1/change-jobstep/5?effectiveDate=2026-02-01
-
-
- → SalaryChangedEvent
- → Async payroll
- → New PayrollRun
-
- 4️⃣ Manual Payroll Trigger
- POST /api/test/payroll/employee/1/run-payroll?payrollDate=2026-01-31
-
-
- → Retro payroll supported
-
- 5️⃣ View Payroll Runs
- GET /api/test/payroll/employee/1/runs
-
-
- See all recalculations.
- * */

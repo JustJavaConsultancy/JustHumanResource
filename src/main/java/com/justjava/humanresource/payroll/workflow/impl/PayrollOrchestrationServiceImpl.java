@@ -7,6 +7,7 @@ import com.justjava.humanresource.hr.entity.Employee;
 import com.justjava.humanresource.hr.repository.EmployeeRepository;
 import com.justjava.humanresource.payroll.entity.PayrollRun;
 import com.justjava.humanresource.payroll.repositories.PayrollRunRepository;
+import com.justjava.humanresource.payroll.service.PayrollSetupService;
 import com.justjava.humanresource.payroll.workflow.PayrollOrchestrationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -20,6 +21,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
 
     private final PayrollRunRepository payrollRunRepository;
     private final EmployeeRepository employeeRepository;
+    private final PayrollSetupService payrollSetupService;
 
     /* =========================
      * INITIALIZE
@@ -32,6 +34,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
             LocalDate payrollDate,
             String processInstanceId) {
 
+        payrollSetupService.validatePayrollSystemReadiness(LocalDate.now());
         Employee employee = employeeRepository.findById(employeeId)
                 .orElseThrow(() ->
                         new ResourceNotFoundException("Employee", employeeId));

@@ -25,6 +25,8 @@ public class PayrollMessageDispatcherImpl
             LocalDate effectiveDate) {
 
         processManager.ensureProcessStarted(employeeId);
+        if(true)
+            return;
 
         String businessKey = "EMPLOYEE_" + employeeId;
 

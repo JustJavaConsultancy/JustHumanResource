@@ -16,20 +16,20 @@ public class EmployeePayrollProcessManagerImpl
     @Override
     public void ensureProcessStarted(Long employeeId) {
 
-        String businessKey = businessKey(employeeId);
+        //String businessKey = businessKey(employeeId);
 
-        long count = runtimeService.createProcessInstanceQuery()
+        ProcessInstance existing = runtimeService.createProcessInstanceQuery()
                 .processDefinitionKey("employeePayrollSupervisor")
-                .processInstanceBusinessKey(businessKey)
+                .processInstanceBusinessKey("EMPLOYEE_" + employeeId)
                 .active()
-                .count();
+                .singleResult();
 
-        if (count == 0) {
-            ProcessInstance processInstance = runtimeService.startProcessInstanceByKey(
+        System.out.println(" Does this exist ?" + existing);
+        if (existing == null) {
+            runtimeService.startProcessInstanceByKey(
                     "employeePayrollSupervisor",
-                    businessKey
+                    "EMPLOYEE_" + employeeId
             );
-            //processInstance.
         }
     }
 

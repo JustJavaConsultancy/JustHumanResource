@@ -2,6 +2,7 @@ package com.justjava.humanresource.hr.service.impl;
 
 import com.justjava.humanresource.core.enums.EmploymentStatus;
 import com.justjava.humanresource.core.exception.ResourceNotFoundException;
+import com.justjava.humanresource.dispatcher.PayrollMessageDispatcher;
 import com.justjava.humanresource.hr.dto.EmployeeDTO;
 import com.justjava.humanresource.hr.entity.Employee;
 import com.justjava.humanresource.hr.entity.JobStep;
@@ -24,7 +25,7 @@ public class EmployeeServiceImpl implements EmployeeService {
 
     private final EmployeeRepository employeeRepository;
     private final JobStepRepository jobStepRepository;
-    private final ApplicationEventPublisher eventPublisher;
+    private final PayrollMessageDispatcher payrollMessageDispatcher;
     private final EmployeeMapper employeeMapper;
 
     /* =========================
@@ -69,9 +70,10 @@ public class EmployeeServiceImpl implements EmployeeService {
 
         Employee saved = employeeRepository.save(employee);
 
-        eventPublisher.publishEvent(
+        payrollMessageDispatcher.requestPayroll(saved.getId(), effectiveDate);
+/*        eventPublisher.publishEvent(
                 new PayGroupChangedEvent(saved, effectiveDate)
-        );
+        );*/
 
         return saved;
     }
@@ -92,14 +94,14 @@ public class EmployeeServiceImpl implements EmployeeService {
         employee.setJobStep(newJobStep);
 
         Employee saved = employeeRepository.save(employee);
-
+        payrollMessageDispatcher.requestPayroll(saved.getId(), effectiveDate);
         /*
          * Salary is derived from JobStep,
          * so this is a salary change event.
          */
-        eventPublisher.publishEvent(
+/*        eventPublisher.publishEvent(
                 new SalaryChangedEvent(saved, effectiveDate)
-        );
+        );*/
 
         return saved;
     }
@@ -115,14 +117,15 @@ public class EmployeeServiceImpl implements EmployeeService {
         employee.setEmploymentStatus(newStatus);
 
         Employee saved = employeeRepository.save(employee);
+        payrollMessageDispatcher.requestPayroll(saved.getId(), effectiveDate);
 
         /*
          * Status change MAY impact payroll depending on rules.
          * We still publish SalaryChangedEvent to keep downstream logic simple.
          */
-        eventPublisher.publishEvent(
+/*        eventPublisher.publishEvent(
                 new SalaryChangedEvent(saved, effectiveDate)
-        );
+        );*/
 
         return saved;
     }
