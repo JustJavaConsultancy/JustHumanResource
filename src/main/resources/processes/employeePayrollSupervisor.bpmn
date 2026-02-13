@@ -5,7 +5,7 @@
     <extensionElements>
       <design:stencilid><![CDATA[BPMNDiagram]]></design:stencilid>
       <design:creationdate><![CDATA[2026-02-10T13:53:22.615Z]]></design:creationdate>
-      <design:modificationdate><![CDATA[2026-02-10T16:20:51.503Z]]></design:modificationdate>
+      <design:modificationdate><![CDATA[2026-02-13T07:04:27.164Z]]></design:modificationdate>
     </extensionElements>
     <serviceTask id="initializePayroll" name="Initialize Payroll" flowable:async="true" flowable:class="com.justjava.humanresource.workflow.delegate.InitializePayrollDelegate">
       <extensionElements>
@@ -31,6 +31,12 @@
         <design:stencilsuperid><![CDATA[Task]]></design:stencilsuperid>
       </extensionElements>
     </serviceTask>
+    <exclusiveGateway id="Exclusive_Databased_Gateway_4" name="Exit?">
+      <extensionElements>
+        <design:stencilid><![CDATA[Exclusive_Databased_Gateway]]></design:stencilid>
+        <design:display_ref_in_diagram><![CDATA[true]]></design:display_ref_in_diagram>
+      </extensionElements>
+    </exclusiveGateway>
     <startEvent id="startSupervisor" name="Start Supervisor" flowable:initiator="initiator" flowable:formFieldValidation="false">
       <extensionElements>
         <flowable:work-form-field-validation><![CDATA[false]]></flowable:work-form-field-validation>
@@ -65,10 +71,22 @@
         <design:stencilid><![CDATA[SequenceFlow]]></design:stencilid>
       </extensionElements>
     </sequenceFlow>
-    <sequenceFlow id="SequenceFlow_7" sourceRef="finalizePayroll" targetRef="EndNoneEvent_4">
+    <sequenceFlow id="SequenceFlow_8" sourceRef="finalizePayroll" targetRef="Exclusive_Databased_Gateway_4">
       <extensionElements>
         <design:stencilid><![CDATA[SequenceFlow]]></design:stencilid>
       </extensionElements>
+    </sequenceFlow>
+    <sequenceFlow id="SequenceFlow_7" sourceRef="Exclusive_Databased_Gateway_4" targetRef="EndNoneEvent_4">
+      <extensionElements>
+        <design:stencilid><![CDATA[SequenceFlow]]></design:stencilid>
+      </extensionElements>
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${exit}]]></conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="SequenceFlow_9" sourceRef="Exclusive_Databased_Gateway_4" targetRef="waitForPayrollRequest">
+      <extensionElements>
+        <design:stencilid><![CDATA[SequenceFlow]]></design:stencilid>
+      </extensionElements>
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${!exit}]]></conditionExpression>
     </sequenceFlow>
     <sequenceFlow id="SequenceFlow_2" sourceRef="startSupervisor" targetRef="waitForPayrollRequest">
       <extensionElements>
@@ -95,28 +113,44 @@
       <bpmndi:BPMNShape bpmnElement="finalizePayroll" id="BPMNShape_finalizePayroll">
         <omgdc:Bounds height="80.0" width="100.0" x="1044.0" y="236.0"></omgdc:Bounds>
       </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Exclusive_Databased_Gateway_4" id="BPMNShape_Exclusive_Databased_Gateway_4">
+        <omgdc:Bounds height="40.0" width="40.0" x="1214.0" y="256.0"></omgdc:Bounds>
+        <bpmndi:BPMNLabel>
+          <omgdc:Bounds height="18.0" width="27.0" x="1217.5" y="300.0"></omgdc:Bounds>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="startSupervisor" id="BPMNShape_startSupervisor">
         <omgdc:Bounds height="30.0" width="30.0" x="317.0" y="261.0"></omgdc:Bounds>
         <bpmndi:BPMNLabel>
-          <omgdc:Bounds height="18.0" width="86.0" x="279.2" y="295.0"></omgdc:Bounds>
+          <omgdc:Bounds height="18.0" width="86.0" x="289.0" y="295.0"></omgdc:Bounds>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="waitForPayrollRequest" id="BPMNShape_waitForPayrollRequest">
         <omgdc:Bounds height="30.0" width="30.0" x="465.0" y="261.0"></omgdc:Bounds>
         <bpmndi:BPMNLabel>
-          <omgdc:Bounds height="18.0" width="133.0" x="400.8" y="295.0"></omgdc:Bounds>
+          <omgdc:Bounds height="18.0" width="133.0" x="413.5" y="295.0"></omgdc:Bounds>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="EndNoneEvent_4" id="BPMNShape_EndNoneEvent_4">
-        <omgdc:Bounds height="28.0" width="28.0" x="1194.0" y="262.0"></omgdc:Bounds>
+        <omgdc:Bounds height="28.0" width="28.0" x="1353.0" y="262.0"></omgdc:Bounds>
       </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge bpmnElement="SequenceFlow_8" id="BPMNEdge_SequenceFlow_8" flowable:sourceDockerX="50.0" flowable:sourceDockerY="40.0" flowable:targetDockerX="20.0" flowable:targetDockerY="20.0">
+        <omgdi:waypoint x="1144.0" y="276.0"></omgdi:waypoint>
+        <omgdi:waypoint x="1214.0" y="276.0"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="SequenceFlow_9" id="BPMNEdge_SequenceFlow_9" flowable:sourceDockerX="20.0" flowable:sourceDockerY="20.0" flowable:targetDockerX="15.0" flowable:targetDockerY="15.0">
+        <omgdi:waypoint x="1234.0" y="256.0"></omgdi:waypoint>
+        <omgdi:waypoint x="1234.0" y="116.0"></omgdi:waypoint>
+        <omgdi:waypoint x="480.0" y="116.0"></omgdi:waypoint>
+        <omgdi:waypoint x="480.0" y="261.0"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="SequenceFlow_6" id="BPMNEdge_SequenceFlow_6" flowable:sourceDockerX="50.0" flowable:sourceDockerY="40.0" flowable:targetDockerX="50.0" flowable:targetDockerY="40.0">
         <omgdi:waypoint x="994.0" y="276.0"></omgdi:waypoint>
         <omgdi:waypoint x="1044.0" y="276.0"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge bpmnElement="SequenceFlow_7" id="BPMNEdge_SequenceFlow_7" flowable:sourceDockerX="50.0" flowable:sourceDockerY="40.0" flowable:targetDockerX="14.0" flowable:targetDockerY="14.0">
-        <omgdi:waypoint x="1144.0" y="276.0"></omgdi:waypoint>
-        <omgdi:waypoint x="1194.0" y="276.0"></omgdi:waypoint>
+      <bpmndi:BPMNEdge bpmnElement="SequenceFlow_7" id="BPMNEdge_SequenceFlow_7" flowable:sourceDockerX="20.0" flowable:sourceDockerY="20.0" flowable:targetDockerX="14.0" flowable:targetDockerY="14.0">
+        <omgdi:waypoint x="1254.0" y="276.0"></omgdi:waypoint>
+        <omgdi:waypoint x="1353.0" y="276.0"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="SequenceFlow_4" id="BPMNEdge_SequenceFlow_4" flowable:sourceDockerX="50.0" flowable:sourceDockerY="40.0" flowable:targetDockerX="50.0" flowable:targetDockerY="40.0">
         <omgdi:waypoint x="694.0" y="276.0"></omgdi:waypoint>

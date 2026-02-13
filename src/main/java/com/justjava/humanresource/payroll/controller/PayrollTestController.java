@@ -1,10 +1,14 @@
 package com.justjava.humanresource.payroll.controller;
 
 import com.justjava.humanresource.hr.dto.EmployeeDTO;
+import com.justjava.humanresource.hr.dto.EmployeeOnboardingResponseDTO;
 import com.justjava.humanresource.hr.entity.Employee;
 import com.justjava.humanresource.hr.entity.PayGroup;
 import com.justjava.humanresource.hr.repository.PayGroupRepository;
 import com.justjava.humanresource.hr.service.EmployeeService;
+import com.justjava.humanresource.onboarding.dto.StartEmployeeOnboardingCommand;
+import com.justjava.humanresource.onboarding.entity.EmployeeOnboarding;
+import com.justjava.humanresource.onboarding.service.EmployeeOnboardingService;
 import com.justjava.humanresource.payroll.entity.PayrollRun;
 import com.justjava.humanresource.payroll.repositories.PayrollRunRepository;
 import com.justjava.humanresource.payroll.service.PayrollChangeOrchestrator;
@@ -21,6 +25,7 @@ import java.util.List;
 public class PayrollTestController {
 
     private final EmployeeService employeeService;
+    private final EmployeeOnboardingService employeeOnboardingService;
     private final PayGroupRepository payGroupRepository;
     private final PayrollRunRepository payrollRunRepository;
     private final PayrollChangeOrchestrator payrollChangeOrchestrator;
@@ -28,6 +33,21 @@ public class PayrollTestController {
     /* ============================================================
        EMPLOYEE CREATION
        ============================================================ */
+/* ============================================================
+   EMPLOYEE ONBOARDING (FLOWABLE PROCESS)
+   ============================================================ */
+
+    @PostMapping("/onboarding")
+    public EmployeeOnboardingResponseDTO startOnboarding(
+            @RequestBody StartEmployeeOnboardingCommand command,
+            @RequestParam(defaultValue = "testUser") String initiatedBy) {
+
+        return employeeOnboardingService.startOnboarding(
+                command,
+                initiatedBy
+        );
+
+    }
 
     @PostMapping("/employee")
     public Employee createEmployee(@RequestBody EmployeeDTO employee) {

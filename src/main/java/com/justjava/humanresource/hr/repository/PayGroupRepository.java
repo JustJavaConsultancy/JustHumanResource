@@ -8,4 +8,5 @@ import java.util.Optional;
 public interface PayGroupRepository extends JpaRepository<PayGroup, Long> {
 
     Optional<PayGroup> findByCode(String code);
+    boolean existsByCode(String code);
 }

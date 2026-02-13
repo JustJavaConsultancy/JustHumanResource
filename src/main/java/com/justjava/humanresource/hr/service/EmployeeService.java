@@ -14,6 +14,7 @@ public interface EmployeeService {
      * ========================= */
 
     Employee createEmployee(EmployeeDTO employee);
+    Employee createAndActivateEmployee(EmployeeDTO dto);
 
     Employee getByEmployeeNumber(String employeeNumber);
 

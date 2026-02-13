@@ -3,6 +3,7 @@ package com.justjava.humanresource.payroll.workflow.impl;
 import com.justjava.humanresource.payroll.workflow.EmployeePayrollProcessManager;
 import lombok.RequiredArgsConstructor;
 import org.flowable.engine.RuntimeService;
+import org.flowable.engine.runtime.ProcessInstance;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -24,10 +25,11 @@ public class EmployeePayrollProcessManagerImpl
                 .count();
 
         if (count == 0) {
-            runtimeService.startProcessInstanceByKey(
+            ProcessInstance processInstance = runtimeService.startProcessInstanceByKey(
                     "employeePayrollSupervisor",
                     businessKey
             );
+            //processInstance.
         }
     }
 

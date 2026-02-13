@@ -5,6 +5,7 @@ public enum OnboardingStatus {
     HR_VERIFIED,
     DOCS_VERIFIED,
     APPROVED,
+    KPI_ASSIGNED,
     COMPLETED,
     REJECTED
 }

@@ -1,12 +1,6 @@
 package com.justjava.humanresource.hr.entity;
 
-
-import com.justjava.humanresource.core.entity.BaseEntity;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -14,17 +8,21 @@ import java.math.BigDecimal;
 
 @Getter
 @Setter
-@Entity
 @Table(name = "job_steps")
-public class JobStep extends BaseEntity {
+@Entity
+public class JobStep {
 
-    @ManyToOne(optional = false)
-    @JoinColumn(name = "job_grade_id")
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String name;
+
+    private BigDecimal basicSalary;
+
+    @ManyToOne
+    private Department department;
+
+    @ManyToOne
     private JobGrade jobGrade;
-
-    @Column(nullable = false)
-    private Integer stepLevel;
-
-    @Column(nullable = false, precision = 15, scale = 2)
-    private BigDecimal baseSalary;
 }

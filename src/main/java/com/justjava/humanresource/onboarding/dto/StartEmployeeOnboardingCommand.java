@@ -11,7 +11,7 @@ public class StartEmployeeOnboardingCommand {
     private String phoneNumber;
 
     private Long departmentId;
-    private Long jobRoleId;
+    private Long jobStepId;
     private Long payGroupId;
 }
 

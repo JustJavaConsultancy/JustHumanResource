@@ -1,8 +1,11 @@
 package com.justjava.humanresource.onboarding.service;
 
 import com.justjava.humanresource.core.enums.EmploymentStatus;
+import com.justjava.humanresource.core.enums.RecordStatus;
+import com.justjava.humanresource.hr.dto.EmployeeDTO;
+import com.justjava.humanresource.hr.dto.EmployeeOnboardingResponseDTO;
 import com.justjava.humanresource.hr.entity.Employee;
-import com.justjava.humanresource.hr.repository.EmployeeRepository;
+import com.justjava.humanresource.hr.service.EmployeeService;
 import com.justjava.humanresource.onboarding.dto.StartEmployeeOnboardingCommand;
 import com.justjava.humanresource.onboarding.entity.EmployeeOnboarding;
 import com.justjava.humanresource.onboarding.enums.OnboardingStatus;
@@ -23,44 +26,67 @@ import java.util.UUID;
 public class EmployeeOnboardingService {
 
     private final RuntimeService runtimeService;
-    private final EmployeeRepository employeeRepository;
+    private final EmployeeService employeeService;   // ✅ use domain service
     private final EmployeeOnboardingRepository onboardingRepository;
 
-    public EmployeeOnboarding startOnboarding(
+    @Transactional
+    public EmployeeOnboardingResponseDTO startOnboarding(
             StartEmployeeOnboardingCommand command,
             String initiatedBy
     ) {
 
-        Employee employee = Employee.builder()
-                .employeeNumber(UUID.randomUUID().toString())
-                .firstName(command.getFirstName())
-                .lastName(command.getLastName())
-                .email(command.getEmail())
-                .phoneNumber(command.getPhoneNumber())
-                .employmentStatus(EmploymentStatus.ONBOARDING)
-                .payrollEnabled(false)
-                .build();
+        // 1️⃣ Create employee
+        EmployeeDTO dto = new EmployeeDTO();
+        dto.setEmployeeNumber(UUID.randomUUID().toString());
+        dto.setDepartmentId(command.getDepartmentId());
+        dto.setFirstName(command.getFirstName());
+        dto.setLastName(command.getLastName());
+        dto.setEmail(command.getEmail());
+        dto.setPhoneNumber(command.getPhoneNumber());
+        dto.setEmploymentStatus(EmploymentStatus.ONBOARDING);
+        dto.setJobStepId(command.getJobStepId());
+        dto.setPayGroupId(command.getPayGroupId());
+        dto.setStatus(RecordStatus.INACTIVE);
 
-        employeeRepository.save(employee);
+        Employee employee = employeeService.createEmployee(dto);
 
-        Map<String, Object> variables = new HashMap<>();
-        variables.put("employeeId", employee.getId());
-        variables.put("initiatedBy", initiatedBy);
-
-        ProcessInstance processInstance =
-                runtimeService.startProcessInstanceByKey(
-                        "employeeOnboardingProcess",
-                        variables
-                );
-
+        // 2️⃣ Create onboarding FIRST (without processInstanceId)
         EmployeeOnboarding onboarding = EmployeeOnboarding.builder()
                 .employee(employee)
-                .processInstanceId(processInstance.getProcessInstanceId())
                 .status(OnboardingStatus.INITIATED)
                 .initiatedBy(initiatedBy)
                 .build();
 
-        return onboardingRepository.save(onboarding);
-    }
-}
+        onboarding = onboardingRepository.save(onboarding);
 
+        // 🔥 IMPORTANT: Flush to DB
+        onboardingRepository.flush();
+
+        // 3️⃣ Start Flowable process AFTER save
+        Map<String, Object> variables = new HashMap<>();
+        variables.put("employeeId", employee.getId());
+        variables.put("initiator", initiatedBy);
+        variables.put("onboardingId", onboarding.getId());
+        variables.put("approvalRequired", false);
+
+        ProcessInstance processInstance =
+                runtimeService.startProcessInstanceByKey(
+                        "onboardingProcess",
+                        variables
+                );
+
+        // 4️⃣ Update onboarding with processInstanceId
+        onboarding.setProcessInstanceId(processInstance.getProcessInstanceId());
+
+        EmployeeOnboarding saved = onboardingRepository.save(onboarding);
+
+        return EmployeeOnboardingResponseDTO.builder()
+                .id(saved.getId())
+                .employeeId(saved.getEmployee().getId())
+                .processInstanceId(saved.getProcessInstanceId())
+                .status(saved.getStatus())
+                .initiatedBy(saved.getInitiatedBy())
+                .build();
+    }
+
+}

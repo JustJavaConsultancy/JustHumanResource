@@ -4,7 +4,9 @@ import com.justjava.humanresource.dispatcher.PayrollMessageDispatcher;
 import com.justjava.humanresource.payroll.workflow.EmployeePayrollProcessManager;
 import lombok.RequiredArgsConstructor;
 import org.flowable.engine.RuntimeService;
+import org.flowable.engine.runtime.Execution;
 import org.springframework.stereotype.Service;
+
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
@@ -24,14 +26,29 @@ public class PayrollMessageDispatcherImpl
 
         processManager.ensureProcessStarted(employeeId);
 
+        String businessKey = "EMPLOYEE_" + employeeId;
+
+        Execution execution = runtimeService
+                .createExecutionQuery()
+                .processDefinitionKey("employeePayrollSupervisor")
+                .processInstanceBusinessKey(businessKey)
+                .messageEventSubscriptionName("PAYROLL_REQUEST")
+                .singleResult();
+
+        if (execution == null) {
+            throw new IllegalStateException(
+                    "No waiting execution found for businessKey: " + businessKey
+            );
+        }
+
         Map<String, Object> vars = new HashMap<>();
         vars.put("employeeId", employeeId);
         vars.put("payrollDate", effectiveDate);
-        vars.put("approvalRequired", true);
+        vars.put("approvalRequired", false);
 
         runtimeService.messageEventReceived(
                 "PAYROLL_REQUEST",
-                "EMPLOYEE_" + employeeId,
+                execution.getId(),
                 vars
         );
     }

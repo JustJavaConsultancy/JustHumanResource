@@ -21,6 +21,8 @@ public class InitializePayrollDelegate implements JavaDelegate {
     public void execute(DelegateExecution execution) {
 
         Long employeeId = getRequiredLong(execution, "employeeId");
+        log.info("Entering Initializing payroll for employeeId={}", employeeId);
+
         LocalDate payrollDate = getRequiredLocalDate(execution, "payrollDate");
 
         String processInstanceId = execution.getProcessInstanceId();

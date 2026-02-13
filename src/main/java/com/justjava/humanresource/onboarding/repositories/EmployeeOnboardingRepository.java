@@ -10,4 +10,7 @@ public interface EmployeeOnboardingRepository
         extends JpaRepository<EmployeeOnboarding, Long> {
 
     Optional<EmployeeOnboarding> findByProcessInstanceId(String processInstanceId);
+
+    Optional<EmployeeOnboarding> findByEmployee_Id(Long id);
+
 }
