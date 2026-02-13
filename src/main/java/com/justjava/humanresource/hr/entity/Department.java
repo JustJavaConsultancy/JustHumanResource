@@ -22,3 +22,9 @@ public class Department extends BaseEntity {
     @Column(nullable = false)
     private RecordStatus status = RecordStatus.ACTIVE;
 }
+
+
+/* Run this against your DB for Department Code to be generated and run smoothly
+    CREATE SEQUENCE department_code_seq
+        START WITH 100001
+        INCREMENT BY 1;*/
