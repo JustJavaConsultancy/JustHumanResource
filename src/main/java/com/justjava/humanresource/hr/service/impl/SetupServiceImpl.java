@@ -23,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -144,7 +145,8 @@ public class SetupServiceImpl implements SetupService {
        }*/
     @Override
     public PayGroupResponseDTO createPayGroup(CreatePayGroupCommand command) {
-
+        String uniqueCode = "PG-" + UUID.randomUUID().toString().substring(0,8).toUpperCase();
+        command.setCode(uniqueCode);
         if (command.getPayFrequency() == null) {
             throw new IllegalArgumentException("PayFrequency is required");
         }
