@@ -120,6 +120,33 @@ public class SetupServiceImpl implements SetupService {
                 )
                 .build();
     }
+    @Override
+    @Transactional(readOnly = true)
+    public List<JobGradeResponseDTO> getAllJobGrades() {
+
+        List<JobGrade> allGrades = jobGradeRepository.findAll();
+
+        return allGrades.stream()
+                .map(grade ->
+                        JobGradeResponseDTO.builder()
+                                .id(grade.getId())
+                                .name(grade.getName())
+                                .steps(
+                                        grade.getJobSteps()
+                                                .stream()
+                                                .map(step ->
+                                                        JobGradeResponseDTO.JobStepSummaryDTO.builder()
+                                                                .id(step.getId())
+                                                                .name(step.getName())
+                                                                .build()
+                                                )
+                                                .toList()
+                                )
+                                .build()
+                )
+                .toList();
+    }
+
 
     /* ============================================================
        LEAVE TYPE SETUP

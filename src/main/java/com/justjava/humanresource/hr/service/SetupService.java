@@ -6,6 +6,8 @@ import com.justjava.humanresource.hr.dto.JobGradeResponseDTO;
 import com.justjava.humanresource.hr.dto.PayGroupResponseDTO;
 import com.justjava.humanresource.hr.entity.Department;
 import com.justjava.humanresource.hr.entity.JobGrade;
+
+import java.util.List;
 //import com.justjava.humanresource.hr.entity.LeaveType;
 
 public interface SetupService {
@@ -14,6 +16,7 @@ public interface SetupService {
 
     JobGradeResponseDTO createJobGradeWithSteps(CreateJobGradeWithStepsCommand command);
 
+    List<JobGradeResponseDTO> getAllJobGrades();
 
 /*    LeaveType createLeaveType(
             String code,
