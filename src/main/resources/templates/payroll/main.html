@@ -1139,11 +1139,11 @@
         </div>
     </div>
 
-    <!-- Create Paygroup Modal -->
+    <!-- Create Paygroup Modal (Simplified) -->
     <div id="createPaygroupModal" class="fixed inset-0 z-50 hidden">
         <div class="modal-backdrop fixed inset-0"></div>
-        <div class="fixed inset-0 flex items-center justify-center p-4 custom-scrollbar">
-            <div class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-2xl">
+        <div class="fixed inset-0 flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md">
                 <div class="p-6 border-b border-gray-200 dark:border-gray-700">
                     <div class="flex justify-between items-center">
                         <h3 class="text-xl font-bold">Create New Paygroup</h3>
@@ -1152,75 +1152,22 @@
                         </button>
                     </div>
                 </div>
-
                 <div class="p-6">
-                    <form id="createPaygroupForm" class="space-y-6">
+                    <!-- Fixed Thymeleaf action and added onsubmit to disable button -->
+                    <form th:action="@{/createPayGroup}" method="post" id="createPaygroupForm" class="space-y-6" onsubmit="disableSubmitButton(this)">
                         <div>
                             <label class="block text-sm font-medium mb-2">Paygroup Name *</label>
-                            <input type="text" class="form-input" placeholder="Enter paygroup name" required>
+                            <input name="name" type="text" class="form-input" placeholder="Enter paygroup name" required>
                         </div>
-
                         <div>
-                            <label class="block text-sm font-medium mb-2">Base Salary Source</label>
-                            <div class="space-y-2">
-                                <label class="flex items-center space-x-2">
-                                    <input type="radio" name="salarySource" value="jobGrade" checked class="text-primary-600">
-                                    <span>Attach to Job Grade/Step</span>
-                                </label>
-                                <label class="flex items-center space-x-2">
-                                    <input type="radio" name="salarySource" value="fixedRange" class="text-primary-600">
-                                    <span>Set Fixed Salary Range</span>
-                                </label>
-                            </div>
-                        </div>
-
-                        <div id="jobGradeSection">
-                            <label class="block text-sm font-medium mb-2">Linked Job Grades</label>
-                            <select class="form-input" multiple size="4">
-                                <option value="1">Grade 1 - Entry Level ($1,500 - $2,700)</option>
-                                <option value="2">Grade 2 - Associate ($2,800 - $4,400)</option>
-                                <option value="3">Grade 3 - Senior Associate ($4,500 - $6,500)</option>
-                                <option value="4">Grade 4 - Team Lead ($7,000 - $9,000)</option>
-                                <option value="5">Grade 5 - Manager ($9,500 - $11,500)</option>
-                                <option value="6">Grade 6 - Senior Manager ($12,000 - $14,000)</option>
-                                <option value="7">Grade 7 - Director ($14,500 - $16,500)</option>
+                            <label class="block text-sm font-medium mb-2">Pay Frequency *</label>
+                            <select name="payFrequency" class="form-input" required>
+                                <option value="">Select frequency</option>
+                                <option value="BI_WEEKLY">BI_Weekly</option>
+                                <option value="WEEKLY">Weekly</option>
+                                <option value="MONTHLY">Monthly</option>
                             </select>
-                            <p class="text-xs text-gray-500 mt-1">Basic salary will be determined by employee's Job Grade and Step</p>
                         </div>
-
-                        <div id="salaryRangeSection" class="hidden">
-                            <label class="block text-sm font-medium mb-2">Basic Salary Range</label>
-                            <div class="grid grid-cols-2 gap-6">
-                                <div>
-                                    <label class="block text-xs text-gray-500 mb-1">Minimum Salary *</label>
-                                    <input type="number" class="form-input" placeholder="Enter minimum salary">
-                                </div>
-                                <div>
-                                    <label class="block text-xs text-gray-500 mb-1">Maximum Salary *</label>
-                                    <input type="number" class="form-input" placeholder="Enter maximum salary">
-                                </div>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium mb-2">Allowances</label>
-                            <div class="space-y-2" id="allowanceSelection">
-                                <!-- Allowances will be loaded dynamically -->
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium mb-2">Deductions</label>
-                            <div class="space-y-2" id="deductionSelection">
-                                <!-- Deductions will be loaded dynamically -->
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium mb-2">Description</label>
-                            <textarea class="form-input h-32" placeholder="Enter paygroup description"></textarea>
-                        </div>
-
                         <div class="flex justify-end space-x-3 pt-4">
                             <button type="button" onclick="closeModal('createPaygroupModal')" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">Cancel</button>
                             <button type="submit" class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">Create Paygroup</button>
@@ -1532,30 +1479,13 @@
             // Initialize event listeners
             document.getElementById('searchInput').addEventListener('input', filterPayrollItems);
 
-            // Form submissions
+            // Form submissions (removed createPaygroupForm listener because we now use inline onsubmit)
             document.getElementById('addAllowanceForm').addEventListener('submit', handleAddAllowance);
             document.getElementById('addDeductionForm').addEventListener('submit', handleAddDeduction);
-            document.getElementById('createPaygroupForm').addEventListener('submit', handleCreatePaygroup);
             document.getElementById('runPayrollForm').addEventListener('submit', handleRunPayroll);
             document.getElementById('editEmployeePayrollForm').addEventListener('submit', handleEditEmployeePayroll);
             document.getElementById('addJobGradeForm').addEventListener('submit', handleAddJobGrade);
             document.getElementById('addJobStepForm').addEventListener('submit', handleAddJobStep);
-
-            // Salary source toggle
-            document.querySelectorAll('input[name="salarySource"]').forEach(radio => {
-                radio.addEventListener('change', function() {
-                    const jobGradeSection = document.getElementById('jobGradeSection');
-                    const salaryRangeSection = document.getElementById('salaryRangeSection');
-
-                    if (this.value === 'jobGrade') {
-                        jobGradeSection.classList.remove('hidden');
-                        salaryRangeSection.classList.add('hidden');
-                    } else {
-                        jobGradeSection.classList.add('hidden');
-                        salaryRangeSection.classList.remove('hidden');
-                    }
-                });
-            });
 
             // Job grade/step salary calculation
             document.getElementById('jobGradeSelect').addEventListener('change', updateEmployeeSalary);
@@ -1565,6 +1495,18 @@
             // Initialize theme
             initializeTheme();
         });
+
+        // New function to disable submit button on form submission
+        function disableSubmitButton(form) {
+            const submitButton = form.querySelector('button[type="submit"]');
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.classList.add('opacity-50', 'cursor-not-allowed');
+                // Optionally change text to indicate submission
+                submitButton.innerHTML = 'Submitting...';
+            }
+            return true; // allow form to submit
+        }
 
         function loadAllowances() {
             const container = document.getElementById('allowancesList');
@@ -1658,8 +1600,6 @@
 
         function loadPaygroups() {
             const container = document.getElementById('paygroupsList');
-            const allowanceSelection = document.getElementById('allowanceSelection');
-            const deductionSelection = document.getElementById('deductionSelection');
 
             container.innerHTML = '';
 
@@ -1699,30 +1639,6 @@
                 `;
 
                 container.appendChild(paygroupElement);
-            });
-
-            // Load allowance selection for paygroup creation
-            allowanceSelection.innerHTML = '';
-            allowances.filter(a => a.status === 'ACTIVE').forEach(allowance => {
-                allowanceSelection.innerHTML += `
-                    <label class="flex items-center space-x-2">
-                        <input type="checkbox" value="${allowance.id}" class="rounded">
-                        <span>${allowance.name} (${allowance.taxable ? 'Taxable' : 'Non-taxable'}) - $${allowance.amount.toFixed(2)}</span>
-                    </label>
-                `;
-            });
-
-            // Load deduction selection for paygroup creation
-            deductionSelection.innerHTML = '';
-            deductions.filter(d => d.status === 'ACTIVE').forEach(deduction => {
-                const isPercentage = deduction.name.includes('Tax') || deduction.name.includes('Pension');
-                const amountDisplay = isPercentage ? `${deduction.amount}%` : `$${deduction.amount.toFixed(2)}`;
-                deductionSelection.innerHTML += `
-                    <label class="flex items-center space-x-2">
-                        <input type="checkbox" value="${deduction.id}" class="rounded">
-                        <span>${deduction.name} (${deduction.statutory ? 'Statutory' : 'Non-statutory'}) - ${amountDisplay}</span>
-                    </label>
-                `;
             });
         }
 
@@ -2179,13 +2095,8 @@
             updateStats();
         }
 
-        function handleCreatePaygroup(e) {
-            e.preventDefault();
-            showToast('Paygroup created successfully!', 'success');
-            closeModal('createPaygroupModal');
-            loadPaygroups();
-            updateStats();
-        }
+        // The handler for createPaygroupForm is no longer needed because we use inline onsubmit.
+        // function handleCreatePaygroup(e) { ... }   // Removed to avoid confusion.
 
         function handleRunPayroll(e) {
             e.preventDefault();
