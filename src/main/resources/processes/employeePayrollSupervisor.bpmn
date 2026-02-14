@@ -1,31 +1,32 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:flowable="http://flowable.org/bpmn" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC" xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI" xmlns:design="http://flowable.org/design" typeLanguage="http://www.w3.org/2001/XMLSchema" expressionLanguage="http://www.w3.org/1999/XPath" targetNamespace="http://flowable.org/test" exporter="Flowable Design" exporterVersion="2025.1.03" design:palette="flowable-work-process-palette">
   <message id="PAYROLL_REQUEST" name="Payroll Request"></message>
+  <message id="PAYROLL_MESSAGE" name="PAYROLL_MESSAGE"></message>
   <process id="employeePayrollSupervisor" name="Employee Payroll Supervisor" isExecutable="true" flowable:candidateStarterGroups="flowableUser">
     <extensionElements>
       <design:stencilid><![CDATA[BPMNDiagram]]></design:stencilid>
       <design:creationdate><![CDATA[2026-02-10T13:53:22.615Z]]></design:creationdate>
-      <design:modificationdate><![CDATA[2026-02-13T07:04:27.164Z]]></design:modificationdate>
+      <design:modificationdate><![CDATA[2026-02-14T09:34:29.214Z]]></design:modificationdate>
     </extensionElements>
-    <serviceTask id="initializePayroll" name="Initialize Payroll" flowable:async="true" flowable:class="com.justjava.humanresource.workflow.delegate.InitializePayrollDelegate">
+    <serviceTask id="initializePayroll" name="Initialize Payroll" flowable:async="true" flowable:delegateExpression="${InitializePayrollDelegate}">
       <extensionElements>
         <design:stencilid><![CDATA[ServiceTask]]></design:stencilid>
         <design:stencilsuperid><![CDATA[Task]]></design:stencilsuperid>
       </extensionElements>
     </serviceTask>
-    <serviceTask id="calculateEarnings" name="Calculate Earnings" flowable:async="true" flowable:class="com.justjava.humanresource.workflow.delegate.CalculateEarningsDelegate">
+    <serviceTask id="calculateEarnings" name="Calculate Earnings" flowable:async="true" flowable:delegateExpression="${CalculateEarningsDelegate}">
       <extensionElements>
         <design:stencilid><![CDATA[ServiceTask]]></design:stencilid>
         <design:stencilsuperid><![CDATA[Task]]></design:stencilsuperid>
       </extensionElements>
     </serviceTask>
-    <serviceTask id="applyStatutory" name="Apply Statutory" flowable:async="true" flowable:class="com.justjava.humanresource.workflow.delegate.ApplyStatutoryDelegate">
+    <serviceTask id="applyStatutory" name="Apply Statutory" flowable:async="true" flowable:delegateExpression="${ApplyStatutoryDelegate}">
       <extensionElements>
         <design:stencilid><![CDATA[ServiceTask]]></design:stencilid>
         <design:stencilsuperid><![CDATA[Task]]></design:stencilsuperid>
       </extensionElements>
     </serviceTask>
-    <serviceTask id="finalizePayroll" name="Finalize Payroll" flowable:async="true" flowable:class="com.justjava.humanresource.workflow.delegate.FinalizePayrollDelegate">
+    <serviceTask id="finalizePayroll" name="Finalize Payroll" flowable:async="true" flowable:delegateExpression="${FinalizePayrollDelegate}">
       <extensionElements>
         <design:stencilid><![CDATA[ServiceTask]]></design:stencilid>
         <design:stencilsuperid><![CDATA[Task]]></design:stencilsuperid>
@@ -49,7 +50,7 @@
         <design:stencilid><![CDATA[IntermediateMessageEventCatching]]></design:stencilid>
         <design:display_ref_in_diagram><![CDATA[true]]></design:display_ref_in_diagram>
       </extensionElements>
-      <messageEventDefinition messageRef="PAYROLL_REQUEST"></messageEventDefinition>
+      <messageEventDefinition messageRef="PAYROLL_MESSAGE"></messageEventDefinition>
     </intermediateCatchEvent>
     <endEvent id="EndNoneEvent_4">
       <extensionElements>
@@ -116,7 +117,7 @@
       <bpmndi:BPMNShape bpmnElement="Exclusive_Databased_Gateway_4" id="BPMNShape_Exclusive_Databased_Gateway_4">
         <omgdc:Bounds height="40.0" width="40.0" x="1214.0" y="256.0"></omgdc:Bounds>
         <bpmndi:BPMNLabel>
-          <omgdc:Bounds height="18.0" width="27.0" x="1217.5" y="300.0"></omgdc:Bounds>
+          <omgdc:Bounds height="18.0" width="27.0" x="1220.5" y="300.0"></omgdc:Bounds>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="startSupervisor" id="BPMNShape_startSupervisor">

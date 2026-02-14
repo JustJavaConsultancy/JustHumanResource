@@ -43,8 +43,8 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
     @Override
     public List<PayeTaxBand> getActivePayeBands(LocalDate date) {
         return payeTaxBandRepository
-                .findByEffectiveFromLessThanEqualAndEffectiveToGreaterThanEqualAndStatusOrderByLowerBoundAsc(
-                        date, date, RecordStatus.ACTIVE
+                .findByEffectiveFromLessThanEqualAndEffectiveToIsNullAndStatusOrderByLowerBoundAsc(
+                        date, RecordStatus.ACTIVE
                 );
     }
 
@@ -80,7 +80,8 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
 
     @Override
     public List<PensionScheme> getActivePensionSchemes() {
-        return pensionSchemeRepository.findByStatus(RecordStatus.ACTIVE);
+        return pensionSchemeRepository
+                .findByEffectiveFromLessThanEqualAndEffectiveToIsNullAndStatus(LocalDate.now(),RecordStatus.ACTIVE);
     }
 
     /* =========================

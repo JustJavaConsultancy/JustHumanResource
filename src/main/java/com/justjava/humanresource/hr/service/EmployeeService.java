@@ -14,7 +14,7 @@ public interface EmployeeService {
      * ========================= */
 
     Employee createEmployee(EmployeeDTO employee);
-    Employee createAndActivateEmployee(EmployeeDTO dto);
+    EmployeeDTO createAndActivateEmployee(EmployeeDTO dto);
 
     Employee getByEmployeeNumber(String employeeNumber);
 
@@ -26,7 +26,7 @@ public interface EmployeeService {
      * Change employee pay group (promotion, transfer, reclassification).
      * Triggers payroll recalculation via domain event.
      */
-    Employee changePayGroup(
+    EmployeeDTO changePayGroup(
             Long employeeId,
             PayGroup newPayGroup,
             LocalDate effectiveDate
@@ -36,7 +36,7 @@ public interface EmployeeService {
      * Change employee job step (salary change).
      * Triggers payroll recalculation via domain event.
      */
-    Employee changeJobStep(
+    EmployeeDTO changeJobStep(
             Long employeeId,
             Long newJobStepId,
             LocalDate effectiveDate
@@ -46,7 +46,7 @@ public interface EmployeeService {
      * Activate / deactivate employee without deleting history.
      * Payroll reacts only if status impacts pay.
      */
-    Employee changeEmploymentStatus(
+    EmployeeDTO changeEmploymentStatus(
             Long employeeId,
             EmploymentStatus newStatus,
             LocalDate effectiveDate

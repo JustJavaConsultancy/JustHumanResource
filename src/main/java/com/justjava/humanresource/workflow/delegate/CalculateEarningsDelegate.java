@@ -9,7 +9,7 @@ import org.flowable.engine.delegate.JavaDelegate;
 import org.springframework.stereotype.Component;
 
 @Slf4j
-@Component
+@Component("CalculateEarningsDelegate")
 @RequiredArgsConstructor
 public class CalculateEarningsDelegate implements JavaDelegate {
     private final PayrollOrchestrationService payrollService;

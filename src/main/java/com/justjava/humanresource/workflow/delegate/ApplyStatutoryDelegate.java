@@ -9,7 +9,7 @@ import org.flowable.engine.delegate.JavaDelegate;
 import org.springframework.stereotype.Component;
 
 @Slf4j
-@Component
+@Component("ApplyStatutoryDelegate")
 @RequiredArgsConstructor
 public class ApplyStatutoryDelegate implements JavaDelegate {
 

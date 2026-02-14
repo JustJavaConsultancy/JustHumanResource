@@ -5,6 +5,7 @@ import com.justjava.humanresource.payroll.workflow.EmployeePayrollProcessManager
 import lombok.RequiredArgsConstructor;
 import org.flowable.engine.RuntimeService;
 import org.flowable.engine.runtime.Execution;
+import org.flowable.engine.runtime.ProcessInstance;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -25,16 +26,25 @@ public class PayrollMessageDispatcherImpl
             LocalDate effectiveDate) {
 
         processManager.ensureProcessStarted(employeeId);
+/*
         if(true)
             return;
+*/
 
         String businessKey = "EMPLOYEE_" + employeeId;
 
-        Execution execution = runtimeService
-                .createExecutionQuery()
+        ProcessInstance processInstance = runtimeService
+                .createProcessInstanceQuery()
                 .processDefinitionKey("employeePayrollSupervisor")
                 .processInstanceBusinessKey(businessKey)
-                .messageEventSubscriptionName("PAYROLL_REQUEST")
+                .singleResult();
+
+
+
+        Execution execution = runtimeService
+                .createExecutionQuery()
+                .processInstanceId(processInstance.getId())
+                .messageEventSubscriptionName("PAYROLL_MESSAGE")
                 .singleResult();
 
         if (execution == null) {
@@ -47,9 +57,10 @@ public class PayrollMessageDispatcherImpl
         vars.put("employeeId", employeeId);
         vars.put("payrollDate", effectiveDate);
         vars.put("approvalRequired", false);
+        vars.put("exit", false);
 
         runtimeService.messageEventReceived(
-                "PAYROLL_REQUEST",
+                "PAYROLL_MESSAGE",
                 execution.getId(),
                 vars
         );

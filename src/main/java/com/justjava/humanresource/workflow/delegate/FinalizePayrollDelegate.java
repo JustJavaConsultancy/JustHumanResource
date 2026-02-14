@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
-@Component
+@Component("FinalizePayrollDelegate")
 @RequiredArgsConstructor
 public class FinalizePayrollDelegate implements JavaDelegate {
 

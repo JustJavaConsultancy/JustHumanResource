@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDate;
 
 @Slf4j
-@Component
+@Component("InitializePayrollDelegate")
 @RequiredArgsConstructor
 public class InitializePayrollDelegate implements JavaDelegate {
 
@@ -23,7 +23,7 @@ public class InitializePayrollDelegate implements JavaDelegate {
         Long employeeId = getRequiredLong(execution, "employeeId");
         log.info("Entering Initializing payroll for employeeId={}", employeeId);
 
-        LocalDate payrollDate = getRequiredLocalDate(execution, "payrollDate");
+        LocalDate payrollDate = LocalDate.now();//getRequiredLocalDate(execution, "payrollDate");
 
         String processInstanceId = execution.getProcessInstanceId();
         String businessKey = execution.getProcessInstanceBusinessKey();

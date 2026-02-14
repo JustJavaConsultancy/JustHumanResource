@@ -1,6 +1,5 @@
 package com.justjava.humanresource.hr.entity;
 
-import com.justjava.humanresource.core.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;

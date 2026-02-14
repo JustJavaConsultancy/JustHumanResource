@@ -37,7 +37,7 @@ public class EmployeeServiceImpl implements EmployeeService {
         Employee employee = employeeMapper.toEntity(dto);
         return employeeRepository.save(employee);
     }
-    public Employee createAndActivateEmployee(EmployeeDTO dto) {
+    public EmployeeDTO createAndActivateEmployee(EmployeeDTO dto) {
 
         Employee employee = createEmployee(dto);
 
@@ -59,7 +59,7 @@ public class EmployeeServiceImpl implements EmployeeService {
      * ========================= */
 
     @Override
-    public Employee changePayGroup(
+    public EmployeeDTO changePayGroup(
             Long employeeId,
             PayGroup newPayGroup,
             LocalDate effectiveDate) {
@@ -75,11 +75,11 @@ public class EmployeeServiceImpl implements EmployeeService {
                 new PayGroupChangedEvent(saved, effectiveDate)
         );*/
 
-        return saved;
+        return employeeMapper.toDto(saved);
     }
 
     @Override
-    public Employee changeJobStep(
+    public EmployeeDTO changeJobStep(
             Long employeeId,
             Long newJobStepId,
             LocalDate effectiveDate) {
@@ -102,12 +102,11 @@ public class EmployeeServiceImpl implements EmployeeService {
 /*        eventPublisher.publishEvent(
                 new SalaryChangedEvent(saved, effectiveDate)
         );*/
-
-        return saved;
+        return employeeMapper.toDto(saved);
     }
 
     @Override
-    public Employee changeEmploymentStatus(
+    public EmployeeDTO changeEmploymentStatus(
             Long employeeId,
             EmploymentStatus newStatus,
             LocalDate effectiveDate) {
@@ -127,7 +126,7 @@ public class EmployeeServiceImpl implements EmployeeService {
                 new SalaryChangedEvent(saved, effectiveDate)
         );*/
 
-        return saved;
+        return employeeMapper.toDto(saved);
     }
 
     /* =========================

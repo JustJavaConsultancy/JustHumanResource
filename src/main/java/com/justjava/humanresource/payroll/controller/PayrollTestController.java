@@ -134,7 +134,7 @@ public class PayrollTestController {
        ============================================================ */
 
     @PostMapping("/employee/{employeeId}/change-paygroup/{payGroupId}")
-    public Employee changePayGroup(
+    public EmployeeDTO changePayGroup(
             @PathVariable Long employeeId,
             @PathVariable Long payGroupId,
             @RequestParam
@@ -156,7 +156,7 @@ public class PayrollTestController {
        ============================================================ */
 
     @PostMapping("/employee/{employeeId}/change-jobstep/{jobStepId}")
-    public Employee changeJobStep(
+    public EmployeeDTO changeJobStep(
             @PathVariable Long employeeId,
             @PathVariable Long jobStepId,
             @RequestParam
@@ -174,7 +174,7 @@ public class PayrollTestController {
        ============================================================ */
 
     @PostMapping("/employee/{employeeId}/change-status")
-    public Employee changeStatus(
+    public EmployeeDTO changeStatus(
             @PathVariable Long employeeId) {
 
         return employeeService.changeEmploymentStatus(
