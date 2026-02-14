@@ -25,3 +25,25 @@ public class JobGrade {
     @OneToMany(mappedBy = "jobGrade", cascade = CascadeType.ALL)
     private List<JobStep> jobSteps;
 }
+
+/*
+
+{
+        "gradeName": "Grade A",
+        "departmentId": 1,
+        "steps": [
+        {
+        "stepName": "Step 1",
+        "basicSalary": 150000
+        },
+        {
+        "stepName": "Step 2",
+        "basicSalary": 180000
+        },
+        {
+        "stepName": "Step 3",
+        "basicSalary": 210000
+        }
+        ]
+        }
+*/
