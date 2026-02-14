@@ -57,7 +57,11 @@ public class SetupServiceImpl implements SetupService {
 
         return departmentRepository.save(department);
     }
-
+    @Override
+    @Transactional(readOnly = true)
+    public List<Department> getAllDepartments() {
+        return departmentRepository.findAll();
+    }
     /* ============================================================
        JOB GRADE + JOB STEPS SETUP
        ============================================================ */
