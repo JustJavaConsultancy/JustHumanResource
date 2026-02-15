@@ -10,9 +10,7 @@ import com.justjava.humanresource.hr.repository.PayGroupRepository;
 import com.justjava.humanresource.hr.service.EmployeeService;
 import com.justjava.humanresource.onboarding.dto.StartEmployeeOnboardingCommand;
 import com.justjava.humanresource.onboarding.service.EmployeeOnboardingService;
-import com.justjava.humanresource.payroll.entity.Allowance;
-import com.justjava.humanresource.payroll.entity.Deduction;
-import com.justjava.humanresource.payroll.entity.PayrollRun;
+import com.justjava.humanresource.payroll.entity.*;
 import com.justjava.humanresource.payroll.repositories.PayrollRunRepository;
 import com.justjava.humanresource.payroll.service.PayrollChangeOrchestrator;
 import com.justjava.humanresource.payroll.service.PayrollSetupService;
@@ -219,4 +217,55 @@ public class PayrollTestController {
         return payrollRunRepository.findById(runId)
                 .orElseThrow();
     }
+    /* ============================================================
+   BULK EMPLOYEE SETUP
+   ============================================================ */
+
+    @PostMapping("/setup/employee/{employeeId}/allowances")
+    public List<EmployeeAllowanceResponse> attachAllowancesToEmployee(
+            @PathVariable Long employeeId,
+            @RequestBody List<AllowanceAttachmentRequest> requests) {
+
+        return payrollSetupService.addAllowancesToEmployee(
+                employeeId,
+                requests
+        );
+    }
+
+    @PostMapping("/setup/employee/{employeeId}/deductions")
+    public List<EmployeeDeductionResponse> attachDeductionsToEmployee(
+            @PathVariable Long employeeId,
+            @RequestBody List<DeductionAttachmentRequest> requests) {
+
+        return payrollSetupService.addDeductionsToEmployee(
+                employeeId,
+                requests
+        );
+    }
+/* ============================================================
+   BULK PAYGROUP SETUP
+   ============================================================ */
+
+    @PostMapping("/setup/paygroup/{payGroupId}/allowances")
+    public List<PayGroupAllowanceResponse> attachAllowancesToPayGroup(
+            @PathVariable Long payGroupId,
+            @RequestBody List<AllowanceAttachmentRequest> requests) {
+
+        return payrollSetupService.addAllowancesToPayGroup(
+                payGroupId,
+                requests
+        );
+    }
+
+    @PostMapping("/setup/paygroup/{payGroupId}/deductions")
+    public List<PayGroupDeductionResponse> attachDeductionsToPayGroup(
+            @PathVariable Long payGroupId,
+            @RequestBody List<DeductionAttachmentRequest> requests) {
+
+        return payrollSetupService.addDeductionsToPayGroup(
+                payGroupId,
+                requests
+        );
+    }
+
 }
