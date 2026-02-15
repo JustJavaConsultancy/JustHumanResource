@@ -14,6 +14,8 @@ public interface SetupService {
 
     Department createDepartment(String name);
 
+    List<Department> getAllDepartments();
+
     JobGradeResponseDTO createJobGradeWithSteps(CreateJobGradeWithStepsCommand command);
 
     List<JobGradeResponseDTO> getAllJobGrades();

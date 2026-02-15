@@ -42,8 +42,7 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
 
     @Override
     public List<PayeTaxBand> getActivePayeBands(LocalDate date) {
-        return payeTaxBandRepository
-                .findByEffectiveFromLessThanEqualAndEffectiveToIsNullAndStatusOrderByLowerBoundAsc(
+        return payeTaxBandRepository.findByEffectiveFromLessThanEqualAndEffectiveToIsNullAndStatusOrderByLowerBoundAsc(
                         date, RecordStatus.ACTIVE
                 );
     }

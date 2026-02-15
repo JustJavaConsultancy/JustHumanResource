@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Controller
 public class TaxBandController {
@@ -19,9 +20,10 @@ public class TaxBandController {
     public String taxBand(Model model){
 
         LocalDate date = LocalDate.now();
-
+        List<PayeTaxBand> activeBands = payrollSetupService.getActivePayeBands(date);
         System.out.println("Active bands " + payrollSetupService.getActivePayeBands(date));
 
+        model.addAttribute("activeBands", activeBands);
         model.addAttribute("title", "Tax Band");
         model.addAttribute("subTitle", "Manage tax bands for employees");
         return "taxBand/main";

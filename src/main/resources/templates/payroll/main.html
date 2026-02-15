@@ -5,7 +5,7 @@
       layout:decorate="~{layout}">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <title>Allowances & Deductions · Payroll Items</title>
     <script>
         tailwind.config = {
             darkMode: "class",
@@ -343,7 +343,7 @@
 </head>
 <body>
 <main layout:fragment="content">
-    <!-- Stats Cards -->
+    <!-- Stats Cards (static numbers for allowances/deductions) -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
         <!-- Total Allowances -->
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6">
@@ -356,12 +356,12 @@
                             +2
                         </span>
             </div>
-            <h3 class="text-2xl font-bold mb-1" id="totalAllowances">8</h3>
+            <h3 th:text="${#lists.size(allowances)}" class="text-2xl font-bold mb-1">8</h3>
             <p class="text-gray-600 dark:text-gray-400 text-sm">Active Allowances</p>
             <div class="mt-3">
                 <div class="flex items-center text-xs text-gray-500">
                     <span class="material-icons-round text-xs mr-1">percent</span>
-                    <span id="taxableAllowances">4 taxable</span>
+                    <span th:text="${taxableAllowances + ' taxable'}">5 taxable</span>
                 </div>
             </div>
         </div>
@@ -374,17 +374,17 @@
                 </div>
                 <span class="badge badge-warning">Compliance</span>
             </div>
-            <h3 class="text-2xl font-bold mb-1" id="totalDeductions">6</h3>
+            <h3 th:text="${#lists.size(deductions)}" class="text-2xl font-bold mb-1">6</h3>
             <p class="text-gray-600 dark:text-gray-400 text-sm">Active Deductions</p>
             <div class="mt-3">
                 <div class="flex items-center text-xs text-gray-500">
                     <span class="material-icons-round text-xs mr-1">gavel</span>
-                    <span id="statutoryDeductions">3 statutory</span>
+                    <span th:text="${saturatoryDeductions + ' saturatory'}">3 statutory</span>
                 </div>
             </div>
         </div>
 
-        <!-- Paygroups -->
+        <!-- Paygroups (unchanged) -->
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6">
             <div class="flex items-center justify-between mb-4">
                 <div class="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
@@ -402,7 +402,7 @@
             </div>
         </div>
 
-        <!-- Monthly Payroll -->
+        <!-- Monthly Payroll (unchanged) -->
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6">
             <div class="flex items-center justify-between mb-4">
                 <div class="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
@@ -453,7 +453,7 @@
         </div>
     </div>
 
-    <!-- Payroll Items Tab -->
+    <!-- Payroll Items Tab (now with Thymeleaf) -->
     <div id="payrollItems" class="tab-content">
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
             <!-- Allowances Section -->
@@ -464,7 +464,6 @@
                             <div class="flex items-center space-x-3">
                                 <span class="material-icons-round text-green-600">add_circle</span>
                                 <h3 class="text-lg font-bold">Allowances</h3>
-                                <span class="text-sm text-gray-500">(with taxable status)</span>
                             </div>
                             <button onclick="openModal('addAllowanceModal')" class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700">
                                 Add Allowance
@@ -473,8 +472,37 @@
                     </div>
 
                     <div class="p-4 md:p-6">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="allowancesList">
-                            <!-- Allowances will be loaded dynamically -->
+                        <!-- Allowances List (shown when data exists) -->
+                        <div th:if="${not #lists.isEmpty(allowances)}" class="grid grid-cols-1 md:grid-cols-2 gap-4" id="allowancesList">
+                            <div th:each="allowance : ${allowances}" class="payroll-card p-4 rounded-lg">
+                                <div class="flex justify-between items-start mb-3">
+                                    <div>
+                                        <h4 class="font-bold" th:text="${allowance.name}">Housing Allowance</h4>
+                                        <p class="text-sm text-gray-500">
+                                            <span th:text="${allowance.code}">ALL-HOUSING</span>
+                                            <span th:if="${allowance.taxable}" class="taxable-badge ml-2">Taxable</span>
+                                            <span th:unless="${allowance.taxable}" class="text-xs text-gray-500 ml-2">Non-taxable</span>
+                                            <span th:if="${allowance.status == 'ACTIVE'}" class="badge badge-success ml-2">Active</span>
+                                            <span th:if="${allowance.status == 'INACTIVE'}" class="badge badge-gray ml-2">Inactive</span>
+                                        </p>
+                                    </div>
+                                    <span class="text-lg font-bold text-green-600" th:text="'+ ₦' + ${#numbers.formatDecimal(allowance.amount, 1, 2)}">+ $1200.00</span>
+                                </div>
+                                <div class="flex justify-between items-center mt-2">
+                                    <div class="text-xs text-gray-500" th:text="'ID: ' + ${allowance.id}">ID: 1</div>
+                                    <div class="flex space-x-2">
+                                        <button th:onclick="'editAllowance(' + ${allowance.id} + ')'" class="text-blue-600 hover:text-blue-700 text-sm">Edit</button>
+                                        <button th:onclick="'toggleAllowanceStatus(' + ${allowance.id} + ')'" class="text-gray-600 hover:text-gray-700 text-sm" th:text="${allowance.status == 'ACTIVE' ? 'Deactivate' : 'Activate'}">Deactivate</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Allowances Empty State -->
+                        <div th:if="${#lists.isEmpty(allowances)}" class="flex flex-col items-center justify-center py-12 text-center">
+                            <span class="material-icons-round text-gray-400 text-5xl mb-4">card_giftcard</span>
+                            <h4 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-1">No allowances</h4>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">Get started by adding a new allowance.</p>
                         </div>
                     </div>
                 </div>
@@ -488,7 +516,6 @@
                             <div class="flex items-center space-x-3">
                                 <span class="material-icons-round text-red-600">remove_circle</span>
                                 <h3 class="text-lg font-bold">Deductions</h3>
-                                <span class="text-sm text-gray-500">(with statutory status)</span>
                             </div>
                             <button onclick="openModal('addDeductionModal')" class="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700">
                                 Add Deduction
@@ -497,8 +524,37 @@
                     </div>
 
                     <div class="p-4 md:p-6">
-                        <div class="space-y-4" id="deductionsList">
-                            <!-- Deductions will be loaded dynamically -->
+                        <!-- Deductions List (shown when data exists) -->
+                        <div th:if="${not #lists.isEmpty(deductions)}" class="space-y-4" id="deductionsList">
+                            <div th:each="deduction : ${deductions}" class="payroll-card p-4 rounded-lg">
+                                <div class="flex justify-between items-start mb-3">
+                                    <div>
+                                        <h4 class="font-bold" th:text="${deduction.name}">Health Insurance</h4>
+                                        <p class="text-sm text-gray-500">
+                                            <span th:text="${deduction.code}">DED-HEALTH</span>
+                                            <span th:if="${deduction.statutory}" class="statutory-badge ml-2">Statutory</span>
+                                            <span th:unless="${deduction.statutory}" class="text-xs text-gray-500 ml-2">Non-statutory</span>
+                                            <span th:if="${deduction.status == 'ACTIVE'}" class="badge badge-success ml-2">Active</span>
+                                            <span th:if="${deduction.status == 'INACTIVE'}" class="badge badge-gray ml-2">Inactive</span>
+                                        </p>
+                                    </div>
+                                    <span class="text-lg font-bold text-red-600" th:text="'- ₦' + ${#numbers.formatDecimal(deduction.amount, 1, 2)}">- $150.00</span>
+                                </div>
+                                <div class="flex justify-between items-center mt-2">
+                                    <div class="text-xs text-gray-500" th:text="'ID: ' + ${deduction.id}">ID: 1</div>
+                                    <div class="flex space-x-2">
+                                        <button th:onclick="'editDeduction(' + ${deduction.id} + ')'" class="text-blue-600 hover:text-blue-700 text-sm">Edit</button>
+                                        <button th:onclick="'toggleDeductionStatus(' + ${deduction.id} + ')'" class="text-gray-600 hover:text-gray-700 text-sm" th:text="${deduction.status == 'ACTIVE' ? 'Deactivate' : 'Activate'}">Deactivate</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Deductions Empty State -->
+                        <div th:if="${#lists.isEmpty(deductions)}" class="flex flex-col items-center justify-center py-12 text-center">
+                            <span class="material-icons-round text-gray-400 text-5xl mb-4">remove_circle_outline</span>
+                            <h4 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-1">No deductions</h4>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">Get started by adding a new deduction.</p>
                         </div>
                     </div>
                 </div>
@@ -506,7 +562,7 @@
         </div>
     </div>
 
-    <!-- Paygroups Tab -->
+    <!-- Paygroups Tab (unchanged) -->
     <div id="paygroups" class="tab-content hidden">
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
             <!-- Paygroups List -->
@@ -550,7 +606,7 @@
         </div>
     </div>
 
-    <!-- Employee Payroll Tab -->
+    <!-- Employee Payroll Tab (unchanged) -->
     <div id="employeePayroll" class="tab-content hidden">
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 mb-6">
             <div class="p-4 md:p-6 border-b border-gray-200 dark:border-gray-700">
@@ -607,7 +663,7 @@
         </div>
     </div>
 
-    <!-- Payroll Processing Tab -->
+    <!-- Payroll Processing Tab (unchanged) -->
     <div id="payrollProcessing" class="tab-content hidden">
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
             <!-- Payroll Process Steps -->
@@ -772,7 +828,7 @@
         </div>
     </div>
 
-    <!-- Job Grades & Steps Tab -->
+    <!-- Job Grades & Steps Tab (unchanged) -->
     <div id="jobGrades" class="tab-content hidden">
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
             <!-- Job Grades List -->
@@ -891,9 +947,7 @@
         </div>
     </div>
 
-
-
-    <!-- Run Payroll Modal -->
+    <!-- Run Payroll Modal (unchanged) -->
     <div id="runPayrollModal" class="fixed inset-0 z-50 hidden">
         <div class="modal-backdrop fixed inset-0"></div>
         <div class="fixed inset-0 flex items-center justify-center p-4 custom-scrollbar">
@@ -999,147 +1053,7 @@
         </div>
     </div>
 
-    <!-- Add Allowance Modal -->
-    <div id="addAllowanceModal" class="fixed inset-0 z-50 hidden">
-        <div class="modal-backdrop fixed inset-0"></div>
-        <div class="fixed inset-0 flex items-center justify-center p-4">
-            <div class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md p-6">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-lg font-bold">Add New Allowance</h3>
-                    <button onclick="closeModal('addAllowanceModal')" class="text-gray-400 hover:text-gray-600">
-                        <span class="material-icons-round">close</span>
-                    </button>
-                </div>
-                <form id="addAllowanceForm" class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium mb-2">Allowance Code *</label>
-                        <input type="text" class="form-input" placeholder="e.g., ALL-HOUSING" required>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-2">Allowance Name *</label>
-                        <input type="text" class="form-input" placeholder="Enter allowance name" required>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-2">Amount *</label>
-                        <div class="flex space-x-3">
-                            <select class="form-input w-32" required>
-                                <option value="fixed">Fixed</option>
-                                <option value="percentage">Percentage</option>
-                            </select>
-                            <input type="number" class="form-input flex-1" placeholder="Enter amount" step="0.01" required>
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-2">Taxable Status</label>
-                        <div class="space-y-2">
-                            <label class="flex items-center space-x-2">
-                                <input type="radio" name="taxable" value="true" class="text-primary-600">
-                                <span>Taxable - Include in tax calculation</span>
-                            </label>
-                            <label class="flex items-center space-x-2">
-                                <input type="radio" name="taxable" value="false" checked class="text-primary-600">
-                                <span>Non-taxable - Exclude from tax calculation</span>
-                            </label>
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-2">Applied To Job Grades</label>
-                        <select class="form-input" multiple size="4">
-                            <option value="all">All Grades</option>
-                            <option value="1">Grade 1 - Entry Level</option>
-                            <option value="2">Grade 2 - Associate</option>
-                            <option value="3">Grade 3 - Senior Associate</option>
-                            <option value="4">Grade 4 - Team Lead</option>
-                            <option value="5">Grade 5 - Manager</option>
-                            <option value="6">Grade 6 - Senior Manager</option>
-                            <option value="7">Grade 7 - Director</option>
-                        </select>
-                        <p class="text-xs text-gray-500 mt-1">Hold Ctrl/Cmd to select multiple grades</p>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-2">Description</label>
-                        <textarea class="form-input h-24" placeholder="Enter allowance description"></textarea>
-                    </div>
-                    <div class="flex justify-end space-x-3 pt-4">
-                        <button type="button" onclick="closeModal('addAllowanceModal')" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">Cancel</button>
-                        <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Add Allowance</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- Add Deduction Modal -->
-    <div id="addDeductionModal" class="fixed inset-0 z-50 hidden">
-        <div class="modal-backdrop fixed inset-0"></div>
-        <div class="fixed inset-0 flex items-center justify-center p-4">
-            <div class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md p-6">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-lg font-bold">Add New Deduction</h3>
-                    <button onclick="closeModal('addDeductionModal')" class="text-gray-400 hover:text-gray-600">
-                        <span class="material-icons-round">close</span>
-                    </button>
-                </div>
-                <form id="addDeductionForm" class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium mb-2">Deduction Code *</label>
-                        <input type="text" class="form-input" placeholder="e.g., DED-HEALTH" required>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-2">Deduction Name *</label>
-                        <input type="text" class="form-input" placeholder="Enter deduction name" required>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-2">Amount *</label>
-                        <div class="flex space-x-3">
-                            <select class="form-input w-32" required>
-                                <option value="fixed">Fixed</option>
-                                <option value="percentage">Percentage</option>
-                            </select>
-                            <input type="number" class="form-input flex-1" placeholder="Enter amount" step="0.01" required>
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-2">Statutory Status</label>
-                        <div class="space-y-2">
-                            <label class="flex items-center space-x-2">
-                                <input type="radio" name="statutory" value="true" class="text-primary-600">
-                                <span>Statutory - Required by law (tax, pension, etc.)</span>
-                            </label>
-                            <label class="flex items-center space-x-2">
-                                <input type="radio" name="statutory" value="false" checked class="text-primary-600">
-                                <span>Non-statutory - Voluntary deductions</span>
-                            </label>
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-2">Applied To Job Grades</label>
-                        <select class="form-input" multiple size="4">
-                            <option value="all">All Grades</option>
-                            <option value="1">Grade 1 - Entry Level</option>
-                            <option value="2">Grade 2 - Associate</option>
-                            <option value="3">Grade 3 - Senior Associate</option>
-                            <option value="4">Grade 4 - Team Lead</option>
-                            <option value="5">Grade 5 - Manager</option>
-                            <option value="6">Grade 6 - Senior Manager</option>
-                            <option value="7">Grade 7 - Director</option>
-                        </select>
-                        <p class="text-xs text-gray-500 mt-1">Hold Ctrl/Cmd to select multiple grades</p>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-2">Description</label>
-                        <textarea class="form-input h-24" placeholder="Enter deduction description"></textarea>
-                    </div>
-                    <div class="flex justify-end space-x-3 pt-4">
-                        <button type="button" onclick="closeModal('addDeductionModal')" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">Cancel</button>
-                        <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Add Deduction</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- Create Paygroup Modal (Simplified) -->
+    <!-- Create Paygroup Modal (unchanged) -->
     <div id="createPaygroupModal" class="fixed inset-0 z-50 hidden">
         <div class="modal-backdrop fixed inset-0"></div>
         <div class="fixed inset-0 flex items-center justify-center p-4">
@@ -1153,7 +1067,6 @@
                     </div>
                 </div>
                 <div class="p-6">
-                    <!-- Fixed Thymeleaf action and added onsubmit to disable button -->
                     <form th:action="@{/createPayGroup}" method="post" id="createPaygroupForm" class="space-y-6" onsubmit="disableSubmitButton(this)">
                         <div>
                             <label class="block text-sm font-medium mb-2">Paygroup Name *</label>
@@ -1178,7 +1091,7 @@
         </div>
     </div>
 
-    <!-- Edit Employee Payroll Modal -->
+    <!-- Edit Employee Payroll Modal (unchanged) -->
     <div id="editEmployeePayrollModal" class="fixed inset-0 z-50 hidden">
         <div class="modal-backdrop fixed inset-0"></div>
         <div class="fixed inset-0 flex items-center justify-center p-4 custom-scrollbar">
@@ -1290,7 +1203,7 @@
         </div>
     </div>
 
-    <!-- Add Job Grade Modal -->
+    <!-- Add Job Grade Modal (unchanged) -->
     <div id="addJobGradeModal" class="fixed inset-0 z-50 hidden">
         <div class="modal-backdrop fixed inset-0"></div>
         <div class="fixed inset-0 flex items-center justify-center p-4">
@@ -1327,7 +1240,7 @@
         </div>
     </div>
 
-    <!-- Add Job Step Modal -->
+    <!-- Add Job Step Modal (unchanged) -->
     <div id="addJobStepModal" class="fixed inset-0 z-50 hidden">
         <div class="modal-backdrop fixed inset-0"></div>
         <div class="fixed inset-0 flex items-center justify-center p-4">
@@ -1377,25 +1290,25 @@
     </div>
 
     <script>
-        // Data models based on the entities provided
+        // ========== Data models (kept for other tabs) ==========
         const allowances = [
-            { id: 1, code: 'ALL-HOUSING', name: 'Housing Allowance', amount: 1200.00, taxable: true, status: 'ACTIVE', appliedGrades: [6, 7] },
-            { id: 2, code: 'ALL-TRANSPORT', name: 'Transport Allowance', amount: 400.00, taxable: false, status: 'ACTIVE', appliedGrades: ['all'] },
-            { id: 3, code: 'ALL-MEAL', name: 'Meal Allowance', amount: 150.00, taxable: true, status: 'ACTIVE', appliedGrades: [1, 2, 3, 4] },
-            { id: 4, code: 'ALL-PERFORMANCE', name: 'Performance Bonus', amount: 2000.00, taxable: true, status: 'ACTIVE', appliedGrades: [3, 4, 5, 6, 7] },
-            { id: 5, code: 'ALL-MEDICAL', name: 'Medical Allowance', amount: 200.00, taxable: false, status: 'ACTIVE', appliedGrades: ['all'] },
-            { id: 6, code: 'ALL-COMMUNICATION', name: 'Communication Allowance', amount: 100.00, taxable: true, status: 'ACTIVE', appliedGrades: [4, 5, 6, 7] },
-            { id: 7, code: 'ALL-TRANSPORT-FUEL', name: 'Fuel Allowance', amount: 300.00, taxable: true, status: 'ACTIVE', appliedGrades: [5, 6, 7] },
-            { id: 8, code: 'ALL-EDUCATION', name: 'Education Allowance', amount: 500.00, taxable: false, status: 'INACTIVE', appliedGrades: [6, 7] }
+            { id: 1, code: 'ALL-HOUSING', name: 'Housing Allowance', amount: 1200.00, taxable: true, status: 'ACTIVE' },
+            { id: 2, code: 'ALL-TRANSPORT', name: 'Transport Allowance', amount: 400.00, taxable: false, status: 'ACTIVE' },
+            { id: 3, code: 'ALL-MEAL', name: 'Meal Allowance', amount: 150.00, taxable: true, status: 'ACTIVE' },
+            { id: 4, code: 'ALL-PERFORMANCE', name: 'Performance Bonus', amount: 2000.00, taxable: true, status: 'ACTIVE' },
+            { id: 5, code: 'ALL-MEDICAL', name: 'Medical Allowance', amount: 200.00, taxable: false, status: 'ACTIVE' },
+            { id: 6, code: 'ALL-COMMUNICATION', name: 'Communication Allowance', amount: 100.00, taxable: true, status: 'ACTIVE' },
+            { id: 7, code: 'ALL-TRANSPORT-FUEL', name: 'Fuel Allowance', amount: 300.00, taxable: true, status: 'ACTIVE' },
+            { id: 8, code: 'ALL-EDUCATION', name: 'Education Allowance', amount: 500.00, taxable: false, status: 'ACTIVE' }
         ];
 
         const deductions = [
-            { id: 1, code: 'DED-HEALTH', name: 'Health Insurance', amount: 150.00, statutory: false, status: 'ACTIVE', appliedGrades: ['all'] },
-            { id: 2, code: 'DED-TAX', name: 'Income Tax', amount: 15.00, statutory: true, status: 'ACTIVE', appliedGrades: ['all'] },
-            { id: 3, code: 'DED-PENSION', name: 'Pension Contribution', amount: 5.00, statutory: true, status: 'ACTIVE', appliedGrades: ['all'] },
-            { id: 4, code: 'DED-LIFE-INS', name: 'Life Insurance', amount: 100.00, statutory: false, status: 'ACTIVE', appliedGrades: [5, 6, 7] },
-            { id: 5, code: 'DED-LOAN', name: 'Loan Deduction', amount: 200.00, statutory: false, status: 'ACTIVE', appliedGrades: [1, 2, 3, 4, 5] },
-            { id: 6, code: 'DED-UNION', name: 'Union Dues', amount: 50.00, statutory: true, status: 'ACTIVE', appliedGrades: [1, 2, 3, 4] }
+            { id: 1, code: 'DED-HEALTH', name: 'Health Insurance', amount: 150.00, statutory: false, status: 'ACTIVE' },
+            { id: 2, code: 'DED-TAX', name: 'Income Tax', amount: 15.00, statutory: true, status: 'ACTIVE' },
+            { id: 3, code: 'DED-PENSION', name: 'Pension Contribution', amount: 5.00, statutory: true, status: 'ACTIVE' },
+            { id: 4, code: 'DED-LIFE-INS', name: 'Life Insurance', amount: 100.00, statutory: false, status: 'ACTIVE' },
+            { id: 5, code: 'DED-LOAN', name: 'Loan Deduction', amount: 200.00, statutory: false, status: 'ACTIVE' },
+            { id: 6, code: 'DED-UNION', name: 'Union Dues', amount: 50.00, statutory: true, status: 'ACTIVE' }
         ];
 
         const paygroups = [
@@ -1467,21 +1380,14 @@
         let currentPaygroup = null;
         let currentEmployee = null;
 
-        // Initialize the page
+        // Initialize the page (load only non-allowance/deduction sections)
         document.addEventListener('DOMContentLoaded', function() {
-            loadAllowances();
-            loadDeductions();
             loadPaygroups();
             loadEmployeePayroll();
             loadJobGrades();
-            updateStats();
+            updateStats(); // updates paygroups and employees stats only
 
-            // Initialize event listeners
-            document.getElementById('searchInput').addEventListener('input', filterPayrollItems);
-
-            // Form submissions (removed createPaygroupForm listener because we now use inline onsubmit)
-            document.getElementById('addAllowanceForm').addEventListener('submit', handleAddAllowance);
-            document.getElementById('addDeductionForm').addEventListener('submit', handleAddDeduction);
+            // Form submissions
             document.getElementById('runPayrollForm').addEventListener('submit', handleRunPayroll);
             document.getElementById('editEmployeePayrollForm').addEventListener('submit', handleEditEmployeePayroll);
             document.getElementById('addJobGradeForm').addEventListener('submit', handleAddJobGrade);
@@ -1502,108 +1408,17 @@
             if (submitButton) {
                 submitButton.disabled = true;
                 submitButton.classList.add('opacity-50', 'cursor-not-allowed');
-                // Optionally change text to indicate submission
                 submitButton.innerHTML = 'Submitting...';
             }
             return true; // allow form to submit
         }
 
-        function loadAllowances() {
-            const container = document.getElementById('allowancesList');
-            const taxableCount = allowances.filter(a => a.taxable && a.status === 'ACTIVE').length;
-
-            container.innerHTML = '';
-
-            allowances.filter(a => a.status === 'ACTIVE').forEach(allowance => {
-                const allowanceElement = document.createElement('div');
-                allowanceElement.className = 'payroll-card p-4 rounded-lg';
-
-                const isTaxable = allowance.taxable ? '<span class="taxable-badge ml-2">Taxable</span>' : '';
-                const gradeBadges = allowance.appliedGrades.includes('all')
-                    ? '<span class="badge-gray ml-2">All Grades</span>'
-                    : allowance.appliedGrades.map(g => `<span class="grade-badge grade-${g} ml-1">G${g}</span>`).join('');
-
-                allowanceElement.innerHTML = `
-                    <div class="flex justify-between items-start mb-3">
-                        <div>
-                            <h4 class="font-bold">${allowance.name}</h4>
-                            <p class="text-sm text-gray-500">${allowance.code} ${isTaxable}</p>
-                        </div>
-                        <span class="text-lg font-bold text-green-600">+ $${allowance.amount.toFixed(2)}</span>
-                    </div>
-                    <div class="mb-3">
-                        ${gradeBadges}
-                    </div>
-                    <div class="flex justify-between items-center">
-                        <div class="text-xs text-gray-500">
-                            Applied to: ${allowance.appliedGrades.includes('all') ? 'All employees' : 'Specific grades'}
-                        </div>
-                        <div class="flex space-x-2">
-                            <button onclick="editAllowance(${allowance.id})" class="text-blue-600 hover:text-blue-700 text-sm">Edit</button>
-                            <button onclick="toggleAllowanceStatus(${allowance.id})" class="text-gray-600 hover:text-gray-700 text-sm">${allowance.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}</button>
-                        </div>
-                    </div>
-                `;
-
-                container.appendChild(allowanceElement);
-            });
-
-            // Update taxable count in stats
-            document.getElementById('taxableAllowances').textContent = `${taxableCount} taxable`;
-        }
-
-        function loadDeductions() {
-            const container = document.getElementById('deductionsList');
-            const statutoryCount = deductions.filter(d => d.statutory && d.status === 'ACTIVE').length;
-
-            container.innerHTML = '';
-
-            deductions.filter(d => d.status === 'ACTIVE').forEach(deduction => {
-                const deductionElement = document.createElement('div');
-                deductionElement.className = 'payroll-card p-4 rounded-lg';
-
-                const isStatutory = deduction.statutory ? '<span class="statutory-badge ml-2">Statutory</span>' : '';
-                const isPercentage = deduction.name.includes('Tax') || deduction.name.includes('Pension');
-                const amountDisplay = isPercentage ? `${deduction.amount}%` : `$${deduction.amount.toFixed(2)}`;
-                const gradeBadges = deduction.appliedGrades.includes('all')
-                    ? '<span class="badge-gray ml-2">All Grades</span>'
-                    : deduction.appliedGrades.map(g => `<span class="grade-badge grade-${g} ml-1">G${g}</span>`).join('');
-
-                deductionElement.innerHTML = `
-                    <div class="flex justify-between items-start mb-3">
-                        <div>
-                            <h4 class="font-bold">${deduction.name}</h4>
-                            <p class="text-sm text-gray-500">${deduction.code} ${isStatutory}</p>
-                        </div>
-                        <span class="text-lg font-bold text-red-600">- ${amountDisplay}</span>
-                    </div>
-                    <div class="mb-3">
-                        ${gradeBadges}
-                    </div>
-                    <div class="flex justify-between items-center">
-                        <div class="text-xs text-gray-500">
-                            ${deduction.statutory ? 'Required by law' : 'Voluntary deduction'}
-                        </div>
-                        <div class="flex space-x-2">
-                            <button onclick="editDeduction(${deduction.id})" class="text-blue-600 hover:text-blue-700 text-sm">Edit</button>
-                            <button onclick="toggleDeductionStatus(${deduction.id})" class="text-gray-600 hover:text-gray-700 text-sm">${deduction.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}</button>
-                        </div>
-                    </div>
-                `;
-
-                container.appendChild(deductionElement);
-            });
-
-            // Update statutory count in stats
-            document.getElementById('statutoryDeductions').textContent = `${statutoryCount} statutory`;
-        }
+        // Removed loadAllowances, loadDeductions, editAllowance, editDeduction, toggleAllowanceStatus, toggleDeductionStatus, filterPayrollItems
 
         function loadPaygroups() {
             const container = document.getElementById('paygroupsList');
-
             container.innerHTML = '';
 
-            // Load paygroups list
             paygroups.forEach(paygroup => {
                 const paygroupElement = document.createElement('div');
                 paygroupElement.className = 'payroll-card p-4 rounded-lg cursor-pointer';
@@ -1670,15 +1485,13 @@
             const deductionList = paygroup.deductions.map(did => {
                 const deduction = deductions.find(d => d.id === did);
                 if (!deduction) return '';
-                const isPercentage = deduction.name.includes('Tax') || deduction.name.includes('Pension');
-                const amountDisplay = isPercentage ? `${deduction.amount}%` : `$${deduction.amount.toFixed(2)}`;
                 return `<div class="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
                     <div>
                         <span class="text-sm font-medium">${deduction.name}</span>
                         <span class="text-xs text-gray-500 ml-2">${deduction.code}</span>
                         ${deduction.statutory ? '<span class="statutory-badge ml-2">Statutory</span>' : ''}
                     </div>
-                    <span class="font-bold text-red-600">- ${amountDisplay}</span>
+                    <span class="font-bold text-red-600">- $${deduction.amount.toFixed(2)}</span>
                 </div>`;
             }).join('');
 
@@ -1738,7 +1551,6 @@
                 </div>
             `;
 
-            // Re-highlight selected paygroup
             loadPaygroups();
         }
 
@@ -1753,7 +1565,6 @@
 
                 if (!grade || !step || !paygroup) return;
 
-                // Calculate payroll
                 const basicSalary = step.baseSalary;
                 const allowanceTotal = calculateEmployeeAllowances(employee);
                 const deductionTotal = calculateEmployeeDeductions(employee);
@@ -1807,9 +1618,7 @@
             paygroup.allowances.forEach(allowanceId => {
                 const allowance = allowances.find(a => a.id === allowanceId);
                 if (allowance && allowance.status === 'ACTIVE') {
-                    if (allowance.appliedGrades.includes('all') || allowance.appliedGrades.includes(employee.gradeId)) {
-                        total += allowance.amount;
-                    }
+                    total += allowance.amount;
                 }
             });
 
@@ -1827,14 +1636,7 @@
             paygroup.deductions.forEach(deductionId => {
                 const deduction = deductions.find(d => d.id === deductionId);
                 if (deduction && deduction.status === 'ACTIVE') {
-                    if (deduction.appliedGrades.includes('all') || deduction.appliedGrades.includes(employee.gradeId)) {
-                        if (deduction.name.includes('Tax') || deduction.name.includes('Pension')) {
-                            // Calculate percentage
-                            total += (step.baseSalary * deduction.amount) / 100;
-                        } else {
-                            total += deduction.amount;
-                        }
-                    }
+                    total += deduction.amount;
                 }
             });
 
@@ -1891,14 +1693,9 @@
         }
 
         function updateStats() {
-            const activeAllowances = allowances.filter(a => a.status === 'ACTIVE').length;
-            const activeDeductions = deductions.filter(d => d.status === 'ACTIVE').length;
-            const totalEmployees = employees.length;
-
-            document.getElementById('totalAllowances').textContent = activeAllowances;
-            document.getElementById('totalDeductions').textContent = activeDeductions;
+            // Only update paygroups and employees stats (allowances/deductions are static)
             document.getElementById('totalPaygroups').textContent = paygroups.length;
-            document.getElementById('totalEmployeesPaygroups').textContent = `${totalEmployees} employees`;
+            document.getElementById('totalEmployeesPaygroups').textContent = `${employees.length} employees`;
         }
 
         function editEmployeePayroll(employeeId) {
@@ -1909,7 +1706,6 @@
             const step = jobSteps.find(s => s.gradeId === currentEmployee.gradeId && s.stepLevel === currentEmployee.stepLevel);
             const paygroup = paygroups.find(p => p.id === currentEmployee.paygroupId);
 
-            // Set form values
             document.getElementById('employeeName').textContent = `Edit Payroll - ${currentEmployee.name}`;
             document.getElementById('employeeDetails').textContent = `${currentEmployee.department} • Employee ID: EMP-${String(currentEmployee.id).padStart(5, '0')}`;
 
@@ -1925,11 +1721,8 @@
             document.getElementById('paygroupSelect').value = currentEmployee.paygroupId;
             document.getElementById('basicSalary').value = step ? step.baseSalary.toFixed(2) : '';
 
-            // Load allowances and deductions
             loadEmployeeAllowancesSelection();
             loadEmployeeDeductionsSelection();
-
-            // Calculate and update summary
             updateEmployeeSummary();
 
             openModal('editEmployeePayrollModal');
@@ -1941,34 +1734,28 @@
 
             allowances.filter(a => a.status === 'ACTIVE').forEach(allowance => {
                 const isInPaygroup = currentEmployee && paygroups.find(p => p.id === currentEmployee.paygroupId)?.allowances.includes(allowance.id);
-                const isApplicable = allowance.appliedGrades.includes('all') || allowance.appliedGrades.includes(currentEmployee.gradeId);
 
                 container.innerHTML += `
                     <div class="flex items-center justify-between">
                         <div class="flex items-center space-x-3">
                             <input type="checkbox" value="${allowance.id}" class="rounded employee-allowance"
-                                   ${isInPaygroup ? 'checked disabled' : ''}
-                                   ${!isApplicable ? 'disabled' : ''}>
+                                   ${isInPaygroup ? 'checked disabled' : ''}>
                             <div>
                                 <span class="text-sm">${allowance.name}</span>
-                                ${!isApplicable ? '<span class="text-xs text-gray-500 ml-2">(Not applicable for this grade)</span>' : ''}
                                 ${isInPaygroup ? '<span class="text-xs text-green-600 ml-2">(From paygroup)</span>' : ''}
                             </div>
                         </div>
                         <input type="number" class="form-input w-32 allowance-amount"
                                value="${allowance.amount}" step="0.01"
-                               ${isInPaygroup ? 'disabled' : ''}
-                               ${!isApplicable ? 'disabled' : ''}>
+                               ${isInPaygroup ? 'disabled' : ''}>
                     </div>
                 `;
             });
 
-            // Add event listeners to checkboxes
             document.querySelectorAll('.employee-allowance').forEach(checkbox => {
                 checkbox.addEventListener('change', updateEmployeeSummary);
             });
 
-            // Add event listeners to amount inputs
             document.querySelectorAll('.allowance-amount').forEach(input => {
                 input.addEventListener('input', updateEmployeeSummary);
             });
@@ -1980,31 +1767,24 @@
 
             deductions.filter(d => d.status === 'ACTIVE').forEach(deduction => {
                 const isInPaygroup = currentEmployee && paygroups.find(p => p.id === currentEmployee.paygroupId)?.deductions.includes(deduction.id);
-                const isApplicable = deduction.appliedGrades.includes('all') || deduction.appliedGrades.includes(currentEmployee.gradeId);
-                const isPercentage = deduction.name.includes('Tax') || deduction.name.includes('Pension');
 
                 container.innerHTML += `
                     <div class="flex items-center justify-between">
                         <div class="flex items-center space-x-3">
                             <input type="checkbox" value="${deduction.id}" class="rounded employee-deduction"
-                                   ${isInPaygroup ? 'checked disabled' : ''}
-                                   ${!isApplicable ? 'disabled' : ''}>
+                                   ${isInPaygroup ? 'checked disabled' : ''}>
                             <div>
                                 <span class="text-sm">${deduction.name}</span>
-                                ${!isApplicable ? '<span class="text-xs text-gray-500 ml-2">(Not applicable for this grade)</span>' : ''}
                                 ${isInPaygroup ? '<span class="text-xs text-blue-600 ml-2">(From paygroup)</span>' : ''}
                             </div>
                         </div>
                         <input type="number" class="form-input w-32 deduction-amount"
                                value="${deduction.amount}" step="0.01"
-                               ${isInPaygroup ? 'disabled' : ''}
-                               ${!isApplicable ? 'disabled' : ''}>
-                        <span class="text-sm text-gray-500 ml-2">${isPercentage ? '%' : '$'}</span>
+                               ${isInPaygroup ? 'disabled' : ''}>
                     </div>
                 `;
             });
 
-            // Add event listeners
             document.querySelectorAll('.employee-deduction').forEach(checkbox => {
                 checkbox.addEventListener('change', updateEmployeeSummary);
             });
@@ -2040,7 +1820,6 @@
         function updateEmployeeSummary() {
             const basicSalary = parseFloat(document.getElementById('basicSalary').value) || 0;
 
-            // Calculate allowances
             let totalAllowances = 0;
             document.querySelectorAll('.employee-allowance:checked').forEach(checkbox => {
                 if (!checkbox.disabled) {
@@ -2051,27 +1830,18 @@
                 }
             });
 
-            // Calculate deductions
             let totalDeductions = 0;
             document.querySelectorAll('.employee-deduction:checked').forEach(checkbox => {
                 if (!checkbox.disabled) {
                     const amountInput = checkbox.closest('.flex.items-center.justify-between').querySelector('.deduction-amount');
-                    const isPercentage = checkbox.closest('.flex.items-center.justify-between').querySelector('.text-sm.text-gray-500').textContent === '%';
-
                     if (amountInput) {
-                        const amount = parseFloat(amountInput.value) || 0;
-                        if (isPercentage) {
-                            totalDeductions += (basicSalary * amount) / 100;
-                        } else {
-                            totalDeductions += amount;
-                        }
+                        totalDeductions += parseFloat(amountInput.value) || 0;
                     }
                 }
             });
 
             const netSalary = basicSalary + totalAllowances - totalDeductions;
 
-            // Update summary display
             document.getElementById('summaryBasic').textContent = `$${basicSalary.toFixed(2)}`;
             document.getElementById('summaryAllowances').textContent = `+ $${totalAllowances.toFixed(2)}`;
             document.getElementById('summaryDeductions').textContent = `- $${totalDeductions.toFixed(2)}`;
@@ -2079,25 +1849,6 @@
         }
 
         // Form handlers
-        function handleAddAllowance(e) {
-            e.preventDefault();
-            showToast('Allowance added successfully!', 'success');
-            closeModal('addAllowanceModal');
-            loadAllowances();
-            updateStats();
-        }
-
-        function handleAddDeduction(e) {
-            e.preventDefault();
-            showToast('Deduction added successfully!', 'success');
-            closeModal('addDeductionModal');
-            loadDeductions();
-            updateStats();
-        }
-
-        // The handler for createPaygroupForm is no longer needed because we use inline onsubmit.
-        // function handleCreatePaygroup(e) { ... }   // Removed to avoid confusion.
-
         function handleRunPayroll(e) {
             e.preventDefault();
             showToast('Payroll run initiated successfully!', 'success');
@@ -2126,47 +1877,10 @@
         }
 
         // Utility functions
-        function editAllowance(id) {
-            const allowance = allowances.find(a => a.id === id);
-            if (allowance) {
-                // In a real app, you would populate the form with allowance data
-                openModal('addAllowanceModal');
-            }
-        }
-
-        function editDeduction(id) {
-            const deduction = deductions.find(d => d.id === id);
-            if (deduction) {
-                // In a real app, you would populate the form with deduction data
-                openModal('addDeductionModal');
-            }
-        }
-
         function editPaygroup(id) {
             const paygroup = paygroups.find(p => p.id === id);
             if (paygroup) {
-                // In a real app, you would populate the form with paygroup data
                 openModal('createPaygroupModal');
-            }
-        }
-
-        function toggleAllowanceStatus(id) {
-            const allowance = allowances.find(a => a.id === id);
-            if (allowance) {
-                allowance.status = allowance.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
-                showToast(`Allowance ${allowance.status === 'ACTIVE' ? 'activated' : 'deactivated'}!`, 'success');
-                loadAllowances();
-                updateStats();
-            }
-        }
-
-        function toggleDeductionStatus(id) {
-            const deduction = deductions.find(d => d.id === id);
-            if (deduction) {
-                deduction.status = deduction.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
-                showToast(`Deduction ${deduction.status === 'ACTIVE' ? 'activated' : 'deactivated'}!`, 'success');
-                loadDeductions();
-                updateStats();
             }
         }
 
@@ -2178,8 +1892,6 @@
                     showToast('Paygroup deleted successfully!', 'success');
                     loadPaygroups();
                     updateStats();
-
-                    // Clear paygroup details view
                     document.getElementById('paygroupDetails').innerHTML = `
                         <div class="text-center py-12 text-gray-500">
                             <span class="material-icons-round text-4xl mb-4">group_work</span>
@@ -2188,26 +1900,6 @@
                     `;
                 }
             }
-        }
-
-        function filterPayrollItems() {
-            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-
-            // Filter allowances
-            document.querySelectorAll('#allowancesList .payroll-card').forEach(card => {
-                const title = card.querySelector('h4').textContent.toLowerCase();
-                const code = card.querySelector('p').textContent.toLowerCase();
-                const isVisible = title.includes(searchTerm) || code.includes(searchTerm);
-                card.style.display = isVisible ? 'block' : 'none';
-            });
-
-            // Filter deductions
-            document.querySelectorAll('#deductionsList .payroll-card').forEach(card => {
-                const title = card.querySelector('h4').textContent.toLowerCase();
-                const code = card.querySelector('p').textContent.toLowerCase();
-                const isVisible = title.includes(searchTerm) || code.includes(searchTerm);
-                card.style.display = isVisible ? 'block' : 'none';
-            });
         }
 
         function filterEmployeePayroll() {
@@ -2330,31 +2022,33 @@
             document.getElementById(tabName + 'Tab').classList.remove('border-transparent', 'text-gray-500');
         }
 
-        // Initialize first tab as active
         document.addEventListener('DOMContentLoaded', () => {
             showTab('payrollItems');
         });
 
-        // Mobile Sidebar Toggle
+        // Mobile Sidebar Toggle (if elements exist)
         const menuToggle = document.getElementById('menuToggle');
         const mobileOverlay = document.getElementById('mobileOverlay');
         const sidebar = document.querySelector('.sidebar-container');
 
-        menuToggle.addEventListener('click', () => {
-            sidebar.classList.toggle('open');
-            mobileOverlay.classList.toggle('hidden');
-            document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : 'auto';
-        });
+        if (menuToggle && mobileOverlay && sidebar) {
+            menuToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('open');
+                mobileOverlay.classList.toggle('hidden');
+                document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : 'auto';
+            });
 
-        mobileOverlay.addEventListener('click', () => {
-            sidebar.classList.remove('open');
-            mobileOverlay.classList.add('hidden');
-            document.body.style.overflow = 'auto';
-        });
+            mobileOverlay.addEventListener('click', () => {
+                sidebar.classList.remove('open');
+                mobileOverlay.classList.add('hidden');
+                document.body.style.overflow = 'auto';
+            });
+        }
 
         // Theme Toggle
         function initializeTheme() {
             const themeToggle = document.getElementById('themeToggle');
+            if (!themeToggle) return;
             const themeIcon = themeToggle.querySelector('.material-icons-round');
 
             themeToggle.addEventListener('click', () => {
@@ -2365,20 +2059,18 @@
 
             if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
                 document.documentElement.classList.add('dark');
-                themeIcon.textContent = 'light_mode';
+                if (themeIcon) themeIcon.textContent = 'light_mode';
             }
         }
 
-        // Close sidebar on window resize
         window.addEventListener('resize', () => {
-            if (window.innerWidth >= 1024) {
+            if (sidebar && window.innerWidth >= 1024) {
                 sidebar.classList.remove('open');
-                mobileOverlay.classList.add('hidden');
+                if (mobileOverlay) mobileOverlay.classList.add('hidden');
                 document.body.style.overflow = 'auto';
             }
         });
 
-        // Close modal on backdrop click
         document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
             backdrop.addEventListener('click', function() {
                 this.parentElement.classList.add('hidden');
