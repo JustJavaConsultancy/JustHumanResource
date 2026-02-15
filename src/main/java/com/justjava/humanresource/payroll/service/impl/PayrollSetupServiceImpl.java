@@ -80,7 +80,7 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
     @Override
     public List<PensionScheme> getActivePensionSchemes() {
         return pensionSchemeRepository
-                .findByEffectiveFromLessThanEqualAndEffectiveToIsNullAndStatus(LocalDate.now(),RecordStatus.ACTIVE);
+                .findEffectiveSchemes(LocalDate.now(),RecordStatus.ACTIVE);
     }
 
     /* =========================
