@@ -32,9 +32,10 @@ public class PaySlipServiceImpl implements PaySlipService {
         PaySlip slip = new PaySlip();
         slip.setPayrollRun(run);
         slip.setPayDate(run.getPayrollDate());
-        slip.setGrossPay(gross);
+        slip.setGrossPay(run.getGrossPay());
         slip.setTotalDeductions(deductions);
-        slip.setNetPay(gross.subtract(deductions));
+        //slip.setNetPay(gross.subtract(deductions));
+        slip.setNetPay(run.getNetPay());
         slip.setEmployee(run.getEmployee());
 
         paySlipRepository.save(slip);

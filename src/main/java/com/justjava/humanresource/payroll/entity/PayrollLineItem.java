@@ -37,6 +37,12 @@ public class PayrollLineItem extends BaseEntity {
     @Column(nullable = false)
     private String componentCode;
 
+    @Column(nullable = false)
+    private String description;
     @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal amount;
+
+    @Column(nullable = false)
+    private boolean taxable;
+
 }
