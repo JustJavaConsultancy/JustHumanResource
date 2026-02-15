@@ -19,6 +19,7 @@ public class PensionController {
     public String getPension(Model model){
         List<PensionScheme> schemes = payrollSetupService.getActivePensionSchemes();
         System.out.println("Active Pension Schemes: " + schemes.size());
+        model.addAttribute("schemes", schemes);
         model.addAttribute("title", "Pension Management");
         model.addAttribute("subTitle", "Manage employee pension details and contributions");
         return "pension/main";

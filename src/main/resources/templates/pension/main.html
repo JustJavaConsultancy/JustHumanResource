@@ -5,7 +5,7 @@
       layout:decorate="~{layout}">
 <head>
     <meta charset="UTF-8">
-    <title>Pension Schemes</title>
+    <title>Pension Schemes · Pagination</title>
     <script>
         tailwind.config = {
             darkMode: "class",
@@ -106,7 +106,7 @@
                 </div>
                 <span class="badge badge-info">ACTIVE</span>
             </div>
-            <h3 class="text-2xl font-bold mb-1">6</h3>
+            <h3 th:text="${#lists.size(schemes)}" class="text-2xl font-bold mb-1">6</h3>
             <p class="text-gray-600 dark:text-gray-400 text-sm">Active Schemes</p>
             <div class="mt-3 flex items-center text-xs text-gray-500">
                 <span class="material-icons-round text-xs mr-1">check_circle</span>4 standard + 2 executive
@@ -189,26 +189,29 @@
                     <th class="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
                 </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                <!-- Scheme 1: Standard (basic only, no cap, open-ended) -->
-                <tr class="hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
-                    <td class="px-4 md:px-6 py-4 font-mono text-sm font-medium">PEN-STD</td>
-                    <td class="px-4 md:px-6 py-4 text-sm">Standard Auto‑Enrolment</td>
-                    <td class="px-4 md:px-6 py-4 text-sm">5.00%</td>
-                    <td class="px-4 md:px-6 py-4 text-sm">3.00%</td>
+                <!-- Table body with populated schemes (now with id and row class for pagination) -->
+                <tbody th:if="${not #lists.isEmpty(schemes)}" id="pensionSchemesBody" class="divide-y divide-gray-200 dark:divide-gray-700">
+                <tr th:each="scheme : ${schemes}" class="hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors scheme-row">
+                    <td th:text="${scheme.code}" class="px-4 md:px-6 py-4 font-mono text-sm font-medium">PEN-STD</td>
+                    <td th:text="${scheme.name}" class="px-4 md:px-6 py-4 text-sm">Standard Auto‑Enrolment</td>
+                    <td th:text="${scheme.employeeRate}" class="px-4 md:px-6 py-4 text-sm">5.00%</td>
+                    <td th:text="${scheme.employerRate}" class="px-4 md:px-6 py-4 text-sm">3.00%</td>
                     <td class="px-4 md:px-6 py-4 text-sm">
                         <div class="flex flex-col">
-                            <span class="flex items-center"><span class="material-icons-round text-xs mr-1 text-blue-600">check_circle</span>Basic only</span>
-                            <span class="text-xs text-gray-500">No cap</span>
+                            <span th:if="${scheme.pensionableOnBasicOnly == true}" class="flex items-center"><span class="material-icons-round text-xs mr-1 text-blue-600">check_circle</span>Basic only</span>
+                            <span th:if="${scheme.pensionableOnBasicOnly == false}" class="flex items-center"><span class="material-icons-round text-xs mr-1 text-gray-500">indeterminate_check_box</span>Gross earnings</span>
+                            <span th:if="${scheme.pensionableCap == null}" class="text-xs text-gray-500">No cap</span>
+                            <span th:if="${scheme.pensionableCap != null}" class="text-xs text-amber-600" th:text="'Cap: ₦' + ${scheme.pensionableCap}">Cap: £50,000</span>
                         </div>
                     </td>
                     <td class="px-4 md:px-6 py-4 text-sm">
                         <div class="flex flex-col text-xs">
-                            <span>From: 2023-01-01</span>
-                            <span class="text-gray-500">To: Indefinite</span>
+                            <span th:text="${scheme.effectiveFrom}">From: 2023-01-01</span>
+                            <span th:if="${scheme.effectiveTo == null}" class="text-gray-500">To: Indefinite</span>
+                            <span th:if="${scheme.effectiveTo != null}" class="text-gray-500" th:text="'To: ' + ${scheme.effectiveTo}">To: 2023-12-31</span>
                         </div>
                     </td>
-                    <td class="px-4 md:px-6 py-4"><span class="badge badge-success">ACTIVE</span></td>
+                    <td class="px-4 md:px-6 py-4"><span class="badge badge-success" th:text="${scheme.status}">ACTIVE</span></td>
                     <td class="px-4 md:px-6 py-4">
                         <div class="flex items-center space-x-2">
                             <button class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700" title="Edit"><span class="material-icons-round text-sm text-gray-600 dark:text-gray-400">edit</span></button>
@@ -217,131 +220,36 @@
                         </div>
                     </td>
                 </tr>
-                <!-- Scheme 2: Executive (gross, with cap, open-ended) -->
-                <tr class="hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
-                    <td class="px-4 md:px-6 py-4 font-mono text-sm">PEN-EXEC</td>
-                    <td class="px-4 md:px-6 py-4 text-sm">Executive Pension</td>
-                    <td class="px-4 md:px-6 py-4 text-sm">8.00%</td>
-                    <td class="px-4 md:px-6 py-4 text-sm">12.00%</td>
-                    <td class="px-4 md:px-6 py-4 text-sm">
-                        <div class="flex flex-col">
-                            <span class="flex items-center"><span class="material-icons-round text-xs mr-1 text-gray-500">indeterminate_check_box</span>Gross earnings</span>
-                            <span class="text-xs text-amber-600">Cap: £50,000</span>
+                </tbody>
+                <!-- Empty state when no schemes exist -->
+                <tbody th:if="${#lists.isEmpty(schemes)}">
+                <tr>
+                    <td colspan="8" class="px-4 md:px-6 py-12 text-center">
+                        <div class="flex flex-col items-center justify-center space-y-3">
+                            <span class="material-icons-round text-gray-400 text-5xl">inbox</span>
+                            <p class="text-gray-500 dark:text-gray-400 text-sm">No pension schemes found.</p>
+                            <p class="text-gray-400 dark:text-gray-500 text-xs">Click "New Scheme" to create your first scheme.</p>
                         </div>
                     </td>
-                    <td class="px-4 md:px-6 py-4 text-sm">
-                        <div class="flex flex-col text-xs">
-                            <span>From: 2023-06-01</span>
-                            <span class="text-gray-500">To: Indefinite</span>
-                        </div>
-                    </td>
-                    <td class="px-4 md:px-6 py-4"><span class="badge badge-success">ACTIVE</span></td>
-                    <td class="px-4 md:px-6 py-4"><div class="flex items-center space-x-2">...</div></td>
-                </tr>
-                <!-- Scheme 3: Graduate (basic only, with cap, fixed end date) -->
-                <tr class="hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
-                    <td class="px-4 md:px-6 py-4 font-mono text-sm">PEN-GRAD</td>
-                    <td class="px-4 md:px-6 py-4 text-sm">Graduate Fast Track</td>
-                    <td class="px-4 md:px-6 py-4 text-sm">4.00%</td>
-                    <td class="px-4 md:px-6 py-4 text-sm">6.00%</td>
-                    <td class="px-4 md:px-6 py-4 text-sm">
-                        <div class="flex flex-col">
-                            <span class="flex items-center"><span class="material-icons-round text-xs mr-1 text-blue-600">check_circle</span>Basic only</span>
-                            <span class="text-xs text-amber-600">Cap: £30,000</span>
-                        </div>
-                    </td>
-                    <td class="px-4 md:px-6 py-4 text-sm">
-                        <div class="flex flex-col text-xs">
-                            <span>From: 2024-01-01</span>
-                            <span class="text-gray-500">To: 2024-12-31</span>
-                        </div>
-                    </td>
-                    <td class="px-4 md:px-6 py-4"><span class="badge badge-success">ACTIVE</span></td>
-                    <td class="px-4 md:px-6 py-4"><div class="flex items-center space-x-2">...</div></td>
-                </tr>
-                <!-- Scheme 4: Part-time (gross, no cap, open-ended) -->
-                <tr class="hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
-                    <td class="px-4 md:px-6 py-4 font-mono text-sm">PEN-PART</td>
-                    <td class="px-4 md:px-6 py-4 text-sm">Part‑Time Worker</td>
-                    <td class="px-4 md:px-6 py-4 text-sm">3.00%</td>
-                    <td class="px-4 md:px-6 py-4 text-sm">2.00%</td>
-                    <td class="px-4 md:px-6 py-4 text-sm">
-                        <div class="flex flex-col">
-                            <span class="flex items-center"><span class="material-icons-round text-xs mr-1 text-gray-500">indeterminate_check_box</span>Gross earnings</span>
-                            <span class="text-xs text-gray-500">No cap</span>
-                        </div>
-                    </td>
-                    <td class="px-4 md:px-6 py-4 text-sm">
-                        <div class="flex flex-col text-xs">
-                            <span>From: 2023-03-01</span>
-                            <span class="text-gray-500">To: Indefinite</span>
-                        </div>
-                    </td>
-                    <td class="px-4 md:px-6 py-4"><span class="badge badge-success">ACTIVE</span></td>
-                    <td class="px-4 md:px-6 py-4"><div class="flex items-center space-x-2">...</div></td>
-                </tr>
-                <!-- Scheme 5: Legacy (basic only, no cap, ended) -->
-                <tr class="hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors bg-gray-50/50 dark:bg-gray-800/50">
-                    <td class="px-4 md:px-6 py-4 font-mono text-sm">PEN-LEGACY</td>
-                    <td class="px-4 md:px-6 py-4 text-sm">Legacy Final Salary</td>
-                    <td class="px-4 md:px-6 py-4 text-sm">7.50%</td>
-                    <td class="px-4 md:px-6 py-4 text-sm">15.00%</td>
-                    <td class="px-4 md:px-6 py-4 text-sm">
-                        <div class="flex flex-col">
-                            <span class="flex items-center"><span class="material-icons-round text-xs mr-1 text-blue-600">check_circle</span>Basic only</span>
-                            <span class="text-xs text-gray-500">No cap</span>
-                        </div>
-                    </td>
-                    <td class="px-4 md:px-6 py-4 text-sm">
-                        <div class="flex flex-col text-xs">
-                            <span>From: 2000-01-01</span>
-                            <span class="text-gray-500">To: 2023-12-31</span>
-                        </div>
-                    </td>
-                    <td class="px-4 md:px-6 py-4"><span class="badge badge-neutral">INACTIVE</span></td>
-                    <td class="px-4 md:px-6 py-4">
-                        <div class="flex items-center space-x-2">
-                            <button class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700" title="View"><span class="material-icons-round text-sm text-gray-600 dark:text-gray-400">visibility</span></button>
-                            <button class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700" title="Copy"><span class="material-icons-round text-sm text-gray-600">content_copy</span></button>
-                            <button class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700" title="Archive" disabled><span class="material-icons-round text-sm text-gray-400">delete_outline</span></button>
-                        </div>
-                    </td>
-                </tr>
-                <!-- Scheme 6: Green (gross, with cap, pending) -->
-                <tr class="hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
-                    <td class="px-4 md:px-6 py-4 font-mono text-sm">PEN-GREEN</td>
-                    <td class="px-4 md:px-6 py-4 text-sm">Green Investment Scheme</td>
-                    <td class="px-4 md:px-6 py-4 text-sm">4.50%</td>
-                    <td class="px-4 md:px-6 py-4 text-sm">5.00%</td>
-                    <td class="px-4 md:px-6 py-4 text-sm">
-                        <div class="flex flex-col">
-                            <span class="flex items-center"><span class="material-icons-round text-xs mr-1 text-gray-500">indeterminate_check_box</span>Gross earnings</span>
-                            <span class="text-xs text-amber-600">Cap: £100,000</span>
-                        </div>
-                    </td>
-                    <td class="px-4 md:px-6 py-4 text-sm">
-                        <div class="flex flex-col text-xs">
-                            <span>From: 2024-05-01</span>
-                            <span class="text-gray-500">To: Indefinite</span>
-                        </div>
-                    </td>
-                    <td class="px-4 md:px-6 py-4"><span class="badge badge-info">PENDING</span></td>
-                    <td class="px-4 md:px-6 py-4"><div class="flex items-center space-x-2">...</div></td>
                 </tr>
                 </tbody>
             </table>
         </div>
-        <!-- Table footer with updated entity hint -->
+        <!-- Table footer with dynamic pagination controls -->
         <div class="px-4 md:px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
-                    <span class="text-xs text-gray-500 dark:text-gray-400 flex items-center">
-                        <span class="material-icons-round text-xs mr-1">info</span>
-                        PensionScheme entity · code (unique), name, employeeRate, employerRate, pensionableOnBasicOnly, pensionableCap, effectiveFrom, effectiveTo, status
-                    </span>
-            <div class="flex items-center space-x-2">
-                <button class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50" disabled><span class="material-icons-round text-sm">chevron_left</span></button>
-                <span class="text-xs text-gray-700 dark:text-gray-300 px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">1</span>
-                <span class="text-xs text-gray-400">2</span>
-                <button class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"><span class="material-icons-round text-sm">chevron_right</span></button>
+        <span class="text-xs text-gray-500 dark:text-gray-400 flex items-center">
+            <span class="material-icons-round text-xs mr-1">info</span>
+            PensionScheme entity · code (unique), name, employeeRate, employerRate, pensionableOnBasicOnly, pensionableCap, effectiveFrom, effectiveTo, status
+        </span>
+            <!-- Pagination container – only shown when schemes exist -->
+            <div th:if="${not #lists.isEmpty(schemes)}" class="flex items-center space-x-2" id="paginationContainer">
+                <button id="prevPage" class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:pointer-events-none" disabled>
+                    <span class="material-icons-round text-sm">chevron_left</span>
+                </button>
+                <div id="pageNumbers" class="flex space-x-1 items-center"></div>
+                <button id="nextPage" class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:pointer-events-none" disabled>
+                    <span class="material-icons-round text-sm">chevron_right</span>
+                </button>
             </div>
         </div>
     </div>
@@ -526,74 +434,158 @@
     </div>
 
     <script>
-        // Modal functionality
-        const modal = document.getElementById('newPensionModal');
-        const openBtn = document.getElementById('openNewPensionModal');
-        const closeBtn = document.getElementById('closeModalBtn');
-        const cancelBtn = document.getElementById('cancelModalBtn');
-        const backdrop = document.getElementById('modalBackdrop');
-        const form = document.getElementById('pensionForm');
-        const codeInput = document.getElementById('pensionCodeInput');
+        (function() {
+            // ---------- MODAL code (unchanged, but using correct IDs) ----------
+            const modal = document.getElementById('newPensionModal');
+            const openBtn = document.getElementById('openNewPensionModal');
+            const closeBtn = document.getElementById('closeModalBtn');
+            const cancelBtn = document.getElementById('cancelModalBtn');
+            const backdrop = document.getElementById('modalBackdrop');
+            const form = document.getElementById('pensionForm');
+            const codeInput = document.getElementById('pensionCodeInput');
 
-        // Function to generate random pension code (e.g., "PEN-8K3M")
-        function generateRandomPensionCode() {
-            const prefix = 'PEN';
-            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-            let suffix = '';
-            for (let i = 0; i < 4; i++) {
-                suffix += chars.charAt(Math.floor(Math.random() * chars.length));
+            function generateRandomPensionCode() {
+                const prefix = 'PEN';
+                const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+                let suffix = '';
+                for (let i = 0; i < 4; i++) {
+                    suffix += chars.charAt(Math.floor(Math.random() * chars.length));
+                }
+                return prefix + '-' + suffix;
             }
-            return prefix + '-' + suffix;
-        }
 
-        function openModal() {
-            // Set random code each time modal opens
-            codeInput.value = generateRandomPensionCode();
-            modal.classList.remove('hidden');
-            document.body.style.overflow = 'hidden';
-        }
-        function closeModal() {
-            modal.classList.add('hidden');
-            document.body.style.overflow = 'auto';
-            // Optionally reset form (but keep random code for next open)
-            form.reset();
-        }
-
-        openBtn.addEventListener('click', openModal);
-        closeBtn.addEventListener('click', closeModal);
-        cancelBtn.addEventListener('click', closeModal);
-        backdrop.addEventListener('click', closeModal);
-
-        // Remove the old simulated submit handler to allow actual form submission
-        // The form will now use the onsubmit attribute to disable the button.
-
-        // Disable submit button function (called by onsubmit)
-        function disableSubmitButton(form) {
-            const submitButton = form.querySelector('button[type="submit"]');
-            if (submitButton) {
-                submitButton.disabled = true;
-                submitButton.classList.add('opacity-50', 'cursor-not-allowed');
-                submitButton.innerHTML = 'Saving...';
+            function openModal() {
+                codeInput.value = generateRandomPensionCode();
+                modal.classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
             }
-            return true; // allow form to submit
-        }
+            function closeModal() {
+                modal.classList.add('hidden');
+                document.body.style.overflow = 'auto';
+                form.reset();
+            }
 
-        // Make all action cells consistent (copy first row actions to rows with "...")
-        window.addEventListener('load', function() {
-            const firstRowActions = document.querySelector('tbody tr:first-child td:last-child .flex');
-            if (firstRowActions) {
+            if (openBtn) openBtn.addEventListener('click', openModal);
+            if (closeBtn) closeBtn.addEventListener('click', closeModal);
+            if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+            if (backdrop) backdrop.addEventListener('click', closeModal);
+
+            window.disableSubmitButton = function(form) {
+                const submitButton = form.querySelector('button[type="submit"]');
+                if (submitButton) {
+                    submitButton.disabled = true;
+                    submitButton.classList.add('opacity-50', 'cursor-not-allowed');
+                    submitButton.innerHTML = 'Saving...';
+                }
+                return true;
+            };
+
+            // ---------- ACTION CELL FIX (copy first row actions if missing) ----------
+            function fixActionCells() {
+                const tbody = document.getElementById('pensionSchemesBody');
+                if (!tbody) return;
+                const firstRowActions = tbody.querySelector('tr:first-child td:last-child .flex');
+                if (!firstRowActions) return;
                 const clone = firstRowActions.cloneNode(true);
-                document.querySelectorAll('tbody tr').forEach((row, index) => {
+                tbody.querySelectorAll('tr').forEach((row, index) => {
                     if (index === 0) return;
                     const actionCell = row.querySelector('td:last-child');
+                    // if the cell looks empty (like "...") replace; otherwise skip.
                     if (actionCell && actionCell.textContent.includes('...')) {
                         actionCell.innerHTML = '';
-                        const newClone = firstRowActions.cloneNode(true);
-                        actionCell.appendChild(newClone);
+                        actionCell.appendChild(clone.cloneNode(true));
                     }
                 });
             }
-        });
+
+            // ---------- PAGINATION LOGIC (exactly as in first file, adapted) ----------
+            function initPagination() {
+                const tbody = document.getElementById('pensionSchemesBody');
+                if (!tbody) return; // no schemes → pagination container hidden anyway
+
+                const rows = Array.from(tbody.querySelectorAll('tr.scheme-row'));
+                const totalRows = rows.length;
+                const rowsPerPage = 10;
+                const totalPages = Math.ceil(totalRows / rowsPerPage);
+
+                const prevBtn = document.getElementById('prevPage');
+                const nextBtn = document.getElementById('nextPage');
+                const pageNumbersDiv = document.getElementById('pageNumbers');
+
+                if (!prevBtn || !nextBtn || !pageNumbersDiv) return;
+
+                // If only one page, disable buttons and show simple page indicator
+                if (totalPages <= 1) {
+                    prevBtn.disabled = true;
+                    nextBtn.disabled = true;
+                    pageNumbersDiv.innerHTML = `<span class="text-xs text-gray-700 dark:text-gray-300 px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">1</span>`;
+                    // ensure all rows visible (they are by default)
+                    rows.forEach(row => row.style.display = '');
+                    return;
+                }
+
+                let currentPage = 1;
+
+                function renderPage(page) {
+                    // show/hide rows
+                    rows.forEach((row, index) => {
+                        const start = (page - 1) * rowsPerPage;
+                        const end = page * rowsPerPage;
+                        row.style.display = (index >= start && index < end) ? '' : 'none';
+                    });
+
+                    prevBtn.disabled = (page === 1);
+                    nextBtn.disabled = (page === totalPages);
+
+                    // generate page numbers
+                    let htmlStr = '';
+                    for (let i = 1; i <= totalPages; i++) {
+                        if (i === page) {
+                            htmlStr += `<span class="text-xs text-gray-700 dark:text-gray-300 px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">${i}</span>`;
+                        } else {
+                            htmlStr += `<button class="text-xs text-gray-500 dark:text-gray-400 px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded page-btn" data-page="${i}">${i}</button>`;
+                        }
+                    }
+                    pageNumbersDiv.innerHTML = htmlStr;
+
+                    // attach click handlers to page buttons
+                    document.querySelectorAll('.page-btn').forEach(btn => {
+                        btn.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            const pageNum = parseInt(btn.dataset.page, 10);
+                            if (!isNaN(pageNum) && pageNum !== currentPage) {
+                                currentPage = pageNum;
+                                renderPage(currentPage);
+                            }
+                        });
+                    });
+                }
+
+                // initial render
+                renderPage(1);
+
+                prevBtn.addEventListener('click', () => {
+                    if (currentPage > 1) {
+                        currentPage--;
+                        renderPage(currentPage);
+                    }
+                });
+
+                nextBtn.addEventListener('click', () => {
+                    if (currentPage < totalPages) {
+                        currentPage++;
+                        renderPage(currentPage);
+                    }
+                });
+            }
+
+            // Run everything after DOM is fully loaded
+            window.addEventListener('DOMContentLoaded', function() {
+                fixActionCells();   // ensure action buttons are consistent
+                initPagination();   // activate pagination
+            });
+
+        })();
     </script>
 </main>
 </body>
