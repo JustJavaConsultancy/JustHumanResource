@@ -74,7 +74,7 @@
                 <div class="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg"><span class="material-icons-round text-green-600 dark:text-green-400">add_circle</span></div>
                 <span class="text-sm font-medium text-green-600 flex items-center"><span class="material-icons-round text-sm mr-1">trending_up</span>+2</span>
             </div>
-            <h3 th:text="${#lists.size(allowances)}" class="text-2xl font-bold mb-1" id="totalAllowances">8</h3>
+            <h3 th:text="${allowances}" class="text-2xl font-bold mb-1">8</h3>
             <p class="text-gray-600 dark:text-gray-400 text-sm">Active Allowances</p>
             <div class="mt-3"><div class="flex items-center text-xs text-gray-500"><span class="material-icons-round text-xs mr-1">percent</span><span th:text="${taxableAllowances + ' taxable'}" id="taxableAllowances">4 taxable</span></div></div>
         </div>
@@ -83,7 +83,7 @@
                 <div class="p-3 bg-red-100 dark:bg-red-900/30 rounded-lg"><span class="material-icons-round text-red-600 dark:text-red-400">remove_circle</span></div>
                 <span class="badge badge-warning">Compliance</span>
             </div>
-            <h3 th:text="${#lists.size(deductions)}" class="text-2xl font-bold mb-1" id="totalDeductions">6</h3>
+            <h3 th:text="${deductions}" class="text-2xl font-bold mb-1" >6</h3>
             <p class="text-gray-600 dark:text-gray-400 text-sm">Active Deductions</p>
             <div class="mt-3"><div class="flex items-center text-xs text-gray-500"><span class="material-icons-round text-xs mr-1">gavel</span><span th:text="${saturatoryDeductions + ' saturatory'}" id="statutoryDeductions">3 statutory</span></div></div>
         </div>
@@ -92,7 +92,7 @@
                 <div class="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg"><span class="material-icons-round text-blue-600 dark:text-blue-400">group_work</span></div>
                 <span class="text-sm text-gray-500">Active</span>
             </div>
-            <h3 class="text-2xl font-bold mb-1" id="totalPaygroups">3</h3>
+            <h3 th:text="${payGroups}" class="text-2xl font-bold mb-1">3</h3>
             <p class="text-gray-600 dark:text-gray-400 text-sm">Paygroups</p>
             <div class="mt-3"><div class="flex items-center text-xs text-gray-500"><span class="material-icons-round text-xs mr-1">people</span><span id="totalEmployeesPaygroups">248 employees</span></div></div>
         </div>
@@ -275,22 +275,6 @@
         </div>
     </div>
     <script>
-        // Data models (same as original, shortened for brevity)
-        const allowances = [ /* ... */ ];
-        const deductions = [ /* ... */ ];
-        const paygroups = [ /* ... */ ];
-        const jobGrades = [ /* ... */ ];
-        const jobSteps = [ /* ... */ ];
-        const employees = [ /* ... */ ];
-
-        function updateStats() {
-            document.getElementById('totalAllowances').textContent = allowances.filter(a => a.status === 'ACTIVE').length;
-            document.getElementById('totalDeductions').textContent = deductions.filter(d => d.status === 'ACTIVE').length;
-            document.getElementById('totalPaygroups').textContent = paygroups.length;
-            document.getElementById('totalEmployeesPaygroups').textContent = employees.length + ' employees';
-            document.getElementById('taxableAllowances').textContent = allowances.filter(a => a.taxable && a.status === 'ACTIVE').length + ' taxable';
-            document.getElementById('statutoryDeductions').textContent = deductions.filter(d => d.statutory && d.status === 'ACTIVE').length + ' statutory';
-        }
 
         function openModal(modalId) {
             document.getElementById(modalId).classList.remove('hidden');
@@ -306,57 +290,6 @@
             e.preventDefault();
             alert('Payroll run initiated! (demo)');
             closeModal('runPayrollModal');
-        });
-
-        // Theme toggle, mobile menu, etc. (same as original)
-        function initializeTheme() {
-            const themeToggle = document.getElementById('themeToggle');
-            const themeIcon = themeToggle.querySelector('.material-icons-round');
-            themeToggle.addEventListener('click', () => {
-                const isDark = document.documentElement.classList.toggle('dark');
-                themeIcon.textContent = isDark ? 'light_mode' : 'dark_mode';
-                localStorage.setItem('theme', isDark ? 'dark' : 'light');
-            });
-            if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-                document.documentElement.classList.add('dark');
-                themeIcon.textContent = 'light_mode';
-            }
-        }
-
-        document.addEventListener('DOMContentLoaded', function() {
-            updateStats();
-            initializeTheme();
-
-            const menuToggle = document.getElementById('menuToggle');
-            const mobileOverlay = document.getElementById('mobileOverlay');
-            const sidebar = document.querySelector('.sidebar-container');
-
-            menuToggle.addEventListener('click', () => {
-                sidebar.classList.toggle('open');
-                mobileOverlay.classList.toggle('hidden');
-                document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : 'auto';
-            });
-
-            mobileOverlay.addEventListener('click', () => {
-                sidebar.classList.remove('open');
-                mobileOverlay.classList.add('hidden');
-                document.body.style.overflow = 'auto';
-            });
-
-            window.addEventListener('resize', () => {
-                if (window.innerWidth >= 1024) {
-                    sidebar.classList.remove('open');
-                    mobileOverlay.classList.add('hidden');
-                    document.body.style.overflow = 'auto';
-                }
-            });
-
-            document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
-                backdrop.addEventListener('click', function() {
-                    this.parentElement.classList.add('hidden');
-                    document.body.style.overflow = 'auto';
-                });
-            });
         });
     </script>
 </main>

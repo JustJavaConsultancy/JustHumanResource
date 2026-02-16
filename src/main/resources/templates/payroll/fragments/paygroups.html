@@ -67,61 +67,71 @@
 
     <div class="p-4 md:p-6">
       <div class="space-y-4" id="paygroupsList">
-        <div th:each="pg : ${payGroups}"
-             class="payroll-card p-4 rounded-lg"
-             th:attr="data-paygroup-id=${pg.payGroup.id}, data-paygroup-name=${pg.payGroup.name}">
+        <!-- Show list when payGroups is not empty -->
+        <th:block th:if="${not #lists.isEmpty(payGroups)}">
+          <div th:each="pg : ${payGroups}"
+               class="payroll-card p-4 rounded-lg"
+               th:attr="data-paygroup-id=${pg.payGroup.id}, data-paygroup-name=${pg.payGroup.name}">
 
-          <div class="flex justify-between items-start mb-3">
-            <div>
-              <h4 class="font-bold" th:text="${pg.payGroup.name}">Paygroup Name</h4>
-              <div class="flex items-center mt-1">
-                <span class="badge badge-purple" th:text="${pg.payGroup.payFrequency}">Monthly</span>
+            <div class="flex justify-between items-start mb-3">
+              <div>
+                <h4 class="font-bold" th:text="${pg.payGroup.name}">Paygroup Name</h4>
+                <div class="flex items-center mt-1">
+                  <span class="badge badge-purple" th:text="${pg.payGroup.payFrequency}">Monthly</span>
+                </div>
+              </div>
+              <span class="badge badge-info" th:text="${#lists.size(pg.employees)} + ' Employees'">0 Employees</span>
+            </div>
+
+            <div class="space-y-2">
+              <div class="flex justify-between text-sm">
+                <span class="text-gray-500">Allowances</span>
+                <span class="text-green-600" th:text="${#lists.size(pg.allowances)} + ' items'">0 items</span>
+              </div>
+              <div class="flex justify-between text-sm">
+                <span class="text-gray-500">Deductions</span>
+                <span class="text-red-600" th:text="${#lists.size(pg.deductions)} + ' items'">0 items</span>
               </div>
             </div>
-            <span class="badge badge-info" th:text="${#lists.size(pg.employees)} + ' Employees'">0 Employees</span>
-          </div>
 
-          <div class="space-y-2">
-            <div class="flex justify-between text-sm">
-              <span class="text-gray-500">Allowances</span>
-              <span class="text-green-600" th:text="${#lists.size(pg.allowances)} + ' items'">0 items</span>
+            <div class="flex items-center space-x-2 mt-3 pt-2 border-t border-gray-100 dark:border-gray-700">
+              <button th:attr="onclick='openAllowancesModal(' + ${pg.payGroup.id} + ')'"
+                      class="action-btn flex items-center text-green-600 dark:text-green-400"
+                      title="Manage Allowances">
+                <span class="material-icons-round text-sm mr-1">add_circle</span>
+                <span class="text-xs">Allowances</span>
+              </button>
+
+              <button th:attr="onclick='openDeductionsModal(' + ${pg.payGroup.id} + ')'"
+                      class="action-btn flex items-center text-red-600 dark:text-red-400"
+                      title="Manage Deductions">
+                <span class="material-icons-round text-sm mr-1">remove_circle</span>
+                <span class="text-xs">Deductions</span>
+              </button>
+
+              <button th:attr="onclick='editPaygroup(' + ${pg.payGroup.id} + ')'"
+                      class="action-btn flex items-center"
+                      title="Edit Paygroup">
+                <span class="material-icons-round text-sm mr-1">edit</span>
+                <span class="text-xs">Edit</span>
+              </button>
+
+              <button th:attr="onclick='deletePaygroup(' + ${pg.payGroup.id} + ')'"
+                      class="action-btn flex items-center text-red-600 dark:text-red-400"
+                      title="Delete Paygroup">
+                <span class="material-icons-round text-sm mr-1">delete</span>
+                <span class="text-xs">Delete</span>
+              </button>
             </div>
-            <div class="flex justify-between text-sm">
-              <span class="text-gray-500">Deductions</span>
-              <span class="text-red-600" th:text="${#lists.size(pg.deductions)} + ' items'">0 items</span>
-            </div>
           </div>
+        </th:block>
 
-          <div class="flex items-center space-x-2 mt-3 pt-2 border-t border-gray-100 dark:border-gray-700">
-            <button th:attr="onclick='openAllowancesModal(' + ${pg.payGroup.id} + ')'"
-                    class="action-btn flex items-center text-green-600 dark:text-green-400"
-                    title="Manage Allowances">
-              <span class="material-icons-round text-sm mr-1">add_circle</span>
-              <span class="text-xs">Allowances</span>
-            </button>
-
-            <button th:attr="onclick='openDeductionsModal(' + ${pg.payGroup.id} + ')'"
-                    class="action-btn flex items-center text-red-600 dark:text-red-400"
-                    title="Manage Deductions">
-              <span class="material-icons-round text-sm mr-1">remove_circle</span>
-              <span class="text-xs">Deductions</span>
-            </button>
-
-            <button th:attr="onclick='editPaygroup(' + ${pg.payGroup.id} + ')'"
-                    class="action-btn flex items-center"
-                    title="Edit Paygroup">
-              <span class="material-icons-round text-sm mr-1">edit</span>
-              <span class="text-xs">Edit</span>
-            </button>
-
-            <button th:attr="onclick='deletePaygroup(' + ${pg.payGroup.id} + ')'"
-                    class="action-btn flex items-center text-red-600 dark:text-red-400"
-                    title="Delete Paygroup">
-              <span class="material-icons-round text-sm mr-1">delete</span>
-              <span class="text-xs">Delete</span>
-            </button>
+        <!-- Empty state when payGroups is empty -->
+        <th:block th:if="${#lists.isEmpty(payGroups)}">
+          <div class="empty-state p-4 text-center text-gray-500">
+            No pay groups found. Click "Add Pay Group" to create one.
           </div>
-        </div>
+        </th:block>
       </div>
     </div>
   </div>

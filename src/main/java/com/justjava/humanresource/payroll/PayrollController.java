@@ -31,6 +31,7 @@ public class PayrollController {
     public String getPayroll(Model model) {
         List<Allowance> allowances = payrollSetupService.getActiveAllowances();
         List<Deduction> deductions = payrollSetupService.getActiveDeductions();
+        List<PayGroup> payGroups = payrollSetupService.getAllPayGroups();
         List<Allowance> taxableAllowances = allowances
                 .stream()
                 .filter(Allowance:: isTaxable)
@@ -40,10 +41,11 @@ public class PayrollController {
                 .filter(Deduction:: isStatutory)
                 .toList();
         System.out.println("Allowance amount is " + allowances.size() + "Deduction amount is " + deductions.size());
-        model.addAttribute("allowances", allowances);
+        model.addAttribute("allowances", allowances.size());
         model.addAttribute("taxableAllowances", taxableAllowances.size());
         model.addAttribute("saturatoryDeductions", saturatoryDeductions.size());
-        model.addAttribute("deductions", deductions);
+        model.addAttribute("deductions", deductions.size());
+        model.addAttribute("payGroups", payGroups.size());
         model.addAttribute("title","Payroll Management");
         model.addAttribute("subTitle","Manage employee payroll, salary details, and payment history");
         return "payroll/main";
