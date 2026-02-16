@@ -267,3 +267,16 @@ public class PayrollTestController {
     }
 
 }
+
+/*
+{
+        "firstName": "Kazeem",
+        "lastName": "Akinrinde",
+        "email": "kazeem.akinrinde@gmail.com",
+        "phoneNumber": "08012345678",
+        "employmentStatus": "ONBOARDING",
+        "departmentId": 1,
+        "jobStepId": 2,
+        "payGroupId": 1
+        }
+      */

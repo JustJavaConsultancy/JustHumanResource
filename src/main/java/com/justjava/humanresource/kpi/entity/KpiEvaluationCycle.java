@@ -7,32 +7,29 @@ import java.time.LocalDateTime;
 import java.time.YearMonth;
 
 @Entity
-@Table(name = "hr_appraisal_cycle",
+@Table(name = "kpi_evaluation_cycle",
         uniqueConstraints = @UniqueConstraint(columnNames = {"period"}))
 @Getter
 @Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class AppraisalCycle {
+public class KpiEvaluationCycle {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    private String name; // e.g. 2026 Q1
-
     private YearMonth period;
 
-    private boolean active;
+    private boolean started;
 
     private boolean completed;
-
-    private int totalEmployees;
-
-    private int processedEmployees;
 
     private LocalDateTime startedAt;
 
     private LocalDateTime completedAt;
+
+    private int totalEmployees;
+
+    private int processedEmployees;
 }

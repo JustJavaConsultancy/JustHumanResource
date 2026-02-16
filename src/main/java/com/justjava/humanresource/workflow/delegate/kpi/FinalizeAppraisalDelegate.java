@@ -10,8 +10,7 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-
-@Component("finalizeAppraisalDelegate ")
+@Component("finalizeAppraisalDelegate")
 @RequiredArgsConstructor
 public class FinalizeAppraisalDelegate implements JavaDelegate {
 
@@ -25,11 +24,13 @@ public class FinalizeAppraisalDelegate implements JavaDelegate {
                 (BigDecimal) execution.getVariable("managerScore");
 
         EmployeeAppraisal appraisal =
-                appraisalRepository.findById(appraisalId).orElseThrow();
+                appraisalRepository.findById(appraisalId)
+                        .orElseThrow();
+
+        BigDecimal kpiScore = appraisal.getKpiScore();
 
         BigDecimal finalScore =
-                appraisal.getKpiScore()
-                        .multiply(BigDecimal.valueOf(0.7))
+                kpiScore.multiply(BigDecimal.valueOf(0.7))
                         .add(managerScore.multiply(BigDecimal.valueOf(0.3)));
 
         appraisal.setManagerScore(managerScore);
