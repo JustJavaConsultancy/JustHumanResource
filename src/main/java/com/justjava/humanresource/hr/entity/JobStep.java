@@ -1,14 +1,17 @@
 package com.justjava.humanresource.hr.entity;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 
 import java.math.BigDecimal;
 
+
+@Table(name = "job_steps")
 @Getter
 @Setter
-@Table(name = "job_steps")
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 @Entity
 public class JobStep {
 

@@ -47,4 +47,17 @@ public interface EmployeePositionHistoryRepository
 
         return Optional.of(list.get(0));
     }
+    @Query("""
+    SELECT eph FROM EmployeePositionHistory eph
+    WHERE eph.payGroup.id = :payGroupId
+      AND eph.status = :status
+      AND eph.effectiveFrom <= :date
+      AND (eph.effectiveTo IS NULL OR eph.effectiveTo >= :date)
+""")
+    List<EmployeePositionHistory> findEmployeesByPayGroupAndDate(
+            @Param("payGroupId") Long payGroupId,
+            @Param("date") LocalDate date,
+            @Param("status") RecordStatus status
+    );
+
 }

@@ -13,6 +13,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 @Entity
 @Table(name = "kpi_assignment")
@@ -35,5 +36,11 @@ public class KpiAssignment extends BaseEntity {
     private BigDecimal weight; // importance (e.g. 0.3)
 
     private boolean mandatory;
+
+    /** lifecycle control */
+    private LocalDate validFrom;
+    private LocalDate validTo;
+
+    private boolean active;
 }
 
