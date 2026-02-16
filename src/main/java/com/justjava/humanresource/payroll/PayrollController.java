@@ -160,11 +160,11 @@ public class PayrollController {
     @PostMapping("/setup/allowance")
     public String createAllowance(Allowance allowance) {
         payrollSetupService.createAllowance(allowance);
-        return "redirect:/payroll";
+        return "redirect:/payroll/items";
     }
     @PostMapping("/setup/deduction")
     public String createDeduction(Deduction deduction) {
         payrollSetupService.createDeduction(deduction);
-        return "redirect:/payroll";
+        return "redirect:/payroll/items";
     }
 }

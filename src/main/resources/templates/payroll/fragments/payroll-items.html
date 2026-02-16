@@ -81,8 +81,8 @@
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <!-- Allowances Section (takes 2/3 width on large screens) -->
-        <div class="lg:col-span-2">
-            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div class="lg:col-span-2 flex flex-col">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden flex-1">
                 <!-- Section header -->
                 <div class="px-6 py-5 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 flex items-center justify-between">
                     <div class="flex items-center space-x-3">
@@ -91,7 +91,7 @@
                     </div>
                     <button onclick="openModal('addAllowanceModal')"
                             class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors">
-                       Add Allowance
+                        Add Allowance
                     </button>
                 </div>
 
@@ -99,7 +99,7 @@
                     <!-- Allowances List (when data exists) -->
                     <div th:if="${not #lists.isEmpty(allowances)}" class="grid grid-cols-1 md:grid-cols-2 gap-4" id="allowancesList">
                         <div th:each="allowance : ${allowances}"
-                             class="bg-gray-50 dark:bg-gray-900/30 rounded-xl p-5 border border-gray-100 dark:border-gray-800 hover:shadow-md transition-shadow">
+                             class="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
                             <!-- Top row: name + amount -->
                             <div class="flex justify-between items-start">
                                 <div class="flex-1">
@@ -120,7 +120,7 @@
                                       th:text="'+ ₦' + ${#numbers.formatDecimal(allowance.amount, 1, 2)}">+ ₦1,200.00</span>
                             </div>
                             <!-- Bottom row: ID + actions -->
-                            <div class="flex justify-between items-center mt-4 pt-3 border-t border-gray-200 dark:border-gray-800">
+                            <div class="flex justify-between items-center mt-4 pt-3 border-t border-gray-200 dark:border-gray-700">
                                 <div class="text-xs text-gray-500 dark:text-gray-500" th:text="'ID: ' + ${allowance.id}">ID: 1</div>
                                 <div class="flex space-x-3">
                                     <button th:onclick="'editAllowance(' + ${allowance.id} + ')'"
@@ -150,8 +150,8 @@
         </div>
 
         <!-- Deductions Section (takes 1/3 width on large screens) -->
-        <div>
-            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div class="flex flex-col">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden flex-1">
                 <!-- Section header -->
                 <div class="px-6 py-5 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 flex items-center justify-between">
                     <div class="flex items-center space-x-3">
@@ -167,7 +167,7 @@
                     <!-- Deductions List (when data exists) -->
                     <div th:if="${not #lists.isEmpty(deductions)}" class="space-y-4" id="deductionsList">
                         <div th:each="deduction : ${deductions}"
-                             class="bg-gray-50 dark:bg-gray-900/30 rounded-xl p-5 border border-gray-100 dark:border-gray-800 hover:shadow-md transition-shadow">
+                             class="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
                             <!-- Top row: name + amount -->
                             <div class="flex justify-between items-start">
                                 <div class="flex-1">
@@ -188,7 +188,7 @@
                                       th:text="'- ₦' + ${#numbers.formatDecimal(deduction.amount, 1, 2)}">- ₦150.00</span>
                             </div>
                             <!-- Bottom row: ID + actions -->
-                            <div class="flex justify-between items-center mt-4 pt-3 border-t border-gray-200 dark:border-gray-800">
+                            <div class="flex justify-between items-center mt-4 pt-3 border-t border-gray-200 dark:border-gray-700">
                                 <div class="text-xs text-gray-500 dark:text-gray-500" th:text="'ID: ' + ${deduction.id}">ID: 1</div>
                                 <div class="flex space-x-3">
                                     <button th:onclick="'editDeduction(' + ${deduction.id} + ')'"
@@ -217,6 +217,137 @@
             </div>
         </div>
     </div>
+
+    <!-- Add Allowance Modal -->
+    <div id="addAllowanceModal" class="fixed inset-0 z-50 hidden">
+        <div class="modal-backdrop fixed inset-0"></div>
+        <div class="fixed inset-0 flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-lg font-bold">Add New Allowance</h3>
+                    <button onclick="closeModal('addAllowanceModal')" class="text-gray-400 hover:text-gray-600">
+                        <span class="material-icons-round">close</span>
+                    </button>
+                </div>
+                <!-- Added onsubmit to disable submit button -->
+                <form th:action="@{/setup/allowance}" method="post" id="addAllowanceForm" class="space-y-4" onsubmit="disableSubmitButton(this)">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Code * <span class="text-xs text-gray-500">(unique)</span></label>
+                        <input name="code" type="text" id="allowanceCodeInput" class="form-input" placeholder="e.g., ALL-HOUSING" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Name *</label>
+                        <input name="name" type="text" class="form-input" placeholder="e.g., Housing Allowance" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Amount *</label>
+                        <input name="amount" type="number" step="0.01" min="0" class="form-input" placeholder="0.00" required>
+                    </div>
+                    <div>
+                        <label class="flex items-center space-x-2">
+                            <input type="checkbox" name="taxable" value="true" class="text-primary-600">
+                            <span class="text-sm font-medium">Taxable (include in tax calculation)</span>
+                        </label>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Status</label>
+                        <select name="status" class="form-input" required>
+                            <option value="ACTIVE">ACTIVE</option>
+                            <option value="INACTIVE">INACTIVE</option>
+                        </select>
+                    </div>
+                    <div class="flex justify-end space-x-3 pt-4">
+                        <button type="button" onclick="closeModal('addAllowanceModal')" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">Cancel</button>
+                        <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Add Allowance</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Deduction Modal -->
+    <div id="addDeductionModal" class="fixed inset-0 z-50 hidden">
+        <div class="modal-backdrop fixed inset-0"></div>
+        <div class="fixed inset-0 flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-lg font-bold">Add New Deduction</h3>
+                    <button onclick="closeModal('addDeductionModal')" class="text-gray-400 hover:text-gray-600">
+                        <span class="material-icons-round">close</span>
+                    </button>
+                </div>
+                <!-- Added onsubmit to disable submit button -->
+                <form th:action="@{/setup/deduction}" method="post" id="addDeductionForm" class="space-y-4" onsubmit="disableSubmitButton(this)">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Code * <span class="text-xs text-gray-500">(unique)</span></label>
+                        <input name="code" type="text" id="deductionCodeInput" class="form-input" placeholder="e.g., DED-HEALTH" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Name *</label>
+                        <input name="name" type="text" class="form-input" placeholder="e.g., Health Insurance" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Amount *</label>
+                        <input name="amount" type="number" step="0.01" min="0" class="form-input" placeholder="0.00" required>
+                    </div>
+                    <div>
+                        <label class="flex items-center space-x-2">
+                            <input type="checkbox" name="statutory" value="true" class="text-primary-600">
+                            <span class="text-sm font-medium">Statutory (required by law)</span>
+                        </label>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Status</label>
+                        <select name="status" class="form-input" required>
+                            <option value="ACTIVE">ACTIVE</option>
+                            <option value="INACTIVE">INACTIVE</option>
+                        </select>
+                    </div>
+                    <div class="flex justify-end space-x-3 pt-4">
+                        <button type="button" onclick="closeModal('addDeductionModal')" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">Cancel</button>
+                        <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Add Deduction</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal JavaScript functions -->
+    <script>
+        // Enhanced openModal to generate random code when opening add modals
+        function openModal(modalId) {
+            document.getElementById(modalId).classList.remove('hidden');
+            if (modalId === 'addAllowanceModal') {
+                generateAndSetCode('allowanceCodeInput', 'ALL');
+            } else if (modalId === 'addDeductionModal') {
+                generateAndSetCode('deductionCodeInput', 'DED');
+            }
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+        }
+
+        function disableSubmitButton(form) {
+            const submitButton = form.querySelector('button[type="submit"]');
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+            return true; // Allow form submission
+        }
+
+        // Generates a random alphanumeric code (e.g., "ALL-A3F9G2") and sets it in the input
+        function generateAndSetCode(inputId, prefix) {
+            const input = document.getElementById(inputId);
+            if (input) {
+                // Generate 6-character random alphanumeric (uppercase)
+                const randomPart = Math.random().toString(36).substring(2, 8).toUpperCase();
+                input.value = prefix + '-' + randomPart;
+            }
+        }
+    </script>
 </main>
+
 </body>
 </html>
