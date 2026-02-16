@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -87,6 +88,14 @@ public class EmployeeOnboardingService {
                 .status(saved.getStatus())
                 .initiatedBy(saved.getInitiatedBy())
                 .build();
+    }
+    @Transactional
+    public List<Employee> getAllOnboardings() {
+        List<EmployeeOnboarding> onboardings = onboardingRepository.findAll();
+        return onboardings.stream()
+                .map(EmployeeOnboarding::getEmployee)
+                .toList();
+
     }
 
 }
