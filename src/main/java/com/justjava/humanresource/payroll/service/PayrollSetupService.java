@@ -1,5 +1,6 @@
 package com.justjava.humanresource.payroll.service;
 
+import com.justjava.humanresource.hr.entity.PayGroup;
 import com.justjava.humanresource.payroll.entity.*;
 import com.justjava.humanresource.payroll.statutory.entity.PayeTaxBand;
 import com.justjava.humanresource.payroll.statutory.entity.PensionScheme;
@@ -63,6 +64,7 @@ public interface PayrollSetupService {
             List<DeductionAttachmentRequest> requests
     );
 
+    List<PayGroup>getAllPayGroups();
 
     /* =========================
      * SYSTEM READINESS

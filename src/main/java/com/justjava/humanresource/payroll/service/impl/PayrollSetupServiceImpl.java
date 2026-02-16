@@ -300,6 +300,12 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
     }
     @Override
     @Transactional
+    public List<PayGroup> getAllPayGroups() {
+        return payGroupRepository.findAll();
+    }
+
+    @Override
+    @Transactional
     public EmployeeAllowance addAllowanceToEmployee(
             Long employeeId,
             Long allowanceId,

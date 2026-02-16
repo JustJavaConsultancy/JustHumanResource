@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="payroll-processing">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <!-- Payroll Process Steps -->
+        <div class="lg:col-span-2">
+            <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+                <h3 class="text-lg font-bold mb-6">Payroll Processing Steps</h3>
+
+                <div class="space-y-8">
+                    <!-- Step 1 -->
+                    <div class="payroll-process-step">
+                        <div class="step-icon step-completed">
+                            <span class="material-icons-round text-sm">check</span>
+                        </div>
+                        <div class="ml-8">
+                            <h4 class="font-bold mb-2">Data Collection</h4>
+                            <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">Collect attendance, leaves, and overtime data for all employees</p>
+                            <div class="text-xs text-gray-500">
+                                <span class="material-icons-round text-xs mr-1">calendar_today</span>
+                                Completed: Jan 1, 2024
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 2 -->
+                    <div class="payroll-process-step">
+                        <div class="step-icon step-completed">
+                            <span class="material-icons-round text-sm">check</span>
+                        </div>
+                        <div class="ml-8">
+                            <h4 class="font-bold mb-2">Salary Calculations</h4>
+                            <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">Calculate basic salary based on Job Grade/Step, allowances, deductions, and net pay</p>
+                            <div class="text-xs text-gray-500">
+                                <span class="material-icons-round text-xs mr-1">calendar_today</span>
+                                Completed: Jan 5, 2024
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 3 -->
+                    <div class="payroll-process-step">
+                        <div class="step-icon step-current">
+                            <span class="material-icons-round text-sm">edit</span>
+                        </div>
+                        <div class="ml-8">
+                            <h4 class="font-bold mb-2">Review & Approval</h4>
+                            <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">Review payroll calculations and get management approval</p>
+                            <div class="flex items-center space-x-3 mt-4">
+                                <button onclick="approvePayroll()" class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700">
+                                    Approve Payroll
+                                </button>
+                                <button onclick="openModal('adjustPayrollModal')" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700">
+                                    Make Adjustments
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 4 -->
+                    <div class="payroll-process-step">
+                        <div class="step-icon step-pending">
+                            <span class="material-icons-round text-sm">payments</span>
+                        </div>
+                        <div class="ml-8">
+                            <h4 class="font-bold mb-2">Payment Processing</h4>
+                            <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">Process payments through bank transfer or checks</p>
+                            <div class="text-xs text-gray-500">
+                                <span class="material-icons-round text-xs mr-1">schedule</span>
+                                Scheduled: Jan 31, 2024
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 5 -->
+                    <div class="payroll-process-step">
+                        <div class="step-icon step-pending">
+                            <span class="material-icons-round text-sm">description</span>
+                        </div>
+                        <div class="ml-8">
+                            <h4 class="font-bold mb-2">Reports & Compliance</h4>
+                            <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">Generate payroll reports and tax compliance documents</p>
+                            <div class="text-xs text-gray-500">
+                                <span class="material-icons-round text-xs mr-1">schedule</span>
+                                Scheduled: Feb 5, 2024
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payroll Summary -->
+        <div>
+            <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+                <h3 class="text-lg font-bold mb-6">Current Payroll Summary</h3>
+
+                <div class="space-y-6">
+                    <div>
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-gray-600 dark:text-gray-400">Total Employees</span>
+                            <span class="font-bold">248</span>
+                        </div>
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-gray-600 dark:text-gray-400">Total Gross Salary</span>
+                            <span class="font-bold">$458,240</span>
+                        </div>
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-gray-600 dark:text-gray-400">Taxable Allowances</span>
+                            <span class="font-bold text-yellow-600">+ $45,800</span>
+                        </div>
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-gray-600 dark:text-gray-400">Statutory Deductions</span>
+                            <span class="font-bold text-blue-600">- $91,648</span>
+                        </div>
+                        <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
+                            <div class="flex justify-between items-center">
+                                <span class="font-bold">Net Payroll Amount</span>
+                                <span class="text-2xl font-bold text-primary-600">$476,569</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h4 class="font-bold mb-4">Tax Breakdown</h4>
+                        <div class="space-y-3">
+                            <div>
+                                <div class="flex justify-between text-sm mb-1">
+                                    <span>Basic Salary Tax</span>
+                                    <span>$68,736</span>
+                                </div>
+                                <div class="salary-breakdown-bar">
+                                    <div class="h-full bg-blue-500" style="width: 70%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-sm mb-1">
+                                    <span>Taxable Allowances</span>
+                                    <span>$9,160</span>
+                                </div>
+                                <div class="salary-breakdown-bar">
+                                    <div class="h-full bg-yellow-500" style="width: 15%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-sm mb-1">
+                                    <span>Other Taxes</span>
+                                    <span>$6,880</span>
+                                </div>
+                                <div class="salary-breakdown-bar">
+                                    <div class="h-full bg-red-500" style="width: 15%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button onclick="openModal('runPayrollModal')" class="w-full px-4 py-3 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 flex items-center justify-center space-x-2">
+                        <span class="material-icons-round">play_arrow</span>
+                        <span>Run Payroll Now</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
