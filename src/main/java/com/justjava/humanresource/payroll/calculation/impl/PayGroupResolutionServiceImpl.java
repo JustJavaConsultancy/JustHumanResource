@@ -25,6 +25,7 @@ public class PayGroupResolutionServiceImpl implements PayGroupResolutionService 
 
     @Override
     public ResolvedPayComponents resolve(
+            PayGroup payGroup,
             Employee employee,
             LocalDate payrollDate) {
 
@@ -35,7 +36,7 @@ public class PayGroupResolutionServiceImpl implements PayGroupResolutionService 
            1️⃣ Resolve PayGroup Hierarchy (Root → Leaf)
            ============================================================ */
 
-        List<PayGroup> hierarchy = resolveHierarchy(employee.getPayGroup());
+        List<PayGroup> hierarchy = resolveHierarchy(payGroup);
 
         for (PayGroup group : hierarchy) {
 

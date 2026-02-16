@@ -135,9 +135,7 @@ public class PayrollTestController {
     public EmployeeDTO changePayGroup(
             @PathVariable Long employeeId,
             @PathVariable Long payGroupId,
-            @RequestParam
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
-            LocalDate effectiveDate) {
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate effectiveDate) {
 
         PayGroup payGroup = payGroupRepository.findById(payGroupId)
                 .orElseThrow();

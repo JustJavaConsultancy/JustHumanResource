@@ -20,7 +20,6 @@ public class PayrollChangeOrchestratorImpl
     public void recalculateForEmployee(
             Long employeeId,
             LocalDate effectiveDate) {
-
         dispatcher.requestPayroll(employeeId, effectiveDate);
     }
 

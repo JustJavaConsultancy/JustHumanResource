@@ -42,6 +42,7 @@ public interface EmployeeService {
             LocalDate effectiveDate
     );
 
+    public void changePosition(Long employeeId,Long jobStepId,Long payGroupId,LocalDate effectiveFrom);
     /**
      * Activate / deactivate employee without deleting history.
      * Payroll reacts only if status impacts pay.

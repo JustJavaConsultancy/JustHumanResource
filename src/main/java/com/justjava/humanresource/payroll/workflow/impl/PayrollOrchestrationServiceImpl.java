@@ -5,6 +5,10 @@ import com.justjava.humanresource.core.enums.RecordStatus;
 import com.justjava.humanresource.core.exception.InvalidOperationException;
 import com.justjava.humanresource.core.exception.ResourceNotFoundException;
 import com.justjava.humanresource.hr.entity.Employee;
+import com.justjava.humanresource.hr.entity.EmployeePositionHistory;
+import com.justjava.humanresource.hr.entity.JobStep;
+import com.justjava.humanresource.hr.entity.PayGroup;
+import com.justjava.humanresource.hr.repository.EmployeePositionHistoryRepository;
 import com.justjava.humanresource.hr.repository.EmployeeRepository;
 import com.justjava.humanresource.hr.repository.PayGroupRepository;
 import com.justjava.humanresource.payroll.calculation.PayGroupResolutionService;
@@ -43,6 +47,9 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
     private final PayeCalculatorService payeCalculatorService;
     private final PensionSchemeRepository pensionSchemeRepository;
     private final PensionCalculatorService pensionCalculatorService;
+    private final EmployeePositionHistoryRepository employeePositionHistoryRepository;
+
+
 
     /* =========================
      * INITIALIZE
@@ -81,11 +88,38 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
     public void calculateEarnings(Long payrollRunId) {
 
         PayrollRun run = getActiveRun(payrollRunId);
+        ensureEditable(run);
         ensureStatus(run, PayrollRunStatus.IN_PROGRESS);
 
         Employee employee = run.getEmployee();
+        LocalDate payrollDate = run.getPayrollDate();
 
-        // Idempotency
+    /* ============================================================
+       1️⃣ Resolve Employee Position (Retro Safe)
+       ============================================================ */
+
+        EmployeePositionHistory position =
+                employeePositionHistoryRepository
+                        .resolvePosition(
+                                employee.getId(),
+                                payrollDate,
+                                RecordStatus.ACTIVE
+                        )
+                        .orElseThrow(() ->
+                                new IllegalStateException(
+                                        "No active position found for employee "
+                                                + employee.getId()
+                                                + " on " + payrollDate
+                                )
+                        );
+
+        JobStep jobStep = position.getJobStep();
+        PayGroup payGroup = position.getPayGroup();
+
+    /* ============================================================
+       2️⃣ Idempotency – Remove Existing Earnings
+       ============================================================ */
+
         payrollLineItemRepository.deleteByPayrollRunIdAndComponentType(
                 payrollRunId,
                 PayComponentType.EARNING
@@ -93,12 +127,11 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
 
         BigDecimal grossPay = BigDecimal.ZERO;
 
-    /* =========================================
-       1️⃣ Basic Salary
-       ========================================= */
+    /* ============================================================
+       3️⃣ Basic Salary (From Position History)
+       ============================================================ */
 
-        BigDecimal basicSalary =
-                employee.getJobStep().getBasicSalary();
+        BigDecimal basicSalary = jobStep.getBasicSalary();
 
         PayrollLineItem basicLine = new PayrollLineItem();
         basicLine.setPayrollRun(run);
@@ -110,19 +143,26 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
         basicLine.setTaxable(true);
 
         payrollLineItemRepository.save(basicLine);
+
         grossPay = grossPay.add(basicSalary);
 
-    /* =========================================
-       2️⃣ Resolve Components (Date Aware)
-       ========================================= */
+    /* ============================================================
+       4️⃣ Resolve Allowances (Hierarchy + Overrides)
+       ============================================================ */
 
         ResolvedPayComponents resolved =
                 payGroupResolutionService.resolve(
+                        payGroup,
                         employee,
-                        run.getPayrollDate()
+                        payrollDate
                 );
 
         for (Allowance allowance : resolved.getAllowances()) {
+
+            if (allowance.getAmount() == null
+                    || allowance.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
+                continue;
+            }
 
             PayrollLineItem line = new PayrollLineItem();
             line.setPayrollRun(run);
@@ -138,6 +178,10 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
             grossPay = grossPay.add(allowance.getAmount());
         }
 
+    /* ============================================================
+       5️⃣ Persist Gross Snapshot
+       ============================================================ */
+
         run.setGrossPay(grossPay);
         payrollRunRepository.save(run);
     }
@@ -152,6 +196,8 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
 
         PayrollRun run = getActiveRun(payrollRunId);
         ensureStatus(run, PayrollRunStatus.IN_PROGRESS);
+
+        ensureEditable(run);
 
         Employee employee = run.getEmployee();
         LocalDate payrollDate = run.getPayrollDate();
@@ -209,7 +255,16 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
     /* ============================================================
        4️⃣ Pension Calculation (Employee Portion Only)
        ============================================================ */
+        EmployeePositionHistory position =
+                employeePositionHistoryRepository
+                        .resolvePosition(
+                                employee.getId(),
+                                payrollDate,
+                                RecordStatus.ACTIVE
+                        )
+                        .orElseThrow();
 
+        JobStep jobStep = position.getJobStep();
         List<PensionScheme> schemes =
                 pensionSchemeRepository.findEffectiveSchemes(
                         payrollDate,
@@ -222,7 +277,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
 
             BigDecimal pensionableAmount =
                     scheme.getPensionableOnBasicOnly()
-                            ? employee.getJobStep().getBasicSalary()
+                            ? jobStep.getBasicSalary()
                             : taxableIncome;
 
             if (scheme.getPensionableCap() != null) {
@@ -259,6 +314,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
 
         ResolvedPayComponents resolved =
                 payGroupResolutionService.resolve(
+                        position.getPayGroup(),
                         employee,
                         payrollDate
                 );
@@ -307,9 +363,23 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
     @Transactional
     public void finalizePayroll(Long payrollRunId) {
 
-        PayrollRun run = getActiveRun(payrollRunId);
+        PayrollRun run = payrollRunRepository
+                .findById(payrollRunId)
+                .orElseThrow();
 
-        ensureStatus(run, PayrollRunStatus.IN_PROGRESS);
+        if (run.getStatus() == PayrollRunStatus.POSTED) {
+            throw new IllegalStateException(
+                    "PayrollRun already POSTED."
+            );
+        }
+
+        if (run.getGrossPay() == null
+                || run.getNetPay() == null) {
+
+            throw new IllegalStateException(
+                    "Payroll cannot be posted without full calculation."
+            );
+        }
 
         run.setStatus(PayrollRunStatus.POSTED);
 
@@ -334,4 +404,13 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
             );
         }
     }
+    private void ensureEditable(PayrollRun run) {
+        if (run.getStatus() == PayrollRunStatus.POSTED) {
+            throw new IllegalStateException(
+                    "PayrollRun " + run.getId() +
+                            " is POSTED and cannot be modified."
+            );
+        }
+    }
+
 }

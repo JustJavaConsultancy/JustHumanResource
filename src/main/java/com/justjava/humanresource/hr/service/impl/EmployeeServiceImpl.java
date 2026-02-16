@@ -1,23 +1,29 @@
 package com.justjava.humanresource.hr.service.impl;
 
 import com.justjava.humanresource.core.enums.EmploymentStatus;
+import com.justjava.humanresource.core.enums.RecordStatus;
 import com.justjava.humanresource.core.exception.ResourceNotFoundException;
 import com.justjava.humanresource.dispatcher.PayrollMessageDispatcher;
 import com.justjava.humanresource.hr.dto.EmployeeDTO;
 import com.justjava.humanresource.hr.entity.Employee;
+import com.justjava.humanresource.hr.entity.EmployeePositionHistory;
 import com.justjava.humanresource.hr.entity.JobStep;
 import com.justjava.humanresource.hr.entity.PayGroup;
 import com.justjava.humanresource.hr.event.SalaryChangedEvent;
 import com.justjava.humanresource.hr.mapper.EmployeeMapper;
+import com.justjava.humanresource.hr.repository.EmployeePositionHistoryRepository;
 import com.justjava.humanresource.hr.repository.EmployeeRepository;
 import com.justjava.humanresource.hr.repository.JobStepRepository;
+import com.justjava.humanresource.hr.repository.PayGroupRepository;
 import com.justjava.humanresource.hr.service.EmployeeService;
 import com.justjava.humanresource.payroll.event.PayGroupChangedEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -27,6 +33,9 @@ public class EmployeeServiceImpl implements EmployeeService {
     private final JobStepRepository jobStepRepository;
     private final PayrollMessageDispatcher payrollMessageDispatcher;
     private final EmployeeMapper employeeMapper;
+    private final PayGroupRepository  payGroupRepository;
+    private final EmployeePositionHistoryRepository employeePositionHistoryRepository;
+
 
     /* =========================
      * EXISTING BEHAVIOR (UNCHANGED)
@@ -103,6 +112,64 @@ public class EmployeeServiceImpl implements EmployeeService {
                 new SalaryChangedEvent(saved, effectiveDate)
         );*/
         return employeeMapper.toDto(saved);
+    }
+    @Transactional
+    public void changePosition(
+            Long employeeId,
+            Long jobStepId,
+            Long payGroupId,
+            LocalDate effectiveFrom) {
+
+        Employee employee = employeeRepository.findById(employeeId)
+                .orElseThrow();
+
+        JobStep jobStep = jobStepRepository.findById(jobStepId)
+                .orElseThrow();
+
+        PayGroup payGroup = payGroupRepository.findById(payGroupId)
+                .orElseThrow();
+
+    /* ============================================================
+       1️⃣ Close Existing Active Position
+       ============================================================ */
+
+        Optional<EmployeePositionHistory> current =
+                employeePositionHistoryRepository
+                        .resolvePosition(
+                                employeeId,
+                                effectiveFrom.minusDays(1),
+                                RecordStatus.ACTIVE
+                        );
+
+        current.ifPresent(existing -> {
+            existing.setEffectiveTo(effectiveFrom.minusDays(1));
+            existing.setStatus(RecordStatus.INACTIVE);
+            employeePositionHistoryRepository.save(existing);
+        });
+
+    /* ============================================================
+       2️⃣ Insert New Position
+       ============================================================ */
+
+        EmployeePositionHistory newPosition =
+                new EmployeePositionHistory();
+
+        newPosition.setEmployee(employee);
+        newPosition.setJobStep(jobStep);
+        newPosition.setPayGroup(payGroup);
+        newPosition.setEffectiveFrom(effectiveFrom);
+        newPosition.setStatus(RecordStatus.ACTIVE);
+
+        employeePositionHistoryRepository.save(newPosition);
+
+    /* ============================================================
+       3️⃣ Trigger Payroll Recalculation
+       ============================================================ */
+
+        payrollMessageDispatcher.requestPayroll(employeeId, effectiveFrom);
+/*        eventPublisher.publishEvent(
+                new SalaryChangedEvent(employee)
+        );*/
     }
 
     @Override
