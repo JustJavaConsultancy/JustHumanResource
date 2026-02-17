@@ -4,6 +4,7 @@ import com.justjava.humanresource.hr.entity.Employee;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface EmployeeRepository extends JpaRepository<Employee,Long> {
@@ -15,4 +16,5 @@ public interface EmployeeRepository extends JpaRepository<Employee,Long> {
    WHERE e.employmentStatus = 'ACTIVE'
 """)
     long countByEmploymentStatusActive();
+    List<Employee> findByPayGroup_Id(Long payGroupId);
 }

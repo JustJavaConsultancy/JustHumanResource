@@ -14,4 +14,5 @@ public class KpiAssignmentResponseDTO {
     private String kpiCode;
     private BigDecimal weight;
     private boolean mandatory;
+    private String name;
 }

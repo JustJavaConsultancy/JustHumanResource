@@ -28,9 +28,7 @@ public class PayrollChangeOrchestratorImpl
             Long payGroupId,
             LocalDate effectiveDate) {
 
-        employeeRepository.findAll().stream()
-                .filter(e ->
-                        e.getPayGroup().getId().equals(payGroupId))
+        employeeRepository.findByPayGroup_Id(payGroupId)
                 .forEach(e ->
                         dispatcher.requestPayroll(
                                 e.getId(),
@@ -38,4 +36,5 @@ public class PayrollChangeOrchestratorImpl
                         )
                 );
     }
+
 }

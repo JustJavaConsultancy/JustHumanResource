@@ -181,10 +181,9 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
 
 
         LocalDate affectedDate = determineAffectedPayrollDate(requests);
-        if (!payrollPeriodService.isPayrollDateInOpenPeriod(affectedDate)) {
-            return response; // or log warning
+        if (payrollPeriodService.isPayrollDateInOpenPeriod(affectedDate)) {
+            payrollChangeOrchestrator.recalculateForPayGroup(payGroupId, affectedDate);
         }
-        payrollChangeOrchestrator.recalculateForPayGroup(payGroupId, affectedDate);
         return response;
     }
 
@@ -208,12 +207,11 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
                     )
             ));
         }
-        LocalDate affectedDate = determineAffectedPayrollDateDEDUCT(requests);
+        LocalDate affectedDate = determineAffectedPayrollDate(requests);
 
-        if (!payrollPeriodService.isPayrollDateInOpenPeriod(affectedDate)) {
-            return response; // or log warning
-        }
-        payrollChangeOrchestrator.recalculateForPayGroup(payGroupId, affectedDate);
+        if (payrollPeriodService.isPayrollDateInOpenPeriod(affectedDate)) {
+            payrollChangeOrchestrator.recalculateForPayGroup(payGroupId, affectedDate);
+        };
         return response;
     }
     @Override
@@ -238,10 +236,9 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
             ));
         }
         LocalDate affectedDate = determineAffectedPayrollDate(requests);
-        if (!payrollPeriodService.isPayrollDateInOpenPeriod(affectedDate)) {
-            return responses; // or log warning
+        if (payrollPeriodService.isPayrollDateInOpenPeriod(affectedDate)) {
+            payrollChangeOrchestrator.recalculateForEmployee(employeeId, affectedDate);
         }
-        payrollChangeOrchestrator.recalculateForEmployee(employeeId, affectedDate);
 
         return responses;
     }
@@ -266,12 +263,11 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
                     )
             ));
         }
-        LocalDate affectedDate = determineAffectedPayrollDateDEDUCT(requests);
+        LocalDate affectedDate = determineAffectedPayrollDate(requests);
 
-        if (!payrollPeriodService.isPayrollDateInOpenPeriod(affectedDate)) {
-            return response; // or log warning
+        if (payrollPeriodService.isPayrollDateInOpenPeriod(affectedDate)) {
+            payrollChangeOrchestrator.recalculateForEmployee(employeeId, affectedDate);
         }
-        payrollChangeOrchestrator.recalculateForEmployee(employeeId, affectedDate);
 
         return response;
     }
@@ -385,27 +381,25 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
 
         return employeeDeductionRepository.save(entity);
     }
-    private LocalDate determineAffectedPayrollDateDEDUCT(
-            List<DeductionAttachmentRequest> requests) {
-
-        return requests.stream()
-                .map(r -> r.getEffectiveFrom())
-                .filter(d -> d != null)
-                .min(LocalDate::compareTo)
-                .orElseThrow(() ->
-                        new InvalidOperationException(
-                                "Effective date required for recalculation."));
-    }
     private LocalDate determineAffectedPayrollDate(
-            List<AllowanceAttachmentRequest> requests) {
+            List<? extends Object> requests) {
 
         return requests.stream()
-                .map(r -> r.getEffectiveFrom())
+                .map(r -> {
+                    if (r instanceof AllowanceAttachmentRequest a) {
+                        return a.getEffectiveFrom();
+                    }
+                    if (r instanceof DeductionAttachmentRequest d) {
+                        return d.getEffectiveFrom();
+                    }
+                    return null;
+                })
                 .filter(d -> d != null)
                 .min(LocalDate::compareTo)
                 .orElseThrow(() ->
                         new InvalidOperationException(
-                                "Effective date required for recalculation."));
+                                "EffectiveFrom date is required for recalculation."
+                        ));
     }
 
 }

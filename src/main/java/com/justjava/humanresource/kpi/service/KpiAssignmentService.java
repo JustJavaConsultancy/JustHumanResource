@@ -136,6 +136,7 @@ public class KpiAssignmentService {
                             .kpiCode(assignment.getKpi().getCode())
                             .weight(assignment.getWeight())
                             .mandatory(assignment.isMandatory())
+                            .name(assignment.getKpi().getName())
                             .build()
             );
         }
