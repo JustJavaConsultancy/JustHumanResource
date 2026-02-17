@@ -19,6 +19,7 @@ import com.justjava.humanresource.payroll.repositories.EmployeeAllowanceReposito
 import com.justjava.humanresource.payroll.repositories.PayGroupAllowanceRepository;
 import com.justjava.humanresource.payroll.repositories.PayrollLineItemRepository;
 import com.justjava.humanresource.payroll.repositories.PayrollRunRepository;
+import com.justjava.humanresource.payroll.service.PayrollPeriodService;
 import com.justjava.humanresource.payroll.service.PayrollSetupService;
 import com.justjava.humanresource.payroll.statutory.entity.PensionScheme;
 import com.justjava.humanresource.payroll.statutory.repositories.PensionSchemeRepository;
@@ -48,7 +49,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
     private final PensionSchemeRepository pensionSchemeRepository;
     private final PensionCalculatorService pensionCalculatorService;
     private final EmployeePositionHistoryRepository employeePositionHistoryRepository;
-
+    private final PayrollPeriodService payrollPeriodService;
 
 
     /* =========================
@@ -62,19 +63,34 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
             LocalDate payrollDate,
             String processInstanceId) {
 
-        payrollSetupService.validatePayrollSystemReadiness(LocalDate.now());
+        // 1️⃣ Ensure Payroll System Ready
+        payrollSetupService.validatePayrollSystemReadiness(payrollDate);
+
+        // 2️⃣ Validate Against OPEN Period
+        payrollPeriodService.validatePayrollDate(payrollDate);
+
         Employee employee = employeeRepository.findById(employeeId)
                 .orElseThrow(() ->
                         new ResourceNotFoundException("Employee", employeeId));
 
+        // 3️⃣ Prevent duplicate run for same employee + date
+        payrollRunRepository.findByEmployeeIdAndPayrollDate(employeeId, payrollDate)
+                .ifPresent(existing -> {
+                    if (existing.getStatus() != PayrollRunStatus.POSTED) {
+                        throw new IllegalStateException(
+                                "Payroll already initialized for this employee and date.");
+                    }
+                });
 
         PayrollRun run = new PayrollRun();
-        run.setEmployee(employee); // IMPORTANT: ensure entity supports this
+        run.setEmployee(employee);
         run.setPayrollDate(payrollDate);
-        run.setGrossPay(employee.getJobStep().getBasicSalary());
-        run.setNetPay(employee.getJobStep().getBasicSalary());
         run.setStatus(PayrollRunStatus.IN_PROGRESS);
         run.setFlowableProcessInstanceId(processInstanceId);
+
+        // Do NOT set gross/net here
+        run.setGrossPay(BigDecimal.ZERO);
+        run.setNetPay(BigDecimal.ZERO);
 
         return payrollRunRepository.save(run).getId();
     }
@@ -382,8 +398,25 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
         }
 
         run.setStatus(PayrollRunStatus.POSTED);
-
         payrollRunRepository.save(run);
+
+    /* ============================================================
+       CHECK IF PERIOD CAN BE CLOSED
+       ============================================================ */
+
+/*         PayrollPeriod current = payrollPeriodService.getCurrentOpenPeriod();
+
+       long incomplete =
+                payrollRunRepository.countByPayrollDateBetweenAndStatusNot(
+                        current.getStartDate(),
+                        current.getEndDate(),
+                        PayrollRunStatus.POSTED
+                );
+
+        if (incomplete == 0) {
+            // Automatically close and open next
+            payrollPeriodService.closeCurrentPeriodAndOpenNext();
+        }*/
     }
 
     /* =========================
