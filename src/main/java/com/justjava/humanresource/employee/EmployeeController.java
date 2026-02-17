@@ -1,10 +1,12 @@
 package com.justjava.humanresource.employee;
 
+import com.justjava.humanresource.core.enums.EmploymentStatus;
 import com.justjava.humanresource.hr.dto.EmployeeOnboardingResponseDTO;
 import com.justjava.humanresource.hr.dto.JobGradeResponseDTO;
 import com.justjava.humanresource.hr.entity.Department;
 import com.justjava.humanresource.hr.entity.Employee;
 import com.justjava.humanresource.hr.entity.PayGroup;
+import com.justjava.humanresource.hr.service.EmployeeService;
 import com.justjava.humanresource.hr.service.SetupService;
 import com.justjava.humanresource.onboarding.dto.StartEmployeeOnboardingCommand;
 import com.justjava.humanresource.onboarding.service.EmployeeOnboardingService;
@@ -17,6 +19,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Controller
@@ -27,6 +30,8 @@ public class EmployeeController {
     @Autowired
     private EmployeeOnboardingService employeeOnboardingService;
 
+    @Autowired
+    private EmployeeService employeeService;
     @Autowired
     private PayrollSetupService payrollSetupService;
 
@@ -54,10 +59,14 @@ public class EmployeeController {
     public String startOnboarding(
             StartEmployeeOnboardingCommand command,
             @RequestParam(defaultValue = "humanResource") String initiatedBy) {
-        employeeOnboardingService.startOnboarding(
+        EmployeeOnboardingResponseDTO employeeOnboardingResponseDTO=employeeOnboardingService.startOnboarding(
                 command,
                 initiatedBy
         );
+        employeeService.changeEmploymentStatus(
+                employeeOnboardingResponseDTO.getId(),
+                EmploymentStatus.ACTIVE, LocalDate.now());
+
         return "redirect:/employees";
     }
     @GetMapping("/employee/dashboard")
