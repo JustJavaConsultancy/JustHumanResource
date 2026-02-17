@@ -2,11 +2,7 @@ package com.justjava.humanresource.payroll.entity;
 
 import com.justjava.humanresource.core.entity.BaseEntity;
 import com.justjava.humanresource.hr.entity.Employee;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -16,7 +12,15 @@ import java.time.LocalDate;
 @Getter
 @Setter
 @Entity
-@Table(name = "pay_slips")
+@Table(
+        name = "pay_slips",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_payroll_run",
+                        columnNames = {"payroll_run_id"}
+                )
+        }
+)
 public class PaySlip extends BaseEntity {
 
     @ManyToOne(optional = false)

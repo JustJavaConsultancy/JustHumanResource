@@ -400,8 +400,8 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
             );
         }
 
-        //run.setStatus(PayrollRunStatus.POSTED);
-        //payrollRunRepository.save(run);
+        run.setStatus(PayrollRunStatus.POSTED);
+        payrollRunRepository.save(run);
 
     /* ============================================================
        CHECK IF PERIOD CAN BE CLOSED

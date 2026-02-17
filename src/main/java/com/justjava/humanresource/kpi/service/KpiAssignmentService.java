@@ -110,6 +110,38 @@ public class KpiAssignmentService {
 
         return response;
     }
+    @Transactional(readOnly = true)
+    public List<KpiAssignmentResponseDTO> getAssignmentsForEmployee(Long employeeId) {
+
+        Employee employee = employeeRepository.findById(employeeId)
+                .orElseThrow();
+
+        LocalDate today = LocalDate.now();
+
+        List<KpiAssignment> assignments =
+                repository.findEffectiveAssignmentsForEmployee(
+                        employeeId,
+                        employee.getJobStep().getId(),
+                        today
+                );
+
+        List<KpiAssignmentResponseDTO> response = new ArrayList<>();
+
+        for (KpiAssignment assignment : assignments) {
+
+            response.add(
+                    KpiAssignmentResponseDTO.builder()
+                            .assignmentId(assignment.getId())
+                            .kpiId(assignment.getKpi().getId())
+                            .kpiCode(assignment.getKpi().getCode())
+                            .weight(assignment.getWeight())
+                            .mandatory(assignment.isMandatory())
+                            .build()
+            );
+        }
+
+        return response;
+    }
 
     /* ==============================
        INTERNAL VALIDATION

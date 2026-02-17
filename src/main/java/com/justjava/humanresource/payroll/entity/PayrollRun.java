@@ -18,8 +18,8 @@ import java.time.LocalDate;
         name = "payroll_runs",
         uniqueConstraints = {
                 @UniqueConstraint(
-                        name = "uk_employee_payroll_date",
-                        columnNames = {"employee_id", "payroll_date"}
+                        name = "uk_employee_payroll_version",
+                        columnNames = {"employee_id", "payroll_date", "version_number"}
                 )
         }
 )
@@ -90,6 +90,7 @@ public class PayrollRun extends BaseEntity {
     @JoinColumn(name = "parent_run_id")
     private PayrollRun parentRun;
 
+    @Column(nullable = false)
     private Integer versionNumber = 1;
 
 }

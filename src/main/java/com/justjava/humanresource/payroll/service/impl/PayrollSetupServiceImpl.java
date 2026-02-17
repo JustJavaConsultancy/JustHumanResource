@@ -14,6 +14,7 @@ import com.justjava.humanresource.payroll.mapper.PayGroupAllowanceMapper;
 import com.justjava.humanresource.payroll.mapper.PayGroupDeductionMapper;
 import com.justjava.humanresource.payroll.repositories.*;
 import com.justjava.humanresource.payroll.service.PayrollChangeOrchestrator;
+import com.justjava.humanresource.payroll.service.PayrollPeriodService;
 import com.justjava.humanresource.payroll.service.PayrollSetupService;
 import com.justjava.humanresource.payroll.statutory.entity.PayeTaxBand;
 import com.justjava.humanresource.payroll.statutory.entity.PensionScheme;
@@ -49,6 +50,7 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
     private final PayGroupDeductionMapper payGroupDeductionMapper;
     private final PayrollChangeOrchestrator  payrollChangeOrchestrator;
 
+    private PayrollPeriodService payrollPeriodService;
 
 
 
@@ -177,9 +179,15 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
             ));
         }
 
-        payrollChangeOrchestrator.recalculateForPayGroup(payGroupId, LocalDate.now());
+
+        LocalDate affectedDate = determineAffectedPayrollDate(requests);
+        if (!payrollPeriodService.isPayrollDateInOpenPeriod(affectedDate)) {
+            return response; // or log warning
+        }
+        payrollChangeOrchestrator.recalculateForPayGroup(payGroupId, affectedDate);
         return response;
     }
+
     @Override
     @Transactional
     public List<PayGroupDeductionResponse> addDeductionsToPayGroup(
@@ -200,8 +208,12 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
                     )
             ));
         }
+        LocalDate affectedDate = determineAffectedPayrollDateDEDUCT(requests);
 
-        payrollChangeOrchestrator.recalculateForPayGroup(payGroupId, LocalDate.now());
+        if (!payrollPeriodService.isPayrollDateInOpenPeriod(affectedDate)) {
+            return response; // or log warning
+        }
+        payrollChangeOrchestrator.recalculateForPayGroup(payGroupId, affectedDate);
         return response;
     }
     @Override
@@ -225,8 +237,11 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
                     )
             ));
         }
-
-        payrollChangeOrchestrator.recalculateForEmployee(employeeId, LocalDate.now());
+        LocalDate affectedDate = determineAffectedPayrollDate(requests);
+        if (!payrollPeriodService.isPayrollDateInOpenPeriod(affectedDate)) {
+            return responses; // or log warning
+        }
+        payrollChangeOrchestrator.recalculateForEmployee(employeeId, affectedDate);
 
         return responses;
     }
@@ -251,8 +266,12 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
                     )
             ));
         }
+        LocalDate affectedDate = determineAffectedPayrollDateDEDUCT(requests);
 
-        payrollChangeOrchestrator.recalculateForEmployee(employeeId, LocalDate.now());
+        if (!payrollPeriodService.isPayrollDateInOpenPeriod(affectedDate)) {
+            return response; // or log warning
+        }
+        payrollChangeOrchestrator.recalculateForEmployee(employeeId, affectedDate);
 
         return response;
     }
@@ -365,6 +384,28 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
         entity.setStatus(RecordStatus.ACTIVE);
 
         return employeeDeductionRepository.save(entity);
+    }
+    private LocalDate determineAffectedPayrollDateDEDUCT(
+            List<DeductionAttachmentRequest> requests) {
+
+        return requests.stream()
+                .map(r -> r.getEffectiveFrom())
+                .filter(d -> d != null)
+                .min(LocalDate::compareTo)
+                .orElseThrow(() ->
+                        new InvalidOperationException(
+                                "Effective date required for recalculation."));
+    }
+    private LocalDate determineAffectedPayrollDate(
+            List<AllowanceAttachmentRequest> requests) {
+
+        return requests.stream()
+                .map(r -> r.getEffectiveFrom())
+                .filter(d -> d != null)
+                .min(LocalDate::compareTo)
+                .orElseThrow(() ->
+                        new InvalidOperationException(
+                                "Effective date required for recalculation."));
     }
 
 }
