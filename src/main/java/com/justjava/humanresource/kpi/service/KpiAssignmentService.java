@@ -134,3 +134,27 @@ public class KpiAssignmentService {
         }
     }
 }
+
+/*****
+ {
+     "employeeId": 12,
+     "jobStepId": null,
+     "kpis": [
+         {
+         "kpiId": 3,
+         "weight": 0.40,
+         "mandatory": true
+         },
+         {
+         "kpiId": 5,
+         "weight": 0.35,
+         "mandatory": true
+         },
+         {
+         "kpiId": 7,
+         "weight": 0.25,
+         "mandatory": false
+         }
+     ]
+ }
+ */
