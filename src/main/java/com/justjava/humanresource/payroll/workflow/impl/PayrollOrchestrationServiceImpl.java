@@ -19,6 +19,7 @@ import com.justjava.humanresource.payroll.repositories.EmployeeAllowanceReposito
 import com.justjava.humanresource.payroll.repositories.PayGroupAllowanceRepository;
 import com.justjava.humanresource.payroll.repositories.PayrollLineItemRepository;
 import com.justjava.humanresource.payroll.repositories.PayrollRunRepository;
+import com.justjava.humanresource.payroll.service.EmployeePositionHistoryService;
 import com.justjava.humanresource.payroll.service.PayrollPeriodService;
 import com.justjava.humanresource.payroll.service.PayrollSetupService;
 import com.justjava.humanresource.payroll.statutory.entity.PensionScheme;
@@ -48,8 +49,9 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
     private final PayeCalculatorService payeCalculatorService;
     private final PensionSchemeRepository pensionSchemeRepository;
     private final PensionCalculatorService pensionCalculatorService;
-    private final EmployeePositionHistoryRepository employeePositionHistoryRepository;
+    private final EmployeePositionHistoryService employeePositionHistoryService;
     private final PayrollPeriodService payrollPeriodService;
+
 
 
     /* =========================
@@ -114,20 +116,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
        1️⃣ Resolve Employee Position (Retro Safe)
        ============================================================ */
 
-        EmployeePositionHistory position =
-                employeePositionHistoryRepository
-                        .resolvePosition(
-                                employee.getId(),
-                                payrollDate,
-                                RecordStatus.ACTIVE
-                        )
-                        .orElseThrow(() ->
-                                new IllegalStateException(
-                                        "No active position found for employee "
-                                                + employee.getId()
-                                                + " on " + payrollDate
-                                )
-                        );
+        EmployeePositionHistory position = employeePositionHistoryService.getCurrentPosition(employee.getId());
 
         JobStep jobStep = position.getJobStep();
         PayGroup payGroup = position.getPayGroup();
@@ -271,14 +260,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
     /* ============================================================
        4️⃣ Pension Calculation (Employee Portion Only)
        ============================================================ */
-        EmployeePositionHistory position =
-                employeePositionHistoryRepository
-                        .resolvePosition(
-                                employee.getId(),
-                                payrollDate,
-                                RecordStatus.ACTIVE
-                        )
-                        .orElseThrow();
+        EmployeePositionHistory position =employeePositionHistoryService.getCurrentPosition(employee.getId());
 
         JobStep jobStep = position.getJobStep();
         List<PensionScheme> schemes =

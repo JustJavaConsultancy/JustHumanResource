@@ -4,7 +4,9 @@ package com.justjava.humanresource.payroll.controller;
 import com.justjava.humanresource.core.enums.EmploymentStatus;
 import com.justjava.humanresource.hr.dto.EmployeeDTO;
 import com.justjava.humanresource.hr.dto.EmployeeOnboardingResponseDTO;
+import com.justjava.humanresource.hr.dto.EmployeePositionHistoryDTO;
 import com.justjava.humanresource.hr.entity.Employee;
+import com.justjava.humanresource.hr.entity.EmployeePositionHistory;
 import com.justjava.humanresource.hr.entity.PayGroup;
 import com.justjava.humanresource.hr.repository.PayGroupRepository;
 import com.justjava.humanresource.hr.service.EmployeeService;
@@ -12,7 +14,9 @@ import com.justjava.humanresource.onboarding.dto.StartEmployeeOnboardingCommand;
 import com.justjava.humanresource.onboarding.service.EmployeeOnboardingService;
 import com.justjava.humanresource.payroll.entity.*;
 import com.justjava.humanresource.payroll.repositories.PayrollRunRepository;
+import com.justjava.humanresource.payroll.service.EmployeePositionHistoryService;
 import com.justjava.humanresource.payroll.service.PayrollChangeOrchestrator;
+import com.justjava.humanresource.payroll.service.PayrollPeriodService;
 import com.justjava.humanresource.payroll.service.PayrollSetupService;
 import com.justjava.humanresource.payroll.statutory.entity.PayeTaxBand;
 import com.justjava.humanresource.payroll.statutory.entity.PensionScheme;
@@ -21,6 +25,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.List;
 
 @RestController
@@ -34,7 +39,9 @@ public class PayrollTestController {
     private final PayrollRunRepository payrollRunRepository;
     private final PayrollChangeOrchestrator payrollChangeOrchestrator;
     private final PayrollSetupService payrollSetupService;
+    private final PayrollPeriodService payrollPeriodService;
 
+    private final EmployeePositionHistoryService employeePositionHistoryService;
     /* ============================================================
        PAYROLL SETUP SECTION
        ============================================================ */
@@ -165,6 +172,18 @@ public class PayrollTestController {
                 effectiveDate
         );
     }
+
+    @GetMapping("/positions/active")
+    public List<EmployeePositionHistoryDTO> getActivePositions() {
+        return employeePositionHistoryService.getActivePositions();
+    }
+    @GetMapping("/employee/{employeeId}/position/current")
+    public EmployeePositionHistoryDTO getCurrentPosition(
+            @PathVariable Long employeeId) {
+        return employeePositionHistoryService
+                .getCurrentPositionAPI(employeeId);
+    }
+
     /* ============================================================
        JOB STEP CHANGE
        ============================================================ */
@@ -178,6 +197,15 @@ public class PayrollTestController {
                 LocalDate.now()
         );
     }
+        /* ============================================================
+       TRIGGER PAYROLL PERIOD OPENING
+       ============================================================ */
+
+    @PostMapping("/open_period")
+    public PayrollPeriod openPeriod() {
+        return payrollPeriodService.openPeriod(YearMonth.now());
+    }
+
 
     /* ============================================================
        MANUAL PAYROLL TRIGGER

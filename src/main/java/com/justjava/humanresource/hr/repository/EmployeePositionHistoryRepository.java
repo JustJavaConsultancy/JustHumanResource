@@ -60,4 +60,9 @@ public interface EmployeePositionHistoryRepository
             @Param("status") RecordStatus status
     );
     boolean existsByEmployee_IdAndCurrentTrue(Long employeeId);
+
+
+    Optional<EmployeePositionHistory> findByEmployee_IdAndCurrentTrue(Long employeeId);
+
+    List<EmployeePositionHistory> findByCurrentTrueAndEffectiveToIsNull();
 }
