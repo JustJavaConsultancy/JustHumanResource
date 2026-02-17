@@ -30,6 +30,7 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
     @Override
     @Transactional
     public PayrollPeriod openPeriod(YearMonth yearMonth) {
+        System.out.println(" The YearMonth==>"+yearMonth);
 
         repository.findByStatus(PayrollPeriodStatus.OPEN)
                 .ifPresent(p ->
