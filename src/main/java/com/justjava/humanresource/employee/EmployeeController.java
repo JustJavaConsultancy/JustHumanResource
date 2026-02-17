@@ -1,16 +1,64 @@
 package com.justjava.humanresource.employee;
 
+import com.justjava.humanresource.hr.dto.EmployeeOnboardingResponseDTO;
+import com.justjava.humanresource.hr.dto.JobGradeResponseDTO;
+import com.justjava.humanresource.hr.entity.Department;
+import com.justjava.humanresource.hr.entity.Employee;
+import com.justjava.humanresource.hr.entity.PayGroup;
+import com.justjava.humanresource.hr.service.SetupService;
+import com.justjava.humanresource.onboarding.dto.StartEmployeeOnboardingCommand;
+import com.justjava.humanresource.onboarding.service.EmployeeOnboardingService;
+import com.justjava.humanresource.payroll.service.PayrollSetupService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
+
+import java.util.List;
 
 @Controller
 public class EmployeeController {
+    @Autowired
+    private SetupService setupService;
+
+    @Autowired
+    private EmployeeOnboardingService employeeOnboardingService;
+
+    @Autowired
+    private PayrollSetupService payrollSetupService;
+
     @GetMapping("/employees")
     public String getEmployees(Model model) {
+        List<Department> departments = setupService.getAllDepartments();
+        List<PayGroup> payGroups = payrollSetupService.getAllPayGroups();
+        List<JobGradeResponseDTO> jobGrades = setupService.getAllJobGrades();
+        jobGrades.forEach(
+                jobGrade -> System.out.println("Job Grade: " + jobGrade.getSteps() + ", Description: " + jobGrade.getId())
+        );
+        List<Employee> employees = employeeOnboardingService.getAllOnboardings();
+        employees.forEach(
+                employee -> System.out.println("Employee: " + employee.getFirstName() + " " + employee.getEmploymentStatus() + ", Department: " + employee.getDepartment().getName())
+        );
+        model.addAttribute("employees", employees);
+        model.addAttribute("jobGrades", jobGrades);
+        model.addAttribute("departments", departments);
+        model.addAttribute("payGroups", payGroups);
         model.addAttribute("title","Employee Management");
         model.addAttribute("subTitle","Manage employee records, payroll, and performance data");
         return "employees/main";
+    }
+    @PostMapping("/onboarding")
+    public String startOnboarding(
+            StartEmployeeOnboardingCommand command,
+            @RequestParam(defaultValue = "humanResource") String initiatedBy) {
+        employeeOnboardingService.startOnboarding(
+                command,
+                initiatedBy
+        );
+        return "redirect:/employees";
     }
     @GetMapping("/employee/dashboard")
     public String getEmployeeDashboard(Model model) {

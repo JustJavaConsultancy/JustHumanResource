@@ -7,173 +7,118 @@
     <meta charset="UTF-8">
     <title>Employee Management</title>
     <style>
-        .grade-badge {
+        .status-badge {
             padding: 2px 8px;
             border-radius: 6px;
             font-size: 0.75rem;
             font-weight: 500;
         }
-
-        .grade-1 { background-color: #dbeafe; color: #1e40af; }
-        .grade-2 { background-color: #dcfce7; color: #166534; }
-        .grade-3 { background-color: #f0f9ff; color: #0c4a6e; }
-        .grade-4 { background-color: #fef3c7; color: #92400e; }
-        .grade-5 { background-color: #f3e8ff; color: #5b21b6; }
-        .grade-6 { background-color: #fce7f3; color: #9d174d; }
-        .grade-7 { background-color: #fef3c7; color: #92400e; }
-
-        .employment-status-active { background-color: #dcfce7; color: #16a34a; }
-        .employment-status-probation { background-color: #fef3c7; color: #d97706; }
-        .employment-status-on-leave { background-color: #dbeafe; color: #2563eb; }
-        .employment-status-terminated { background-color: #fee2e2; color: #dc2626; }
-
-        .record-status-active { background-color: #dcfce7; color: #16a34a; }
-        .record-status-inactive { background-color: #f1f5f9; color: #64748b; }
-
+        .status-onboarding { background-color: #fef3c7; color: #92400e; }
+        .status-active { background-color: #dcfce7; color: #166534; }
+        .status-probation { background-color: #dbeafe; color: #1e40af; }
+        .status-on-leave { background-color: #f1f5f9; color: #64748b; }
+        .status-terminated { background-color: #fee2e2; color: #b91c1c; }
         .avatar-placeholder {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 14px;
+            width: 40px; height: 40px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: bold; font-size: 14px;
+        }
+        .modal-transition {
+            transition: opacity 0.2s ease-in-out;
+        }
+        .modal-content {
+            transform: scale(0.95);
+            transition: transform 0.2s ease-in-out;
+        }
+        .modal.show .modal-content {
+            transform: scale(1);
+        }
+        .form-input:focus {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
         }
     </style>
 </head>
 <body>
 <main layout:fragment="content">
-    <!-- Stats Cards -->
+    <!-- Stats Cards (static values for demo) -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
-        <!-- Total Employees -->
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6">
             <div class="flex items-center justify-between mb-4">
                 <div class="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
                     <span class="material-icons-round text-blue-600 dark:text-blue-400">people</span>
                 </div>
                 <span class="text-sm font-medium text-green-600 flex items-center">
-                            <span class="material-icons-round text-sm mr-1">trending_up</span>
-                            +2.4%
-                        </span>
+                    <span class="material-icons-round text-sm mr-1">trending_up</span> +2.4%
+                </span>
             </div>
-            <h3 class="text-2xl font-bold mb-1" id="totalEmployees">248</h3>
+            <h3 th:text="${#lists.size(employees)}" class="text-2xl font-bold mb-1">24</h3>
             <p class="text-gray-600 dark:text-gray-400 text-sm">Total Employees</p>
-            <div class="mt-3 flex items-center text-xs text-gray-500">
-                <span class="material-icons-round text-xs mr-1">check_circle</span>
-                <span id="activeEmployees">224 active</span>
-            </div>
         </div>
-
-        <!-- Probation Ending -->
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6">
             <div class="flex items-center justify-between mb-4">
                 <div class="p-3 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
-                    <span class="material-icons-round text-yellow-600 dark:text-yellow-400">assignment_late</span>
-                </div>
-                <span class="badge badge-warning">Attention</span>
-            </div>
-            <h3 class="text-2xl font-bold mb-1" id="probationCount">28</h3>
-            <p class="text-gray-600 dark:text-gray-400 text-sm">Probation Ending</p>
-            <div class="mt-3">
-                <div class="flex items-center text-xs text-gray-500">
-                    <span class="material-icons-round text-xs mr-1">schedule</span>
-                    <span id="probationEnding">8 ending this week</span>
+                    <span class="material-icons-round text-yellow-600 dark:text-yellow-400">person_add</span>
                 </div>
             </div>
+            <h3 class="text-2xl font-bold mb-1">3</h3>
+            <p class="text-gray-600 dark:text-gray-400 text-sm">Onboarding</p>
         </div>
-
-        <!-- Average KPI -->
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6">
             <div class="flex items-center justify-between mb-4">
                 <div class="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
-                    <span class="material-icons-round text-green-600 dark:text-green-400">assessment</span>
+                    <span class="material-icons-round text-green-600 dark:text-green-400">work</span>
                 </div>
-                <span class="text-sm text-gray-500">This Quarter</span>
             </div>
-            <h3 class="text-2xl font-bold mb-1" id="avgKPI">84</h3>
-            <p class="text-gray-600 dark:text-gray-400 text-sm">Average KPI Score</p>
-            <div class="mt-3">
-                <div class="progress-bar">
-                    <div class="progress-fill bg-green-500" style="width: 84%"></div>
-                </div>
-                <p class="text-xs text-gray-500 mt-1">Over 100 points scale</p>
-            </div>
+            <h3 class="text-2xl font-bold mb-1">0</h3>
+            <p class="text-gray-600 dark:text-gray-400 text-sm">Active</p>
         </div>
-
-        <!-- Payroll Cost -->
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6">
             <div class="flex items-center justify-between mb-4">
                 <div class="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-                    <span class="material-icons-round text-purple-600 dark:text-purple-400">payments</span>
+                    <span class="material-icons-round text-purple-600 dark:text-purple-400">assignment</span>
                 </div>
-                <span class="text-sm font-medium text-green-600 flex items-center">
-                            <span class="material-icons-round text-sm mr-1">trending_up</span>
-                            +5.2%
-                        </span>
             </div>
-            <h3 class="text-2xl font-bold mb-1">$476K</h3>
-            <p class="text-gray-600 dark:text-gray-400 text-sm">Monthly Payroll</p>
-            <div class="mt-3 flex items-center text-xs text-gray-500">
-                <span class="material-icons-round text-xs mr-1">calendar_today</span>
-                <span>Next run: Jan 31</span>
-            </div>
+            <h3 th:text="${#lists.size(departments)}" class="text-2xl font-bold mb-1">6</h3>
+            <p class="text-gray-600 dark:text-gray-400 text-sm">Departments</p>
         </div>
     </div>
 
-    <div style="display:flex;justify-content:end;margin-bottom:20px">
-        <button onclick="openModal('addEmployeeModal')" class="hidden md:flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">
+    <!-- Add Employee Button -->
+    <div class="flex justify-end mb-4">
+        <button onclick="openModal('addEmployeeModal')" class="hidden md:flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors shadow-sm hover:shadow">
             <span class="material-icons-round text-sm">person_add</span>
             <span>Add Employee</span>
         </button>
     </div>
-    <!-- Filters and Actions -->
+
+    <!-- Filters (static – do nothing) -->
     <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6 mb-6">
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div class="flex flex-wrap gap-3">
                 <select id="departmentFilter" class="form-input py-2 w-full md:w-40">
                     <option value="">All Departments</option>
-                    <option value="engineering">Engineering</option>
-                    <option value="sales">Sales</option>
-                    <option value="marketing">Marketing</option>
-                    <option value="operations">Operations</option>
-                    <option value="hr">Human Resources</option>
-                    <option value="finance">Finance</option>
+                    <option>Engineering</option>
+                    <option>Marketing</option>
                 </select>
-
                 <select id="employmentStatusFilter" class="form-input py-2 w-full md:w-40">
                     <option value="">All Status</option>
-                    <option value="ACTIVE">Active</option>
-                    <option value="PROBATION">Probation</option>
-                    <option value="ON_LEAVE">On Leave</option>
-                    <option value="TERMINATED">Terminated</option>
+                    <option>Onboarding</option>
+                    <option>Active</option>
+                    <option>Probation</option>
                 </select>
-
-                <select id="gradeFilter" class="form-input py-2 w-full md:w-40">
-                    <option value="">All Grades</option>
-                    <option value="1">Grade 1</option>
-                    <option value="2">Grade 2</option>
-                    <option value="3">Grade 3</option>
-                    <option value="4">Grade 4</option>
-                    <option value="5">Grade 5</option>
-                    <option value="6">Grade 6</option>
-                    <option value="7">Grade 7</option>
+                <select id="jobStepFilter" class="form-input py-2 w-full md:w-40">
+                    <option value="">All Steps</option>
+                    <option>Grade 1 – Step 1</option>
                 </select>
-
-                <select id="paygroupFilter" class="form-input py-2 w-full md:w-40">
-                    <option value="">All Paygroups</option>
-                    <option value="executive">Executive Level</option>
-                    <option value="mid">Mid Level</option>
-                    <option value="junior">Junior Level</option>
+                <select id="payGroupFilter" class="form-input py-2 w-full md:w-40">
+                    <option value="">All Pay Groups</option>
+                    <option>Executive</option>
                 </select>
             </div>
-
             <div class="flex items-center space-x-3">
-                <button onclick="exportEmployeeData()" class="p-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+                <button onclick="alert('Export disabled in static demo')" class="p-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-500 hover:text-gray-700">
                     <span class="material-icons-round">download</span>
-                </button>
-                <button onclick="openModal('bulkActionsModal')" class="p-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
-                    <span class="material-icons-round">tune</span>
                 </button>
                 <button onclick="openModal('addEmployeeModal')" class="md:hidden p-2 bg-primary-600 text-white rounded-lg">
                     <span class="material-icons-round">person_add</span>
@@ -182,236 +127,302 @@
         </div>
     </div>
 
-    <!-- Employee List -->
     <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
         <div class="overflow-x-auto custom-scrollbar">
             <table class="w-full">
                 <thead class="bg-gray-50 dark:bg-gray-750">
                 <tr>
-                    <th class="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Employee</th>
-                    <th class="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Department</th>
-                    <th class="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Job Grade/Step</th>
-                    <th class="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Pay Group</th>
-                    <th class="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Join Date</th>
-                    <th class="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-                    <th class="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+                    <th class="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee</th>
+                    <th class="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email / Phone</th>
+                    <th class="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
+                    <th class="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Job Grade & Step</th>
+                    <th class="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pay Group</th>
+                    <th class="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th class="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-200 dark:divide-gray-700" id="employeeTableBody">
-                <!-- Employee rows will be loaded dynamically -->
+                <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+
+                <!-- Employee Rows -->
+                <tr th:each="employee : ${employees}"
+                    th:if="${employees != null and !#lists.isEmpty(employees)}"
+                    class="hover:bg-gray-50 dark:hover:bg-gray-750 cursor-pointer"
+                    th:onclick="'viewEmployee(' + ${employee.id} + ')'">
+
+                    <td class="px-4 md:px-6 py-4">
+                        <div class="flex items-center">
+                            <div class="avatar-placeholder bg-blue-100 text-blue-600"
+                                 th:text="${employee.firstName.substring(0,1) + employee.lastName.substring(0,1)}">
+                            </div>
+                            <div class="ml-4">
+                                <div th:text="${employee.firstName + ' ' + employee.lastName}"
+                                     class="text-sm font-medium"></div>
+                                <div th:text="${'ID: ' + employee.id}"
+                                     class="text-xs text-gray-500"></div>
+                            </div>
+                        </div>
+                    </td>
+
+                    <td class="px-4 md:px-6 py-4">
+                        <div th:text="${employee.email}" class="text-sm"></div>
+                        <div th:text="${employee.phoneNumber}" class="text-xs text-gray-500"></div>
+                    </td>
+
+                    <td th:text="${employee.department != null ? employee.department.name : 'No Department'}"
+                        class="px-4 md:px-6 py-4"></td>
+
+                    <td th:text="${employee.jobStep != null ? employee.jobStep.jobGrade.name + ' - ' + employee.jobStep.name : 'Not Assigned'}"
+                        class="px-4 md:px-6 py-4"></td>
+
+                    <td th:text="${employee.payGroup != null ? employee.payGroup.name : 'Not Assigned'}"
+                        class="px-4 md:px-6 py-4"></td>
+
+                    <td class="px-4 md:px-6 py-4">
+        <span class="status-badge status-onboarding"
+              th:text="${employee.status}">
+        </span>
+                    </td>
+
+                    <td class="px-4 md:px-6 py-4">
+                        <div class="flex space-x-2">
+                            <button type="button"
+                                    th:onclick="'event.stopPropagation(); editEmployee(' + ${employee.id} + ')'"
+                                    class="text-green-600 hover:text-green-700 text-sm font-medium">
+                                Edit
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+
+                <!-- Empty State -->
+                <tr th:if="${employees == null or #lists.isEmpty(employees)}">
+                    <td colspan="7" class="px-6 py-16 text-center">
+                        <div class="flex flex-col items-center justify-center space-y-4">
+
+                            <!-- Icon -->
+                            <div class="w-16 h-16 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700">
+                                <svg xmlns="http://www.w3.org/2000/svg"
+                                     class="h-8 w-8 text-gray-400"
+                                     fill="none"
+                                     viewBox="0 0 24 24"
+                                     stroke="currentColor">
+                                    <path stroke-linecap="round"
+                                          stroke-linejoin="round"
+                                          stroke-width="1.5"
+                                          d="M17 20h5V4H2v16h5m10 0V10m0 10l-4-4m4 4l4-4"/>
+                                </svg>
+                            </div>
+
+                            <!-- Title -->
+                            <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-200">
+                                No Employees Found
+                            </h3>
+
+                            <!-- Description -->
+                            <p class="text-sm text-gray-500 dark:text-gray-400 max-w-sm">
+                                There are currently no employees in the system.
+                                Start by adding a new employee to begin managing payroll.
+                            </p>
+
+                            <!-- CTA Button -->
+                            <a th:href="@{/employees/create}"
+                               class="mt-2 inline-flex items-center px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 transition">
+                                Add Employee
+                            </a>
+
+                        </div>
+                    </td>
+                </tr>
+
                 </tbody>
+
             </table>
         </div>
-
-        <!-- Pagination -->
+        <!-- Pagination (static) -->
         <div class="px-4 md:px-6 py-4 border-t border-gray-200 dark:border-gray-700">
             <div class="flex items-center justify-between">
                 <div class="text-sm text-gray-500 dark:text-gray-400">
-                    Showing <span class="font-medium" id="showingFrom">1</span> to <span class="font-medium" id="showingTo">10</span> of <span class="font-medium" id="totalResults">0</span> employees
+                    Showing <span class="font-medium">1</span> to <span class="font-medium">3</span> of <span class="font-medium">24</span> employees
                 </div>
                 <div class="flex space-x-2">
-                    <button id="prevPage" class="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm hover:bg-gray-50 dark:hover:bg-gray-700">Previous</button>
-                    <div id="paginationNumbers" class="flex space-x-1">
-                        <!-- Pagination numbers will be loaded dynamically -->
+                    <button class="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm hover:bg-gray-50">Previous</button>
+                    <div class="flex space-x-1">
+                        <button class="px-3 py-1 border rounded text-sm bg-primary-600 text-white border-primary-600">1</button>
+                        <button class="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50">2</button>
+                        <button class="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50">3</button>
                     </div>
-                    <button id="nextPage" class="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm hover:bg-gray-50 dark:hover:bg-gray-700">Next</button>
+                    <button class="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm hover:bg-gray-50">Next</button>
                 </div>
             </div>
         </div>
     </div>
 
-
-    <!-- Add Employee Modal -->
-    <div id="addEmployeeModal" class="fixed inset-0 z-50 hidden">
-        <div class="modal-backdrop fixed inset-0"></div>
-        <div class="fixed inset-0 flex items-center justify-center p-4 custom-scrollbar">
-            <div class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-                <div class="p-6 border-b border-gray-200 dark:border-gray-700">
-                    <div class="flex justify-between items-center">
-                        <h3 class="text-xl font-bold">Add New Employee</h3>
-                        <button onclick="closeModal('addEmployeeModal')" class="text-gray-400 hover:text-gray-600">
-                            <span class="material-icons-round">close</span>
-                        </button>
+    <!-- Add Employee Modal (unchanged) -->
+    <div id="addEmployeeModal" class="fixed inset-0 z-50 hidden modal-transition" onclick="if(event.target === this) closeModal('addEmployeeModal')">
+        <!-- ... (modal content same as original) ... -->
+        <div class="modal-backdrop fixed inset-0 bg-black bg-opacity-50"></div>
+        <div class="fixed inset-0 flex items-center justify-center p-4">
+            <div class="modal-content bg-white dark:bg-gray-800 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
+                <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2 bg-primary-100 dark:bg-primary-900/30 rounded-full">
+                            <span class="material-icons-round text-primary-600 dark:text-primary-400 text-2xl">person_add</span>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-900 dark:text-white">Add New Employee</h3>
                     </div>
+                    <button onclick="closeModal('addEmployeeModal')" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+                        <span class="material-icons-round text-2xl">close</span>
+                    </button>
                 </div>
 
                 <div class="p-6">
-                    <!-- Tabs -->
-                    <div class="flex border-b border-gray-200 dark:border-gray-700 mb-6">
-                        <button class="tab-btn px-4 py-2 font-medium text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 border-b-2 border-transparent" data-tab="basic-info">Basic Information</button>
-                        <button class="tab-btn px-4 py-2 font-medium text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 border-b-2 border-transparent" data-tab="hr-info">HR Information</button>
-                        <button class="tab-btn px-4 py-2 font-medium text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 border-b-2 border-transparent" data-tab="payroll-info">Payroll Information</button>
-                    </div>
-
-                    <form id="addEmployeeForm">
-                        <!-- Basic Info Tab -->
-                        <div id="basic-info" class="tab-content space-y-6">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <form th:action="@{/onboarding}" method="post" onsubmit="disableSubmitButton(this)">
+                        <!-- Personal Information -->
+                        <div class="mb-6">
+                            <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4 flex items-center">
+                                <span class="material-icons-round text-sm mr-2">person</span>
+                                Personal Information
+                            </h4>
+                            <div class="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label class="block text-sm font-medium mb-2">Employee Number *</label>
-                                    <input type="text" name="employeeNumber" class="form-input" placeholder="e.g., EMP-00123" required>
-                                    <p class="text-xs text-gray-500 mt-1">Unique identifier for the employee</p>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        First Name <span class="text-red-500">*</span>
+                                    </label>
+                                    <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                                            <span class="material-icons-round text-sm">badge</span>
+                                        </span>
+                                        <input type="text" name="firstName" class="form-input pl-10" placeholder="John" required>
+                                    </div>
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-medium mb-2">Email Address *</label>
-                                    <input type="email" name="email" class="form-input" placeholder="Enter email address" required>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        Last Name <span class="text-red-500">*</span>
+                                    </label>
+                                    <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                                            <span class="material-icons-round text-sm">badge</span>
+                                        </span>
+                                        <input type="text" name="lastName" class="form-input pl-10" placeholder="Doe" required>
+                                    </div>
                                 </div>
-                            </div>
-
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div>
-                                    <label class="block text-sm font-medium mb-2">First Name *</label>
-                                    <input type="text" name="firstName" class="form-input" placeholder="Enter first name" required>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium mb-2">Last Name *</label>
-                                    <input type="text" name="lastName" class="form-input" placeholder="Enter last name" required>
-                                </div>
-                            </div>
-
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div>
-                                    <label class="block text-sm font-medium mb-2">Phone Number</label>
-                                    <input type="tel" name="phone" class="form-input" placeholder="Enter phone number">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium mb-2">Date of Birth</label>
-                                    <input type="date" name="dateOfBirth" class="form-input">
-                                </div>
-                            </div>
-
-                            <div>
-                                <label class="block text-sm font-medium mb-2">Address</label>
-                                <textarea name="address" class="form-input h-24" placeholder="Enter full address"></textarea>
                             </div>
                         </div>
 
-                        <!-- HR Info Tab -->
-                        <div id="hr-info" class="tab-content hidden space-y-6">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Contact Information -->
+                        <div class="mb-6">
+                            <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4 flex items-center">
+                                <span class="material-icons-round text-sm mr-2">contact_mail</span>
+                                Contact Information
+                            </h4>
+                            <div class="space-y-4">
                                 <div>
-                                    <label class="block text-sm font-medium mb-2">Department *</label>
-                                    <select name="department" class="form-input" required>
-                                        <option value="">Select department</option>
-                                        <option value="engineering">Engineering</option>
-                                        <option value="sales">Sales</option>
-                                        <option value="marketing">Marketing</option>
-                                        <option value="operations">Operations</option>
-                                        <option value="hr">Human Resources</option>
-                                        <option value="finance">Finance</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium mb-2">Job Title</label>
-                                    <input type="text" name="jobTitle" class="form-input" placeholder="Enter job title">
-                                </div>
-                            </div>
-
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div>
-                                    <label class="block text-sm font-medium mb-2">Job Grade/Step *</label>
-                                    <div class="flex space-x-3">
-                                        <select name="jobGrade" class="form-input flex-1" required onchange="updateJobSteps()">
-                                            <option value="">Select Grade</option>
-                                            <option value="1">Grade 1 - Entry Level</option>
-                                            <option value="2">Grade 2 - Associate</option>
-                                            <option value="3">Grade 3 - Senior Associate</option>
-                                            <option value="4">Grade 4 - Team Lead</option>
-                                            <option value="5">Grade 5 - Manager</option>
-                                            <option value="6">Grade 6 - Senior Manager</option>
-                                            <option value="7">Grade 7 - Director</option>
-                                        </select>
-                                        <select name="jobStep" class="form-input w-32" required>
-                                            <option value="">Step</option>
-                                            <!-- Steps will be loaded dynamically -->
-                                        </select>
-                                    </div>
-                                    <p class="text-xs text-gray-500 mt-1">Basic salary determined by Grade/Step selection</p>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium mb-2">Basic Salary</label>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        Email Address <span class="text-red-500">*</span>
+                                    </label>
                                     <div class="relative">
-                                        <span class="absolute left-3 top-1/2 transform -translate-y-1/2">$</span>
-                                        <input type="number" name="basicSalary" class="form-input pl-8" readonly id="basicSalaryPreview">
+                                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                                            <span class="material-icons-round text-sm">email</span>
+                                        </span>
+                                        <input type="email" name="email" class="form-input pl-10" placeholder="john.doe@company.com" required>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        Phone Number
+                                    </label>
+                                    <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                                            <span class="material-icons-round text-sm">phone</span>
+                                        </span>
+                                        <input type="text" name="phoneNumber" class="form-input pl-10" placeholder="+1 (555) 000-0000">
                                     </div>
                                 </div>
                             </div>
+                        </div>
 
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Employment Details -->
+                        <div class="mb-6">
+                            <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4 flex items-center">
+                                <span class="material-icons-round text-sm mr-2">work</span>
+                                Employment Details
+                            </h4>
+                            <div class="space-y-4">
                                 <div>
-                                    <label class="block text-sm font-medium mb-2">Date of Hire *</label>
-                                    <input type="date" name="dateOfHire" class="form-input" required>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium mb-2">Employment Status *</label>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        Employment Status <span class="text-red-500">*</span>
+                                    </label>
                                     <select name="employmentStatus" class="form-input" required>
+                                        <option value="ONBOARDING">Onboarding</option>
                                         <option value="ACTIVE">Active</option>
                                         <option value="PROBATION">Probation</option>
                                         <option value="ON_LEAVE">On Leave</option>
                                         <option value="TERMINATED">Terminated</option>
                                     </select>
                                 </div>
-                            </div>
-
-                            <div>
-                                <label class="block text-sm font-medium mb-2">Reporting Manager</label>
-                                <select name="reportingManager" class="form-input">
-                                    <option value="">Select manager</option>
-                                    <!-- Managers will be loaded dynamically -->
-                                </select>
-                            </div>
-                        </div>
-
-                        <!-- Payroll Info Tab -->
-                        <div id="payroll-info" class="tab-content hidden space-y-6">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
-                                    <label class="block text-sm font-medium mb-2">Pay Group *</label>
-                                    <select name="payGroup" class="form-input" required onchange="updatePayrollComponents()">
-                                        <option value="">Select pay group</option>
-                                        <option value="executive">Executive Level</option>
-                                        <option value="mid">Mid Level</option>
-                                        <option value="junior">Junior Level</option>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        Department <span class="text-red-500">*</span>
+                                    </label>
+                                    <select name="departmentId" id="addDepartmentId" class="form-input" required>
+                                        <option value="">Select Department</option>
+                                        <option th:each="dept : ${departments}" th:value="${dept.id}" th:text="${dept.name}">Engineering</option>
                                     </select>
                                 </div>
+                                <!-- Job Grade -->
                                 <div>
-                                    <label class="block text-sm font-medium mb-2">Bank Account</label>
-                                    <input type="text" name="bankAccount" class="form-input" placeholder="Bank account number">
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        Job Grade <span class="text-red-500">*</span>
+                                    </label>
+                                    <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                                            <span class="material-icons-round text-sm">layers</span>
+                                        </span>
+                                        <select id="addJobGradeId" class="form-input pl-10">
+                                            <option value="">Select Job Grade</option>
+                                            <option th:each="grade : ${jobGrades}" th:value="${grade.id}" th:text="${grade.name}">Grade 1</option>
+                                        </select>
+                                    </div>
                                 </div>
-                            </div>
 
-                            <div id="payrollComponents" class="space-y-4">
-                                <!-- Payroll components will be loaded dynamically -->
-                            </div>
+                                <!-- Job Step (dynamically populated via JavaScript) -->
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        Job Step <span class="text-red-500">*</span>
+                                    </label>
+                                    <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                                            <span class="material-icons-round text-sm">trending_up</span>
+                                        </span>
+                                        <select name="jobStepId" id="addJobStepId" class="form-input pl-10" required disabled>
+                                            <option value="">Select Job Step</option>
+                                        </select>
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-1">
+                                        Select a job grade first to see available steps
+                                    </p>
+                                </div>
 
-                            <div class="bg-gray-50 dark:bg-gray-750 rounded-lg p-4">
-                                <h4 class="font-bold mb-4">Payroll Summary</h4>
-                                <div class="space-y-3">
-                                    <div class="flex justify-between items-center">
-                                        <span>Basic Salary</span>
-                                        <span class="font-bold" id="summaryBasic">$0.00</span>
-                                    </div>
-                                    <div class="flex justify-between items-center">
-                                        <span>Allowances</span>
-                                        <span class="font-bold text-green-600" id="summaryAllowances">+ $0.00</span>
-                                    </div>
-                                    <div class="flex justify-between items-center">
-                                        <span>Deductions</span>
-                                        <span class="font-bold text-red-600" id="summaryDeductions">- $0.00</span>
-                                    </div>
-                                    <div class="pt-3 border-t border-gray-200 dark:border-gray-700">
-                                        <div class="flex justify-between items-center">
-                                            <span class="font-bold">Net Salary</span>
-                                            <span class="text-xl font-bold text-primary-600" id="summaryNet">$0.00</span>
-                                        </div>
-                                    </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        Pay Group <span class="text-red-500">*</span>
+                                    </label>
+                                    <select name="payGroupId" id="addPayGroupId" class="form-input" required>
+                                        <option value="">Select Pay Group</option>
+                                        <option th:each="pg : ${payGroups}" th:value="${pg.id}" th:text="${pg.name}">Executive</option>
+                                    </select>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="flex justify-end space-x-3 pt-6 mt-6 border-t border-gray-200 dark:border-gray-700">
-                            <button type="button" onclick="closeModal('addEmployeeModal')" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">Cancel</button>
-                            <button type="submit" class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">Add Employee</button>
+                        <div class="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                            <button type="button" onclick="closeModal('addEmployeeModal')" class="px-5 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                                Cancel
+                            </button>
+                            <button type="submit" class="px-5 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors shadow-sm hover:shadow flex items-center space-x-1">
+                                <span class="material-icons-round text-sm">save</span>
+                                <span>Add Employee</span>
+                            </button>
                         </div>
                     </form>
                 </div>
@@ -419,397 +430,129 @@
         </div>
     </div>
 
-    <!-- Employee Detail Modal -->
-    <div id="employeeDetailModal" class="fixed inset-0 z-50 hidden">
-        <div class="modal-backdrop fixed inset-0"></div>
-        <div class="fixed inset-0 flex items-center justify-center p-4 custom-scrollbar">
-            <div class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto">
-                <div class="p-6 border-b border-gray-200 dark:border-gray-700">
-                    <div class="flex justify-between items-center">
-                        <div class="flex items-center space-x-4">
-                            <div id="detailAvatar" class="w-16 h-16 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xl font-bold">
-                                <!-- Avatar will be loaded dynamically -->
-                            </div>
-                            <div>
-                                <h3 class="text-xl font-bold" id="detailName">Employee Name</h3>
-                                <p class="text-gray-600 dark:text-gray-400" id="detailInfo">Employee details</p>
-                            </div>
+    <!-- Edit Employee Modal (simplified, static) -->
+    <div id="editEmployeeModal" class="fixed inset-0 z-50 hidden modal-transition" onclick="if(event.target === this) closeModal('editEmployeeModal')">
+        <!-- ... (modal content same as original, but you may keep it) ... -->
+        <div class="modal-backdrop fixed inset-0 bg-black bg-opacity-50"></div>
+        <div class="fixed inset-0 flex items-center justify-center p-4">
+            <div class="modal-content bg-white dark:bg-gray-800 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
+                <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2 bg-primary-100 dark:bg-primary-900/30 rounded-full">
+                            <span class="material-icons-round text-primary-600 dark:text-primary-400 text-2xl">edit</span>
                         </div>
-                        <div class="flex space-x-2">
-                            <button onclick="editCurrentEmployee()" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">Edit</button>
-                            <button onclick="closeModal('employeeDetailModal')" class="text-gray-400 hover:text-gray-600">
-                                <span class="material-icons-round">close</span>
-                            </button>
-                        </div>
+                        <h3 class="text-xl font-bold text-gray-900 dark:text-white">Edit Employee</h3>
                     </div>
-                </div>
-
-                <div class="p-6">
-                    <!-- Detail Tabs -->
-                    <div class="flex flex-wrap border-b border-gray-200 dark:border-gray-700 mb-6 gap-2">
-                        <button class="detail-tab-btn px-4 py-2 font-medium text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 border-b-2 border-transparent" data-tab="overview">Overview</button>
-                        <button class="detail-tab-btn px-4 py-2 font-medium text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 border-b-2 border-transparent" data-tab="payroll">Payroll Details</button>
-                        <button class="detail-tab-btn px-4 py-2 font-medium text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 border-b-2 border-transparent" data-tab="promotion">Promotion History</button>
-                        <button class="detail-tab-btn px-4 py-2 font-medium text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 border-b-2 border-transparent" data-tab="kpi">KPI & Performance</button>
-                        <button class="detail-tab-btn px-4 py-2 font-medium text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 border-b-2 border-transparent" data-tab="leave">Leave History</button>
-                        <button class="detail-tab-btn px-4 py-2 font-medium text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 border-b-2 border-transparent" data-tab="documents">Documents</button>
-                    </div>
-
-                    <!-- Overview Tab -->
-                    <div id="overview" class="detail-tab-content">
-                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                            <!-- Employee Information -->
-                            <div class="space-y-6">
-                                <div>
-                                    <h4 class="font-bold mb-4">Employee Information</h4>
-                                    <div class="space-y-3" id="basicInfoDetails">
-                                        <!-- Basic info will be loaded dynamically -->
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <h4 class="font-bold mb-4">HR Information</h4>
-                                    <div class="space-y-3" id="hrInfoDetails">
-                                        <!-- HR info will be loaded dynamically -->
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Payroll Summary -->
-                            <div class="lg:col-span-2">
-                                <div class="bg-gray-50 dark:bg-gray-750 rounded-xl p-6 mb-6">
-                                    <h4 class="font-bold mb-4">Payroll Summary</h4>
-                                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                                        <div class="text-center">
-                                            <label class="text-sm text-gray-500 dark:text-gray-400">Basic Salary</label>
-                                            <p class="text-xl font-bold" id="overviewBasic">$0</p>
-                                        </div>
-                                        <div class="text-center">
-                                            <label class="text-sm text-gray-500 dark:text-gray-400">Allowances</label>
-                                            <p class="text-xl font-bold text-green-600" id="overviewAllowances">+ $0</p>
-                                        </div>
-                                        <div class="text-center">
-                                            <label class="text-sm text-gray-500 dark:text-gray-400">Deductions</label>
-                                            <p class="text-xl font-bold text-red-600" id="overviewDeductions">- $0</p>
-                                        </div>
-                                        <div class="text-center">
-                                            <label class="text-sm text-gray-500 dark:text-gray-400">Net Salary</label>
-                                            <p class="text-2xl font-bold text-primary-600" id="overviewNet">$0</p>
-                                        </div>
-                                    </div>
-
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <label class="text-sm text-gray-500 dark:text-gray-400">Pay Group</label>
-                                            <p class="font-medium" id="overviewPayGroup">-</p>
-                                        </div>
-                                        <div>
-                                            <label class="text-sm text-gray-500 dark:text-gray-400">Job Grade/Step</label>
-                                            <p class="font-medium" id="overviewGradeStep">-</p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Quick Actions -->
-                                <div>
-                                    <h4 class="font-bold mb-4">Quick Actions</h4>
-                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                        <button onclick="showDetailTab('payroll')" class="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-left">
-                                            <span class="material-icons-round text-primary-600 mb-2">payments</span>
-                                            <p class="text-sm font-medium">Adjust Salary</p>
-                                            <p class="text-xs text-gray-500">Update payroll components</p>
-                                        </button>
-                                        <button onclick="openModal('promotionModal')" class="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-left">
-                                            <span class="material-icons-round text-green-600 mb-2">trending_up</span>
-                                            <p class="text-sm font-medium">Process Promotion</p>
-                                            <p class="text-xs text-gray-500">Upgrade job grade/step</p>
-                                        </button>
-                                        <button onclick="showDetailTab('kpi')" class="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-left">
-                                            <span class="material-icons-round text-purple-600 mb-2">assessment</span>
-                                            <p class="text-sm font-medium">Update KPI</p>
-                                            <p class="text-xs text-gray-500">Set performance score</p>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Payroll Details Tab -->
-                    <div id="payroll" class="detail-tab-content hidden">
-                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            <!-- Current Payroll -->
-                            <div>
-                                <h4 class="font-bold mb-4">Current Payroll Details</h4>
-                                <div class="bg-gray-50 dark:bg-gray-750 rounded-xl p-6">
-                                    <div class="space-y-4" id="payrollBreakdown">
-                                        <!-- Payroll breakdown will be loaded dynamically -->
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Edit Payroll -->
-                            <div>
-                                <h4 class="font-bold mb-4">Edit Payroll Components</h4>
-                                <div class="space-y-4">
-                                    <div>
-                                        <label class="block text-sm font-medium mb-2">Job Grade/Step</label>
-                                        <div class="flex space-x-3">
-                                            <select id="editJobGrade" class="form-input flex-1" onchange="updateEditJobSteps()">
-                                                <option value="">Select Grade</option>
-                                                <option value="1">Grade 1 - Entry Level</option>
-                                                <option value="2">Grade 2 - Associate</option>
-                                                <option value="3">Grade 3 - Senior Associate</option>
-                                                <option value="4">Grade 4 - Team Lead</option>
-                                                <option value="5">Grade 5 - Manager</option>
-                                                <option value="6">Grade 6 - Senior Manager</option>
-                                                <option value="7">Grade 7 - Director</option>
-                                            </select>
-                                            <select id="editJobStep" class="form-input w-32">
-                                                <option value="">Step</option>
-                                            </select>
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <label class="block text-sm font-medium mb-2">Pay Group</label>
-                                        <select id="editPayGroup" class="form-input">
-                                            <option value="">Select pay group</option>
-                                            <option value="executive">Executive Level</option>
-                                            <option value="mid">Mid Level</option>
-                                            <option value="junior">Junior Level</option>
-                                        </select>
-                                    </div>
-
-                                    <div>
-                                        <label class="block text-sm font-medium mb-2">Additional Allowances</label>
-                                        <div class="space-y-2" id="editAllowances">
-                                            <!-- Allowances will be loaded dynamically -->
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <label class="block text-sm font-medium mb-2">Additional Deductions</label>
-                                        <div class="space-y-2" id="editDeductions">
-                                            <!-- Deductions will be loaded dynamically -->
-                                        </div>
-                                    </div>
-
-                                    <button onclick="updateEmployeePayroll()" class="w-full px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">Update Payroll</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Promotion History Tab -->
-                    <div id="promotion" class="detail-tab-content hidden">
-                        <div class="flex justify-between items-center mb-6">
-                            <h4 class="font-bold">Promotion History</h4>
-                            <button onclick="openModal('promotionModal')" class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
-                                <span class="material-icons-round text-sm mr-2">add</span>
-                                New Promotion
-                            </button>
-                        </div>
-
-                        <div class="space-y-4" id="promotionHistory">
-                            <!-- Promotion history will be loaded dynamically -->
-                        </div>
-                    </div>
-
-                    <!-- KPI Tab -->
-                    <div id="kpi" class="detail-tab-content hidden">
-                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            <!-- Current Performance -->
-                            <div>
-                                <h4 class="font-bold mb-4">Current Performance</h4>
-                                <div class="bg-gray-50 dark:bg-gray-750 rounded-xl p-6" id="kpiDetails">
-                                    <!-- KPI details will be loaded dynamically -->
-                                </div>
-                            </div>
-
-                            <!-- Set KPI Score -->
-                            <div>
-                                <h4 class="font-bold mb-4">Set KPI Score</h4>
-                                <div class="space-y-6">
-                                    <div>
-                                        <label class="block text-sm font-medium mb-2">Overall KPI Score (0-100)</label>
-                                        <input type="range" min="0" max="100" value="0" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" id="kpiScore">
-                                        <div class="flex justify-between mt-2">
-                                            <span class="text-sm text-gray-500">0</span>
-                                            <span class="text-lg font-bold text-primary-600" id="kpiScoreValue">0</span>
-                                            <span class="text-sm text-gray-500">100</span>
-                                        </div>
-                                    </div>
-
-                                    <div class="space-y-4">
-                                        <div>
-                                            <label class="block text-sm font-medium mb-2">Technical Skills (0-50)</label>
-                                            <input type="number" min="0" max="50" class="form-input" value="0" id="technicalSkills">
-                                        </div>
-                                        <div>
-                                            <label class="block text-sm font-medium mb-2">Team Collaboration (0-25)</label>
-                                            <input type="number" min="0" max="25" class="form-input" value="0" id="teamCollaboration">
-                                        </div>
-                                        <div>
-                                            <label class="block text-sm font-medium mb-2">Project Delivery (0-25)</label>
-                                            <input type="number" min="0" max="25" class="form-input" value="0" id="projectDelivery">
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <label class="block text-sm font-medium mb-2">Comments</label>
-                                        <textarea class="form-input h-32" placeholder="Enter performance comments..." id="kpiComments"></textarea>
-                                    </div>
-
-                                    <button onclick="updateKPI()" class="w-full px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">Update KPI Score</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Leave History Tab -->
-                    <div id="leave" class="detail-tab-content hidden">
-                        <div class="flex justify-between items-center mb-6">
-                            <h4 class="font-bold">Leave History</h4>
-                            <button onclick="openModal('addLeaveModal')" class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
-                                <span class="material-icons-round text-sm mr-2">add</span>
-                                Add Leave
-                            </button>
-                        </div>
-
-                        <div class="overflow-x-auto">
-                            <table class="w-full">
-                                <thead>
-                                <tr class="bg-gray-50 dark:bg-gray-750">
-                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Leave Type</th>
-                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Dates</th>
-                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Days</th>
-                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Approved By</th>
-                                </tr>
-                                </thead>
-                                <tbody class="divide-y divide-gray-200 dark:divide-gray-700" id="leaveHistory">
-                                <!-- Leave history will be loaded dynamically -->
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <!-- Documents Tab -->
-                    <div id="documents" class="detail-tab-content hidden">
-                        <div class="flex justify-between items-center mb-6">
-                            <h4 class="font-bold">Employee Documents</h4>
-                            <button onclick="openModal('uploadDocumentModal')" class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
-                                <span class="material-icons-round text-sm mr-2">upload</span>
-                                Upload Document
-                            </button>
-                        </div>
-
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="employeeDocuments">
-                            <!-- Documents will be loaded dynamically -->
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Edit Employee Modal -->
-    <div id="editEmployeeModal" class="fixed inset-0 z-50 hidden">
-        <div class="modal-backdrop fixed inset-0"></div>
-        <div class="fixed inset-0 flex items-center justify-center p-4 custom-scrollbar">
-            <div class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-                <div class="p-6 border-b border-gray-200 dark:border-gray-700">
-                    <div class="flex justify-between items-center">
-                        <h3 class="text-xl font-bold">Edit Employee Information</h3>
-                        <button onclick="closeModal('editEmployeeModal')" class="text-gray-400 hover:text-gray-600">
-                            <span class="material-icons-round">close</span>
-                        </button>
-                    </div>
+                    <button onclick="closeModal('editEmployeeModal')" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+                        <span class="material-icons-round text-2xl">close</span>
+                    </button>
                 </div>
 
                 <div class="p-6">
                     <form id="editEmployeeForm">
                         <input type="hidden" id="editEmployeeId">
-
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <label class="block text-sm font-medium mb-2">Employee Number</label>
-                                <input type="text" id="editEmployeeNumber" class="form-input bg-gray-50 dark:bg-gray-700" readonly>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium mb-2">Email Address</label>
-                                <input type="email" id="editEmail" class="form-input" required>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium mb-2">First Name</label>
-                                <input type="text" id="editFirstName" class="form-input" required>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium mb-2">Last Name</label>
-                                <input type="text" id="editLastName" class="form-input" required>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium mb-2">Phone Number</label>
-                                <input type="tel" id="editPhone" class="form-input">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium mb-2">Date of Birth</label>
-                                <input type="date" id="editDateOfBirth" class="form-input">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium mb-2">Department</label>
-                                <select id="editDepartment" class="form-input" required>
-                                    <option value="">Select department</option>
-                                    <option value="engineering">Engineering</option>
-                                    <option value="sales">Sales</option>
-                                    <option value="marketing">Marketing</option>
-                                    <option value="operations">Operations</option>
-                                    <option value="hr">Human Resources</option>
-                                    <option value="finance">Finance</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium mb-2">Job Title</label>
-                                <input type="text" id="editJobTitle" class="form-input">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium mb-2">Date of Hire</label>
-                                <input type="date" id="editDateOfHire" class="form-input" required>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium mb-2">Employment Status</label>
-                                <select id="editEmploymentStatus" class="form-input" required>
-                                    <option value="ACTIVE">Active</option>
-                                    <option value="PROBATION">Probation</option>
-                                    <option value="ON_LEAVE">On Leave</option>
-                                    <option value="TERMINATED">Terminated</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium mb-2">Record Status</label>
-                                <select id="editRecordStatus" class="form-input" required>
-                                    <option value="ACTIVE">Active</option>
-                                    <option value="INACTIVE">Inactive</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium mb-2">Reporting Manager</label>
-                                <select id="editReportingManager" class="form-input">
-                                    <option value="">Select manager</option>
-                                    <!-- Managers will be loaded dynamically -->
-                                </select>
+                        <div class="mb-6">
+                            <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4 flex items-center">
+                                <span class="material-icons-round text-sm mr-2">person</span>
+                                Personal Information
+                            </h4>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">First Name</label>
+                                    <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                                            <span class="material-icons-round text-sm">badge</span>
+                                        </span>
+                                        <input type="text" id="editFirstName" class="form-input pl-10" required>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Last Name</label>
+                                    <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                                            <span class="material-icons-round text-sm">badge</span>
+                                        </span>
+                                        <input type="text" id="editLastName" class="form-input pl-10" required>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        <div class="mt-6">
-                            <label class="block text-sm font-medium mb-2">Address</label>
-                            <textarea id="editAddress" class="form-input h-24"></textarea>
+                        <div class="mb-6">
+                            <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4 flex items-center">
+                                <span class="material-icons-round text-sm mr-2">contact_mail</span>
+                                Contact Information
+                            </h4>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email Address</label>
+                                    <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                                            <span class="material-icons-round text-sm">email</span>
+                                        </span>
+                                        <input type="email" id="editEmail" class="form-input pl-10" required>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone Number</label>
+                                    <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                                            <span class="material-icons-round text-sm">phone</span>
+                                        </span>
+                                        <input type="text" id="editPhoneNumber" class="form-input pl-10">
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
-                        <div class="flex justify-end space-x-3 pt-6 mt-6 border-t border-gray-200 dark:border-gray-700">
-                            <button type="button" onclick="closeModal('editEmployeeModal')" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">Cancel</button>
-                            <button type="submit" class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">Save Changes</button>
+                        <div class="mb-6">
+                            <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4 flex items-center">
+                                <span class="material-icons-round text-sm mr-2">work</span>
+                                Employment Details
+                            </h4>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Employment Status</label>
+                                    <select id="editEmploymentStatus" class="form-input" required>
+                                        <option value="ONBOARDING">Onboarding</option>
+                                        <option value="ACTIVE">Active</option>
+                                        <option value="PROBATION">Probation</option>
+                                        <option value="ON_LEAVE">On Leave</option>
+                                        <option value="TERMINATED">Terminated</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Department</label>
+                                    <select id="editDepartmentId" class="form-input" required>
+                                        <option value="">Select Department</option>
+                                        <option th:each="dept : ${departments}" th:value="${dept.id}" th:text="${dept.name}">Engineering</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Job Step</label>
+                                    <select id="editJobStepId" class="form-input" required>
+                                        <option value="">Select Job Step</option>
+                                        <option value="1">Grade 1 – Step 1</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Pay Group</label>
+                                    <select id="editPayGroupId" class="form-input" required>
+                                        <option value="">Select Pay Group</option>
+                                        <option th:each="pg : ${payGroups}" th:value="${pg.id}" th:text="${pg.name}">Executive</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                            <button type="button" onclick="closeModal('editEmployeeModal')" class="px-5 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                                Cancel
+                            </button>
+                            <button type="submit" class="px-5 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors shadow-sm hover:shadow flex items-center space-x-1">
+                                <span class="material-icons-round text-sm">save</span>
+                                <span>Save Changes</span>
+                            </button>
                         </div>
                     </form>
                 </div>
@@ -817,113 +560,28 @@
         </div>
     </div>
 
-    <!-- Promotion Modal -->
-    <div id="promotionModal" class="fixed inset-0 z-50 hidden">
-        <div class="modal-backdrop fixed inset-0"></div>
+    <!-- View Employee Modal -->
+    <div id="viewEmployeeModal" class="fixed inset-0 z-50 hidden modal-transition" onclick="if(event.target === this) closeModal('viewEmployeeModal')">
+        <div class="modal-backdrop fixed inset-0 bg-black bg-opacity-50"></div>
         <div class="fixed inset-0 flex items-center justify-center p-4">
-            <div class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md p-6">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-lg font-bold">Process Promotion</h3>
-                    <button onclick="closeModal('promotionModal')" class="text-gray-400 hover:text-gray-600">
-                        <span class="material-icons-round">close</span>
+            <div class="modal-content bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md shadow-2xl">
+                <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2 bg-primary-100 dark:bg-primary-900/30 rounded-full">
+                            <span class="material-icons-round text-primary-600 dark:text-primary-400 text-2xl">visibility</span>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-900 dark:text-white" id="viewName">Employee Details</h3>
+                    </div>
+                    <button onclick="closeModal('viewEmployeeModal')" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+                        <span class="material-icons-round text-2xl">close</span>
                     </button>
                 </div>
-                <form id="promotionForm">
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium mb-2">Employee</label>
-                            <select id="promotionEmployee" class="form-input" required>
-                                <option value="">Select employee</option>
-                                <!-- Employees will be loaded dynamically -->
-                            </select>
-                        </div>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium mb-2">Current Grade</label>
-                                <input type="text" id="currentGrade" class="form-input bg-gray-50 dark:bg-gray-700" readonly>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium mb-2">New Grade</label>
-                                <select id="newGrade" class="form-input" required>
-                                    <option value="">Select grade</option>
-                                    <option value="1">Grade 1</option>
-                                    <option value="2">Grade 2</option>
-                                    <option value="3">Grade 3</option>
-                                    <option value="4">Grade 4</option>
-                                    <option value="5">Grade 5</option>
-                                    <option value="6">Grade 6</option>
-                                    <option value="7">Grade 7</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium mb-2">Current Step</label>
-                                <input type="text" id="currentStep" class="form-input bg-gray-50 dark:bg-gray-700" readonly>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium mb-2">New Step</label>
-                                <select id="newStep" class="form-input" required>
-                                    <option value="">Select step</option>
-                                    <option value="1">Step 1</option>
-                                    <option value="2">Step 2</option>
-                                    <option value="3">Step 3</option>
-                                    <option value="4">Step 4</option>
-                                    <option value="5">Step 5</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-2">New Basic Salary ($)</label>
-                            <input type="number" id="newSalary" class="form-input" placeholder="Enter new salary" required>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-2">Promotion Reason</label>
-                            <textarea id="promotionReason" class="form-input h-24" placeholder="Enter promotion reason..." required></textarea>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-2">Effective Date</label>
-                            <input type="date" id="promotionDate" class="form-input" required>
-                        </div>
-                        <div class="flex justify-end space-x-3 pt-4">
-                            <button type="button" onclick="closeModal('promotionModal')" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">Cancel</button>
-                            <button type="submit" class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">Process Promotion</button>
-                        </div>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- Bulk Actions Modal -->
-    <div id="bulkActionsModal" class="fixed inset-0 z-50 hidden">
-        <div class="modal-backdrop fixed inset-0"></div>
-        <div class="fixed inset-0 flex items-center justify-center p-4">
-            <div class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md p-6">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-lg font-bold">Bulk Actions</h3>
-                    <button onclick="closeModal('bulkActionsModal')" class="text-gray-400 hover:text-gray-600">
-                        <span class="material-icons-round">close</span>
-                    </button>
-                </div>
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium mb-2">Select Action</label>
-                        <select id="bulkAction" class="form-input">
-                            <option value="">Select action</option>
-                            <option value="update_paygroup">Update Pay Group</option>
-                            <option value="update_status">Update Employment Status</option>
-                            <option value="update_department">Update Department</option>
-                            <option value="send_email">Send Email</option>
-                            <option value="export_selected">Export Selected</option>
-                        </select>
-                    </div>
-                    <div id="bulkActionDetails" class="space-y-4 hidden">
-                        <!-- Action details will be shown based on selection -->
-                    </div>
-                    <div class="flex justify-end space-x-3 pt-4">
-                        <button type="button" onclick="closeModal('bulkActionsModal')" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">Cancel</button>
-                        <button type="button" onclick="executeBulkAction()" class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">Execute</button>
+                <div class="p-6">
+                    <div class="space-y-3 text-gray-700 dark:text-gray-300" id="viewDetails"></div>
+                    <div class="mt-6 flex justify-end">
+                        <button onclick="closeModal('viewEmployeeModal')" class="px-5 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">
+                            Close
+                        </button>
                     </div>
                 </div>
             </div>
@@ -931,1108 +589,68 @@
     </div>
 
     <script>
-        // Data models based on the entities provided
-        const employees = [
-            {
-                id: 1,
-                employeeNumber: 'EMP-00123',
-                firstName: 'Sarah',
-                lastName: 'Jenkins',
-                email: 'sarah.j@company.com',
-                phone: '+1 (555) 123-4567',
-                dateOfBirth: '1990-03-15',
-                address: '123 Main St, San Francisco, CA',
-                department: 'Engineering',
-                jobTitle: 'Software Engineer',
-                jobGrade: 6,
-                jobStep: 2,
-                dateOfHire: '2022-01-15',
-                employmentStatus: 'ACTIVE',
-                recordStatus: 'ACTIVE',
-                payGroup: 'mid',
-                reportingManager: 'Alex Morgan',
-                basicSalary: 5000.00,
-                avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=48&h=48&q=80',
-                kpiScore: 92,
-                promotionHistory: [
-                    { date: '2023-01-15', fromGrade: 5, toGrade: 6, fromStep: 3, toStep: 1, reason: 'Performance-based promotion', salary: 5000 },
-                    { date: '2022-07-01', fromGrade: 4, toGrade: 5, fromStep: 4, toStep: 2, reason: 'Probation completion', salary: 4200 }
-                ],
-                leaveHistory: [
-                    { type: 'Annual PTO', startDate: '2023-12-20', endDate: '2023-12-29', days: 8, status: 'Approved', approvedBy: 'Alex Morgan' },
-                    { type: 'Sick Leave', startDate: '2023-11-15', endDate: '2023-11-16', days: 2, status: 'Approved', approvedBy: 'Alex Morgan' }
-                ]
-            },
-            {
-                id: 2,
-                employeeNumber: 'EMP-00456',
-                firstName: 'Mike',
-                lastName: 'Ross',
-                email: 'mike.r@company.com',
-                phone: '+1 (555) 987-6543',
-                dateOfBirth: '1988-07-22',
-                address: '456 Oak Ave, New York, NY',
-                department: 'Sales',
-                jobTitle: 'Sales Manager',
-                jobGrade: 5,
-                jobStep: 3,
-                dateOfHire: '2023-03-22',
-                employmentStatus: 'PROBATION',
-                recordStatus: 'ACTIVE',
-                payGroup: 'mid',
-                reportingManager: 'Sarah Chen',
-                basicSalary: 4500.00,
-                avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=48&h=48&q=80',
-                kpiScore: 85,
-                promotionHistory: [],
-                leaveHistory: []
-            },
-            {
-                id: 3,
-                employeeNumber: 'EMP-00789',
-                firstName: 'John',
-                lastName: 'Doe',
-                email: 'john.d@company.com',
-                phone: '+1 (555) 456-7890',
-                dateOfBirth: '1995-01-15',
-                address: '789 Pine St, Chicago, IL',
-                department: 'Engineering',
-                jobTitle: 'Junior Developer',
-                jobGrade: 3,
-                jobStep: 1,
-                dateOfHire: '2024-01-15',
-                employmentStatus: 'PROBATION',
-                recordStatus: 'ACTIVE',
-                payGroup: 'junior',
-                reportingManager: 'Sarah Jenkins',
-                basicSalary: 4500.00,
-                avatar: null,
-                kpiScore: 78,
-                promotionHistory: [],
-                leaveHistory: []
-            },
-            {
-                id: 4,
-                employeeNumber: 'EMP-00234',
-                firstName: 'Sophia',
-                lastName: 'Miller',
-                email: 'sophia.m@company.com',
-                phone: '+1 (555) 234-5678',
-                dateOfBirth: '1985-11-30',
-                address: '321 Elm St, Boston, MA',
-                department: 'Product',
-                jobTitle: 'Product Director',
-                jobGrade: 7,
-                jobStep: 2,
-                dateOfHire: '2020-06-01',
-                employmentStatus: 'ACTIVE',
-                recordStatus: 'ACTIVE',
-                payGroup: 'executive',
-                reportingManager: 'CEO',
-                basicSalary: 12500.00,
-                avatar: null,
-                kpiScore: 95,
-                promotionHistory: [
-                    { date: '2022-01-01', fromGrade: 6, toGrade: 7, fromStep: 3, toStep: 1, reason: 'Executive promotion', salary: 12500 },
-                    { date: '2020-12-01', fromGrade: 5, toGrade: 6, fromStep: 5, toStep: 3, reason: 'Performance excellence', salary: 10000 }
-                ],
-                leaveHistory: [
-                    { type: 'Maternity Leave', startDate: '2023-08-01', endDate: '2023-10-31', days: 92, status: 'Approved', approvedBy: 'HR Department' }
-                ]
-            }
-        ];
-
-        const jobSteps = [
-            { gradeId: 1, stepLevel: 1, baseSalary: 1500.00 },
-            { gradeId: 1, stepLevel: 2, baseSalary: 1800.00 },
-            { gradeId: 1, stepLevel: 3, baseSalary: 2100.00 },
-            { gradeId: 1, stepLevel: 4, baseSalary: 2400.00 },
-            { gradeId: 1, stepLevel: 5, baseSalary: 2700.00 },
-            { gradeId: 2, stepLevel: 1, baseSalary: 2800.00 },
-            { gradeId: 2, stepLevel: 2, baseSalary: 3200.00 },
-            { gradeId: 2, stepLevel: 3, baseSalary: 3600.00 },
-            { gradeId: 2, stepLevel: 4, baseSalary: 4000.00 },
-            { gradeId: 2, stepLevel: 5, baseSalary: 4400.00 },
-            { gradeId: 3, stepLevel: 1, baseSalary: 4500.00 },
-            { gradeId: 3, stepLevel: 2, baseSalary: 5000.00 },
-            { gradeId: 3, stepLevel: 3, baseSalary: 5500.00 },
-            { gradeId: 3, stepLevel: 4, baseSalary: 6000.00 },
-            { gradeId: 3, stepLevel: 5, baseSalary: 6500.00 },
-            { gradeId: 4, stepLevel: 1, baseSalary: 7000.00 },
-            { gradeId: 4, stepLevel: 2, baseSalary: 7500.00 },
-            { gradeId: 4, stepLevel: 3, baseSalary: 8000.00 },
-            { gradeId: 4, stepLevel: 4, baseSalary: 8500.00 },
-            { gradeId: 4, stepLevel: 5, baseSalary: 9000.00 },
-            { gradeId: 5, stepLevel: 1, baseSalary: 9500.00 },
-            { gradeId: 5, stepLevel: 2, baseSalary: 10000.00 },
-            { gradeId: 5, stepLevel: 3, baseSalary: 10500.00 },
-            { gradeId: 5, stepLevel: 4, baseSalary: 11000.00 },
-            { gradeId: 5, stepLevel: 5, baseSalary: 11500.00 },
-            { gradeId: 6, stepLevel: 1, baseSalary: 12000.00 },
-            { gradeId: 6, stepLevel: 2, baseSalary: 12500.00 },
-            { gradeId: 6, stepLevel: 3, baseSalary: 13000.00 },
-            { gradeId: 6, stepLevel: 4, baseSalary: 13500.00 },
-            { gradeId: 6, stepLevel: 5, baseSalary: 14000.00 },
-            { gradeId: 7, stepLevel: 1, baseSalary: 14500.00 },
-            { gradeId: 7, stepLevel: 2, baseSalary: 15000.00 },
-            { gradeId: 7, stepLevel: 3, baseSalary: 15500.00 },
-            { gradeId: 7, stepLevel: 4, baseSalary: 16000.00 },
-            { gradeId: 7, stepLevel: 5, baseSalary: 16500.00 }
-        ];
-
-        const paygroups = {
-            executive: {
-                name: 'Executive Level',
-                allowances: [1200, 400, 2000, 300], // Housing, Transport, Bonus, Fuel
-                deductions: [150, 15, 5, 100] // Insurance, Tax %, Pension %, Life Insurance
-            },
-            mid: {
-                name: 'Mid Level',
-                allowances: [400, 200], // Transport, Medical
-                deductions: [150, 15, 5] // Insurance, Tax %, Pension %
-            },
-            junior: {
-                name: 'Junior Level',
-                allowances: [400], // Transport
-                deductions: [150, 15, 5] // Insurance, Tax %, Pension %
-            }
-        };
-
-        let currentPage = 1;
-        let itemsPerPage = 10;
-        let currentEmployeeId = null;
-        let selectedEmployees = new Set();
-
-        // Initialize the page
-        document.addEventListener('DOMContentLoaded', function() {
-            loadEmployeeTable();
-            updateStats();
-            setupEventListeners();
-
-            // Initialize tabs
-            initializeTabs();
-
-            // Initialize theme
-            initializeTheme();
-        });
-
-        function loadEmployeeTable() {
-            const tbody = document.getElementById('employeeTableBody');
-            tbody.innerHTML = '';
-
-            const filteredEmployees = getFilteredEmployees();
-            const paginatedEmployees = getPaginatedEmployees(filteredEmployees);
-
-            paginatedEmployees.forEach(employee => {
-                const row = document.createElement('tr');
-                row.className = 'hover:bg-gray-50 dark:hover:bg-gray-750 cursor-pointer';
-                row.onclick = () => openEmployeeDetail(employee.id);
-
-                const avatar = employee.avatar
-                    ? `<img src="${employee.avatar}" class="w-10 h-10 rounded-full">`
-                    : `<div class="avatar-placeholder bg-blue-100 text-blue-600">${employee.firstName[0]}${employee.lastName[0]}</div>`;
-
-                const employmentStatusClass = `employment-status-${employee.employmentStatus.toLowerCase().replace('_', '-')}`;
-                const employmentStatusText = employee.employmentStatus.replace('_', ' ');
-
-                row.innerHTML = `
-                    <td class="px-4 md:px-6 py-4">
-                        <div class="flex items-center">
-                            ${avatar}
-                            <div class="ml-4">
-                                <div class="text-sm font-medium">${employee.firstName} ${employee.lastName}</div>
-                                <div class="text-sm text-gray-500 dark:text-gray-400">${employee.employeeNumber}</div>
-                                <div class="text-xs text-gray-500">${employee.email}</div>
-                            </div>
-                        </div>
-                    </td>
-                    <td class="px-4 md:px-6 py-4">
-                        <div class="text-sm">${employee.department}</div>
-                        <div class="text-xs text-gray-500">${employee.jobTitle}</div>
-                    </td>
-                    <td class="px-4 md:px-6 py-4">
-                        <span class="grade-badge grade-${employee.jobGrade}">Grade ${employee.jobGrade}</span>
-                        <span class="text-xs text-gray-500 ml-2">Step ${employee.jobStep}</span>
-                        <div class="text-xs text-gray-500 mt-1">$${employee.basicSalary.toFixed(2)}</div>
-                    </td>
-                    <td class="px-4 md:px-6 py-4">
-                        <div class="text-sm">${paygroups[employee.payGroup]?.name || employee.payGroup}</div>
-                    </td>
-                    <td class="px-4 md:px-6 py-4">
-                        <div class="text-sm text-gray-500">${formatDate(employee.dateOfHire)}</div>
-                    </td>
-                    <td class="px-4 md:px-6 py-4">
-                        <span class="badge ${employmentStatusClass}">${employmentStatusText}</span>
-                        ${employee.recordStatus === 'INACTIVE' ? '<span class="badge record-status-inactive ml-1">Inactive</span>' : ''}
-                    </td>
-                    <td class="px-4 md:px-6 py-4">
-                        <div class="flex space-x-2">
-                            <button onclick="event.stopPropagation(); openEmployeeDetail(${employee.id})" class="text-primary-600 hover:text-primary-700 text-sm font-medium">View</button>
-                            <button onclick="event.stopPropagation(); editEmployee(${employee.id})" class="text-green-600 hover:text-green-700 text-sm font-medium">Edit</button>
-                        </div>
-                    </td>
-                `;
-
-                tbody.appendChild(row);
-            });
-
-            updatePagination(filteredEmployees.length);
-        }
-
-        function getFilteredEmployees() {
-            const department = document.getElementById('departmentFilter').value.toLowerCase();
-            const employmentStatus = document.getElementById('employmentStatusFilter').value;
-            const grade = document.getElementById('gradeFilter').value;
-            const paygroup = document.getElementById('paygroupFilter').value;
-            const searchTerm = document.getElementById('searchInput')?.value.toLowerCase() || '';
-
-            return employees.filter(employee => {
-                let match = true;
-
-                if (department && !employee.department.toLowerCase().includes(department)) {
-                    match = false;
-                }
-
-                if (employmentStatus && employee.employmentStatus !== employmentStatus) {
-                    match = false;
-                }
-
-                if (grade && employee.jobGrade != grade) {
-                    match = false;
-                }
-
-                if (paygroup && employee.payGroup !== paygroup) {
-                    match = false;
-                }
-
-                if (searchTerm) {
-                    const searchText = `${employee.firstName} ${employee.lastName} ${employee.employeeNumber} ${employee.email} ${employee.department} ${employee.jobTitle}`.toLowerCase();
-                    if (!searchText.includes(searchTerm)) {
-                        match = false;
-                    }
-                }
-
-                return match;
-            });
-        }
-
-        function getPaginatedEmployees(filteredEmployees) {
-            const startIndex = (currentPage - 1) * itemsPerPage;
-            const endIndex = startIndex + itemsPerPage;
-            return filteredEmployees.slice(startIndex, endIndex);
-        }
-
-        function updatePagination(totalItems) {
-            const totalPages = Math.ceil(totalItems / itemsPerPage);
-
-            document.getElementById('showingFrom').textContent = Math.min((currentPage - 1) * itemsPerPage + 1, totalItems);
-            document.getElementById('showingTo').textContent = Math.min(currentPage * itemsPerPage, totalItems);
-            document.getElementById('totalResults').textContent = totalItems;
-
-            const paginationNumbers = document.getElementById('paginationNumbers');
-            paginationNumbers.innerHTML = '';
-
-            for (let i = 1; i <= totalPages; i++) {
-                if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
-                    const button = document.createElement('button');
-                    button.className = `px-3 py-1 border rounded text-sm ${i === currentPage ? 'bg-primary-600 text-white border-primary-600' : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'}`;
-                    button.textContent = i;
-                    button.onclick = () => {
-                        currentPage = i;
-                        loadEmployeeTable();
-                    };
-                    paginationNumbers.appendChild(button);
-                } else if (i === currentPage - 2 || i === currentPage + 2) {
-                    const span = document.createElement('span');
-                    span.className = 'px-2';
-                    span.textContent = '...';
-                    paginationNumbers.appendChild(span);
-                }
-            }
-
-            document.getElementById('prevPage').disabled = currentPage === 1;
-            document.getElementById('nextPage').disabled = currentPage === totalPages || totalPages === 0;
-
-            document.getElementById('prevPage').onclick = () => {
-                if (currentPage > 1) {
-                    currentPage--;
-                    loadEmployeeTable();
-                }
-            };
-
-            document.getElementById('nextPage').onclick = () => {
-                if (currentPage < totalPages) {
-                    currentPage++;
-                    loadEmployeeTable();
-                }
-            };
-        }
-
-        function updateStats() {
-            const totalEmployees = employees.length;
-            const activeEmployees = employees.filter(e => e.employmentStatus === 'ACTIVE').length;
-            const probationEmployees = employees.filter(e => e.employmentStatus === 'PROBATION').length;
-            const avgKPI = Math.round(employees.reduce((sum, e) => sum + e.kpiScore, 0) / employees.length);
-
-            document.getElementById('employeeCount').textContent = totalEmployees;
-            document.getElementById('totalEmployees').textContent = totalEmployees;
-            document.getElementById('activeEmployees').textContent = `${activeEmployees} active`;
-            document.getElementById('probationCount').textContent = probationEmployees;
-            document.getElementById('probationEnding').textContent = `${Math.floor(probationEmployees * 0.3)} ending this week`;
-            document.getElementById('avgKPI').textContent = avgKPI;
-        }
-
-        function openEmployeeDetail(employeeId) {
-            currentEmployeeId = employeeId;
-            const employee = employees.find(e => e.id === employeeId);
-            if (!employee) return;
-
-            // Set basic info
-            document.getElementById('detailName').textContent = `${employee.firstName} ${employee.lastName}`;
-            document.getElementById('detailInfo').textContent = `${employee.jobTitle} • ${employee.employeeNumber}`;
-
-            // Set avatar
-            const avatarDiv = document.getElementById('detailAvatar');
-            if (employee.avatar) {
-                avatarDiv.innerHTML = `<img src="${employee.avatar}" class="w-16 h-16 rounded-full">`;
-            } else {
-                avatarDiv.textContent = `${employee.firstName[0]}${employee.lastName[0]}`;
-                avatarDiv.className = 'w-16 h-16 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xl font-bold';
-            }
-
-            // Load basic info
-            document.getElementById('basicInfoDetails').innerHTML = `
-                <div>
-                    <label class="text-sm text-gray-500 dark:text-gray-400">Email</label>
-                    <p class="font-medium">${employee.email}</p>
-                </div>
-                <div>
-                    <label class="text-sm text-gray-500 dark:text-gray-400">Phone</label>
-                    <p class="font-medium">${employee.phone || 'Not provided'}</p>
-                </div>
-                <div>
-                    <label class="text-sm text-gray-500 dark:text-gray-400">Date of Birth</label>
-                    <p class="font-medium">${employee.dateOfBirth ? formatDate(employee.dateOfBirth) : 'Not provided'}</p>
-                </div>
-                <div>
-                    <label class="text-sm text-gray-500 dark:text-gray-400">Address</label>
-                    <p class="font-medium">${employee.address || 'Not provided'}</p>
-                </div>
-            `;
-
-            // Load HR info
-            const employmentStatusClass = `employment-status-${employee.employmentStatus.toLowerCase().replace('_', '-')}`;
-            const employmentStatusText = employee.employmentStatus.replace('_', ' ');
-
-            document.getElementById('hrInfoDetails').innerHTML = `
-                <div>
-                    <label class="text-sm text-gray-500 dark:text-gray-400">Department</label>
-                    <p class="font-medium">${employee.department}</p>
-                </div>
-                <div>
-                    <label class="text-sm text-gray-500 dark:text-gray-400">Job Title</label>
-                    <p class="font-medium">${employee.jobTitle}</p>
-                </div>
-                <div>
-                    <label class="text-sm text-gray-500 dark:text-gray-400">Job Grade/Step</label>
-                    <p class="font-medium">
-                        <span class="grade-badge grade-${employee.jobGrade}">Grade ${employee.jobGrade}</span>
-                        <span class="ml-2">Step ${employee.jobStep}</span>
-                    </p>
-                </div>
-                <div>
-                    <label class="text-sm text-gray-500 dark:text-gray-400">Join Date</label>
-                    <p class="font-medium">${formatDate(employee.dateOfHire)}</p>
-                </div>
-                <div>
-                    <label class="text-sm text-gray-500 dark:text-gray-400">Reporting Manager</label>
-                    <p class="font-medium">${employee.reportingManager || 'Not assigned'}</p>
-                </div>
-                <div>
-                    <label class="text-sm text-gray-500 dark:text-gray-400">Status</label>
-                    <div class="flex space-x-2">
-                        <span class="badge ${employmentStatusClass}">${employmentStatusText}</span>
-                        ${employee.recordStatus === 'INACTIVE' ? '<span class="badge record-status-inactive">Inactive</span>' : ''}
-                    </div>
-                </div>
-            `;
-
-            // Load payroll summary
-            const paygroup = paygroups[employee.payGroup];
-            const basicSalary = employee.basicSalary;
-            const allowanceTotal = paygroup ? paygroup.allowances.reduce((sum, a) => sum + a, 0) : 0;
-            const deductionTotal = paygroup ? calculateDeductions(basicSalary, paygroup.deductions) : 0;
-            const netSalary = basicSalary + allowanceTotal - deductionTotal;
-
-            document.getElementById('overviewBasic').textContent = `$${basicSalary.toFixed(2)}`;
-            document.getElementById('overviewAllowances').textContent = `+ $${allowanceTotal.toFixed(2)}`;
-            document.getElementById('overviewDeductions').textContent = `- $${deductionTotal.toFixed(2)}`;
-            document.getElementById('overviewNet').textContent = `$${netSalary.toFixed(2)}`;
-            document.getElementById('overviewPayGroup').textContent = paygroup?.name || employee.payGroup;
-            document.getElementById('overviewGradeStep').textContent = `Grade ${employee.jobGrade} • Step ${employee.jobStep}`;
-
-            // Load payroll breakdown
-            let payrollBreakdown = `
-                <div class="flex justify-between items-center">
-                    <span>Basic Salary</span>
-                    <span class="font-bold">$${basicSalary.toFixed(2)}</span>
-                </div>
-            `;
-
-            if (paygroup?.allowances?.length) {
-                paygroup.allowances.forEach((allowance, index) => {
-                    payrollBreakdown += `
-                        <div class="flex justify-between items-center text-green-600">
-                            <span>${index === 0 ? 'Housing' : index === 1 ? 'Transport' : index === 2 ? 'Bonus' : 'Fuel'} Allowance</span>
-                            <span class="font-bold">+ $${allowance.toFixed(2)}</span>
-                        </div>
-                    `;
-                });
-            }
-
-            if (paygroup?.deductions?.length) {
-                payrollBreakdown += `
-                    <div class="flex justify-between items-center text-red-600">
-                        <span>Health Insurance</span>
-                        <span class="font-bold">- $${paygroup.deductions[0].toFixed(2)}</span>
-                    </div>
-                    <div class="flex justify-between items-center text-red-600">
-                        <span>Tax (${paygroup.deductions[1]}%)</span>
-                        <span class="font-bold">- $${(basicSalary * paygroup.deductions[1] / 100).toFixed(2)}</span>
-                    </div>
-                    <div class="flex justify-between items-center text-red-600">
-                        <span>Pension (${paygroup.deductions[2]}%)</span>
-                        <span class="font-bold">- $${(basicSalary * paygroup.deductions[2] / 100).toFixed(2)}</span>
-                    </div>
-                `;
-            }
-
-            payrollBreakdown += `
-                <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
-                    <div class="flex justify-between items-center">
-                        <span class="font-bold">Net Salary</span>
-                        <span class="text-2xl font-bold text-primary-600">$${netSalary.toFixed(2)}</span>
-                    </div>
-                </div>
-            `;
-
-            document.getElementById('payrollBreakdown').innerHTML = payrollBreakdown;
-
-            // Load promotion history
-            let promotionHistoryHTML = '';
-            if (employee.promotionHistory?.length) {
-                employee.promotionHistory.forEach(promo => {
-                    promotionHistoryHTML += `
-                        <div class="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
-                            <div class="flex justify-between items-start mb-2">
-                                <div>
-                                    <p class="font-bold">Grade ${promo.fromGrade} to Grade ${promo.toGrade}</p>
-                                    <p class="text-sm text-gray-500 dark:text-gray-400">Step ${promo.fromStep} to Step ${promo.toStep}</p>
-                                </div>
-                                <span class="text-sm text-gray-500">${formatDate(promo.date)}</span>
-                            </div>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label class="text-xs text-gray-500">Previous Salary</label>
-                                    <p class="font-medium">$${(promo.salary * 0.8).toFixed(2)}</p>
-                                </div>
-                                <div>
-                                    <label class="text-xs text-gray-500">New Salary</label>
-                                    <p class="font-medium text-green-600">$${promo.salary.toFixed(2)}</p>
-                                </div>
-                            </div>
-                            <p class="text-sm mt-2">${promo.reason}</p>
-                        </div>
-                    `;
-                });
-            } else {
-                promotionHistoryHTML = '<p class="text-gray-500 text-center py-8">No promotion history available</p>';
-            }
-            document.getElementById('promotionHistory').innerHTML = promotionHistoryHTML;
-
-            // Load KPI details
-            const kpiColor = employee.kpiScore >= 90 ? 'text-green-600' : employee.kpiScore >= 70 ? 'text-yellow-600' : 'text-red-600';
-            const kpiLabel = employee.kpiScore >= 90 ? 'Excellent' : employee.kpiScore >= 70 ? 'Good' : 'Needs Improvement';
-
-            document.getElementById('kpiDetails').innerHTML = `
-                <div class="text-center mb-6">
-                    <div class="inline-flex items-center justify-center w-32 h-32 rounded-full border-8 border-primary-100 dark:border-primary-900">
-                        <div class="text-center">
-                            <span class="text-3xl font-bold ${kpiColor}">${employee.kpiScore}</span>
-                            <span class="text-gray-500">/100</span>
-                        </div>
-                    </div>
-                    <p class="text-lg font-bold mt-4">${kpiLabel} Performance</p>
-                    <p class="text-gray-500">Last updated: ${formatDate(new Date().toISOString().split('T')[0])}</p>
-                </div>
-
-                <div class="space-y-3">
-                    <div>
-                        <div class="flex justify-between text-sm mb-1">
-                            <span>Technical Skills</span>
-                            <span class="font-bold">${Math.round(employee.kpiScore * 0.5)}/50</span>
-                        </div>
-                        <div class="progress-bar">
-                            <div class="progress-fill bg-green-500" style="width: ${employee.kpiScore}%"></div>
-                        </div>
-                    </div>
-                    <div>
-                        <div class="flex justify-between text-sm mb-1">
-                            <span>Team Collaboration</span>
-                            <span class="font-bold">${Math.round(employee.kpiScore * 0.25)}/25</span>
-                        </div>
-                        <div class="progress-bar">
-                            <div class="progress-fill bg-blue-500" style="width: ${employee.kpiScore}%"></div>
-                        </div>
-                    </div>
-                    <div>
-                        <div class="flex justify-between text-sm mb-1">
-                            <span>Project Delivery</span>
-                            <span class="font-bold">${Math.round(employee.kpiScore * 0.25)}/25</span>
-                        </div>
-                        <div class="progress-bar">
-                            <div class="progress-fill bg-purple-500" style="width: ${employee.kpiScore}%"></div>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            // Set KPI form values
-            document.getElementById('kpiScore').value = employee.kpiScore;
-            document.getElementById('kpiScoreValue').textContent = employee.kpiScore;
-            document.getElementById('technicalSkills').value = Math.round(employee.kpiScore * 0.5);
-            document.getElementById('teamCollaboration').value = Math.round(employee.kpiScore * 0.25);
-            document.getElementById('projectDelivery').value = Math.round(employee.kpiScore * 0.25);
-
-            // Load leave history
-            let leaveHistoryHTML = '';
-            if (employee.leaveHistory?.length) {
-                employee.leaveHistory.forEach(leave => {
-                    leaveHistoryHTML += `
-                        <tr>
-                            <td class="px-4 py-4">
-                                <div class="text-sm font-medium">${leave.type}</div>
-                                <div class="text-xs text-gray-500">${leave.type.includes('Sick') ? 'Medical' : leave.type.includes('Maternity') ? 'Parental' : 'Vacation'}</div>
-                            </td>
-                            <td class="px-4 py-4">
-                                <div class="text-sm">${formatDate(leave.startDate)} - ${formatDate(leave.endDate)}</div>
-                            </td>
-                            <td class="px-4 py-4">
-                                <div class="text-sm">${leave.days} days</div>
-                            </td>
-                            <td class="px-4 py-4">
-                                <span class="badge badge-success">${leave.status}</span>
-                            </td>
-                            <td class="px-4 py-4">
-                                <div class="text-sm">${leave.approvedBy}</div>
-                            </td>
-                        </tr>
-                    `;
-                });
-            } else {
-                leaveHistoryHTML = `
-                    <tr>
-                        <td colspan="5" class="px-4 py-8 text-center text-gray-500">
-                            No leave history available
-                        </td>
-                    </tr>
-                `;
-            }
-            document.getElementById('leaveHistory').innerHTML = leaveHistoryHTML;
-
-            // Show documents tab placeholder
-            document.getElementById('employeeDocuments').innerHTML = `
-                <div class="col-span-full text-center py-12 text-gray-500">
-                    <span class="material-icons-round text-4xl mb-4">folder_open</span>
-                    <p>No documents uploaded yet</p>
-                </div>
-            `;
-
-            openModal('employeeDetailModal');
-            showDetailTab('overview');
-        }
-
-        function editEmployee(employeeId) {
-            currentEmployeeId = employeeId;
-            const employee = employees.find(e => e.id === employeeId);
-            if (!employee) return;
-
-            // Populate form
-            document.getElementById('editEmployeeId').value = employee.id;
-            document.getElementById('editEmployeeNumber').value = employee.employeeNumber;
-            document.getElementById('editEmail').value = employee.email;
-            document.getElementById('editFirstName').value = employee.firstName;
-            document.getElementById('editLastName').value = employee.lastName;
-            document.getElementById('editPhone').value = employee.phone || '';
-            document.getElementById('editDateOfBirth').value = employee.dateOfBirth || '';
-            document.getElementById('editDepartment').value = employee.department.toLowerCase();
-            document.getElementById('editJobTitle').value = employee.jobTitle || '';
-            document.getElementById('editDateOfHire').value = employee.dateOfHire;
-            document.getElementById('editEmploymentStatus').value = employee.employmentStatus;
-            document.getElementById('editRecordStatus').value = employee.recordStatus;
-            document.getElementById('editReportingManager').value = employee.reportingManager || '';
-            document.getElementById('editAddress').value = employee.address || '';
-
-            openModal('editEmployeeModal');
-        }
-
-        function editCurrentEmployee() {
-            if (currentEmployeeId) {
-                editEmployee(currentEmployeeId);
-                closeModal('employeeDetailModal');
-            }
-        }
-
-        function updateJobSteps() {
-            const gradeSelect = document.querySelector('select[name="jobGrade"]');
-            const stepSelect = document.querySelector('select[name="jobStep"]');
-            const grade = gradeSelect.value;
-
-            stepSelect.innerHTML = '<option value="">Select Step</option>';
-
-            if (grade) {
-                const steps = jobSteps.filter(step => step.gradeId == grade);
-                steps.forEach(step => {
-                    const option = document.createElement('option');
-                    option.value = step.stepLevel;
-                    option.textContent = `Step ${step.stepLevel} - $${step.baseSalary.toFixed(2)}`;
-                    stepSelect.appendChild(option);
-                });
-
-                // Update basic salary preview
-                updateBasicSalaryPreview();
-            }
-        }
-
-        function updateBasicSalaryPreview() {
-            const grade = document.querySelector('select[name="jobGrade"]').value;
-            const step = document.querySelector('select[name="jobStep"]').value;
-
-            if (grade && step) {
-                const jobStep = jobSteps.find(s => s.gradeId == grade && s.stepLevel == step);
-                if (jobStep) {
-                    document.getElementById('basicSalaryPreview').value = jobStep.baseSalary.toFixed(2);
-                    document.querySelector('input[name="basicSalary"]').value = jobStep.baseSalary;
-                }
-            }
-        }
-
-        function updatePayrollComponents() {
-            const paygroup = document.querySelector('select[name="payGroup"]').value;
-            const container = document.getElementById('payrollComponents');
-
-            if (paygroup && paygroups[paygroup]) {
-                const pg = paygroups[paygroup];
-                let html = '<h4 class="font-bold mb-3">Payroll Components</h4>';
-
-                // Show allowances
-                html += '<div class="mb-4"><h5 class="text-sm font-medium mb-2 text-green-600">Allowances</h5>';
-                pg.allowances.forEach((allowance, index) => {
-                    const label = index === 0 ? 'Housing' : index === 1 ? 'Transport' : index === 2 ? 'Bonus' : 'Fuel';
-                    html += `
-                        <div class="flex justify-between items-center mb-2">
-                            <span class="text-sm">${label} Allowance</span>
-                            <span class="font-bold text-green-600">+ $${allowance.toFixed(2)}</span>
-                        </div>
-                    `;
-                });
-                html += '</div>';
-
-                // Show deductions
-                html += '<div><h5 class="text-sm font-medium mb-2 text-red-600">Deductions</h5>';
-                pg.deductions.forEach((deduction, index) => {
-                    const label = index === 0 ? 'Health Insurance' : index === 1 ? 'Income Tax' : index === 2 ? 'Pension Contribution' : 'Life Insurance';
-                    const isPercentage = index === 1 || index === 2;
-                    const value = isPercentage ? `${deduction}%` : `$${deduction.toFixed(2)}`;
-                    html += `
-                        <div class="flex justify-between items-center mb-2">
-                            <span class="text-sm">${label}</span>
-                            <span class="font-bold text-red-600">- ${value}</span>
-                        </div>
-                    `;
-                });
-                html += '</div>';
-
-                container.innerHTML = html;
-                updatePayrollSummary();
-            } else {
-                container.innerHTML = '<p class="text-gray-500">Select a pay group to view components</p>';
-            }
-        }
-
-        function updatePayrollSummary() {
-            const basicSalary = parseFloat(document.querySelector('input[name="basicSalary"]').value) || 0;
-            const paygroup = document.querySelector('select[name="payGroup"]').value;
-
-            let allowanceTotal = 0;
-            let deductionTotal = 0;
-
-            if (paygroup && paygroups[paygroup]) {
-                const pg = paygroups[paygroup];
-                allowanceTotal = pg.allowances.reduce((sum, a) => sum + a, 0);
-                deductionTotal = calculateDeductions(basicSalary, pg.deductions);
-            }
-
-            const netSalary = basicSalary + allowanceTotal - deductionTotal;
-
-            document.getElementById('summaryBasic').textContent = `$${basicSalary.toFixed(2)}`;
-            document.getElementById('summaryAllowances').textContent = `+ $${allowanceTotal.toFixed(2)}`;
-            document.getElementById('summaryDeductions').textContent = `- $${deductionTotal.toFixed(2)}`;
-            document.getElementById('summaryNet').textContent = `$${netSalary.toFixed(2)}`;
-        }
-
-        function calculateDeductions(basicSalary, deductions) {
-            let total = 0;
-            deductions.forEach((deduction, index) => {
-                if (index === 0 || index === 3) {
-                    total += deduction; // Fixed amounts
-                } else if (index === 1 || index === 2) {
-                    total += (basicSalary * deduction) / 100; // Percentages
-                }
-            });
-            return total;
-        }
-
-        function formatDate(dateString) {
-            if (!dateString) return 'Not provided';
-            const date = new Date(dateString);
-            return date.toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric'
-            });
-        }
-
-        function showDetailTab(tabId) {
-            // Remove active class from all tabs
-            document.querySelectorAll('.detail-tab-btn').forEach(tab => {
-                tab.classList.remove('border-primary-600', 'text-primary-600');
-            });
-
-            // Add active class to clicked tab
-            document.querySelector(`.detail-tab-btn[data-tab="${tabId}"]`).classList.add('border-primary-600', 'text-primary-600');
-
-            // Hide all tab contents
-            document.querySelectorAll('.detail-tab-content').forEach(content => {
-                content.classList.add('hidden');
-            });
-
-            // Show selected tab content
-            document.getElementById(tabId).classList.remove('hidden');
-        }
-
-        function updateKPI() {
-            const employee = employees.find(e => e.id === currentEmployeeId);
-            if (!employee) return;
-
-            const kpiScore = parseInt(document.getElementById('kpiScore').value);
-            employee.kpiScore = kpiScore;
-
-            showToast('KPI score updated successfully!', 'success');
-            openEmployeeDetail(currentEmployeeId);
-            showDetailTab('kpi');
-        }
-
-        function updateEmployeePayroll() {
-            const employee = employees.find(e => e.id === currentEmployeeId);
-            if (!employee) return;
-
-            const newGrade = document.getElementById('editJobGrade').value;
-            const newStep = document.getElementById('editJobStep').value;
-            const newPayGroup = document.getElementById('editPayGroup').value;
-
-            if (newGrade) employee.jobGrade = parseInt(newGrade);
-            if (newStep) employee.jobStep = parseInt(newStep);
-            if (newPayGroup) employee.payGroup = newPayGroup;
-
-            // Update basic salary based on new grade/step
-            if (newGrade && newStep) {
-                const jobStep = jobSteps.find(s => s.gradeId == newGrade && s.stepLevel == newStep);
-                if (jobStep) {
-                    employee.basicSalary = jobStep.baseSalary;
-                }
-            }
-
-            showToast('Payroll updated successfully!', 'success');
-            openEmployeeDetail(currentEmployeeId);
-            showDetailTab('payroll');
-        }
-
-        function exportEmployeeData() {
-            const data = employees.map(emp => ({
-                employeeNumber: emp.employeeNumber,
-                name: `${emp.firstName} ${emp.lastName}`,
-                email: emp.email,
-                department: emp.department,
-                jobTitle: emp.jobTitle,
-                grade: emp.jobGrade,
-                step: emp.jobStep,
-                payGroup: paygroups[emp.payGroup]?.name || emp.payGroup,
-                employmentStatus: emp.employmentStatus,
-                dateOfHire: emp.dateOfHire,
-                basicSalary: emp.basicSalary
-            }));
-
-            const csvContent = 'data:text/csv;charset=utf-8,'
-                + [Object.keys(data[0]), ...data.map(row => Object.values(row))]
-                    .map(row => row.join(','))
-                    .join('\n');
-
-            const encodedUri = encodeURI(csvContent);
-            const link = document.createElement('a');
-            link.setAttribute('href', encodedUri);
-            link.setAttribute('download', `employees_${new Date().toISOString().split('T')[0]}.csv`);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-
-            showToast('Employee data exported successfully!', 'success');
-        }
-
-        function showToast(message, type = 'success') {
-            const toast = document.createElement('div');
-            toast.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 transition-all duration-300 transform translate-x-full ${
-                type === 'success' ? 'bg-green-500 text-white' :
-                type === 'error' ? 'bg-red-500 text-white' :
-                'bg-blue-500 text-white'
-            }`;
-            toast.textContent = message;
-            document.body.appendChild(toast);
-
-            setTimeout(() => {
-                toast.classList.remove('translate-x-full');
-            }, 100);
-
-            setTimeout(() => {
-                toast.classList.add('translate-x-full');
-                setTimeout(() => {
-                    document.body.removeChild(toast);
-                }, 300);
-            }, 3000);
-        }
-
-        function setupEventListeners() {
-            // Form submissions
-            document.getElementById('addEmployeeForm').addEventListener('submit', handleAddEmployee);
-            document.getElementById('editEmployeeForm').addEventListener('submit', handleEditEmployee);
-            document.getElementById('promotionForm').addEventListener('submit', handlePromotion);
-
-            // Filter events
-            document.getElementById('departmentFilter').addEventListener('change', loadEmployeeTable);
-            document.getElementById('employmentStatusFilter').addEventListener('change', loadEmployeeTable);
-            document.getElementById('gradeFilter').addEventListener('change', loadEmployeeTable);
-            document.getElementById('paygroupFilter').addEventListener('change', loadEmployeeTable);
-            document.getElementById('searchInput').addEventListener('input', loadEmployeeTable);
-
-            // KPI score slider
-            document.getElementById('kpiScore').addEventListener('input', function() {
-                document.getElementById('kpiScoreValue').textContent = this.value;
-            });
-
-            // Job grade/step changes
-            document.querySelector('select[name="jobGrade"]').addEventListener('change', updateBasicSalaryPreview);
-            document.querySelector('select[name="jobStep"]').addEventListener('change', updateBasicSalaryPreview);
-            document.querySelector('select[name="payGroup"]').addEventListener('change', updatePayrollSummary);
-        }
-
-        function handleAddEmployee(e) {
-            e.preventDefault();
-            const formData = new FormData(e.target);
-
-            const newEmployee = {
-                id: employees.length + 1,
-                employeeNumber: formData.get('employeeNumber'),
-                firstName: formData.get('firstName'),
-                lastName: formData.get('lastName'),
-                email: formData.get('email'),
-                phone: formData.get('phone'),
-                dateOfBirth: formData.get('dateOfBirth'),
-                address: formData.get('address'),
-                department: formData.get('department'),
-                jobTitle: formData.get('jobTitle'),
-                jobGrade: parseInt(formData.get('jobGrade')),
-                jobStep: parseInt(formData.get('jobStep')),
-                dateOfHire: formData.get('dateOfHire'),
-                employmentStatus: formData.get('employmentStatus'),
-                recordStatus: 'ACTIVE',
-                payGroup: formData.get('payGroup'),
-                reportingManager: formData.get('reportingManager'),
-                basicSalary: parseFloat(formData.get('basicSalary')) || 0,
-                avatar: null,
-                kpiScore: 0,
-                promotionHistory: [],
-                leaveHistory: []
-            };
-
-            employees.push(newEmployee);
-            showToast('Employee added successfully!', 'success');
-            closeModal('addEmployeeModal');
-            loadEmployeeTable();
-            updateStats();
-        }
-
-        function handleEditEmployee(e) {
-            e.preventDefault();
-            const employeeId = parseInt(document.getElementById('editEmployeeId').value);
-            const employee = employees.find(e => e.id === employeeId);
-
-            if (employee) {
-                employee.email = document.getElementById('editEmail').value;
-                employee.firstName = document.getElementById('editFirstName').value;
-                employee.lastName = document.getElementById('editLastName').value;
-                employee.phone = document.getElementById('editPhone').value;
-                employee.dateOfBirth = document.getElementById('editDateOfBirth').value;
-                employee.department = document.getElementById('editDepartment').value;
-                employee.jobTitle = document.getElementById('editJobTitle').value;
-                employee.dateOfHire = document.getElementById('editDateOfHire').value;
-                employee.employmentStatus = document.getElementById('editEmploymentStatus').value;
-                employee.recordStatus = document.getElementById('editRecordStatus').value;
-                employee.reportingManager = document.getElementById('editReportingManager').value;
-                employee.address = document.getElementById('editAddress').value;
-
-                showToast('Employee information updated successfully!', 'success');
-                closeModal('editEmployeeModal');
-                loadEmployeeTable();
-                updateStats();
-            }
-        }
-
-        function handlePromotion(e) {
-            e.preventDefault();
-            const employeeId = parseInt(document.getElementById('promotionEmployee').value);
-            const employee = employees.find(e => e.id === employeeId);
-
-            if (employee) {
-                const promotion = {
-                    date: document.getElementById('promotionDate').value,
-                    fromGrade: employee.jobGrade,
-                    toGrade: parseInt(document.getElementById('newGrade').value),
-                    fromStep: employee.jobStep,
-                    toStep: parseInt(document.getElementById('newStep').value),
-                    reason: document.getElementById('promotionReason').value,
-                    salary: parseFloat(document.getElementById('newSalary').value)
-                };
-
-                employee.jobGrade = promotion.toGrade;
-                employee.jobStep = promotion.toStep;
-                employee.basicSalary = promotion.salary;
-
-                if (!employee.promotionHistory) {
-                    employee.promotionHistory = [];
-                }
-                employee.promotionHistory.unshift(promotion);
-
-                showToast('Promotion processed successfully!', 'success');
-                closeModal('promotionModal');
-                loadEmployeeTable();
-                updateStats();
-            }
-        }
-
-        function initializeTabs() {
-            // Add employee modal tabs
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const tabId = this.getAttribute('data-tab');
-
-                    // Remove active class from all tabs
-                    document.querySelectorAll('.tab-btn').forEach(tab => {
-                        tab.classList.remove('border-primary-600', 'text-primary-600');
-                    });
-
-                    // Add active class to clicked tab
-                    this.classList.add('border-primary-600', 'text-primary-600');
-
-                    // Hide all tab contents
-                    document.querySelectorAll('.tab-content').forEach(content => {
-                        content.classList.add('hidden');
-                    });
-
-                    // Show selected tab content
-                    document.getElementById(tabId).classList.remove('hidden');
-                });
-            });
-
-            // Employee detail modal tabs
-            document.querySelectorAll('.detail-tab-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const tabId = this.getAttribute('data-tab');
-                    showDetailTab(tabId);
-                });
-            });
-        }
-
-        // Modal functions
-        function openModal(modalId) {
-            document.getElementById(modalId).classList.remove('hidden');
+        // Minimal JavaScript for modals and job step dropdown (static demo)
+        function openModal(id) {
+            document.getElementById(id).classList.remove('hidden');
             document.body.style.overflow = 'hidden';
         }
-
-        function closeModal(modalId) {
-            document.getElementById(modalId).classList.add('hidden');
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
             document.body.style.overflow = 'auto';
         }
-
-        // Mobile Sidebar Toggle
-        const menuToggle = document.getElementById('menuToggle');
-        const mobileOverlay = document.getElementById('mobileOverlay');
-        const sidebar = document.querySelector('.sidebar-container');
-
-        menuToggle.addEventListener('click', () => {
-            sidebar.classList.toggle('open');
-            mobileOverlay.classList.toggle('hidden');
-            document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : 'auto';
-        });
-
-        mobileOverlay.addEventListener('click', () => {
-            sidebar.classList.remove('open');
-            mobileOverlay.classList.add('hidden');
-            document.body.style.overflow = 'auto';
-        });
-
-        // Theme Toggle
-        function initializeTheme() {
-            const themeToggle = document.getElementById('themeToggle');
-            const themeIcon = themeToggle.querySelector('.material-icons-round');
-
-            themeToggle.addEventListener('click', () => {
-                const isDark = document.documentElement.classList.toggle('dark');
-                themeIcon.textContent = isDark ? 'light_mode' : 'dark_mode';
-                localStorage.setItem('theme', isDark ? 'dark' : 'light');
-            });
-
-            if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-                document.documentElement.classList.add('dark');
-                themeIcon.textContent = 'light_mode';
+        function disableSubmitButton(form) {
+            const submitButton = form.querySelector('button[type="submit"]');
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.classList.add('opacity-50', 'cursor-not-allowed');
             }
+            return true;
         }
 
-        // Close sidebar on window resize
-        window.addEventListener('resize', () => {
-            if (window.innerWidth >= 1024) {
-                sidebar.classList.remove('open');
-                mobileOverlay.classList.add('hidden');
-                document.body.style.overflow = 'auto';
-            }
-        });
+        // Stubbed CRUD functions for hardcoded rows
+        function viewEmployee(id) {
+            // In a real app, you'd fetch data; here we just show a generic message
+            document.getElementById('viewName').innerText = 'Employee ' + id;
+            document.getElementById('viewDetails').innerHTML = '<p>Static demo – no dynamic data.</p>';
+            openModal('viewEmployeeModal');
+        }
+        function editEmployee(id) {
+            alert('Edit is disabled in this static demo.');
+        }
 
-        // Close modal on backdrop click
-        document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
-            backdrop.addEventListener('click', function() {
-                this.parentElement.classList.add('hidden');
-                document.body.style.overflow = 'auto';
-            });
-        });
+        // Job step dynamic (for add modal)
+        document.addEventListener('DOMContentLoaded', function() {
+            const gradeSelect = document.getElementById('addJobGradeId');
+            const stepSelect = document.getElementById('addJobStepId');
 
-        // Initialize first tab as active
-        document.addEventListener('DOMContentLoaded', () => {
-            // Add active class to first tab in add employee modal
-            const firstTab = document.querySelector('.tab-btn');
-            if (firstTab) {
-                firstTab.classList.add('border-primary-600', 'text-primary-600');
+            if (gradeSelect && stepSelect) {
+                gradeSelect.addEventListener('change', function() {
+                    const selectedGradeId = this.value;
+                    stepSelect.innerHTML = '<option value="">Select Job Step</option>';
+                    stepSelect.disabled = true;
+
+                    if (!selectedGradeId) return;
+
+                    // Dummy steps for demonstration
+                    const dummySteps = [
+                        { id: 1, gradeId: 1, display: 'Grade 1 – Step 1' },
+                        { id: 2, gradeId: 1, display: 'Grade 1 – Step 2' },
+                        { id: 3, gradeId: 2, display: 'Grade 2 – Step 1' }
+                    ];
+                    const filtered = dummySteps.filter(step => step.gradeId == selectedGradeId);
+                    filtered.forEach(step => {
+                        const option = document.createElement('option');
+                        option.value = step.id;
+                        option.textContent = step.display;
+                        stepSelect.appendChild(option);
+                    });
+
+                    stepSelect.disabled = false;
+                });
             }
         });
     </script>
+
 </main>
 </body>
 </html>
