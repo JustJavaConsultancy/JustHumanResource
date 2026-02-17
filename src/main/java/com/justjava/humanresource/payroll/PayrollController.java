@@ -7,6 +7,7 @@ import com.justjava.humanresource.hr.service.SetupService;
 import com.justjava.humanresource.payroll.entity.*;
 import com.justjava.humanresource.payroll.service.PayGroupService;
 import com.justjava.humanresource.payroll.service.PayrollSetupService;
+import com.justjava.humanresource.payroll.service.impl.PayrollPeriodServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -14,12 +15,16 @@ import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.List;
 
 @Controller
 public class PayrollController {
     @Autowired
     PayGroupService payGroupService;
+
+    @Autowired
+    private PayrollPeriodServiceImpl payrollPeriodService;
 
     @Autowired
     private SetupService setupService;
@@ -138,8 +143,34 @@ public class PayrollController {
     @PostMapping("/setup/paygroup/deductions")
     public String attachDeductionsToPayGroup(
             @RequestParam Long payGroupId,
-            List<DeductionAttachmentRequest> requests) {
-        System.out.println(" The Pay Group ID ==="+payGroupId);
+            @RequestParam(required = false) List<String> deductionSending) {
+        if (deductionSending == null || deductionSending.isEmpty()) {
+            return "redirect:/payroll/pay-group";
+        }
+        List<DeductionAttachmentRequest> requests = deductionSending.stream()
+                .map(value -> {
+
+                    System.out.println("RAW VALUE: " + value);
+
+                    String[] parts = value.split(" ");
+
+                    if (parts.length < 2) {
+                        throw new IllegalArgumentException("Invalid allowance format: " + parts);
+                    }
+
+                    Long id = Long.parseLong(parts[0]);
+                    BigDecimal amount = new BigDecimal(parts[1]);
+
+                    DeductionAttachmentRequest req = new DeductionAttachmentRequest();
+                    req.setDeductionId(id);
+                    req.setOverridden(true);
+                    req.setOverrideAmount(amount);
+                    req.setEffectiveFrom(LocalDate.now());
+
+                    return req;
+                })
+                .toList();
+
         payrollSetupService.addDeductionsToPayGroup(
                 payGroupId,
                 requests
@@ -168,5 +199,11 @@ public class PayrollController {
     public String createDeduction(Deduction deduction) {
         payrollSetupService.createDeduction(deduction);
         return "redirect:/payroll/items";
+    }
+    @PostMapping("/setup/payroll/open")
+    public String openPayroll() {
+        YearMonth yearMonth = YearMonth.now();
+        payrollPeriodService.openPeriod(yearMonth);
+        return "redirect:/payroll";
     }
 }
