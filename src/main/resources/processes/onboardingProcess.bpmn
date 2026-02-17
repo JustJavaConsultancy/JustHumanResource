@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:flowable="http://flowable.org/bpmn" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC" xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI" xmlns:design="http://flowable.org/design" typeLanguage="http://www.w3.org/2001/XMLSchema" expressionLanguage="http://www.w3.org/1999/XPath" targetNamespace="http://flowable.org/test" exporter="Flowable Design" exporterVersion="2025.1.03" design:palette="flowable-work-process-palette">
   <process id="onboardingProcess" name="onboardingProcess" isExecutable="true" flowable:candidateStarterGroups="flowableUser">
+    <documentation>This service is to create the first EmployeePositionHistory since it is required for Payroll run</documentation>
     <extensionElements>
       <design:stencilid><![CDATA[BPMNDiagram]]></design:stencilid>
-      <design:creationdate><![CDATA[2026-02-12T09:15:55.467Z]]></design:creationdate>
-      <design:modificationdate><![CDATA[2026-02-13T06:44:04.504Z]]></design:modificationdate>
+      <design:creationdate><![CDATA[2026-02-17T08:45:11.602Z]]></design:creationdate>
+      <design:modificationdate><![CDATA[2026-02-17T08:59:32.041Z]]></design:modificationdate>
     </extensionElements>
     <serviceTask id="ServiceTask_1" name="HR Verification" flowable:delegateExpression="${hrVerificationDelegate}">
       <extensionElements>
@@ -37,6 +38,12 @@
         <design:stencilsuperid><![CDATA[Task]]></design:stencilsuperid>
       </extensionElements>
     </serviceTask>
+    <serviceTask id="ServiceTask_9" name="Create Initial Position " flowable:delegateExpression="${createInitialPositionDelegate}">
+      <extensionElements>
+        <design:stencilid><![CDATA[ServiceTask]]></design:stencilid>
+        <design:stencilsuperid><![CDATA[Task]]></design:stencilsuperid>
+      </extensionElements>
+    </serviceTask>
     <exclusiveGateway id="approvalRequired" name="Approval Required?">
       <extensionElements>
         <design:stencilid><![CDATA[Exclusive_Databased_Gateway]]></design:stencilid>
@@ -49,6 +56,11 @@
         <design:stencilid><![CDATA[StartNoneEvent]]></design:stencilid>
       </extensionElements>
     </startEvent>
+    <endEvent id="EndNoneEvent_13">
+      <extensionElements>
+        <design:stencilid><![CDATA[EndNoneEvent]]></design:stencilid>
+      </extensionElements>
+    </endEvent>
     <sequenceFlow id="SequenceFlow_4" sourceRef="ServiceTask_1" targetRef="ServiceTask_3">
       <extensionElements>
         <design:stencilid><![CDATA[SequenceFlow]]></design:stencilid>
@@ -64,12 +76,17 @@
         <design:stencilid><![CDATA[SequenceFlow]]></design:stencilid>
       </extensionElements>
     </sequenceFlow>
+    <sequenceFlow id="SequenceFlow_12" sourceRef="ServiceTask_7" targetRef="ServiceTask_9">
+      <extensionElements>
+        <design:stencilid><![CDATA[SequenceFlow]]></design:stencilid>
+      </extensionElements>
+    </sequenceFlow>
     <sequenceFlow id="SequenceFlow_9" sourceRef="ServiceTask_8" targetRef="ServiceTask_7">
       <extensionElements>
         <design:stencilid><![CDATA[SequenceFlow]]></design:stencilid>
       </extensionElements>
     </sequenceFlow>
-    <sequenceFlow id="SequenceFlow_2" sourceRef="startnoneevent1" targetRef="ServiceTask_1">
+    <sequenceFlow id="SequenceFlow_14" sourceRef="ServiceTask_9" targetRef="EndNoneEvent_13">
       <extensionElements>
         <design:stencilid><![CDATA[SequenceFlow]]></design:stencilid>
       </extensionElements>
@@ -87,6 +104,11 @@
         <design:display_ref_in_diagram><![CDATA[true]]></design:display_ref_in_diagram>
       </extensionElements>
       <conditionExpression xsi:type="tFormalExpression"><![CDATA[${!approvalRequired}]]></conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="SequenceFlow_2" sourceRef="startnoneevent1" targetRef="ServiceTask_1">
+      <extensionElements>
+        <design:stencilid><![CDATA[SequenceFlow]]></design:stencilid>
+      </extensionElements>
     </sequenceFlow>
   </process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_onboardingProcess">
@@ -106,14 +128,20 @@
       <bpmndi:BPMNShape bpmnElement="ServiceTask_8" id="BPMNShape_ServiceTask_8">
         <omgdc:Bounds height="80.0" width="100.0" x="1083.0" y="236.0"></omgdc:Bounds>
       </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="ServiceTask_9" id="BPMNShape_ServiceTask_9">
+        <omgdc:Bounds height="80.0" width="100.0" x="1377.0" y="236.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="approvalRequired" id="BPMNShape_approvalRequired">
         <omgdc:Bounds height="40.0" width="40.0" x="749.0" y="256.0"></omgdc:Bounds>
         <bpmndi:BPMNLabel>
-          <omgdc:Bounds height="18.0" width="106.0" x="714.9" y="290.0"></omgdc:Bounds>
+          <omgdc:Bounds height="18.0" width="106.0" x="714.0" y="290.0"></omgdc:Bounds>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="startnoneevent1" id="BPMNShape_startnoneevent1">
         <omgdc:Bounds height="30.0" width="30.0" x="317.0" y="261.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="EndNoneEvent_13" id="BPMNShape_EndNoneEvent_13">
+        <omgdc:Bounds height="28.0" width="28.0" x="1527.0" y="262.0"></omgdc:Bounds>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge bpmnElement="SequenceFlow_11" id="BPMNEdge_SequenceFlow_11" flowable:sourceDockerX="20.0" flowable:sourceDockerY="20.0" flowable:targetDockerX="50.0" flowable:targetDockerY="40.0">
         <omgdi:waypoint x="769.0" y="296.0"></omgdi:waypoint>
@@ -124,6 +152,10 @@
           <omgdc:Bounds height="18.0" width="15.0" x="773.0" y="323.0"></omgdc:Bounds>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="SequenceFlow_12" id="BPMNEdge_SequenceFlow_12" flowable:sourceDockerX="50.0" flowable:sourceDockerY="40.0" flowable:targetDockerX="50.0" flowable:targetDockerY="40.0">
+        <omgdi:waypoint x="1327.0" y="276.0"></omgdi:waypoint>
+        <omgdi:waypoint x="1377.0" y="276.0"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="SequenceFlow_8" id="BPMNEdge_SequenceFlow_8" flowable:sourceDockerX="50.0" flowable:sourceDockerY="40.0" flowable:targetDockerX="50.0" flowable:targetDockerY="40.0">
         <omgdi:waypoint x="974.0" y="276.0"></omgdi:waypoint>
         <omgdi:waypoint x="1083.0" y="276.0"></omgdi:waypoint>
@@ -131,6 +163,10 @@
       <bpmndi:BPMNEdge bpmnElement="SequenceFlow_9" id="BPMNEdge_SequenceFlow_9" flowable:sourceDockerX="50.0" flowable:sourceDockerY="40.0" flowable:targetDockerX="50.0" flowable:targetDockerY="40.0">
         <omgdi:waypoint x="1183.0" y="276.0"></omgdi:waypoint>
         <omgdi:waypoint x="1227.0" y="276.0"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="SequenceFlow_14" id="BPMNEdge_SequenceFlow_14" flowable:sourceDockerX="50.0" flowable:sourceDockerY="40.0" flowable:targetDockerX="14.0" flowable:targetDockerY="14.0">
+        <omgdi:waypoint x="1477.0" y="276.0"></omgdi:waypoint>
+        <omgdi:waypoint x="1527.0" y="276.0"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="SequenceFlow_6" id="BPMNEdge_SequenceFlow_6" flowable:sourceDockerX="50.0" flowable:sourceDockerY="40.0" flowable:targetDockerX="20.0" flowable:targetDockerY="20.0">
         <omgdi:waypoint x="647.0" y="276.0"></omgdi:waypoint>
@@ -144,7 +180,7 @@
         <omgdi:waypoint x="789.0" y="276.0"></omgdi:waypoint>
         <omgdi:waypoint x="874.0" y="276.0"></omgdi:waypoint>
         <bpmndi:BPMNLabel>
-          <omgdc:Bounds height="18.0" width="20.0" x="799.0" y="246.8"></omgdc:Bounds>
+          <omgdc:Bounds height="18.0" width="20.0" x="799.0" y="246.0"></omgdc:Bounds>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="SequenceFlow_2" id="BPMNEdge_SequenceFlow_2" flowable:sourceDockerX="15.0" flowable:sourceDockerY="15.0" flowable:targetDockerX="50.0" flowable:targetDockerY="40.0">

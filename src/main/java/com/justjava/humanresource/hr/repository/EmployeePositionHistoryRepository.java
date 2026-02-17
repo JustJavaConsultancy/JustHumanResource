@@ -59,5 +59,5 @@ public interface EmployeePositionHistoryRepository
             @Param("date") LocalDate date,
             @Param("status") RecordStatus status
     );
-
+    boolean existsByEmployee_IdAndCurrentTrue(Long employeeId);
 }
