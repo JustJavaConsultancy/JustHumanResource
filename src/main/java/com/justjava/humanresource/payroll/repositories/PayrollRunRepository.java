@@ -102,4 +102,8 @@ public interface PayrollRunRepository extends JpaRepository<PayrollRun, Long> {
             LocalDate end,
             PayrollRunStatus status
     );
+    Optional<PayrollRun> findTopByEmployeeIdAndPayrollDateOrderByVersionNumberDesc(
+            Long employeeId,
+            LocalDate payrollDate
+    );
 }

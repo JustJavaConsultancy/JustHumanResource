@@ -3,6 +3,7 @@ package com.justjava.humanresource.payroll.entity;
 import com.justjava.humanresource.core.entity.BaseEntity;
 import com.justjava.humanresource.core.enums.PayrollRunStatus;
 import com.justjava.humanresource.hr.entity.Employee;
+import com.justjava.humanresource.payroll.enums.PayrollRunType;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -81,5 +82,14 @@ public class PayrollRun extends BaseEntity {
 
     @Column(precision = 19, scale = 2)
     private BigDecimal netPay = BigDecimal.ZERO;
+
+    @Enumerated(EnumType.STRING)
+    private PayrollRunType runType = PayrollRunType.ORIGINAL;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parent_run_id")
+    private PayrollRun parentRun;
+
+    private Integer versionNumber = 1;
 
 }

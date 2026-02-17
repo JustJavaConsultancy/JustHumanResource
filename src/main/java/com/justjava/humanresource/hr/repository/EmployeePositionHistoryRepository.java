@@ -65,4 +65,6 @@ public interface EmployeePositionHistoryRepository
     Optional<EmployeePositionHistory> findByEmployee_IdAndCurrentTrue(Long employeeId);
 
     List<EmployeePositionHistory> findByCurrentTrueAndEffectiveToIsNull();
+    long countByCurrentTrue();
+
 }

@@ -181,5 +181,16 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
                 Map.of("periodId", periodId)
         );
     }
+    @Override
+    public boolean isPayrollDateInOpenPeriod(LocalDate payrollDate) {
+
+        return repository
+                .findByStartDateLessThanEqualAndEndDateGreaterThanEqual(
+                        payrollDate,
+                        payrollDate
+                )
+                .map(period -> period.getStatus() == PayrollPeriodStatus.OPEN)
+                .orElse(false);
+    }
 
 }

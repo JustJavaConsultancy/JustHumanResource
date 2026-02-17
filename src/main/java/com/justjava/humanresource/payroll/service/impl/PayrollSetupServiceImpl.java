@@ -13,6 +13,7 @@ import com.justjava.humanresource.payroll.mapper.EmployeeDeductionMapper;
 import com.justjava.humanresource.payroll.mapper.PayGroupAllowanceMapper;
 import com.justjava.humanresource.payroll.mapper.PayGroupDeductionMapper;
 import com.justjava.humanresource.payroll.repositories.*;
+import com.justjava.humanresource.payroll.service.PayrollChangeOrchestrator;
 import com.justjava.humanresource.payroll.service.PayrollSetupService;
 import com.justjava.humanresource.payroll.statutory.entity.PayeTaxBand;
 import com.justjava.humanresource.payroll.statutory.entity.PensionScheme;
@@ -46,6 +47,7 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
     private final EmployeeDeductionMapper employeeDeductionMapper;
     private final PayGroupAllowanceMapper payGroupAllowanceMapper;
     private final PayGroupDeductionMapper payGroupDeductionMapper;
+    private final PayrollChangeOrchestrator  payrollChangeOrchestrator;
 
 
 
@@ -175,6 +177,7 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
             ));
         }
 
+        payrollChangeOrchestrator.recalculateForPayGroup(payGroupId, LocalDate.now());
         return response;
     }
     @Override
@@ -198,6 +201,7 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
             ));
         }
 
+        payrollChangeOrchestrator.recalculateForPayGroup(payGroupId, LocalDate.now());
         return response;
     }
     @Override
@@ -222,6 +226,8 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
             ));
         }
 
+        payrollChangeOrchestrator.recalculateForEmployee(employeeId, LocalDate.now());
+
         return responses;
     }
     @Override
@@ -245,6 +251,8 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
                     )
             ));
         }
+
+        payrollChangeOrchestrator.recalculateForEmployee(employeeId, LocalDate.now());
 
         return response;
     }

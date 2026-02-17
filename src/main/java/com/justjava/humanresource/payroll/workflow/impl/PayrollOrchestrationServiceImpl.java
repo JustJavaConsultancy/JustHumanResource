@@ -8,13 +8,12 @@ import com.justjava.humanresource.hr.entity.Employee;
 import com.justjava.humanresource.hr.entity.EmployeePositionHistory;
 import com.justjava.humanresource.hr.entity.JobStep;
 import com.justjava.humanresource.hr.entity.PayGroup;
-import com.justjava.humanresource.hr.repository.EmployeePositionHistoryRepository;
 import com.justjava.humanresource.hr.repository.EmployeeRepository;
-import com.justjava.humanresource.hr.repository.PayGroupRepository;
 import com.justjava.humanresource.payroll.calculation.PayGroupResolutionService;
 import com.justjava.humanresource.payroll.calculation.dto.ResolvedPayComponents;
 import com.justjava.humanresource.payroll.entity.*;
 import com.justjava.humanresource.payroll.enums.PayComponentType;
+import com.justjava.humanresource.payroll.enums.PayrollRunType;
 import com.justjava.humanresource.payroll.repositories.EmployeeAllowanceRepository;
 import com.justjava.humanresource.payroll.repositories.PayGroupAllowanceRepository;
 import com.justjava.humanresource.payroll.repositories.PayrollLineItemRepository;
@@ -34,6 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -43,8 +43,6 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
     private final EmployeeRepository employeeRepository;
     private final PayrollSetupService payrollSetupService;
     private final PayrollLineItemRepository payrollLineItemRepository;
-    private final PayGroupAllowanceRepository payGroupAllowanceRepository;
-    private final EmployeeAllowanceRepository employeeAllowanceRepository;
     private final PayGroupResolutionService payGroupResolutionService;
     private final PayeCalculatorService payeCalculatorService;
     private final PensionSchemeRepository pensionSchemeRepository;
@@ -65,32 +63,55 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
             LocalDate payrollDate,
             String processInstanceId) {
 
-        // 1️⃣ Ensure Payroll System Ready
         payrollSetupService.validatePayrollSystemReadiness(payrollDate);
-
-        // 2️⃣ Validate Against OPEN Period
         payrollPeriodService.validatePayrollDate(payrollDate);
 
         Employee employee = employeeRepository.findById(employeeId)
                 .orElseThrow(() ->
                         new ResourceNotFoundException("Employee", employeeId));
 
-        // 3️⃣ Prevent duplicate run for same employee + date
-        payrollRunRepository.findByEmployeeIdAndPayrollDate(employeeId, payrollDate)
-                .ifPresent(existing -> {
-                    if (existing.getStatus() != PayrollRunStatus.POSTED) {
-                        throw new IllegalStateException(
-                                "Payroll already initialized for this employee and date.");
-                    }
-                });
+        // 🔎 Get latest version run
+        Optional<PayrollRun> existingOpt =
+                payrollRunRepository
+                        .findTopByEmployeeIdAndPayrollDateOrderByVersionNumberDesc(
+                                employeeId,
+                                payrollDate
+                        );
 
+        if (existingOpt.isPresent()) {
+
+            PayrollRun existing = existingOpt.get();
+
+            if (existing.getStatus() == PayrollRunStatus.POSTED) {
+
+                // Allow amendment only if period open
+                if (!payrollPeriodService
+                        .isPayrollDateInOpenPeriod(payrollDate)) {
+
+                    throw new IllegalStateException(
+                            "Cannot amend payroll. Period is CLOSED."
+                    );
+                }
+
+                PayrollRun amendment = createAmendmentRun(existing);
+                amendment.setFlowableProcessInstanceId(processInstanceId);
+
+                return amendment.getId();
+            }
+
+            if (existing.getStatus() == PayrollRunStatus.IN_PROGRESS) {
+                return existing.getId();
+            }
+        }
+
+        // Create fresh ORIGINAL run
         PayrollRun run = new PayrollRun();
         run.setEmployee(employee);
         run.setPayrollDate(payrollDate);
         run.setStatus(PayrollRunStatus.IN_PROGRESS);
         run.setFlowableProcessInstanceId(processInstanceId);
-
-        // Do NOT set gross/net here
+        run.setRunType(PayrollRunType.ORIGINAL);
+        run.setVersionNumber(1);
         run.setGrossPay(BigDecimal.ZERO);
         run.setNetPay(BigDecimal.ZERO);
 
@@ -379,8 +400,8 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
             );
         }
 
-        run.setStatus(PayrollRunStatus.POSTED);
-        payrollRunRepository.save(run);
+        //run.setStatus(PayrollRunStatus.POSTED);
+        //payrollRunRepository.save(run);
 
     /* ============================================================
        CHECK IF PERIOD CAN BE CLOSED
@@ -426,6 +447,24 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
                             " is POSTED and cannot be modified."
             );
         }
+    }
+
+    private PayrollRun createAmendmentRun(PayrollRun original) {
+
+        PayrollRun amendment = new PayrollRun();
+
+        amendment.setEmployee(original.getEmployee());
+        amendment.setPayrollDate(original.getPayrollDate());
+        amendment.setStatus(PayrollRunStatus.IN_PROGRESS);
+        amendment.setRunType(PayrollRunType.AMENDMENT);
+        amendment.setParentRun(original);
+
+        amendment.setVersionNumber(original.getVersionNumber() + 1);
+
+        amendment.setGrossPay(BigDecimal.ZERO);
+        amendment.setNetPay(BigDecimal.ZERO);
+
+        return payrollRunRepository.save(amendment);
     }
 
 }

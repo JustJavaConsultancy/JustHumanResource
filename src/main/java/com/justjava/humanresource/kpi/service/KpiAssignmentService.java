@@ -1,5 +1,8 @@
 package com.justjava.humanresource.kpi.service;
 
+import com.justjava.humanresource.hr.dto.KpiAssignmentItemRequestDTO;
+import com.justjava.humanresource.hr.dto.KpiAssignmentResponseDTO;
+import com.justjava.humanresource.hr.dto.KpiBulkAssignmentRequestDTO;
 import com.justjava.humanresource.hr.entity.Employee;
 import com.justjava.humanresource.hr.entity.JobStep;
 import com.justjava.humanresource.hr.repository.EmployeeRepository;
@@ -14,6 +17,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -25,55 +30,107 @@ public class KpiAssignmentService {
     private final JobStepRepository jobStepRepository;
     private final KpiDefinitionRepository kpiRepository;
 
-    public KpiAssignment assignToEmployee(
-            Long employeeId,
-            Long kpiId,
-            BigDecimal weight
-    ) {
+    public List<KpiAssignmentResponseDTO> bulkAssign(KpiBulkAssignmentRequestDTO request) {
 
-        validateWeight(weight);
+        if (request.getEmployeeId() == null && request.getJobStepId() == null) {
+            throw new IllegalArgumentException("Either employeeId or jobStepId must be provided");
+        }
 
-        Employee employee = employeeRepository.findById(employeeId).orElseThrow();
-        KpiDefinition kpi = kpiRepository.findById(kpiId).orElseThrow();
+        Employee employee = null;
+        JobStep jobStep = null;
 
-        return repository.save(
-                KpiAssignment.builder()
-                        .kpi(kpi)
-                        .employee(employee)
-                        .weight(weight)
-                        .mandatory(true)
-                        .validFrom(LocalDate.now())
-                        .active(true)
-                        .build()
-        );
+        if (request.getEmployeeId() != null) {
+            employee = employeeRepository.findById(request.getEmployeeId())
+                    .orElseThrow();
+        }
+
+        if (request.getJobStepId() != null) {
+            jobStep = jobStepRepository.findById(request.getJobStepId())
+                    .orElseThrow();
+        }
+
+        validateTotalWeight(request);
+
+        List<KpiAssignment> toSave = new ArrayList<>();
+        List<KpiAssignmentResponseDTO> response = new ArrayList<>();
+
+        for (KpiAssignmentItemRequestDTO item : request.getKpis()) {
+
+            validateWeight(item.getWeight());
+
+            KpiDefinition kpi = kpiRepository.findById(item.getKpiId())
+                    .orElseThrow();
+
+            boolean exists;
+
+            if (employee != null) {
+                exists = repository
+                        .findByEmployee_IdAndKpi_IdAndActiveTrue(
+                                employee.getId(),
+                                kpi.getId()
+                        ).isPresent();
+            } else {
+                exists = repository
+                        .findByJobStep_IdAndKpi_IdAndActiveTrue(
+                                jobStep.getId(),
+                                kpi.getId()
+                        ).isPresent();
+            }
+
+            if (exists) {
+                continue; // skip duplicate safely
+            }
+
+            KpiAssignment assignment = KpiAssignment.builder()
+                    .kpi(kpi)
+                    .employee(employee)
+                    .jobStep(jobStep)
+                    .weight(item.getWeight())
+                    .mandatory(item.isMandatory())
+                    .validFrom(LocalDate.now())
+                    .active(true)
+                    .build();
+
+            toSave.add(assignment);
+        }
+
+        List<KpiAssignment> saved = repository.saveAll(toSave);
+
+        for (KpiAssignment assignment : saved) {
+            response.add(
+                    KpiAssignmentResponseDTO.builder()
+                            .assignmentId(assignment.getId())
+                            .kpiId(assignment.getKpi().getId())
+                            .kpiCode(assignment.getKpi().getCode())
+                            .weight(assignment.getWeight())
+                            .mandatory(assignment.isMandatory())
+                            .build()
+            );
+        }
+
+        return response;
     }
 
-    public KpiAssignment assignToJobStep(
-            Long jobStepId,
-            Long kpiId,
-            BigDecimal weight
-    ) {
-
-        validateWeight(weight);
-
-        JobStep jobStep = jobStepRepository.findById(jobStepId).orElseThrow();
-        KpiDefinition kpi = kpiRepository.findById(kpiId).orElseThrow();
-
-        return repository.save(
-                KpiAssignment.builder()
-                        .kpi(kpi)
-                        .jobStep(jobStep)
-                        .weight(weight)
-                        .mandatory(true)
-                        .validFrom(LocalDate.now())
-                        .active(true)
-                        .build()
-        );
-    }
+    /* ==============================
+       INTERNAL VALIDATION
+       ============================== */
 
     private void validateWeight(BigDecimal weight) {
-        if (weight == null || weight.compareTo(BigDecimal.ZERO) <= 0)
+        if (weight == null || weight.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Weight must be positive.");
+        }
+    }
+
+    private void validateTotalWeight(KpiBulkAssignmentRequestDTO request) {
+
+        BigDecimal total = request.getKpis().stream()
+                .map(KpiAssignmentItemRequestDTO::getWeight)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        if (total.compareTo(BigDecimal.ONE) > 0) {
+            throw new IllegalArgumentException(
+                    "Total KPI weight cannot exceed 1.0 (100%)"
+            );
+        }
     }
 }
-
