@@ -9,6 +9,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
     <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <script>
         tailwind.config = {
             darkMode: "class",
@@ -294,6 +296,13 @@
             color: #ef4444;
             font-size: 0.875rem;
         }
+        .htmx-indicator {
+    display: none;
+}
+.htmx-request .htmx-indicator,
+.htmx-request.htmx-indicator {
+    display: inline-block;
+}
     </style>
 </head>
 <body>
@@ -317,7 +326,7 @@
         </nav>
     </div>
 
-    <!-- Stats Grid (unchanged) -->
+    <!-- Stats Cards -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
         <!-- Total KPI Definitions -->
         <div class="stat-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6">
@@ -403,9 +412,9 @@
             <span>Add KPI</span>
         </button>
     </div>
-    <!-- KPI Definitions Content (table hardcoded) -->
+
+    <!-- KPI Definitions Content -->
     <div id="content-definitions" class="tab-content">
-        <!-- KPI Definitions Table -->
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
             <div class="p-4 md:p-6 border-b border-gray-200 dark:border-gray-700">
                 <div class="flex items-center justify-between">
@@ -434,7 +443,10 @@
                     </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200 dark:divide-gray-700" id="kpiDefinitionsTable">
+
+                    <!-- KPI Rows -->
                     <tr th:each="kpi : ${kpiDefinitions}" class="bg-white dark:bg-gray-800">
+
                         <!-- Code -->
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div th:text="${kpi.code}" class="font-medium">KPI001</div>
@@ -443,174 +455,104 @@
                         <!-- Name & Description -->
                         <td class="px-6 py-4">
                             <div th:text="${kpi.name}" class="font-medium">Sales Target Achievement</div>
-                            <div th:text="${kpi.description}" class="text-sm text-gray-500">Percentage of monthly sales target achieved</div>
+                            <div th:text="${kpi.description}"
+                                 class="text-sm text-gray-500">
+                                Percentage of monthly sales target achieved
+                            </div>
                         </td>
 
-                        <!-- Category Badge (dynamic color based on category name) -->
+                        <!-- Category Badge -->
                         <td class="px-6 py-4 whitespace-nowrap">
             <span th:text="${kpi.category}"
-                  th:classappend="|px-2 py-1 text-xs rounded-full
-                  ${kpi.category == 'PRODUCTIVITY' ? 'bg-blue-100 text-blue-800' :
-                    (kpi.category == 'ATTENDANCE' ? 'bg-green-100 text-green-800' :
-                      (kpi.category == 'QUALITY' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'))}|"
-                  class="px-2 py-1 text-xs rounded-full">
+                  class="px-2 py-1 text-xs rounded-full"
+                  th:classappend="${kpi.category == 'PRODUCTIVITY' ? ' bg-blue-100 text-blue-800' :
+                                  (kpi.category == 'ATTENDANCE' ? ' bg-green-100 text-green-800' :
+                                  (kpi.category == 'QUALITY' ? ' bg-purple-100 text-purple-800' :
+                                  ' bg-gray-100 text-gray-800'))}">
                 Productivity
             </span>
                         </td>
 
-                        <!-- Target Value with unit symbol -->
+                        <!-- Target Value with Unit Symbol -->
                         <td class="px-6 py-4 whitespace-nowrap">
                             <th:block th:switch="${kpi.unit}">
-                                <span th:case="'PERCENTAGE'" th:text="${kpi.targetValue} + ' %'">100 %</span>
-                                <span th:case="'HOURS'" th:text="${kpi.targetValue} + ' h'">40 h</span>
-                                <span th:case="'NUMBER'" th:text="${kpi.targetValue}">4.5</span>
-                                <span th:case="*" th:text="${kpi.targetValue}">--</span> <!-- fallback -->
+                <span th:case="'PERCENTAGE'"
+                      th:text="${kpi.targetValue} + ' %'">100 %</span>
+                                <span th:case="'HOURS'"
+                                      th:text="${kpi.targetValue} + ' h'">40 h</span>
+                                <span th:case="'NUMBER'"
+                                      th:text="${kpi.targetValue}">4.5</span>
+                                <span th:case="*"
+                                      th:text="${kpi.targetValue ?: '--'}">--</span>
                             </th:block>
                         </td>
 
-                        <!-- Unit (full display name) -->
-                        <td th:text="${kpi.unit == 'PERCENTAGE' ? 'Percentage' :
-                       (kpi.unit == 'HOURS' ? 'Hours' :
-                         (kpi.unit == 'NUMBER' ? 'Number' : kpi.unit))}"
-                            class="px-6 py-4 whitespace-nowrap">
+                        <!-- Unit (Full Display Name) -->
+                        <td class="px-6 py-4 whitespace-nowrap"
+                            th:text="${kpi.unit == 'PERCENTAGE' ? 'Percentage' :
+                      (kpi.unit == 'HOURS' ? 'Hours' :
+                      (kpi.unit == 'NUMBER' ? 'Number' : kpi.unit))}">
                             Percentage
                         </td>
 
-                        <!-- Status Badge (active/inactive) -->
+                        <!-- Status Badge -->
                         <td class="px-6 py-4 whitespace-nowrap">
             <span th:text="${kpi.active ? 'Active' : 'Inactive'}"
-                  th:classappend="${kpi.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}"
-                  class="px-2 py-1 text-xs rounded-full">
+                  class="px-2 py-1 text-xs rounded-full"
+                  th:classappend="${kpi.active ? ' bg-green-100 text-green-800' :
+                                                ' bg-red-100 text-red-800'}">
                 Active
             </span>
                         </td>
 
-                        <!-- Action buttons -->
+                        <!-- Action Buttons -->
                         <td class="px-6 py-4 whitespace-nowrap text-sm">
                             <button th:onclick="'editKpiDefinition(' + ${kpi.id} + ')'"
                                     class="text-primary-600 hover:text-primary-900 mr-3">
                                 <span class="material-icons-round text-sm">edit</span>
                             </button>
+
                             <button th:onclick="'deleteKpiDefinition(' + ${kpi.id} + ')'"
                                     class="text-red-600 hover:text-red-900">
                                 <span class="material-icons-round text-sm">delete</span>
                             </button>
+
                             <button th:onclick="'assignKpi(' + ${kpi.id} + ')'"
                                     class="text-blue-600 hover:text-blue-900 ml-3">
                                 <span class="material-icons-round text-sm">assignment</span>
                             </button>
                         </td>
+
                     </tr>
 
-                    <!-- Fallback row when the list is empty -->
-                    <tr th:if="${#lists.isEmpty(kpiDefinitions)}">
-                        <td colspan="7" class="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                    <!-- Empty State -->
+                    <tr th:if="${kpiDefinitions == null or #lists.isEmpty(kpiDefinitions)}">
+                        <td colspan="7"
+                            class="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
                             No KPI definitions found.
                         </td>
                     </tr>
+
                     </tbody>
+
                 </table>
             </div>
         </div>
     </div>
 
-    <!-- KPI Assignments Content (tables hardcoded) -->
+    <!-- KPI Assignments Content – loaded via HTMX -->
     <div id="content-assignments" class="tab-content hidden">
-        <div class="mb-6 flex justify-between items-center">
-            <div>
-                <button onclick="openModal('kpiAssignmentModal')" class="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 flex items-center space-x-2">
-                    <span class="material-icons-round text-sm">assignment_add</span>
-                    <span>Assign Multiple KPIs</span>
-                </button>
-            </div>
-            <div class="text-sm text-gray-600 dark:text-gray-400">
-                Total Assignments: <span class="font-bold">186</span>
-            </div>
-        </div>
-
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <!-- Individual Assignments -->
-            <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-                <div class="p-6 border-b border-gray-200 dark:border-gray-700">
-                    <h3 class="text-lg font-bold">Individual KPI Assignments</h3>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Multiple KPIs per employee with weights</p>
-                </div>
-                <div class="p-6 overflow-x-auto">
-                    <table class="w-full">
-                        <thead class="bg-gray-50 dark:bg-gray-750">
-                        <tr>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Employee</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Assigned KPIs</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Total Weight</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Actions</th>
-                        </tr>
-                        </thead>
-                        <tbody id="individualAssignmentsTable">
-                        <!-- Hardcoded rows based on sample data -->
-                        <tr>
-                            <td class="px-4 py-3"><div class="font-medium">John Doe</div><div class="text-sm text-gray-500">Sales</div></td>
-                            <td class="px-4 py-3"><div class="text-sm">Sales Target Achievement, Customer Satisfaction Score, Project Delivery On Time</div><div class="text-xs text-gray-500">3 KPIs assigned</div></td>
-                            <td class="px-4 py-3"><span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">1.00</span></td>
-                            <td class="px-4 py-3">
-                                <button onclick="viewAssignmentDetails(1, 'employee')" class="text-primary-600 hover:text-primary-900 mr-3"><span class="material-icons-round text-sm">visibility</span></button>
-                                <button onclick="editAssignment(1, 'employee')" class="text-blue-600 hover:text-blue-900 mr-3"><span class="material-icons-round text-sm">edit</span></button>
-                                <button onclick="deleteAllAssignments(1, 'employee')" class="text-red-600 hover:text-red-900"><span class="material-icons-round text-sm">delete</span></button>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="px-4 py-3"><div class="font-medium">Jane Smith</div><div class="text-sm text-gray-500">Engineering</div></td>
-                            <td class="px-4 py-3"><div class="text-sm">Attendance Rate, Training Hours Completed</div><div class="text-xs text-gray-500">2 KPIs assigned</div></td>
-                            <td class="px-4 py-3"><span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">1.00</span></td>
-                            <td class="px-4 py-3">
-                                <button onclick="viewAssignmentDetails(2, 'employee')" class="text-primary-600 hover:text-primary-900 mr-3"><span class="material-icons-round text-sm">visibility</span></button>
-                                <button onclick="editAssignment(2, 'employee')" class="text-blue-600 hover:text-blue-900 mr-3"><span class="material-icons-round text-sm">edit</span></button>
-                                <button onclick="deleteAllAssignments(2, 'employee')" class="text-red-600 hover:text-red-900"><span class="material-icons-round text-sm">delete</span></button>
-                            </td>
-                        </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Role-based Assignments -->
-            <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-                <div class="p-6 border-b border-gray-200 dark:border-gray-700">
-                    <h3 class="text-lg font-bold">Role-based KPI Assignments</h3>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Multiple KPIs per role with weights</p>
-                </div>
-                <div class="p-6 overflow-x-auto">
-                    <table class="w-full">
-                        <thead class="bg-gray-50 dark:bg-gray-750">
-                        <tr>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Job Role</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Assigned KPIs</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Total Weight</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Actions</th>
-                        </tr>
-                        </thead>
-                        <tbody id="roleAssignmentsTable">
-                        <!-- Hardcoded rows based on sample data -->
-                        <tr>
-                            <td class="px-4 py-3"><div class="font-medium">Sales Manager</div></td>
-                            <td class="px-4 py-3"><div class="text-sm">Sales Target Achievement, Customer Satisfaction Score</div><div class="text-xs text-gray-500">2 KPIs assigned</div></td>
-                            <td class="px-4 py-3"><span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">1.00</span></td>
-                            <td class="px-4 py-3">
-                                <button onclick="viewAssignmentDetails('SALES_MANAGER', 'role')" class="text-primary-600 hover:text-primary-900 mr-3"><span class="material-icons-round text-sm">visibility</span></button>
-                                <button onclick="editAssignment('SALES_MANAGER', 'role')" class="text-blue-600 hover:text-blue-900 mr-3"><span class="material-icons-round text-sm">edit</span></button>
-                                <button onclick="deleteAllAssignments('SALES_MANAGER', 'role')" class="text-red-600 hover:text-red-900"><span class="material-icons-round text-sm">delete</span></button>
-                            </td>
-                        </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+        <!-- Placeholder with loading indicator – will be replaced by HTMX -->
+        <div class="flex justify-center items-center py-12">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+            <span class="ml-3 text-gray-500">Loading assignments...</span>
         </div>
     </div>
 
-    <!-- KPI Measurements Content (table hardcoded) -->
+    <!-- KPI Measurements Content -->
     <div id="content-measurements" class="tab-content hidden">
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-            <!-- Measurement Form for Multiple KPIs (kept dynamic) -->
+            <!-- Measurement Form for Multiple KPIs -->
             <div class="lg:col-span-1 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
                 <h3 class="text-lg font-bold mb-4">Record KPI Measurements</h3>
                 <form id="measurementForm" class="space-y-4">
@@ -689,16 +631,16 @@
         </div>
     </div>
 
-    <!-- Performance Dashboard Content (table hardcoded, top performers and chart dynamic) -->
+    <!-- Performance Dashboard Content -->
     <div id="content-performance" class="tab-content hidden">
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-            <!-- Performance Chart (dynamic) -->
+            <!-- Performance Chart -->
             <div class="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
                 <h3 class="text-lg font-bold mb-6">Performance Overview</h3>
                 <div id="performanceChart" class="h-80"></div>
             </div>
 
-            <!-- Top Performers (dynamic) -->
+            <!-- Top Performers -->
             <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
                 <h3 class="text-lg font-bold mb-6">Top Performers</h3>
                 <div class="space-y-4" id="topPerformersList">
@@ -707,7 +649,7 @@
             </div>
         </div>
 
-        <!-- Department Performance Table (hardcoded) -->
+        <!-- Department Performance Table -->
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
             <h3 class="text-lg font-bold mb-6">Department Performance</h3>
             <div class="overflow-x-auto">
@@ -807,14 +749,24 @@
         </div>
     </div>
 
-    <!-- KPI Assignment Modal -->
+    <!-- ========== KPI ASSIGNMENT MODAL (INDEXED FIELDS) ========== -->
     <div id="kpiAssignmentModal" class="modal">
         <div class="modal-content">
             <div class="p-6 border-b border-gray-200 dark:border-gray-700">
                 <h3 class="text-lg font-bold">Assign Multiple KPIs</h3>
                 <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Add multiple KPIs with weights (total must equal 1.0)</p>
             </div>
-            <form id="kpiAssignmentForm" class="p-6 space-y-4">
+            <!-- Standard form submission – htmx will send as application/x-www-form-urlencoded -->
+            <form id="kpiAssignmentForm"
+                  hx-post="/kpi/assign"
+                  hx-target="#content-assignments"
+                  hx-swap="innerHTML"
+                  hx-indicator="#submit-spinner"
+                  hx-on:htmx:before-request="disableAssignmentSubmit()"
+                  hx-on:htmx:after-request="handleAssignmentResponse(event)"
+                  onsubmit="return validateAssignmentForm(event)"
+                  class="p-6 space-y-4">
+
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Assign To</label>
                     <div class="space-y-3">
@@ -824,36 +776,41 @@
                             <label for="assignEmployee" class="ml-2 text-sm">Individual Employee</label>
                         </div>
                         <div class="flex items-center">
-                            <input type="radio" id="assignRole" name="assignTo" value="role"
+                            <input type="radio" id="assignGrade" name="assignTo" value="grade"
                                    class="w-4 h-4 text-primary-600 focus:ring-primary-500">
-                            <label for="assignRole" class="ml-2 text-sm">Job Role</label>
+                            <label for="assignGrade" class="ml-2 text-sm">Job Grade with Steps</label>
                         </div>
                     </div>
                 </div>
+
                 <div id="employeeAssignment" class="assignment-option">
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Employee *</label>
-                    <select id="assignmentEmployee" required
+                    <select id="assignmentEmployee" name="employeeId" required
                             class="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
                         <option value="">Select Employee</option>
-                    </select>
-                </div>
-                <div id="roleAssignment" class="assignment-option hidden">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Job Role *</label>
-                    <select id="assignmentRole"
-                            class="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
-                        <option value="">Select Job Role</option>
-                        <option value="SOFTWARE_ENGINEER">Software Engineer</option>
-                        <option value="SALES_MANAGER">Sales Manager</option>
-                        <option value="HR_MANAGER">HR Manager</option>
-                        <option value="PRODUCT_MANAGER">Product Manager</option>
-                        <option value="MARKETING_SPECIALIST">Marketing Specialist</option>
+                        <option th:each="employee : ${employees}" th:value="${employee.id}" th:text="${employee.firstName + ' ' + employee.lastName}">John Doe</option>
                     </select>
                 </div>
 
+                <div id="gradeAssignment" class="assignment-option hidden">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Job Grade *</label>
+                    <select id="assignmentJobGrade" name="jobGradeId" class="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+                        <option value="">Select Job Grade</option>
+                        <option th:each="grade : ${jobGrades}" th:value="${grade.id}" th:text="${grade.name}">Grade 1</option>
+                    </select>
+                    <div class="mt-3">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Job Step *</label>
+                        <select id="assignmentJobStep" name="jobStepId" class="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none" disabled>
+                            <option value="">Select Job Step</option>
+                        </select>
+                        <p class="text-xs text-gray-500 mt-1">Select a job grade first to see available steps</p>
+                    </div>
+                </div>
+
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">KPIs with Weights *</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">KPIs with Weights</label>
                     <div id="assignmentKpisContainer" class="space-y-3">
-                        <!-- KPI items will be added here -->
+                        <!-- KPI rows will be added here with indexed names -->
                     </div>
                     <button type="button" onclick="addKpiAssignmentRow()" class="mt-3 text-primary-600 hover:text-primary-800 flex items-center space-x-1">
                         <span class="material-icons-round text-sm">add_circle</span>
@@ -867,37 +824,57 @@
                         <span id="totalWeight" class="ml-2 total-weight">0.00</span>
                         <span id="weightError" class="ml-2 weight-error hidden">Total must be 1.0</span>
                     </div>
-                    <div class="flex items-center">
-                        <input type="checkbox" id="assignmentMandatory" class="w-4 h-4 text-primary-600 rounded focus:ring-primary-500">
-                        <label class="ml-2 text-sm text-gray-700 dark:text-gray-300">Mandatory</label>
-                    </div>
+                </div>
+
+                <!-- Footer buttons with spinner -->
+                <div class="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <button type="button" onclick="closeModal('kpiAssignmentModal')" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
+                        Assign KPIs
+                    </button>
+                    <span id="submit-spinner" class="htmx-indicator ml-2">
+                    <span class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></span>
+                </span>
                 </div>
             </form>
-            <div class="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3">
-                <button onclick="closeModal('kpiAssignmentModal')" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
-                    Cancel
-                </button>
-                <button onclick="saveMultipleKpiAssignments()" class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
-                    Assign KPIs
-                </button>
-            </div>
         </div>
     </div>
 
-    <script>
-        // Data Structures (used by modals)
-        let kpiDefinitions = [
-            { id: 1, code: 'KPI001', name: 'Sales Target Achievement', description: 'Percentage of monthly sales target achieved', category: 'PRODUCTIVITY', targetValue: 100, unit: 'PERCENTAGE', active: true },
-            { id: 2, code: 'KPI002', name: 'Attendance Rate', description: 'Percentage of days present in the month', category: 'ATTENDANCE', targetValue: 95, unit: 'PERCENTAGE', active: true },
-            { id: 3, code: 'KPI003', name: 'Customer Satisfaction Score', description: 'Average customer satisfaction rating', category: 'QUALITY', targetValue: 4.5, unit: 'NUMBER', active: true },
-            { id: 4, code: 'KPI004', name: 'Project Delivery On Time', description: 'Percentage of projects delivered on schedule', category: 'PRODUCTIVITY', targetValue: 90, unit: 'PERCENTAGE', active: true },
-            { id: 5, code: 'KPI005', name: 'Training Hours Completed', description: 'Total professional development hours completed', category: 'PRODUCTIVITY', targetValue: 40, unit: 'HOURS', active: true }
-        ];
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        // Receive server-side data safely
+        const jobGrades = [[${jobGrades}]] || [];
+        const departments = [[${departments}]] || [];
+        const payGroups = [[${payGroups}]] || [];
+        const kpiDefinitions = [[${kpiDefinitions}]] || [];
 
+        // Build jobSteps array from jobGrades (handle both 'steps' and 'jobSteps' property names)
+        let jobSteps = [];
+        if (Array.isArray(jobGrades) && jobGrades.length > 0) {
+            jobGrades.forEach(grade => {
+                const stepsList = grade.steps || grade.jobSteps || [];
+                if (Array.isArray(stepsList) && stepsList.length > 0) {
+                    stepsList.forEach(step => {
+                        jobSteps.push({
+                            id: step.id,
+                            gradeId: grade.id,
+                            display: grade.name + ' - ' + step.name
+                        });
+                    });
+                }
+            });
+        }
+        /*]]>*/
+    </script>
+
+    <script>
+        // Data Structures (used by modals) - hardcoded demo data, but kpiDefinitions now comes from server
         let kpiAssignments = [
             { id: 1, employeeId: 1, assignments: [ { kpiId: 1, weight: 0.3 }, { kpiId: 3, weight: 0.4 }, { kpiId: 4, weight: 0.3 } ], mandatory: true, type: 'employee' },
             { id: 2, employeeId: 2, assignments: [ { kpiId: 2, weight: 0.5 }, { kpiId: 5, weight: 0.5 } ], mandatory: true, type: 'employee' },
-            { id: 3, jobRole: 'SALES_MANAGER', assignments: [ { kpiId: 1, weight: 0.6 }, { kpiId: 3, weight: 0.4 } ], mandatory: false, type: 'role' }
+            { id: 3, jobStepId: 101, assignments: [ { kpiId: 1, weight: 0.6 }, { kpiId: 3, weight: 0.4 } ], mandatory: false, type: 'grade' }
         ];
 
         let kpiMeasurements = [
@@ -913,7 +890,7 @@
             { id: 5, name: 'David Brown', department: 'Product', jobRole: 'PRODUCT_MANAGER' }
         ];
 
-        // Tab Management (removed calls to table population)
+        // Tab Management (updated to load assignments via HTMX)
         function switchTab(tabName) {
             document.querySelectorAll('.tab-content').forEach(content => {
                 content.classList.add('hidden');
@@ -923,11 +900,20 @@
                 tab.classList.remove('active');
             });
 
-            document.getElementById(`content-${tabName}`).classList.remove('hidden');
+            const contentDiv = document.getElementById(`content-${tabName}`);
+            contentDiv.classList.remove('hidden');
             document.getElementById(`tab-${tabName}`).classList.add('active');
 
-            // Keep dynamic parts for measurements and performance
-            if (tabName === 'measurements') {
+            if (tabName === 'assignments') {
+                if (!contentDiv.hasAttribute('data-loaded')) {
+                    htmx.ajax('GET', '/fragments/kpi-assignments', {
+                        target: '#content-assignments',
+                        swap: 'innerHTML'
+                    }).then(() => {
+                        contentDiv.setAttribute('data-loaded', 'true');
+                    });
+                }
+            } else if (tabName === 'measurements') {
                 loadEmployeeOptions();
             } else if (tabName === 'performance') {
                 loadTopPerformers();
@@ -944,7 +930,6 @@
                 resetKpiForm();
             } else if (modalId === 'kpiAssignmentModal') {
                 resetAssignmentForm();
-                loadEmployeeOptionsForAssignment();
                 addKpiAssignmentRow();
                 setupAssignmentToggle();
             }
@@ -962,7 +947,7 @@
             return prefix + randomNum;
         }
 
-        // Helper functions for categories and units (used by modals)
+        // Helper functions for categories and units
         function getCategoryClass(category) {
             const classes = {
                 'PRODUCTIVITY': 'bg-blue-100 text-blue-800',
@@ -1023,9 +1008,7 @@
 
         function deleteKpiDefinition(id) {
             if (confirm('Are you sure you want to delete this KPI?')) {
-                kpiDefinitions = kpiDefinitions.filter(k => k.id !== id);
-                showNotification('KPI deleted successfully!', 'success');
-                // Table not updated – static
+                showNotification('KPI deleted successfully! (demo only)', 'success');
             }
         }
 
@@ -1038,188 +1021,226 @@
             }
             return true;
         }
+        // Counter for indexing KPI rows
+let kpiRowCounter = 0;
 
-        // KPI Assignment functions
-        function resetAssignmentForm() {
-            document.getElementById('kpiAssignmentForm').reset();
-            document.getElementById('assignmentKpisContainer').innerHTML = '';
-            document.getElementById('totalWeight').textContent = '0.00';
-            document.getElementById('weightError').classList.add('hidden');
-        }
+// Function to add a KPI row with indexed field names
+function addKpiAssignmentRow(kpiId = '', weight = '', mandatory = true) {
+    const container = document.getElementById('assignmentKpisContainer');
+    const index = kpiRowCounter++; // use and increment counter
 
-        function loadEmployeeOptionsForAssignment() {
-            const select = document.getElementById('assignmentEmployee');
-            select.innerHTML = '<option value="">Select Employee</option>';
-            employees.forEach(emp => {
-                const option = document.createElement('option');
-                option.value = emp.id;
-                option.textContent = emp.name;
-                select.appendChild(option);
-            });
-        }
-
-        function addKpiAssignmentRow(kpiId = '', weight = '') {
-            const container = document.getElementById('assignmentKpisContainer');
-            const rowId = Date.now();
-
-            const row = document.createElement('div');
-            row.className = 'kpi-item';
-            row.innerHTML = `
-                <div class="kpi-item-header" onclick="toggleKpiItem(${rowId})">
-                    <div class="flex items-center space-x-2">
-                        <span class="material-icons-round text-sm">expand_more</span>
-                        <span>KPI Assignment</span>
-                    </div>
-                    <button type="button" onclick="removeKpiAssignmentRow(${rowId}, event)" class="text-red-600 hover:text-red-900">
-                        <span class="material-icons-round text-sm">delete</span>
-                    </button>
+    const row = document.createElement('div');
+    row.className = 'kpi-item';
+    row.setAttribute('data-index', index);
+    row.innerHTML = `
+        <div class="kpi-item-header" onclick="toggleKpiItem(this)">
+            <div class="flex items-center space-x-2">
+                <span class="material-icons-round text-sm">expand_more</span>
+                <span>KPI Assignment</span>
+            </div>
+            <button type="button" onclick="removeKpiAssignmentRow(this)" class="text-red-600 hover:text-red-900">
+                <span class="material-icons-round text-sm">delete</span>
+            </button>
+        </div>
+        <div class="kpi-item-content hidden">
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">KPI</label>
+                    <select name="kpis[${index}].kpiId" class="kpi-select w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none" onchange="updateTotalWeight()">
+                        <option value="">Select KPI</option>
+                        ${kpiDefinitions.filter(k => k.active).map(k =>
+                            `<option value="${k.id}" ${kpiId == k.id ? 'selected' : ''}>${k.code} - ${k.name}</option>`
+                        ).join('')}
+                    </select>
                 </div>
-                <div id="kpi-content-${rowId}" class="kpi-item-content hidden">
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">KPI</label>
-                            <select class="kpi-select w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none" onchange="updateTotalWeight()">
-                                <option value="">Select KPI</option>
-                                ${kpiDefinitions.filter(k => k.active).map(k =>
-                                    `<option value="${k.id}" ${kpiId == k.id ? 'selected' : ''}>${k.code} - ${k.name}</option>`
-                                ).join('')}
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Weight (0-1)</label>
-                            <input type="number" step="0.01" min="0" max="1" value="${weight}"
-                                   class="weight-input w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none"
-                                   onchange="updateTotalWeight()" oninput="updateTotalWeight()">
-                        </div>
-                    </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Weight (0-1)</label>
+                    <input type="number" step="0.01" min="0" max="1" value="${weight}"
+                           name="kpis[${index}].weight"
+                           class="weight-input w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none"
+                           onchange="updateTotalWeight()" oninput="updateTotalWeight()">
                 </div>
-            `;
-            container.appendChild(row);
-            updateTotalWeight();
+            </div>
+            <div class="mt-3 flex items-center">
+                <input type="checkbox" name="kpis[${index}].mandatory" class="kpi-mandatory w-4 h-4 text-primary-600 rounded focus:ring-primary-500" ${mandatory ? 'checked' : ''} value="true">
+                <label class="ml-2 text-sm text-gray-700 dark:text-gray-300">Mandatory</label>
+                <!-- Hidden field to ensure 'false' is sent when checkbox is unchecked -->
+                <input type="hidden" name="kpis[${index}].mandatory" value="false">
+            </div>
+        </div>
+    `;
+    container.appendChild(row);
+    updateTotalWeight();
+}
+
+// Toggle row content (expand/collapse)
+function toggleKpiItem(header) {
+    const content = header.nextElementSibling;
+    const icon = header.querySelector('.material-icons-round');
+    content.classList.toggle('hidden');
+    icon.textContent = content.classList.contains('hidden') ? 'expand_more' : 'expand_less';
+}
+
+// Remove a KPI row and renumber remaining rows
+function removeKpiAssignmentRow(button) {
+    const row = button.closest('.kpi-item');
+    row.remove();
+    renumberKpiRows();
+    updateTotalWeight();
+}
+
+// Renumber all KPI rows so indices are contiguous (0,1,2,...)
+function renumberKpiRows() {
+    const rows = document.querySelectorAll('#assignmentKpisContainer .kpi-item');
+    rows.forEach((row, newIndex) => {
+        // Update data-index attribute
+        row.setAttribute('data-index', newIndex);
+        // Update name attributes in selects, inputs, and hidden fields
+        const select = row.querySelector('.kpi-select');
+        if (select) select.name = `kpis[${newIndex}].kpiId`;
+        const weightInput = row.querySelector('.weight-input');
+        if (weightInput) weightInput.name = `kpis[${newIndex}].weight`;
+        const checkbox = row.querySelector('.kpi-mandatory');
+        if (checkbox) checkbox.name = `kpis[${newIndex}].mandatory`;
+        const hidden = row.querySelector('input[type="hidden"][name$=".mandatory"]');
+        if (hidden) hidden.name = `kpis[${newIndex}].mandatory`;
+    });
+    // Reset the global counter to the next available index
+    kpiRowCounter = rows.length;
+}
+
+// Update total weight display
+function updateTotalWeight() {
+    const weightInputs = document.querySelectorAll('.weight-input');
+    let total = 0;
+    weightInputs.forEach(input => {
+        const value = parseFloat(input.value) || 0;
+        total += value;
+    });
+    const totalWeightElement = document.getElementById('totalWeight');
+    const weightErrorElement = document.getElementById('weightError');
+    totalWeightElement.textContent = total.toFixed(2);
+    if (Math.abs(total - 1.0) > 0.001) {
+        totalWeightElement.classList.add('text-red-600');
+        weightErrorElement.classList.remove('hidden');
+    } else {
+        totalWeightElement.classList.remove('text-red-600');
+        weightErrorElement.classList.add('hidden');
+    }
+}
+
+// Reset form (clear rows, reset fields)
+function resetAssignmentForm() {
+    document.getElementById('kpiAssignmentForm').reset();
+    document.getElementById('assignmentKpisContainer').innerHTML = '';
+    document.getElementById('totalWeight').textContent = '0.00';
+    document.getElementById('weightError').classList.add('hidden');
+    const gradeSelect = document.getElementById('assignmentJobGrade');
+    const stepSelect = document.getElementById('assignmentJobStep');
+    if (gradeSelect) gradeSelect.value = '';
+    if (stepSelect) {
+        stepSelect.innerHTML = '<option value="">Select Job Step</option>';
+        stepSelect.disabled = true;
+    }
+    kpiRowCounter = 0; // reset counter
+}
+
+// Validation (now checks indexed fields correctly)
+function validateAssignmentForm(event) {
+    // Basic HTML5 validation (required attributes)
+    const form = document.getElementById('kpiAssignmentForm');
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        event.preventDefault();
+        return false;
+    }
+
+    // Total weight must be 1.0
+    const totalWeight = parseFloat(document.getElementById('totalWeight').textContent);
+    if (Math.abs(totalWeight - 1.0) > 0.001) {
+        alert('Total weight must equal 1.0');
+        event.preventDefault();
+        return false;
+    }
+
+    // At least one KPI row with selected KPI
+    const kpiSelects = document.querySelectorAll('.kpi-select');
+    if (kpiSelects.length === 0 || !Array.from(kpiSelects).some(s => s.value)) {
+        alert('Please add at least one KPI');
+        event.preventDefault();
+        return false;
+    }
+
+    // Ensure every row has both KPI selected and weight entered
+    const rows = document.querySelectorAll('#assignmentKpisContainer .kpi-item');
+    for (let row of rows) {
+        const select = row.querySelector('.kpi-select');
+        const weight = row.querySelector('.weight-input');
+        if (!select.value || !weight.value) {
+            alert('Each KPI row must have a KPI selected and a weight entered.');
+            event.preventDefault();
+            return false;
         }
+    }
 
-        function toggleKpiItem(rowId) {
-            const content = document.getElementById(`kpi-content-${rowId}`);
-            const icon = content.parentElement.querySelector('.material-icons-round');
-            content.classList.toggle('hidden');
-            icon.textContent = content.classList.contains('hidden') ? 'expand_more' : 'expand_less';
+    // For grade assignment, ensure grade and step are selected
+    if (document.getElementById('assignGrade').checked) {
+        const grade = document.getElementById('assignmentJobGrade');
+        const step = document.getElementById('assignmentJobStep');
+        if (!grade.value || !step.value) {
+            alert('Please select both Job Grade and Job Step.');
+            event.preventDefault();
+            return false;
         }
+    }
 
-        function removeKpiAssignmentRow(rowId, event) {
-            event.stopPropagation();
-            const element = document.querySelector(`#kpi-content-${rowId}`).parentElement;
-            element.remove();
-            updateTotalWeight();
+    // For employee assignment, ensure employee is selected
+    if (document.getElementById('assignEmployee').checked) {
+        const employee = document.getElementById('assignmentEmployee');
+        if (!employee.value) {
+            alert('Please select an employee.');
+            event.preventDefault();
+            return false;
         }
+    }
 
-        function updateTotalWeight() {
-            const weightInputs = document.querySelectorAll('.weight-input');
-            let total = 0;
-            weightInputs.forEach(input => {
-                const value = parseFloat(input.value) || 0;
-                total += value;
-            });
-            const totalWeightElement = document.getElementById('totalWeight');
-            const weightErrorElement = document.getElementById('weightError');
-            totalWeightElement.textContent = total.toFixed(2);
-            if (Math.abs(total - 1.0) > 0.001) {
-                totalWeightElement.classList.add('text-red-600');
-                weightErrorElement.classList.remove('hidden');
-            } else {
-                totalWeightElement.classList.remove('text-red-600');
-                weightErrorElement.classList.add('hidden');
-            }
-        }
+    return true; // allow htmx submission
+}
 
-        function setupAssignmentToggle() {
-            const assignEmployee = document.getElementById('assignEmployee');
-            const assignRole = document.getElementById('assignRole');
-            const employeeDiv = document.getElementById('employeeAssignment');
-            const roleDiv = document.getElementById('roleAssignment');
+// Disable submit button during request
+function disableAssignmentSubmit() {
+    const btn = document.querySelector('#kpiAssignmentForm button[type="submit"]');
+    if (btn) {
+        btn.disabled = true;
+        btn.classList.add('opacity-50', 'cursor-not-allowed');
+        btn.innerHTML = 'Submitting...';
+    }
+}
 
-            assignEmployee.addEventListener('change', () => {
-                if (assignEmployee.checked) {
-                    employeeDiv.classList.remove('hidden');
-                    roleDiv.classList.add('hidden');
-                }
-            });
-            assignRole.addEventListener('change', () => {
-                if (assignRole.checked) {
-                    employeeDiv.classList.add('hidden');
-                    roleDiv.classList.remove('hidden');
-                }
-            });
-        }
+// Re-enable submit button on error
+function enableAssignmentSubmit() {
+    const btn = document.querySelector('#kpiAssignmentForm button[type="submit"]');
+    if (btn) {
+        btn.disabled = false;
+        btn.classList.remove('opacity-50', 'cursor-not-allowed');
+        btn.innerHTML = 'Assign KPIs';
+    }
+}
 
-        function getJobRoleLabel(role) {
-            const labels = {
-                'SOFTWARE_ENGINEER': 'Software Engineer',
-                'SALES_MANAGER': 'Sales Manager',
-                'HR_MANAGER': 'HR Manager',
-                'PRODUCT_MANAGER': 'Product Manager',
-                'MARKETING_SPECIALIST': 'Marketing Specialist'
-            };
-            return labels[role] || role;
-        }
-
-        function saveMultipleKpiAssignments() {
-            const form = document.getElementById('kpiAssignmentForm');
-            if (!form.checkValidity()) {
-                form.reportValidity();
-                return;
-            }
-
-            const totalWeight = parseFloat(document.getElementById('totalWeight').textContent);
-            if (Math.abs(totalWeight - 1.0) > 0.001) {
-                alert('Total weight must equal 1.0');
-                return;
-            }
-
-            const isEmployee = document.getElementById('assignEmployee').checked;
-            const kpiSelects = document.querySelectorAll('.kpi-select');
-            const weightInputs = document.querySelectorAll('.weight-input');
-
-            const assignments = [];
-            kpiSelects.forEach((select, index) => {
-                if (select.value && weightInputs[index].value) {
-                    assignments.push({
-                        kpiId: parseInt(select.value),
-                        weight: parseFloat(weightInputs[index].value)
-                    });
-                }
-            });
-
-            if (assignments.length === 0) {
-                alert('Please add at least one KPI');
-                return;
-            }
-
-            const newAssignment = {
-                id: kpiAssignments.length > 0 ? Math.max(...kpiAssignments.map(a => a.id)) + 1 : 1,
-                assignments: assignments,
-                mandatory: document.getElementById('assignmentMandatory').checked,
-                type: isEmployee ? 'employee' : 'role'
-            };
-
-            if (isEmployee) {
-                const employeeId = parseInt(document.getElementById('assignmentEmployee').value);
-                newAssignment.employeeId = employeeId;
-                kpiAssignments = kpiAssignments.filter(a => !(a.type === 'employee' && a.employeeId === employeeId));
-            } else {
-                const role = document.getElementById('assignmentRole').value;
-                newAssignment.jobRole = role;
-                kpiAssignments = kpiAssignments.filter(a => !(a.type === 'role' && a.jobRole === role));
-            }
-
-            kpiAssignments.push(newAssignment);
-            closeModal('kpiAssignmentModal');
-            showNotification('KPIs assigned successfully!', 'success');
-            // Table not updated – static
-        }
+// Handle response: close modal on success, show notification, re-enable button on error
+function handleAssignmentResponse(event) {
+    if (event.detail.successful) {
+        closeModal('kpiAssignmentModal');
+        showNotification('KPIs assigned successfully!', 'success');
+    } else {
+        enableAssignmentSubmit();
+        showNotification('Failed to assign KPIs. Please try again.', 'error');
+    }
+}
 
         function viewAssignmentDetails(id, type) {
             const assignments = kpiAssignments.filter(a =>
-                type === 'employee' ? a.employeeId === id : a.jobRole === id
+                type === 'employee' ? a.employeeId === id : a.jobStepId === id
             );
             let details = '';
             let totalWeight = 0;
@@ -1234,13 +1255,13 @@
             });
             const title = type === 'employee'
                 ? employees.find(e => e.id === id)?.name
-                : getJobRoleLabel(id);
+                : getJobStepLabel(id);
             alert(`${title} - KPI Assignments\n\n${details}\nTotal Weight: ${totalWeight.toFixed(2)}`);
         }
 
         function editAssignment(id, type) {
             const assignments = kpiAssignments.filter(a =>
-                type === 'employee' ? a.employeeId === id : a.jobRole === id
+                type === 'employee' ? a.employeeId === id : a.jobStepId === id
             );
             if (assignments.length === 0) return;
 
@@ -1250,12 +1271,22 @@
                 document.getElementById('assignEmployee').checked = true;
                 document.getElementById('assignmentEmployee').value = id;
                 document.getElementById('employeeAssignment').classList.remove('hidden');
-                document.getElementById('roleAssignment').classList.add('hidden');
+                document.getElementById('gradeAssignment').classList.add('hidden');
             } else {
-                document.getElementById('assignRole').checked = true;
-                document.getElementById('assignmentRole').value = id;
+                document.getElementById('assignGrade').checked = true;
                 document.getElementById('employeeAssignment').classList.add('hidden');
-                document.getElementById('roleAssignment').classList.remove('hidden');
+                document.getElementById('gradeAssignment').classList.remove('hidden');
+
+                const step = jobSteps.find(s => s.id === id);
+                if (step) {
+                    const gradeSelect = document.getElementById('assignmentJobGrade');
+                    gradeSelect.value = step.gradeId;
+                    gradeSelect.dispatchEvent(new Event('change'));
+                    setTimeout(() => {
+                        const stepSelect = document.getElementById('assignmentJobStep');
+                        stepSelect.value = id;
+                    }, 100);
+                }
             }
 
             document.getElementById('assignmentKpisContainer').innerHTML = '';
@@ -1266,17 +1297,16 @@
             });
 
             kpiAssignments = kpiAssignments.filter(a =>
-                type === 'employee' ? a.employeeId !== id : a.jobRole !== id
+                type === 'employee' ? a.employeeId !== id : a.jobStepId !== id
             );
         }
 
         function deleteAllAssignments(id, type) {
             if (confirm(`Are you sure you want to remove all KPI assignments?`)) {
                 kpiAssignments = kpiAssignments.filter(a =>
-                    type === 'employee' ? a.employeeId !== id : a.jobRole !== id
+                    type === 'employee' ? a.employeeId !== id : a.jobStepId !== id
                 );
                 showNotification('Assignments removed!', 'success');
-                // Table not updated – static
             }
         }
 
@@ -1432,7 +1462,6 @@
             document.getElementById('kpiMeasurementList').innerHTML = '';
 
             showNotification('Measurements recorded successfully!', 'success');
-            // Table not updated – static
         }
 
         function viewMeasurementDetails(id) {
@@ -1483,7 +1512,7 @@
             return 'kpi-score-poor';
         }
 
-        // Performance Dashboard (dynamic parts only)
+        // Performance Dashboard functions
         function loadTopPerformers() {
             const container = document.getElementById('topPerformersList');
             container.innerHTML = '';
@@ -1581,17 +1610,16 @@
 
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
-            loadEmployeeOptions(); // for measurement dropdown
+            loadEmployeeOptions();
+            setupGradeStepListener();
 
-            // Close modals when clicking outside
             window.onclick = function(event) {
                 if (event.target.classList.contains('modal')) {
                     event.target.style.display = 'none';
                     document.body.style.overflow = 'auto';
                 }
-            }
+            };
 
-            // Mobile Sidebar Toggle (if elements exist)
             const menuToggle = document.getElementById('menuToggle');
             const mobileOverlay = document.getElementById('mobileOverlay');
             const sidebar = document.querySelector('.sidebar-container');
@@ -1608,7 +1636,6 @@
                 });
             }
 
-            // Theme Toggle (if element exists)
             const themeToggle = document.getElementById('themeToggle');
             if (themeToggle) {
                 const themeIcon = themeToggle.querySelector('.material-icons-round');
@@ -1623,7 +1650,6 @@
                 }
             }
 
-            // Sidebar navigation active state
             document.querySelectorAll('.sidebar-item').forEach(item => {
                 item.addEventListener('click', function(e) {
                     if (this.getAttribute('href') === '#') e.preventDefault();
@@ -1637,7 +1663,6 @@
                 });
             });
 
-            // Close sidebar on window resize
             window.addEventListener('resize', () => {
                 if (window.innerWidth >= 1024 && sidebar) {
                     sidebar.classList.remove('open');

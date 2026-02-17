@@ -143,6 +143,9 @@ public class KpiAssignmentService {
         return response;
     }
 
+    public List<KpiAssignment> getAllAssignments() {
+        return repository.findAll();
+    }
     /* ==============================
        INTERNAL VALIDATION
        ============================== */
