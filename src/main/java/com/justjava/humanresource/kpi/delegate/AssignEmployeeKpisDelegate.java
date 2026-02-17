@@ -72,11 +72,12 @@ public class AssignEmployeeKpisDelegate implements JavaDelegate {
                 log.info("Assigning KPI {} to employee {}",
                         kpiId, employeeId);
 
-                kpiAssignmentService.assignToEmployee(
+                // To DO Later when we are ready to assign default at onboarding
+/*                kpiAssignmentService.assignToEmployee(
                         employeeId,
                         kpiId,
                         roleAssignment.getWeight()
-                );
+                );*/
 
             } else {
                 log.debug("KPI {} already assigned to employee {}, skipping.",
