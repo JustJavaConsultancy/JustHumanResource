@@ -63,6 +63,8 @@
         .grade-5 { background-color: #f3e8ff; color: #5b21b6; }
         .grade-6 { background-color: #fce7f3; color: #9d174d; }
         .grade-7 { background-color: #fef3c7; color: #92400e; }
+        /* Conditional field visibility */
+        .field-dependent { transition: all 0.2s; }
     </style>
 </head>
 <body>
@@ -78,6 +80,15 @@
             <span class="font-medium text-slate-900 dark:text-white">Allowances & Deductions</span>
         </div>
     </div>
+
+    <!-- Hidden data for JavaScript (populated from server) -->
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        // Convert server-side lists to JavaScript arrays for editing
+        var allowances = /*[[${allowances}]]*/ [];
+        var deductions = /*[[${deductions}]]*/ [];
+        /*]]>*/
+    </script>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <!-- Allowances Section (takes 2/3 width on large screens) -->
@@ -114,6 +125,23 @@
                                               class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">Active</span>
                                         <span th:if="${allowance.status == 'INACTIVE'}"
                                               class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400">Inactive</span>
+                                        <!-- NEW: Calculation type badge -->
+                                        <span th:if="${allowance.calculationType}"
+                                              class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                                              th:text="${allowance.calculationType}">FIXED_AMOUNT</span>
+                                        <!-- NEW: Proratable badge -->
+                                        <span th:if="${allowance.proratable}"
+                                              class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400">Proratable</span>
+                                    </div>
+                                    <!-- NEW: Percentage rate or formula indicator -->
+                                    <div th:if="${allowance.calculationType == 'PERCENTAGE_OF_BASIC' or allowance.calculationType == 'PERCENTAGE_OF_GROSS' or allowance.calculationType == 'PERCENTAGE_OF_TAXABLE'}"
+                                         class="mt-1 text-xs text-gray-600 dark:text-gray-400">
+                                        Rate: <span th:text="${allowance.percentageRate} + '%'">10%</span>
+                                    </div>
+                                    <div th:if="${allowance.calculationType == 'FORMULA' and allowance.formulaExpression}"
+                                         class="mt-1 text-xs text-gray-600 dark:text-gray-400 truncate max-w-[200px]"
+                                         th:title="${allowance.formulaExpression}">
+                                        Formula: <span th:text="${allowance.formulaExpression}">expression</span>
                                     </div>
                                 </div>
                                 <span class="text-lg font-bold text-green-600 dark:text-green-400"
@@ -182,6 +210,23 @@
                                               class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">Active</span>
                                         <span th:if="${deduction.status == 'INACTIVE'}"
                                               class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400">Inactive</span>
+                                        <!-- NEW: Calculation type badge -->
+                                        <span th:if="${deduction.calculationType}"
+                                              class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                                              th:text="${deduction.calculationType}">FIXED_AMOUNT</span>
+                                        <!-- NEW: Proratable badge -->
+                                        <span th:if="${deduction.proratable}"
+                                              class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400">Proratable</span>
+                                    </div>
+                                    <!-- NEW: Percentage rate or formula indicator -->
+                                    <div th:if="${deduction.calculationType == 'PERCENTAGE_OF_BASIC' or deduction.calculationType == 'PERCENTAGE_OF_GROSS' or deduction.calculationType == 'PERCENTAGE_OF_TAXABLE'}"
+                                         class="mt-1 text-xs text-gray-600 dark:text-gray-400">
+                                        Rate: <span th:text="${deduction.percentageRate} + '%'">10%</span>
+                                    </div>
+                                    <div th:if="${deduction.calculationType == 'FORMULA' and deduction.formulaExpression}"
+                                         class="mt-1 text-xs text-gray-600 dark:text-gray-400 truncate max-w-[200px]"
+                                         th:title="${deduction.formulaExpression}">
+                                        Formula: <span th:text="${deduction.formulaExpression}">expression</span>
                                     </div>
                                 </div>
                                 <span class="text-lg font-bold text-red-600 dark:text-red-400"
@@ -218,22 +263,24 @@
         </div>
     </div>
 
-    <!-- Add Allowance Modal -->
+    <!-- ==================== MODALS ==================== -->
+
+    <!-- Add Allowance Modal (updated with new fields) -->
     <div id="addAllowanceModal" class="fixed inset-0 z-50 hidden">
         <div class="modal-backdrop fixed inset-0"></div>
         <div class="fixed inset-0 flex items-center justify-center p-4">
-            <div class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md p-6">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto custom-scrollbar">
                 <div class="flex justify-between items-center mb-6">
                     <h3 class="text-lg font-bold">Add New Allowance</h3>
                     <button onclick="closeModal('addAllowanceModal')" class="text-gray-400 hover:text-gray-600">
                         <span class="material-icons-round">close</span>
                     </button>
                 </div>
-                <!-- Added onsubmit to disable submit button -->
                 <form th:action="@{/setup/allowance}" method="post" id="addAllowanceForm" class="space-y-4" onsubmit="disableSubmitButton(this)">
+                    <input type="hidden" name="id" value="" /> <!-- for edit, but add has no id -->
                     <div>
                         <label class="block text-sm font-medium mb-2">Code * <span class="text-xs text-gray-500">(unique)</span></label>
-                        <input name="code" type="text" id="allowanceCodeInput" class="form-input" placeholder="e.g., ALL-HOUSING" required>
+                        <input name="code" type="text" id="addAllowanceCode" class="form-input" placeholder="e.g., ALL-HOUSING" required>
                     </div>
                     <div>
                         <label class="block text-sm font-medium mb-2">Name *</label>
@@ -242,6 +289,34 @@
                     <div>
                         <label class="block text-sm font-medium mb-2">Amount *</label>
                         <input name="amount" type="number" step="0.01" min="0" class="form-input" placeholder="0.00" required>
+                    </div>
+                    <!-- NEW: Calculation Type -->
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Calculation Type</label>
+                        <select name="calculationType" class="form-input" required onchange="toggleCalculationFields(this, 'addAllowance')">
+                            <option value="FIXED_AMOUNT">Fixed Amount</option>
+                            <option value="PERCENTAGE_OF_BASIC">Percentage of Basic</option>
+                            <option value="PERCENTAGE_OF_GROSS">Percentage of Gross</option>
+                            <option value="PERCENTAGE_OF_TAXABLE">Percentage of Taxable</option>
+                            <option value="FORMULA">Formula</option>
+                        </select>
+                    </div>
+                    <!-- NEW: Percentage Rate (hidden by default) -->
+                    <div id="addAllowancePercentageField" class="field-dependent hidden">
+                        <label class="block text-sm font-medium mb-2">Percentage Rate (%)</label>
+                        <input name="percentageRate" type="number" step="0.0001" min="0" max="100" class="form-input" placeholder="e.g., 10.5">
+                    </div>
+                    <!-- NEW: Formula Expression (hidden by default) -->
+                    <div id="addAllowanceFormulaField" class="field-dependent hidden">
+                        <label class="block text-sm font-medium mb-2">Formula Expression</label>
+                        <textarea name="formulaExpression" rows="3" class="form-input" placeholder="e.g., 20% of BASIC"></textarea>
+                    </div>
+                    <!-- NEW: Proratable Checkbox -->
+                    <div>
+                        <label class="flex items-center space-x-2">
+                            <input type="checkbox" name="proratable" value="true" class="text-primary-600">
+                            <span class="text-sm font-medium">Proratable (adjust for partial periods)</span>
+                        </label>
                     </div>
                     <div>
                         <label class="flex items-center space-x-2">
@@ -265,22 +340,93 @@
         </div>
     </div>
 
-    <!-- Add Deduction Modal -->
+    <!-- Edit Allowance Modal (similar to add but with populated data) -->
+    <div id="editAllowanceModal" class="fixed inset-0 z-50 hidden">
+        <div class="modal-backdrop fixed inset-0"></div>
+        <div class="fixed inset-0 flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto custom-scrollbar">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-lg font-bold">Edit Allowance</h3>
+                    <button onclick="closeModal('editAllowanceModal')" class="text-gray-400 hover:text-gray-600">
+                        <span class="material-icons-round">close</span>
+                    </button>
+                </div>
+                <form th:action="@{/setup/allowance/update}" method="post" id="editAllowanceForm" class="space-y-4" onsubmit="disableSubmitButton(this)">
+                    <input type="hidden" name="id" id="editAllowanceId" value="" />
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Code *</label>
+                        <input name="code" type="text" id="editAllowanceCode" class="form-input" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Name *</label>
+                        <input name="name" type="text" id="editAllowanceName" class="form-input" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Amount *</label>
+                        <input name="amount" type="number" step="0.01" min="0" id="editAllowanceAmount" class="form-input" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Calculation Type</label>
+                        <select name="calculationType" id="editAllowanceCalcType" class="form-input" required onchange="toggleCalculationFields(this, 'editAllowance')">
+                            <option value="FIXED_AMOUNT">Fixed Amount</option>
+                            <option value="PERCENTAGE_OF_BASIC">Percentage of Basic</option>
+                            <option value="PERCENTAGE_OF_GROSS">Percentage of Gross</option>
+                            <option value="PERCENTAGE_OF_TAXABLE">Percentage of Taxable</option>
+                            <option value="FORMULA">Formula</option>
+                        </select>
+                    </div>
+                    <div id="editAllowancePercentageField" class="field-dependent hidden">
+                        <label class="block text-sm font-medium mb-2">Percentage Rate (%)</label>
+                        <input name="percentageRate" type="number" step="0.0001" min="0" max="100" id="editAllowancePercentage" class="form-input">
+                    </div>
+                    <div id="editAllowanceFormulaField" class="field-dependent hidden">
+                        <label class="block text-sm font-medium mb-2">Formula Expression</label>
+                        <textarea name="formulaExpression" rows="3" id="editAllowanceFormula" class="form-input"></textarea>
+                    </div>
+                    <div>
+                        <label class="flex items-center space-x-2">
+                            <input type="checkbox" name="proratable" value="true" id="editAllowanceProratable" class="text-primary-600">
+                            <span class="text-sm font-medium">Proratable</span>
+                        </label>
+                    </div>
+                    <div>
+                        <label class="flex items-center space-x-2">
+                            <input type="checkbox" name="taxable" value="true" id="editAllowanceTaxable" class="text-primary-600">
+                            <span class="text-sm font-medium">Taxable</span>
+                        </label>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Status</label>
+                        <select name="status" id="editAllowanceStatus" class="form-input" required>
+                            <option value="ACTIVE">ACTIVE</option>
+                            <option value="INACTIVE">INACTIVE</option>
+                        </select>
+                    </div>
+                    <div class="flex justify-end space-x-3 pt-4">
+                        <button type="button" onclick="closeModal('editAllowanceModal')" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">Cancel</button>
+                        <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Update Allowance</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Deduction Modal (updated) -->
     <div id="addDeductionModal" class="fixed inset-0 z-50 hidden">
         <div class="modal-backdrop fixed inset-0"></div>
         <div class="fixed inset-0 flex items-center justify-center p-4">
-            <div class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md p-6">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto custom-scrollbar">
                 <div class="flex justify-between items-center mb-6">
                     <h3 class="text-lg font-bold">Add New Deduction</h3>
                     <button onclick="closeModal('addDeductionModal')" class="text-gray-400 hover:text-gray-600">
                         <span class="material-icons-round">close</span>
                     </button>
                 </div>
-                <!-- Added onsubmit to disable submit button -->
                 <form th:action="@{/setup/deduction}" method="post" id="addDeductionForm" class="space-y-4" onsubmit="disableSubmitButton(this)">
+                    <input type="hidden" name="id" value="" />
                     <div>
                         <label class="block text-sm font-medium mb-2">Code * <span class="text-xs text-gray-500">(unique)</span></label>
-                        <input name="code" type="text" id="deductionCodeInput" class="form-input" placeholder="e.g., DED-HEALTH" required>
+                        <input name="code" type="text" id="addDeductionCode" class="form-input" placeholder="e.g., DED-HEALTH" required>
                     </div>
                     <div>
                         <label class="block text-sm font-medium mb-2">Name *</label>
@@ -289,6 +435,30 @@
                     <div>
                         <label class="block text-sm font-medium mb-2">Amount *</label>
                         <input name="amount" type="number" step="0.01" min="0" class="form-input" placeholder="0.00" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Calculation Type</label>
+                        <select name="calculationType" class="form-input" required onchange="toggleCalculationFields(this, 'addDeduction')">
+                            <option value="FIXED_AMOUNT">Fixed Amount</option>
+                            <option value="PERCENTAGE_OF_BASIC">Percentage of Basic</option>
+                            <option value="PERCENTAGE_OF_GROSS">Percentage of Gross</option>
+                            <option value="PERCENTAGE_OF_TAXABLE">Percentage of Taxable</option>
+                            <option value="FORMULA">Formula</option>
+                        </select>
+                    </div>
+                    <div id="addDeductionPercentageField" class="field-dependent hidden">
+                        <label class="block text-sm font-medium mb-2">Percentage Rate (%)</label>
+                        <input name="percentageRate" type="number" step="0.0001" min="0" max="100" class="form-input" placeholder="e.g., 5.5">
+                    </div>
+                    <div id="addDeductionFormulaField" class="field-dependent hidden">
+                        <label class="block text-sm font-medium mb-2">Formula Expression</label>
+                        <textarea name="formulaExpression" rows="3" class="form-input" placeholder="e.g., 20% of BASIC"></textarea>
+                    </div>
+                    <div>
+                        <label class="flex items-center space-x-2">
+                            <input type="checkbox" name="proratable" value="true" class="text-primary-600">
+                            <span class="text-sm font-medium">Proratable</span>
+                        </label>
                     </div>
                     <div>
                         <label class="flex items-center space-x-2">
@@ -312,15 +482,98 @@
         </div>
     </div>
 
-    <!-- Modal JavaScript functions -->
+    <!-- Edit Deduction Modal -->
+    <div id="editDeductionModal" class="fixed inset-0 z-50 hidden">
+        <div class="modal-backdrop fixed inset-0"></div>
+        <div class="fixed inset-0 flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto custom-scrollbar">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-lg font-bold">Edit Deduction</h3>
+                    <button onclick="closeModal('editDeductionModal')" class="text-gray-400 hover:text-gray-600">
+                        <span class="material-icons-round">close</span>
+                    </button>
+                </div>
+                <form th:action="@{/setup/deduction/update}" method="post" id="editDeductionForm" class="space-y-4" onsubmit="disableSubmitButton(this)">
+                    <input type="hidden" name="id" id="editDeductionId" value="" />
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Code *</label>
+                        <input name="code" type="text" id="editDeductionCode" class="form-input" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Name *</label>
+                        <input name="name" type="text" id="editDeductionName" class="form-input" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Amount *</label>
+                        <input name="amount" type="number" step="0.01" min="0" id="editDeductionAmount" class="form-input" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Calculation Type</label>
+                        <select name="calculationType" id="editDeductionCalcType" class="form-input" required onchange="toggleCalculationFields(this, 'editDeduction')">
+                            <option value="FIXED_AMOUNT">Fixed Amount</option>
+                            <option value="PERCENTAGE_OF_BASIC">Percentage of Basic</option>
+                            <option value="PERCENTAGE_OF_GROSS">Percentage of Gross</option>
+                            <option value="PERCENTAGE_OF_TAXABLE">Percentage of Taxable</option>
+                            <option value="FORMULA">Formula</option>
+                        </select>
+                    </div>
+                    <div id="editDeductionPercentageField" class="field-dependent hidden">
+                        <label class="block text-sm font-medium mb-2">Percentage Rate (%)</label>
+                        <input name="percentageRate" type="number" step="0.0001" min="0" max="100" id="editDeductionPercentage" class="form-input">
+                    </div>
+                    <div id="editDeductionFormulaField" class="field-dependent hidden">
+                        <label class="block text-sm font-medium mb-2">Formula Expression</label>
+                        <textarea name="formulaExpression" rows="3" id="editDeductionFormula" class="form-input"></textarea>
+                    </div>
+                    <div>
+                        <label class="flex items-center space-x-2">
+                            <input type="checkbox" name="proratable" value="true" id="editDeductionProratable" class="text-primary-600">
+                            <span class="text-sm font-medium">Proratable</span>
+                        </label>
+                    </div>
+                    <div>
+                        <label class="flex items-center space-x-2">
+                            <input type="checkbox" name="statutory" value="true" id="editDeductionStatutory" class="text-primary-600">
+                            <span class="text-sm font-medium">Statutory</span>
+                        </label>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Status</label>
+                        <select name="status" id="editDeductionStatus" class="form-input" required>
+                            <option value="ACTIVE">ACTIVE</option>
+                            <option value="INACTIVE">INACTIVE</option>
+                        </select>
+                    </div>
+                    <div class="flex justify-end space-x-3 pt-4">
+                        <button type="button" onclick="closeModal('editDeductionModal')" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">Cancel</button>
+                        <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Update Deduction</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal JavaScript functions (updated) -->
     <script>
-        // Enhanced openModal to generate random code when opening add modals
+        // Open modal (existing, but also ensure fields are reset for add modals)
         function openModal(modalId) {
             document.getElementById(modalId).classList.remove('hidden');
+            // If it's an add modal, generate code and reset conditional fields
             if (modalId === 'addAllowanceModal') {
-                generateAndSetCode('allowanceCodeInput', 'ALL');
+                generateAndSetCode('addAllowanceCode', 'ALL');
+                // Reset calculation type to default FIXED_AMOUNT and hide conditional fields
+                const select = document.querySelector('#addAllowanceModal select[name="calculationType"]');
+                if (select) {
+                    select.value = 'FIXED_AMOUNT';
+                    toggleCalculationFields(select, 'addAllowance');
+                }
             } else if (modalId === 'addDeductionModal') {
-                generateAndSetCode('deductionCodeInput', 'DED');
+                generateAndSetCode('addDeductionCode', 'DED');
+                const select = document.querySelector('#addDeductionModal select[name="calculationType"]');
+                if (select) {
+                    select.value = 'FIXED_AMOUNT';
+                    toggleCalculationFields(select, 'addDeduction');
+                }
             }
         }
 
@@ -334,20 +587,92 @@
                 submitButton.disabled = true;
                 submitButton.classList.add('opacity-50', 'cursor-not-allowed');
             }
-            return true; // Allow form submission
+            return true;
         }
 
-        // Generates a random alphanumeric code (e.g., "ALL-A3F9G2") and sets it in the input
+        // Generate random code for add modals
         function generateAndSetCode(inputId, prefix) {
             const input = document.getElementById(inputId);
             if (input) {
-                // Generate 6-character random alphanumeric (uppercase)
                 const randomPart = Math.random().toString(36).substring(2, 8).toUpperCase();
                 input.value = prefix + '-' + randomPart;
             }
         }
+
+        // Toggle percentage/formula fields based on calculation type
+        function toggleCalculationFields(select, prefix) {
+            const value = select.value;
+            const percentageField = document.getElementById(prefix + 'PercentageField');
+            const formulaField = document.getElementById(prefix + 'FormulaField');
+
+            // Hide both first
+            if (percentageField) percentageField.classList.add('hidden');
+            if (formulaField) formulaField.classList.add('hidden');
+
+            // Show relevant field
+            if (value.startsWith('PERCENTAGE')) {
+                if (percentageField) percentageField.classList.remove('hidden');
+            } else if (value === 'FORMULA') {
+                if (formulaField) formulaField.classList.remove('hidden');
+            }
+        }
+
+        // Edit functions: populate modal from the globally available arrays
+        function editAllowance(id) {
+            const allowance = allowances.find(a => a.id === id);
+            if (!allowance) return;
+
+            // Populate fields
+            document.getElementById('editAllowanceId').value = allowance.id;
+            document.getElementById('editAllowanceCode').value = allowance.code;
+            document.getElementById('editAllowanceName').value = allowance.name;
+            document.getElementById('editAllowanceAmount').value = allowance.amount;
+            document.getElementById('editAllowanceCalcType').value = allowance.calculationType || 'FIXED_AMOUNT';
+            document.getElementById('editAllowancePercentage').value = allowance.percentageRate || '';
+            document.getElementById('editAllowanceFormula').value = allowance.formulaExpression || '';
+            document.getElementById('editAllowanceProratable').checked = allowance.proratable || false;
+            document.getElementById('editAllowanceTaxable').checked = allowance.taxable || false;
+            document.getElementById('editAllowanceStatus').value = allowance.status || 'ACTIVE';
+
+            // Trigger toggle to show correct conditional fields
+            const select = document.getElementById('editAllowanceCalcType');
+            toggleCalculationFields(select, 'editAllowance');
+
+            // Open modal
+            openModal('editAllowanceModal');
+        }
+
+        function editDeduction(id) {
+            const deduction = deductions.find(d => d.id === id);
+            if (!deduction) return;
+
+            document.getElementById('editDeductionId').value = deduction.id;
+            document.getElementById('editDeductionCode').value = deduction.code;
+            document.getElementById('editDeductionName').value = deduction.name;
+            document.getElementById('editDeductionAmount').value = deduction.amount;
+            document.getElementById('editDeductionCalcType').value = deduction.calculationType || 'FIXED_AMOUNT';
+            document.getElementById('editDeductionPercentage').value = deduction.percentageRate || '';
+            document.getElementById('editDeductionFormula').value = deduction.formulaExpression || '';
+            document.getElementById('editDeductionProratable').checked = deduction.proratable || false;
+            document.getElementById('editDeductionStatutory').checked = deduction.statutory || false;
+            document.getElementById('editDeductionStatus').value = deduction.status || 'ACTIVE';
+
+            const select = document.getElementById('editDeductionCalcType');
+            toggleCalculationFields(select, 'editDeduction');
+
+            openModal('editDeductionModal');
+        }
+
+        // Dummy toggle functions for status (to be implemented)
+        function toggleAllowanceStatus(id) {
+            // You can implement AJAX call or form submission
+            alert('Toggle allowance status for ID: ' + id);
+        }
+
+        function toggleDeductionStatus(id) {
+            alert('Toggle deduction status for ID: ' + id);
+        }
     </script>
 </main>
-
 </body>
 </html>
