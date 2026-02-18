@@ -9,6 +9,7 @@ import com.justjava.humanresource.hr.service.SetupService;
 import com.justjava.humanresource.kpi.entity.KpiAssignment;
 import com.justjava.humanresource.kpi.entity.KpiBulkMeasurementRequestDTO;
 import com.justjava.humanresource.kpi.entity.KpiDefinition;
+import com.justjava.humanresource.kpi.entity.KpiMeasurement;
 import com.justjava.humanresource.kpi.service.KpiAssignmentService;
 import com.justjava.humanresource.kpi.service.KpiDefinitionService;
 import com.justjava.humanresource.kpi.service.KpiMeasurementService;
@@ -191,8 +192,9 @@ public class KpiController {
         return "kpi/fragment/measurement-form-items-fragment :: kpi-measurement-items";
     }
     @GetMapping("/fragments/kpi-measurements-table")
-    public String getKpiMeasurementsTable() {
-
+    public String getKpiMeasurementsTable(Model model) {
+        List<KpiMeasurement> measurements = kpiMeasurementService.getAllMeasurements();
+        model.addAttribute("measurements", measurements);
         return "kpi/fragment/kpi-measurements-table";
     }
     @PostMapping("/kpi/measurements")
@@ -201,6 +203,8 @@ public class KpiController {
         kpiMeasurementService.recordBulkMeasurements(request);
         System.out.println("Successfully recorded KPI measurements for employee ID: " + request.getEmployeeId());
 
+        List<KpiMeasurement> measurements = kpiMeasurementService.getAllMeasurements();
+        model.addAttribute("measurements", measurements);
         return "kpi/fragment/kpi-measurements-table";
     }
 }

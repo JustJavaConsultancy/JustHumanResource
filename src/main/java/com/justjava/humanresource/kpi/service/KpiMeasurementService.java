@@ -143,6 +143,9 @@ public class KpiMeasurementService {
                 .filter(m -> assignedKpiIds.contains(m.getKpi().getId()))
                 .collect(Collectors.toList());
     }
+    public List<KpiMeasurement> getAllMeasurements(){
+        return measurementRepository.findAll();
+    }
     /* =========================================================
        FETCH EFFECTIVE MEASUREMENTS FOR JOBSTEP
        ========================================================= */
