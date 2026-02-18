@@ -4,6 +4,11 @@
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layout}">
 <head>
+  <!-- Google Fonts for Inter (added for consistent typography) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
+
   <script>
     tailwind.config = {
         darkMode: "class",
@@ -144,20 +149,165 @@
         <thead class="bg-gray-50 dark:bg-gray-750">
         <tr>
           <th class="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Employee</th>
-          <th class="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Grade/Step</th>
+          <th class="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Pay Day</th>
           <th class="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Basic Salary</th>
-          <th class="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Allowances</th>
           <th class="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Deductions</th>
           <th class="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Net Salary</th>
           <th class="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
         </tr>
         </thead>
-        <tbody class="divide-y divide-gray-200 dark:divide-gray-700" id="employeePayrollTable">
-        <!-- Employee payroll rows will be loaded dynamically -->
+        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+        <!-- Data rows -->
+        <tr th:each="payroll : ${paySlips}" class="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200">
+          <td th:text="${payroll.employeeName}" class="px-4 md:px-6 py-4 whitespace-nowrap flex items-center gap-3">
+            Akinrinde Akinkunmi
+          </td>
+          <td th:text="${payroll.payDate}" class="px-4 md:px-6 py-4 whitespace-nowrap">
+            2024-06-30
+          </td>
+          <td th:text="${'₦' + payroll.grossPay}" class="px-4 md:px-6 py-4 whitespace-nowrap">
+            ₦5,000
+          </td>
+          <td th:text="${payroll.totalDeductions}" class="px-4 md:px-6 py-4 whitespace-nowrap">
+            5
+          </td>
+          <td th:text="${'₦' + payroll.netPay}" class="px-4 md:px-6 py-4 whitespace-nowrap">
+            ₦4,750
+          </td>
+          <td class="px-4 md:px-6 py-4 whitespace-nowrap">
+            <!-- Updated download link to call JavaScript function -->
+            <a href="javascript:void(0);"
+               onclick="downloadPayslip(this)"
+               class="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors duration-200">
+              <i class="bi bi-download text-xs"></i>
+              <span>Download payslip</span>
+            </a>
+          </td>
+        </tr>
+
+        <!-- Empty state row (shown when no payslips exist) -->
+        <tr th:if="${#lists.isEmpty(paySlips)}">
+          <td colspan="6" class="px-4 md:px-6 py-12 text-center">
+            <div class="flex flex-col items-center justify-center">
+              <i class="bi bi-inbox text-5xl text-gray-300 dark:text-gray-600 mb-4"></i>
+              <p class="text-base font-medium text-gray-500 dark:text-gray-400">No payslips found</p>
+              <p class="text-sm text-gray-400 dark:text-gray-500 mt-1">There are no payslips to display for the selected period.</p>
+            </div>
+          </td>
+        </tr>
         </tbody>
       </table>
     </div>
   </div>
+
+  <!-- Hidden Payslip Template (will be used for PDF generation) -->
+  <div id="payslip-template" style="display: none;">
+    <div id="payslip-content" class="bg-white p-8 max-w-3xl mx-auto border border-gray-200 rounded-xl shadow-lg" style="font-family: 'Inter', sans-serif;">
+      <!-- Header -->
+      <div class="flex justify-between items-center border-b border-gray-200 pb-4 mb-6">
+        <div>
+          <h1 class="text-2xl font-bold text-primary-600">PAYSLIP</h1>
+          <p class="text-sm text-gray-500">Generated on <span id="payslip-generated-date">2025-03-15</span></p>
+        </div>
+        <div class="text-right">
+          <p class="font-semibold text-gray-800">Your Company Name</p>
+          <p class="text-sm text-gray-500">123 Business St., City</p>
+        </div>
+      </div>
+
+      <!-- Employee & Period Details -->
+      <div class="grid grid-cols-2 gap-6 mb-6">
+        <div>
+          <p class="text-xs text-gray-500 uppercase tracking-wide">Employee</p>
+          <p class="font-medium text-gray-800" id="payslip-employee-name">John Doe</p>
+        </div>
+        <div>
+          <p class="text-xs text-gray-500 uppercase tracking-wide">Pay Period</p>
+          <p class="font-medium text-gray-800" id="payslip-pay-date">2024-06-30</p>
+        </div>
+      </div>
+
+      <!-- Earnings Table (only Basic Salary, no deductions) -->
+      <table class="w-full mb-6">
+        <thead class="bg-gray-50 border-y border-gray-200">
+        <tr>
+          <th class="py-2 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+          <th class="py-2 text-right text-xs font-medium text-gray-500 uppercase">Amount</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+          <td class="py-3 text-gray-700">Basic Salary</td>
+          <td class="py-3 text-right font-medium text-gray-900" id="payslip-basic-salary">₦5,000</td>
+        </tr>
+        <!-- No deduction rows -->
+        </tbody>
+      </table>
+
+      <!-- Net Pay -->
+      <div class="flex justify-end border-t border-gray-200 pt-4">
+        <div class="w-64">
+          <div class="flex justify-between items-center">
+            <span class="text-base font-semibold text-gray-700">Net Pay</span>
+            <span class="text-xl font-bold text-primary-600" id="payslip-net-pay">₦4,750</span>
+          </div>
+          <p class="text-xs text-gray-500 text-right mt-1">After all deductions</p>
+        </div>
+      </div>
+
+      <!-- Footer Note -->
+      <div class="mt-8 text-xs text-center text-gray-400 border-t border-gray-100 pt-4">
+        This is a computer‑generated payslip. No signature required.
+      </div>
+    </div>
+  </div>
 </main>
+
+<!-- html2pdf library (added for PDF generation) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+<!-- Download function -->
+<script>
+  function downloadPayslip(button) {
+    // Find the parent row
+    const row = button.closest('tr');
+    if (!row) return;
+
+    // Extract cell data (indices: 0=Employee, 1=Pay Day, 2=Basic Salary, 4=Net Salary)
+    const cells = row.cells;
+    const employeeName = cells[0]?.textContent.trim() || 'N/A';
+    const payDate = cells[1]?.textContent.trim() || 'N/A';
+    const basicSalary = cells[2]?.textContent.trim() || '₦0';
+    const netPay = cells[4]?.textContent.trim() || '₦0';
+
+    // Populate template fields
+    document.getElementById('payslip-employee-name').textContent = employeeName;
+    document.getElementById('payslip-pay-date').textContent = payDate;
+    document.getElementById('payslip-basic-salary').textContent = basicSalary;
+    document.getElementById('payslip-net-pay').textContent = netPay;
+    document.getElementById('payslip-generated-date').textContent = new Date().toISOString().split('T')[0];
+
+    // Get the template element
+    const element = document.getElementById('payslip-content');
+
+    // Configure PDF options
+    const opt = {
+      margin:        [0.5, 0.5, 0.5, 0.5], // top, right, bottom, left (inches)
+      filename:     `payslip-${employeeName.replace(/\s+/g, '_')}.pdf`,
+      image:        { type: 'jpeg', quality: 0.98 },
+      html2canvas:  { scale: 2, letterRendering: true },
+      jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+    };
+
+    // Generate and download PDF
+    html2pdf().set(opt).from(element).save();
+  }
+
+  // Optional: define filter functions (if not defined elsewhere)
+  function filterEmployeePayroll() {
+    // Placeholder – implement your filtering logic
+    console.log('Filter changed');
+  }
+</script>
 </body>
 </html>

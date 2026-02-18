@@ -7,6 +7,7 @@ import com.justjava.humanresource.hr.service.SetupService;
 import com.justjava.humanresource.payroll.entity.*;
 import com.justjava.humanresource.payroll.service.PayGroupService;
 import com.justjava.humanresource.payroll.service.PayrollSetupService;
+import com.justjava.humanresource.payroll.service.impl.PaySlipServiceImpl;
 import com.justjava.humanresource.payroll.service.impl.PayrollPeriodServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -31,6 +32,9 @@ public class PayrollController {
 
     @Autowired
     private PayrollSetupService payrollSetupService;
+
+    @Autowired
+    private PaySlipServiceImpl paySlipService;
 
     @GetMapping("/payroll")
     public String getPayroll(Model model) {
@@ -181,6 +185,15 @@ public class PayrollController {
 
     @GetMapping("/payroll/employee-payroll")
     public String getEmployeePayroll(Model model) {
+        List<PaySlipDTO> paySlips = paySlipService.getPaySlipsForPeriod(YearMonth.now());
+        paySlips.forEach(
+                paySlip -> System.out.println(" Pay Slip for Employee ==="+paySlip.getEmployeeName()
+                        +" the Pay Period ==="+paySlip.getPayDate()
+                        +" the Gross Pay ==="+paySlip.getGrossPay()
+                        +" the Total Deductions ==="+paySlip.getTotalDeductions()
+                        +" the Net Pay ==="+paySlip.getNetPay())
+        );
+        model.addAttribute("paySlips", paySlips);
         model.addAttribute("title", "Payroll Management");
         model.addAttribute("subTitle", "Manage employee payroll, salary details, and payment history");
         return "payroll/fragments/employee-payroll";
