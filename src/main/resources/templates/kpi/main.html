@@ -1129,7 +1129,7 @@ function updateTotalWeight() {
     }
 }
 
-// Reset form (clear rows, reset fields)
+// Reset form (clear rows, reset fields, and ensure correct div visibility)
 function resetAssignmentForm() {
     document.getElementById('kpiAssignmentForm').reset();
     document.getElementById('assignmentKpisContainer').innerHTML = '';
@@ -1143,6 +1143,69 @@ function resetAssignmentForm() {
         stepSelect.disabled = true;
     }
     kpiRowCounter = 0; // reset counter
+
+    // Ensure correct visibility and required attributes based on default radio (employee)
+    const employeeDiv = document.getElementById('employeeAssignment');
+    const gradeDiv = document.getElementById('gradeAssignment');
+    const employeeSelect = document.getElementById('assignmentEmployee');
+    const jobGradeSelect = document.getElementById('assignmentJobGrade');
+    const jobStepSelect = document.getElementById('assignmentJobStep');
+    if (document.getElementById('assignEmployee').checked) {
+        employeeDiv.classList.remove('hidden');
+        gradeDiv.classList.add('hidden');
+        employeeSelect.required = true;
+        jobGradeSelect.required = false;
+        jobStepSelect.required = false;
+    } else {
+        employeeDiv.classList.add('hidden');
+        gradeDiv.classList.remove('hidden');
+        employeeSelect.required = false;
+        jobGradeSelect.required = true;
+        jobStepSelect.required = true;
+    }
+}
+
+// Setup radio toggle listeners with required attribute handling
+function setupAssignmentToggle() {
+    const assignEmployee = document.getElementById('assignEmployee');
+    const assignGrade = document.getElementById('assignGrade');
+    const employeeDiv = document.getElementById('employeeAssignment');
+    const gradeDiv = document.getElementById('gradeAssignment');
+    const employeeSelect = document.getElementById('assignmentEmployee');
+    const gradeSelect = document.getElementById('assignmentJobGrade');
+    const stepSelect = document.getElementById('assignmentJobStep');
+
+    // Remove existing listeners to avoid duplicates
+    const newEmployee = assignEmployee.cloneNode(true);
+    const newGrade = assignGrade.cloneNode(true);
+    assignEmployee.parentNode.replaceChild(newEmployee, assignEmployee);
+    assignGrade.parentNode.replaceChild(newGrade, assignGrade);
+
+    // Re-fetch elements
+    const updatedEmployee = document.getElementById('assignEmployee');
+    const updatedGrade = document.getElementById('assignGrade');
+
+    updatedEmployee.addEventListener('change', () => {
+        if (updatedEmployee.checked) {
+            employeeDiv.classList.remove('hidden');
+            gradeDiv.classList.add('hidden');
+            // Set required attributes
+            employeeSelect.required = true;
+            gradeSelect.required = false;
+            stepSelect.required = false;
+        }
+    });
+    updatedGrade.addEventListener('change', () => {
+        if (updatedGrade.checked) {
+            employeeDiv.classList.add('hidden');
+            gradeDiv.classList.remove('hidden');
+            // Set required attributes
+            employeeSelect.required = false;
+            gradeSelect.required = true;
+            stepSelect.required = true;
+            // Step select may still be disabled if no grade selected; that's fine.
+        }
+    });
 }
 
 // Validation (now checks indexed fields correctly)
@@ -1232,6 +1295,7 @@ function handleAssignmentResponse(event) {
     if (event.detail.successful) {
         closeModal('kpiAssignmentModal');
         showNotification('KPIs assigned successfully!', 'success');
+        enableAssignmentSubmit();
     } else {
         enableAssignmentSubmit();
         showNotification('Failed to assign KPIs. Please try again.', 'error');
@@ -1269,14 +1333,12 @@ function handleAssignmentResponse(event) {
 
             if (type === 'employee') {
                 document.getElementById('assignEmployee').checked = true;
+                // Trigger change event to update required attributes and visibility
+                document.getElementById('assignEmployee').dispatchEvent(new Event('change'));
                 document.getElementById('assignmentEmployee').value = id;
-                document.getElementById('employeeAssignment').classList.remove('hidden');
-                document.getElementById('gradeAssignment').classList.add('hidden');
             } else {
                 document.getElementById('assignGrade').checked = true;
-                document.getElementById('employeeAssignment').classList.add('hidden');
-                document.getElementById('gradeAssignment').classList.remove('hidden');
-
+                document.getElementById('assignGrade').dispatchEvent(new Event('change'));
                 const step = jobSteps.find(s => s.id === id);
                 if (step) {
                     const gradeSelect = document.getElementById('assignmentJobGrade');
@@ -1606,6 +1668,42 @@ function handleAssignmentResponse(event) {
             `;
             document.body.appendChild(notification);
             setTimeout(() => notification.remove(), 3000);
+        }
+
+        // Setup grade step listener (runs once on page load)
+        function setupGradeStepListener() {
+            const gradeSelect = document.getElementById('assignmentJobGrade');
+            const stepSelect = document.getElementById('assignmentJobStep');
+            if (gradeSelect && stepSelect) {
+                gradeSelect.addEventListener('change', function() {
+                    const selectedGradeId = this.value;
+                    stepSelect.innerHTML = '<option value="">Select Job Step</option>';
+                    stepSelect.disabled = true;
+                    if (!selectedGradeId) return;
+
+                    const filteredSteps = jobSteps.filter(step => String(step.gradeId) === String(selectedGradeId));
+                    if (filteredSteps.length === 0) {
+                        const option = document.createElement('option');
+                        option.value = '';
+                        option.textContent = 'No steps available for this grade';
+                        option.disabled = true;
+                        stepSelect.appendChild(option);
+                    } else {
+                        filteredSteps.forEach(step => {
+                            const option = document.createElement('option');
+                            option.value = step.id;
+                            option.textContent = step.display;
+                            stepSelect.appendChild(option);
+                        });
+                        stepSelect.disabled = false;
+                    }
+                });
+            }
+        }
+
+        function getJobStepLabel(stepId) {
+            const step = jobSteps.find(s => s.id == stepId);
+            return step ? step.display : 'Unknown Step';
         }
 
         // Initialize

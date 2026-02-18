@@ -15,7 +15,11 @@
             </button>
         </div>
         <div class="text-sm text-gray-600 dark:text-gray-400">
-            Total Assignments: <span class="font-bold">186</span>
+            Total Assignments:
+            <span class="font-bold" th:text="${employmentSize}"
+                  >
+                0
+            </span>
         </div>
     </div>
 
@@ -37,25 +41,38 @@
                     </tr>
                     </thead>
                     <tbody id="individualAssignmentsTable">
-                    <!-- Hardcoded rows based on sample data -->
-                    <tr>
-                        <td class="px-4 py-3"><div class="font-medium">John Doe</div><div class="text-sm text-gray-500">Sales</div></td>
-                        <td class="px-4 py-3"><div class="text-sm">Sales Target Achievement, Customer Satisfaction Score, Project Delivery On Time</div><div class="text-xs text-gray-500">3 KPIs assigned</div></td>
-                        <td class="px-4 py-3"><span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">1.00</span></td>
-                        <td class="px-4 py-3">
-                            <button onclick="viewAssignmentDetails(1, 'employee')" class="text-primary-600 hover:text-primary-900 mr-3"><span class="material-icons-round text-sm">visibility</span></button>
-                            <button onclick="editAssignment(1, 'employee')" class="text-blue-600 hover:text-blue-900 mr-3"><span class="material-icons-round text-sm">edit</span></button>
-                            <button onclick="deleteAllAssignments(1, 'employee')" class="text-red-600 hover:text-red-900"><span class="material-icons-round text-sm">delete</span></button>
+                    <!-- Empty state when no employee assignments exist -->
+                    <tr th:if="${#maps.isEmpty(assignmentsByEmployee)}">
+                        <td colspan="4" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                            No individual assignments found.
                         </td>
                     </tr>
-                    <tr>
-                        <td class="px-4 py-3"><div class="font-medium">Jane Smith</div><div class="text-sm text-gray-500">Engineering</div></td>
-                        <td class="px-4 py-3"><div class="text-sm">Attendance Rate, Training Hours Completed</div><div class="text-xs text-gray-500">2 KPIs assigned</div></td>
-                        <td class="px-4 py-3"><span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">1.00</span></td>
+                    <tr th:each="entry : ${assignmentsByEmployee}" th:unless="${#maps.isEmpty(assignmentsByEmployee)}" class="hover:bg-gray-50">
                         <td class="px-4 py-3">
-                            <button onclick="viewAssignmentDetails(2, 'employee')" class="text-primary-600 hover:text-primary-900 mr-3"><span class="material-icons-round text-sm">visibility</span></button>
-                            <button onclick="editAssignment(2, 'employee')" class="text-blue-600 hover:text-blue-900 mr-3"><span class="material-icons-round text-sm">edit</span></button>
-                            <button onclick="deleteAllAssignments(2, 'employee')" class="text-red-600 hover:text-red-900"><span class="material-icons-round text-sm">delete</span></button>
+                            <div class="font-medium" th:text="${entry.key.firstName + ' ' + entry.key.lastName}">Employee Name</div>
+                            <div class="text-sm text-gray-500" th:text="${entry.key.department?.name}">Department</div>
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="text-sm" th:text="${#strings.listJoin(entry.value.![name], ', ')}">KPI Names</div>
+                            <div class="text-xs text-gray-500" th:text="${entry.value.size() + ' KPIs assigned'}">0 KPIs assigned</div>
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800"
+                                  th:text="${#aggregates.sum(entry.value.![weight])}">0.00</span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <button th:onclick="'viewAssignmentDetails(' + ${entry.key.id} + ', \'employee\')'"
+                                    class="text-primary-600 hover:text-primary-900 mr-3">
+                                <span class="material-icons-round text-sm">visibility</span>
+                            </button>
+                            <button th:onclick="'editAssignment(' + ${entry.key.id} + ', \'employee\')'"
+                                    class="text-blue-600 hover:text-blue-900 mr-3">
+                                <span class="material-icons-round text-sm">edit</span>
+                            </button>
+                            <button th:onclick="'deleteAllAssignments(' + ${entry.key.id} + ', \'employee\')'"
+                                    class="text-red-600 hover:text-red-900">
+                                <span class="material-icons-round text-sm">delete</span>
+                            </button>
                         </td>
                     </tr>
                     </tbody>
@@ -63,7 +80,7 @@
             </div>
         </div>
 
-        <!-- Grade-based Assignments -->
+        <!-- Grade-based Assignments (by Job Step) -->
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
             <div class="p-6 border-b border-gray-200 dark:border-gray-700">
                 <h3 class="text-lg font-bold">Grade-based KPI Assignments</h3>
@@ -80,15 +97,37 @@
                     </tr>
                     </thead>
                     <tbody id="gradeAssignmentsTable">
-                    <!-- Hardcoded rows based on sample data (updated to steps) -->
-                    <tr>
-                        <td class="px-4 py-3"><div class="font-medium">Grade 1 - Step 1</div></td>
-                        <td class="px-4 py-3"><div class="text-sm">Sales Target Achievement, Customer Satisfaction Score</div><div class="text-xs text-gray-500">2 KPIs assigned</div></td>
-                        <td class="px-4 py-3"><span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">1.00</span></td>
+                    <!-- Empty state when no job step assignments exist -->
+                    <tr th:if="${#maps.isEmpty(assignmentsByJobStep)}">
+                        <td colspan="4" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                            No grade-based assignments found.
+                        </td>
+                    </tr>
+                    <tr th:each="entry : ${assignmentsByJobStep}" th:unless="${#maps.isEmpty(assignmentsByJobStep)}" class="hover:bg-gray-50">
                         <td class="px-4 py-3">
-                            <button onclick="viewAssignmentDetails(101, 'grade')" class="text-primary-600 hover:text-primary-900 mr-3"><span class="material-icons-round text-sm">visibility</span></button>
-                            <button onclick="editAssignment(101, 'grade')" class="text-blue-600 hover:text-blue-900 mr-3"><span class="material-icons-round text-sm">edit</span></button>
-                            <button onclick="deleteAllAssignments(101, 'grade')" class="text-red-600 hover:text-red-900"><span class="material-icons-round text-sm">delete</span></button>
+                            <div class="font-medium" th:text="${entry.key.jobGrade.name + ' - ' + entry.key.name}">Grade 1 - Step 1</div>
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="text-sm" th:text="${#strings.listJoin(entry.value.![name], ', ')}">Sales Target, Customer Satisfaction</div>
+                            <div class="text-xs text-gray-500" th:text="${entry.value.size() + ' KPIs assigned'}">2 KPIs assigned</div>
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800"
+                                  th:text="${#aggregates.sum(entry.value.![weight])}">1.00</span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <button th:onclick="'viewAssignmentDetails(' + ${entry.key.id} + ', \'grade\')'"
+                                    class="text-primary-600 hover:text-primary-900 mr-3">
+                                <span class="material-icons-round text-sm">visibility</span>
+                            </button>
+                            <button th:onclick="'editAssignment(' + ${entry.key.id} + ', \'grade\')'"
+                                    class="text-blue-600 hover:text-blue-900 mr-3">
+                                <span class="material-icons-round text-sm">edit</span>
+                            </button>
+                            <button th:onclick="'deleteAllAssignments(' + ${entry.key.id} + ', \'grade\')'"
+                                    class="text-red-600 hover:text-red-900">
+                                <span class="material-icons-round text-sm">delete</span>
+                            </button>
                         </td>
                     </tr>
                     </tbody>
