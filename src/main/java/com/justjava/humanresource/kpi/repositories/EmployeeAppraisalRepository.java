@@ -51,5 +51,12 @@ public interface EmployeeAppraisalRepository
     Double averageFinalScoreByDepartment(
             @Param("departmentId") Long departmentId
     );
+    @Query("""
+       SELECT a
+       FROM EmployeeAppraisal a
+       WHERE a.cycle.active = true
+       AND a.completedAt IS NULL
+       """)
+    List<EmployeeAppraisal> findAllActiveAppraisals();
 
 }
