@@ -2,6 +2,7 @@ package com.justjava.humanresource.kpi.service;
 
 import com.justjava.humanresource.hr.entity.Employee;
 import com.justjava.humanresource.hr.repository.EmployeeRepository;
+import com.justjava.humanresource.kpi.dto.EmployeeAppraisalDTO;
 import com.justjava.humanresource.kpi.entity.*;
 import com.justjava.humanresource.kpi.enums.AppraisalOutcome;
 import com.justjava.humanresource.kpi.repositories.EmployeeAppraisalRepository;
@@ -102,6 +103,28 @@ public class AppraisalService {
                 appraisal.getEmployee().getId(), finalScore);
 
         return appraisalRepository.save(appraisal);
+    }
+    @Transactional(readOnly = true)
+    public List<EmployeeAppraisalDTO> getAllActiveAppraisals() {
+
+        List<EmployeeAppraisal> appraisals =
+                appraisalRepository.findAllActiveAppraisals();
+
+        return appraisals.stream()
+                .map(a -> EmployeeAppraisalDTO.builder()
+                        .appraisalId(a.getId())
+                        .employeeId(a.getEmployee().getId())
+                        .employeeName(a.getEmployee().getFullName())
+                        .cycleId(a.getCycle().getId())
+                        .cycleName(a.getCycle().getName())
+                        .kpiScore(a.getKpiScore())
+                        .managerScore(a.getManagerScore())
+                        .finalScore(a.getFinalScore())
+                        .outcome(a.getOutcome())
+                        .completedAt(a.getCompletedAt())
+                        .build()
+                )
+                .toList();
     }
 
     /* =========================================================
