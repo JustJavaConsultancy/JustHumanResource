@@ -3,6 +3,7 @@ package com.justjava.humanresource.payroll.entity;
 
 import com.justjava.humanresource.core.entity.BaseEntity;
 import com.justjava.humanresource.core.enums.RecordStatus;
+import com.justjava.humanresource.payroll.enums.PayComponentCalculationType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -34,4 +35,14 @@ public class Deduction extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private RecordStatus status = RecordStatus.ACTIVE;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private PayComponentCalculationType calculationType = PayComponentCalculationType.FIXED_AMOUNT;
+
+    @Column(precision = 10, scale = 4)
+    private BigDecimal percentageRate;
+
+    @Column(length = 1000)
+    private String formulaExpression;
 }

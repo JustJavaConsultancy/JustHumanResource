@@ -50,7 +50,7 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
     private final PayGroupDeductionMapper payGroupDeductionMapper;
     private final PayrollChangeOrchestrator  payrollChangeOrchestrator;
 
-    private PayrollPeriodService payrollPeriodService;
+    private final PayrollPeriodService payrollPeriodService;
 
 
 
