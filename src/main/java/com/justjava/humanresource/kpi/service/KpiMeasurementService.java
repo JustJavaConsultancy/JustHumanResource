@@ -2,8 +2,7 @@ package com.justjava.humanresource.kpi.service;
 
 import com.justjava.humanresource.hr.entity.Employee;
 import com.justjava.humanresource.hr.repository.EmployeeRepository;
-import com.justjava.humanresource.kpi.entity.KpiDefinition;
-import com.justjava.humanresource.kpi.entity.KpiMeasurement;
+import com.justjava.humanresource.kpi.entity.*;
 import com.justjava.humanresource.kpi.repositories.KpiAssignmentRepository;
 import com.justjava.humanresource.kpi.repositories.KpiDefinitionRepository;
 import com.justjava.humanresource.kpi.repositories.KpiMeasurementRepository;
@@ -15,6 +14,8 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -26,51 +27,102 @@ public class KpiMeasurementService {
     private final EmployeeRepository employeeRepository;
     private final KpiDefinitionRepository kpiRepository;
 
-    public KpiMeasurement recordMeasurement(
-            Long employeeId,
-            Long kpiId,
-            BigDecimal actualValue,
-            YearMonth period
+    /* =====================================================
+       BULK MEASUREMENT ENTRY
+       ===================================================== */
+
+    public List<KpiMeasurementResponseDTO> recordBulkMeasurements(
+            KpiBulkMeasurementRequestDTO request
     ) {
 
-        Employee employee = employeeRepository.findById(employeeId)
+        if (request.getEmployeeId() == null)
+            throw new IllegalArgumentException("EmployeeId is required");
+
+        if (request.getPeriod() == null)
+            throw new IllegalArgumentException("Measurement period is required");
+
+        if (request.getMeasurements() == null || request.getMeasurements().isEmpty())
+            throw new IllegalArgumentException("At least one KPI measurement is required");
+
+        Employee employee = employeeRepository.findById(request.getEmployeeId())
                 .orElseThrow();
 
-        KpiDefinition kpi = kpiRepository.findById(kpiId)
-                .orElseThrow();
+        YearMonth period = request.getPeriod();
 
-        validateAssignmentExists(employee, kpi);
+        List<KpiMeasurementResponseDTO> responseList = new ArrayList<>();
 
-        // prevent duplicate measurement for same period
-        measurementRepository.findByEmployeeAndKpiAndPeriod(employee, kpi, period)
-                .ifPresent(existing -> {
-                    throw new IllegalStateException(
-                            "Measurement already exists for period " + period
-                    );
-                });
+        for (KpiMeasurementItemRequestDTO item : request.getMeasurements()) {
 
-        BigDecimal score = calculateScore(actualValue, kpi.getTargetValue());
+            validateActualValue(item.getActualValue());
 
-        return measurementRepository.save(
-                KpiMeasurement.builder()
-                        .employee(employee)
-                        .kpi(kpi)
-                        .actualValue(actualValue)
-                        .score(score)
-                        .period(period)
-                        .recordedAt(LocalDateTime.now())
-                        .build()
-        );
+            KpiDefinition kpi = kpiRepository.findById(item.getKpiId())
+                    .orElseThrow();
+
+            validateAssignmentExists(employee, kpi);
+
+            boolean exists = measurementRepository
+                    .findByEmployeeAndKpiAndPeriod(employee, kpi, period)
+                    .isPresent();
+
+            if (exists) {
+                // skip duplicate safely
+                continue;
+            }
+
+            BigDecimal score = calculateScore(
+                    item.getActualValue(),
+                    kpi.getTargetValue()
+            );
+
+            KpiMeasurement saved = measurementRepository.save(
+                    KpiMeasurement.builder()
+                            .employee(employee)
+                            .kpi(kpi)
+                            .actualValue(item.getActualValue())
+                            .score(score)
+                            .period(period)
+                            .recordedAt(LocalDateTime.now())
+                            .build()
+            );
+
+            responseList.add(
+                    KpiMeasurementResponseDTO.builder()
+                            .measurementId(saved.getId())
+                            .kpiId(kpi.getId())
+                            .kpiCode(kpi.getCode())
+                            .actualValue(saved.getActualValue())
+                            .score(saved.getScore())
+                            .period(saved.getPeriod())
+                            .build()
+            );
+        }
+
+        return responseList;
     }
+
+    /* =====================================================
+       INTERNAL VALIDATION
+       ===================================================== */
 
     private void validateAssignmentExists(Employee employee, KpiDefinition kpi) {
 
-        boolean assigned = assignmentRepository
-                .existsEffectiveAssignment(employee.getId(), employee.getJobStep().getId(), kpi.getId());
+        boolean assigned = assignmentRepository.existsActiveAssignment(
+                employee.getId(),
+                employee.getJobStep().getId(),
+                kpi.getId()
+        );
 
         if (!assigned) {
-            throw new IllegalStateException("KPI not assigned to employee or role.");
+            throw new IllegalStateException(
+                    "KPI not assigned to employee or job step."
+            );
         }
+    }
+
+    private void validateActualValue(BigDecimal actualValue) {
+
+        if (actualValue == null || actualValue.compareTo(BigDecimal.ZERO) < 0)
+            throw new IllegalArgumentException("Actual value must be zero or positive.");
     }
 
     private BigDecimal calculateScore(BigDecimal actual, BigDecimal target) {
@@ -84,3 +136,25 @@ public class KpiMeasurementService {
                 .min(BigDecimal.valueOf(100));
     }
 }
+
+
+/*
+{
+        "employeeId": 12,
+        "period": "2026-01",
+        "measurements": [
+            {
+            "kpiId": 3,
+            "actualValue": 85
+            },
+            {
+            "kpiId": 5,
+            "actualValue": 120
+            },
+            {
+            "kpiId": 7,
+            "actualValue": 60
+            }
+        ]
+ }
+*/

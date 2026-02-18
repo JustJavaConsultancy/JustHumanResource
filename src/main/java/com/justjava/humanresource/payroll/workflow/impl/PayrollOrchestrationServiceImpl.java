@@ -13,9 +13,8 @@ import com.justjava.humanresource.payroll.calculation.PayGroupResolutionService;
 import com.justjava.humanresource.payroll.calculation.dto.ResolvedPayComponents;
 import com.justjava.humanresource.payroll.entity.*;
 import com.justjava.humanresource.payroll.enums.PayComponentType;
+import com.justjava.humanresource.payroll.enums.PayComponentCalculationType;
 import com.justjava.humanresource.payroll.enums.PayrollRunType;
-import com.justjava.humanresource.payroll.repositories.EmployeeAllowanceRepository;
-import com.justjava.humanresource.payroll.repositories.PayGroupAllowanceRepository;
 import com.justjava.humanresource.payroll.repositories.PayrollLineItemRepository;
 import com.justjava.humanresource.payroll.repositories.PayrollRunRepository;
 import com.justjava.humanresource.payroll.service.EmployeePositionHistoryService;
@@ -33,7 +32,9 @@ import org.springframework.transaction.annotation.Transactional;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 
@@ -52,7 +53,8 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
     private final EmployeePositionHistoryService employeePositionHistoryService;
     private final PayrollPeriodService payrollPeriodService;
 
-
+    private final ScriptEngine scriptEngine =
+            new ScriptEngineManager().getEngineByName("JavaScript");
 
     /* =========================
      * INITIALIZE
@@ -72,7 +74,6 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
                 .orElseThrow(() ->
                         new ResourceNotFoundException("Employee", employeeId));
 
-        // 🔎 Get latest version run
         Optional<PayrollRun> existingOpt =
                 payrollRunRepository
                         .findTopByEmployeeIdAndPayrollDateOrderByVersionNumberDesc(
@@ -86,7 +87,6 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
 
             if (existing.getStatus() == PayrollRunStatus.POSTED) {
 
-                // Allow amendment only if period open
                 if (!payrollPeriodService
                         .isPayrollDateInOpenPeriod(payrollDate)) {
 
@@ -97,7 +97,6 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
 
                 PayrollRun amendment = createAmendmentRun(existing);
                 amendment.setFlowableProcessInstanceId(processInstanceId);
-
                 return amendment.getId();
             }
 
@@ -106,7 +105,6 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
             }
         }
 
-        // Create fresh ORIGINAL run
         PayrollRun run = new PayrollRun();
         run.setEmployee(employee);
         run.setPayrollDate(payrollDate);
@@ -116,6 +114,10 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
         run.setVersionNumber(1);
         run.setGrossPay(BigDecimal.ZERO);
         run.setNetPay(BigDecimal.ZERO);
+
+        PayrollPeriod openPeriod = payrollPeriodService.getCurrentOpenPeriod();
+        run.setPeriodStart(openPeriod.getStartDate());
+        run.setPeriodEnd(openPeriod.getEndDate());
 
         return payrollRunRepository.save(run).getId();
     }
@@ -135,18 +137,11 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
         Employee employee = run.getEmployee();
         LocalDate payrollDate = run.getPayrollDate();
 
-    /* ============================================================
-       1️⃣ Resolve Employee Position (Retro Safe)
-       ============================================================ */
-
-        EmployeePositionHistory position = employeePositionHistoryService.getCurrentPosition(employee.getId());
+        EmployeePositionHistory position =
+                employeePositionHistoryService.getCurrentPosition(employee.getId());
 
         JobStep jobStep = position.getJobStep();
         PayGroup payGroup = position.getPayGroup();
-
-    /* ============================================================
-       2️⃣ Idempotency – Remove Existing Earnings
-       ============================================================ */
 
         payrollLineItemRepository.deleteByPayrollRunIdAndComponentType(
                 payrollRunId,
@@ -154,29 +149,21 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
         );
 
         BigDecimal grossPay = BigDecimal.ZERO;
-
-    /* ============================================================
-       3️⃣ Basic Salary (From Position History)
-       ============================================================ */
-
         BigDecimal basicSalary = jobStep.getBasicSalary();
 
+        // BASIC
         PayrollLineItem basicLine = new PayrollLineItem();
         basicLine.setPayrollRun(run);
         basicLine.setEmployee(employee);
         basicLine.setComponentType(PayComponentType.EARNING);
         basicLine.setComponentCode("BASIC");
         basicLine.setDescription("Basic Salary");
-        basicLine.setAmount(basicSalary);
+        basicLine.setAmount(basicSalary.setScale(2, RoundingMode.HALF_UP));
         basicLine.setTaxable(true);
-
         payrollLineItemRepository.save(basicLine);
 
         grossPay = grossPay.add(basicSalary);
-
-    /* ============================================================
-       4️⃣ Resolve Allowances (Hierarchy + Overrides)
-       ============================================================ */
+        BigDecimal taxableIncome = basicSalary;
 
         ResolvedPayComponents resolved =
                 payGroupResolutionService.resolve(
@@ -187,10 +174,27 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
 
         for (Allowance allowance : resolved.getAllowances()) {
 
-            if (allowance.getAmount() == null
-                    || allowance.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
+            BigDecimal computedAmount = computeAllowanceAmount(
+                    allowance,
+                    basicSalary,
+                    grossPay,
+                    taxableIncome
+            );
+
+            if (computedAmount == null
+                    || computedAmount.compareTo(BigDecimal.ZERO) <= 0) {
                 continue;
             }
+
+            if (allowance.isProratable()) {
+                computedAmount = applyProration(
+                        computedAmount,
+                        run.getPeriodStart(),
+                        run.getPeriodEnd()
+                );
+            }
+
+            computedAmount = computedAmount.setScale(2, RoundingMode.HALF_UP);
 
             PayrollLineItem line = new PayrollLineItem();
             line.setPayrollRun(run);
@@ -198,24 +202,24 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
             line.setComponentType(PayComponentType.EARNING);
             line.setComponentCode(allowance.getCode());
             line.setDescription(allowance.getName());
-            line.setAmount(allowance.getAmount());
+            line.setAmount(computedAmount);
             line.setTaxable(allowance.isTaxable());
 
             payrollLineItemRepository.save(line);
 
-            grossPay = grossPay.add(allowance.getAmount());
+            grossPay = grossPay.add(computedAmount);
+
+            if (allowance.isTaxable()) {
+                taxableIncome = taxableIncome.add(computedAmount);
+            }
         }
 
-    /* ============================================================
-       5️⃣ Persist Gross Snapshot
-       ============================================================ */
-
-        run.setGrossPay(grossPay);
+        run.setGrossPay(grossPay.setScale(2, RoundingMode.HALF_UP));
         payrollRunRepository.save(run);
     }
 
     /* =========================
-     * APPLY STATUTORY
+     * APPLY DEDUCTIONS
      * ========================= */
 
     @Override
@@ -223,16 +227,11 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
     public void applyStatutoryDeductions(Long payrollRunId) {
 
         PayrollRun run = getActiveRun(payrollRunId);
-        ensureStatus(run, PayrollRunStatus.IN_PROGRESS);
-
         ensureEditable(run);
+        ensureStatus(run, PayrollRunStatus.IN_PROGRESS);
 
         Employee employee = run.getEmployee();
         LocalDate payrollDate = run.getPayrollDate();
-
-    /* ============================================================
-       1️⃣ Idempotency: Remove existing deductions
-       ============================================================ */
 
         payrollLineItemRepository.deleteByPayrollRunIdAndComponentType(
                 payrollRunId,
@@ -240,10 +239,6 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
         );
 
         BigDecimal totalDeductions = BigDecimal.ZERO;
-
-    /* ============================================================
-       2️⃣ Aggregate Taxable Earnings
-       ============================================================ */
 
         List<PayrollLineItem> taxableEarnings =
                 payrollLineItemRepository
@@ -257,14 +252,13 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
                         .map(PayrollLineItem::getAmount)
                         .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-    /* ============================================================
-       3️⃣ PAYE Calculation
-       ============================================================ */
-
+        // PAYE
         BigDecimal paye =
                 payeCalculatorService.calculateTax(taxableIncome);
 
         if (paye.compareTo(BigDecimal.ZERO) > 0) {
+
+            paye = paye.setScale(2, RoundingMode.HALF_UP);
 
             PayrollLineItem payeLine = new PayrollLineItem();
             payeLine.setPayrollRun(run);
@@ -276,16 +270,15 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
             payeLine.setTaxable(false);
 
             payrollLineItemRepository.save(payeLine);
-
             totalDeductions = totalDeductions.add(paye);
         }
 
-    /* ============================================================
-       4️⃣ Pension Calculation (Employee Portion Only)
-       ============================================================ */
-        EmployeePositionHistory position =employeePositionHistoryService.getCurrentPosition(employee.getId());
+        // Pension
+        EmployeePositionHistory position =
+                employeePositionHistoryService.getCurrentPosition(employee.getId());
 
         JobStep jobStep = position.getJobStep();
+
         List<PensionScheme> schemes =
                 pensionSchemeRepository.findEffectiveSchemes(
                         payrollDate,
@@ -294,7 +287,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
 
         if (!schemes.isEmpty()) {
 
-            PensionScheme scheme = schemes.get(0); // assume one active scheme
+            PensionScheme scheme = schemes.get(0);
 
             BigDecimal pensionableAmount =
                     scheme.getPensionableOnBasicOnly()
@@ -310,7 +303,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
                     pensionCalculatorService.calculateEmployeeContribution(
                             pensionableAmount,
                             scheme.getEmployeeRate()
-                    );
+                    ).setScale(2, RoundingMode.HALF_UP);
 
             if (employeePension.compareTo(BigDecimal.ZERO) > 0) {
 
@@ -324,54 +317,16 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
                 pensionLine.setTaxable(false);
 
                 payrollLineItemRepository.save(pensionLine);
-
                 totalDeductions = totalDeductions.add(employeePension);
             }
         }
 
-    /* ============================================================
-       5️⃣ Other Resolved Deductions
-       ============================================================ */
-
-        ResolvedPayComponents resolved =
-                payGroupResolutionService.resolve(
-                        position.getPayGroup(),
-                        employee,
-                        payrollDate
-                );
-
-        for (Deduction deduction : resolved.getDeductions()) {
-
-            BigDecimal amount = deduction.getAmount();
-
-            if (amount == null
-                    || amount.compareTo(BigDecimal.ZERO) <= 0) {
-                continue;
-            }
-
-            PayrollLineItem line = new PayrollLineItem();
-            line.setPayrollRun(run);
-            line.setEmployee(employee);
-            line.setComponentType(PayComponentType.DEDUCTION);
-            line.setComponentCode(deduction.getCode());
-            line.setDescription(deduction.getName());
-            line.setAmount(amount);
-            line.setTaxable(false);
-
-            payrollLineItemRepository.save(line);
-
-            totalDeductions = totalDeductions.add(amount);
-        }
-
-    /* ============================================================
-       6️⃣ Compute Net Pay
-       ============================================================ */
-
-        BigDecimal netPay =
-                run.getGrossPay().subtract(totalDeductions);
-
-        run.setTotalDeductions(totalDeductions);
-        run.setNetPay(netPay);
+        run.setTotalDeductions(totalDeductions.setScale(2, RoundingMode.HALF_UP));
+        run.setNetPay(
+                run.getGrossPay()
+                        .subtract(totalDeductions)
+                        .setScale(2, RoundingMode.HALF_UP)
+        );
 
         payrollRunRepository.save(run);
     }
@@ -384,19 +339,14 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
     @Transactional
     public void finalizePayroll(Long payrollRunId) {
 
-        PayrollRun run = payrollRunRepository
-                .findById(payrollRunId)
+        PayrollRun run = payrollRunRepository.findById(payrollRunId)
                 .orElseThrow();
 
         if (run.getStatus() == PayrollRunStatus.POSTED) {
-            throw new IllegalStateException(
-                    "PayrollRun already POSTED."
-            );
+            throw new IllegalStateException("PayrollRun already POSTED.");
         }
 
-        if (run.getGrossPay() == null
-                || run.getNetPay() == null) {
-
+        if (run.getGrossPay() == null || run.getNetPay() == null) {
             throw new IllegalStateException(
                     "Payroll cannot be posted without full calculation."
             );
@@ -404,28 +354,10 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
 
         run.setStatus(PayrollRunStatus.POSTED);
         payrollRunRepository.save(run);
-
-    /* ============================================================
-       CHECK IF PERIOD CAN BE CLOSED
-       ============================================================ */
-
-/*         PayrollPeriod current = payrollPeriodService.getCurrentOpenPeriod();
-
-       long incomplete =
-                payrollRunRepository.countByPayrollDateBetweenAndStatusNot(
-                        current.getStartDate(),
-                        current.getEndDate(),
-                        PayrollRunStatus.POSTED
-                );
-
-        if (incomplete == 0) {
-            // Automatically close and open next
-            payrollPeriodService.closeCurrentPeriodAndOpenNext();
-        }*/
     }
 
     /* =========================
-     * INTERNAL SAFETY
+     * INTERNAL METHODS
      * ========================= */
 
     private PayrollRun getActiveRun(Long payrollRunId) {
@@ -442,6 +374,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
             );
         }
     }
+
     private void ensureEditable(PayrollRun run) {
         if (run.getStatus() == PayrollRunStatus.POSTED) {
             throw new IllegalStateException(
@@ -460,20 +393,20 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
         amendment.setStatus(PayrollRunStatus.IN_PROGRESS);
         amendment.setRunType(PayrollRunType.AMENDMENT);
         amendment.setParentRun(original);
-
         amendment.setVersionNumber(original.getVersionNumber() + 1);
-
         amendment.setGrossPay(BigDecimal.ZERO);
         amendment.setNetPay(BigDecimal.ZERO);
+        amendment.setPeriodStart(original.getPeriodStart());
+        amendment.setPeriodEnd(original.getPeriodEnd());
 
         return payrollRunRepository.save(amendment);
     }
-    private BigDecimal computeComponentAmount(
+
+    private BigDecimal computeAllowanceAmount(
             Allowance allowance,
-            BigDecimal basicSalary,
-            BigDecimal currentGross,
-            BigDecimal taxableIncome
-    ) {
+            BigDecimal basic,
+            BigDecimal gross,
+            BigDecimal taxable) {
 
         switch (allowance.getCalculationType()) {
 
@@ -481,49 +414,42 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
                 return allowance.getAmount();
 
             case PERCENTAGE_OF_BASIC:
-                return basicSalary
-                        .multiply(allowance.getPercentageRate())
-                        .divide(BigDecimal.valueOf(100));
+                return basic.multiply(allowance.getPercentageRate())
+                        .divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
 
             case PERCENTAGE_OF_GROSS:
-                return currentGross
-                        .multiply(allowance.getPercentageRate())
-                        .divide(BigDecimal.valueOf(100));
+                return gross.multiply(allowance.getPercentageRate())
+                        .divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
 
             case PERCENTAGE_OF_TAXABLE:
-                return taxableIncome
-                        .multiply(allowance.getPercentageRate())
-                        .divide(BigDecimal.valueOf(100));
+                return taxable.multiply(allowance.getPercentageRate())
+                        .divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
 
             case FORMULA:
                 return evaluateFormula(
                         allowance.getFormulaExpression(),
-                        basicSalary,
-                        currentGross,
-                        taxableIncome
+                        basic,
+                        gross,
+                        taxable
                 );
 
             default:
                 throw new IllegalStateException("Unsupported calculation type");
         }
     }
+
     private BigDecimal evaluateFormula(
             String expression,
             BigDecimal basic,
             BigDecimal gross,
-            BigDecimal taxable
-    ) {
+            BigDecimal taxable) {
 
         try {
-            ScriptEngine engine = new ScriptEngineManager()
-                    .getEngineByName("JavaScript");
+            scriptEngine.put("BASIC", basic);
+            scriptEngine.put("GROSS", gross);
+            scriptEngine.put("TAXABLE", taxable);
 
-            engine.put("BASIC", basic);
-            engine.put("GROSS", gross);
-            engine.put("TAXABLE", taxable);
-
-            Object result = engine.eval(expression);
-
+            Object result = scriptEngine.eval(expression);
             return new BigDecimal(result.toString());
 
         } catch (Exception e) {
@@ -531,4 +457,20 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
         }
     }
 
+    private BigDecimal applyProration(
+            BigDecimal amount,
+            LocalDate periodStart,
+            LocalDate periodEnd) {
+
+        long totalDays =
+                ChronoUnit.DAYS.between(periodStart, periodEnd) + 1;
+
+        if (totalDays <= 0) return amount;
+
+        return amount.divide(
+                BigDecimal.valueOf(totalDays),
+                6,
+                RoundingMode.HALF_UP
+        ).multiply(BigDecimal.valueOf(totalDays));
+    }
 }

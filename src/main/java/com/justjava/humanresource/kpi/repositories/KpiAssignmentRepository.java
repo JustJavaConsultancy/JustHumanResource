@@ -143,4 +143,23 @@ public interface KpiAssignmentRepository
     List<KpiAssignment> findActiveEmployeeAssignments(
             @Param("employeeId") Long employeeId
     );
+    @Query("""
+       SELECT CASE WHEN COUNT(a) > 0 THEN true ELSE false END
+       FROM KpiAssignment a
+       WHERE a.active = true
+       AND a.kpi.id = :kpiId
+       AND (
+            (a.employee.id = :employeeId)
+            OR
+            (a.employee IS NULL AND a.jobStep.id = :jobStepId)
+       )
+       AND (a.validFrom IS NULL OR a.validFrom <= CURRENT_DATE)
+       AND (a.validTo IS NULL OR a.validTo >= CURRENT_DATE)
+       """)
+    boolean existsActiveAssignment(
+            @Param("employeeId") Long employeeId,
+            @Param("jobStepId") Long jobStepId,
+            @Param("kpiId") Long kpiId
+    );
+
 }

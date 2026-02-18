@@ -45,4 +45,7 @@ public class Deduction extends BaseEntity {
 
     @Column(length = 1000)
     private String formulaExpression;
+
+    @Column(nullable = false)
+    private boolean proratable = false;
 }

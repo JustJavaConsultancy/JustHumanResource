@@ -44,4 +44,7 @@ public class Allowance extends BaseEntity {
 
     @Column(length = 1000)
     private String formulaExpression; // used for formula-driven
+
+    @Column(nullable = false)
+    private boolean proratable = false;
 }
