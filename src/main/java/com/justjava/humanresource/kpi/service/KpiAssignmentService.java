@@ -138,6 +138,8 @@ public class KpiAssignmentService {
                             .weight(assignment.getWeight())
                             .mandatory(assignment.isMandatory())
                             .name(assignment.getKpi().getName())
+                            .targetValue(assignment.getKpi().getTargetValue())
+                            .kpiUnit(assignment.getKpi().getUnit())
                             .build()
             );
         }
