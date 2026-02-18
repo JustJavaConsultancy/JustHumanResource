@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -63,6 +64,19 @@ public interface PaySlipRepository
     List<PaySlip> findLatestForAllEmployeesForPeriod(
             @Param("start") LocalDate start,
             @Param("end") LocalDate end
+    );
+    @Query("""
+       SELECT COALESCE(SUM(p.grossPay), 0)
+       FROM PaySlip p
+       WHERE p.employee.department.id = :departmentId
+       AND p.versionNumber = (
+            SELECT MAX(ps.versionNumber)
+            FROM PaySlip ps
+            WHERE ps.employee.id = p.employee.id
+       )
+       """)
+    BigDecimal sumLatestGrossByDepartment(
+            @Param("departmentId") Long departmentId
     );
 
 }

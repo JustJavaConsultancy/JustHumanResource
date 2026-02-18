@@ -2,6 +2,8 @@ package com.justjava.humanresource.kpi.repositories;
 
 import com.justjava.humanresource.kpi.entity.EmployeeAppraisal;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -40,4 +42,14 @@ public interface EmployeeAppraisalRepository
     List<EmployeeAppraisal> findByCycle_IdAndCompletedAtIsNotNull(
             Long cycleId
     );
+    @Query("""
+       SELECT AVG(a.finalScore)
+       FROM EmployeeAppraisal a
+       WHERE a.employee.department.id = :departmentId
+       AND a.completedAt IS NOT NULL
+       """)
+    Double averageFinalScoreByDepartment(
+            @Param("departmentId") Long departmentId
+    );
+
 }
