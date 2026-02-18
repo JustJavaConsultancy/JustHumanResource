@@ -1,6 +1,6 @@
 package com.justjava.humanresource.workflow.delegate.kpi;
 
-import com.justjava.humanresource.hr.repository.EmployeeRepository;
+
 import com.justjava.humanresource.kpi.entity.AppraisalCycle;
 import com.justjava.humanresource.kpi.entity.EmployeeAppraisal;
 import com.justjava.humanresource.kpi.repositories.AppraisalCycleRepository;
@@ -9,35 +9,46 @@ import lombok.RequiredArgsConstructor;
 import org.flowable.engine.delegate.DelegateExecution;
 import org.flowable.engine.delegate.JavaDelegate;
 import org.springframework.stereotype.Component;
-import java.math.RoundingMode;
 
 @Component("calculateKpiScoreDelegate")
 @RequiredArgsConstructor
 public class CalculateKpiScoreDelegate implements JavaDelegate {
 
     private final AppraisalService appraisalService;
-    private final EmployeeRepository employeeRepository;
     private final AppraisalCycleRepository cycleRepository;
 
     @Override
     public void execute(DelegateExecution execution) {
 
-        Long employeeId = (Long) execution.getVariable("employeeId");
-        Long cycleId = (Long) execution.getVariable("cycleId");
+        Long employeeId = getLongVariable(execution, "employeeId");
+        Long cycleId = getLongVariable(execution, "cycleId");
 
         AppraisalCycle cycle = cycleRepository.findById(cycleId)
-                .orElseThrow();
+                .orElseThrow(() ->
+                        new IllegalStateException("Appraisal cycle not found: " + cycleId)
+                );
 
-        // Only calculate KPI part here
+        // Create draft appraisal (KPI score only)
         EmployeeAppraisal appraisal =
-                appraisalService.generateAppraisal(
+                appraisalService.createDraftAppraisal(
                         employeeId,
-                        cycle,
-                        null,  // managerScore not yet provided
-                        null
+                        cycle
                 );
 
         execution.setVariable("appraisalId", appraisal.getId());
         execution.setVariable("kpiScore", appraisal.getKpiScore());
+    }
+
+    /* =====================================================
+       SAFE VARIABLE EXTRACTION
+       Prevents ClassCastException from Flowable Forms
+       ===================================================== */
+
+    private Long getLongVariable(DelegateExecution execution, String name) {
+        Object value = execution.getVariable(name);
+        if (value == null) {
+            throw new IllegalStateException("Missing process variable: " + name);
+        }
+        return Long.valueOf(value.toString());
     }
 }

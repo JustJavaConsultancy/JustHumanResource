@@ -1,55 +1,56 @@
 package com.justjava.humanresource.workflow.delegate.kpi;
 
+
 import com.justjava.humanresource.kpi.entity.EmployeeAppraisal;
-import com.justjava.humanresource.kpi.enums.AppraisalOutcome;
-import com.justjava.humanresource.kpi.repositories.EmployeeAppraisalRepository;
+import com.justjava.humanresource.kpi.service.AppraisalService;
 import lombok.RequiredArgsConstructor;
 import org.flowable.engine.delegate.DelegateExecution;
 import org.flowable.engine.delegate.JavaDelegate;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+
 @Component("finalizeAppraisalDelegate")
 @RequiredArgsConstructor
 public class FinalizeAppraisalDelegate implements JavaDelegate {
 
-    private final EmployeeAppraisalRepository appraisalRepository;
+    private final AppraisalService appraisalService;
 
     @Override
     public void execute(DelegateExecution execution) {
 
-        Long appraisalId = (Long) execution.getVariable("appraisalId");
-        BigDecimal managerScore =
-                (BigDecimal) execution.getVariable("managerScore");
+        Long appraisalId = getLongVariable(execution, "appraisalId");
+        BigDecimal managerScore = getBigDecimalVariable(execution, "managerScore");
+        String managerComment = (String) execution.getVariable("managerComment");
 
         EmployeeAppraisal appraisal =
-                appraisalRepository.findById(appraisalId)
-                        .orElseThrow();
+                appraisalService.finalizeAppraisal(
+                        appraisalId,
+                        managerScore,
+                        managerComment
+                );
 
-        BigDecimal kpiScore = appraisal.getKpiScore();
-
-        BigDecimal finalScore =
-                kpiScore.multiply(BigDecimal.valueOf(0.7))
-                        .add(managerScore.multiply(BigDecimal.valueOf(0.3)));
-
-        appraisal.setManagerScore(managerScore);
-        appraisal.setFinalScore(finalScore);
-        appraisal.setOutcome(determineOutcome(finalScore));
-        appraisal.setCompletedAt(LocalDateTime.now());
-
-        appraisalRepository.save(appraisal);
-
+        execution.setVariable("finalScore", appraisal.getFinalScore());
         execution.setVariable("appraisalOutcome", appraisal.getOutcome());
     }
 
-    private AppraisalOutcome determineOutcome(BigDecimal score) {
-        if (score.compareTo(BigDecimal.valueOf(85)) >= 0)
-            return AppraisalOutcome.EXCEEDS_EXPECTATION;
-        if (score.compareTo(BigDecimal.valueOf(70)) >= 0)
-            return AppraisalOutcome.MEETS_EXPECTATION;
-        if (score.compareTo(BigDecimal.valueOf(50)) >= 0)
-            return AppraisalOutcome.NEEDS_IMPROVEMENT;
-        return AppraisalOutcome.UNDERPERFORMING;
+    /* =====================================================
+       SAFE VARIABLE EXTRACTION (Prevents ClassCastException)
+       ===================================================== */
+
+    private Long getLongVariable(DelegateExecution execution, String name) {
+        Object value = execution.getVariable(name);
+        if (value == null) {
+            throw new IllegalStateException("Missing process variable: " + name);
+        }
+        return Long.valueOf(value.toString());
+    }
+
+    private BigDecimal getBigDecimalVariable(DelegateExecution execution, String name) {
+        Object value = execution.getVariable(name);
+        if (value == null) {
+            throw new IllegalStateException("Missing process variable: " + name);
+        }
+        return new BigDecimal(value.toString());
     }
 }

@@ -75,4 +75,8 @@ public class Employee extends BaseEntity {
 
     private LocalDateTime activatedAt;
 
+    public String getFullName() {
+        return firstName + " " + lastName;
+    }
+
 }

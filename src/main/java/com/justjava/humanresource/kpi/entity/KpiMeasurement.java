@@ -2,10 +2,7 @@ package com.justjava.humanresource.kpi.entity;
 
 import com.justjava.humanresource.core.entity.BaseEntity;
 import com.justjava.humanresource.hr.entity.Employee;
-import jakarta.persistence.Entity;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -19,9 +16,19 @@ import java.time.YearMonth;
 @Entity
 @Table(
         name = "kpi_measurement",
-        uniqueConstraints = @UniqueConstraint(
-                columnNames = {"employee_id", "kpi_id", "period"}
-        )
+        uniqueConstraints = @UniqueConstraint
+                (columnNames = {
+                        "employee_id",
+                        "kpi_id",
+                        "period"
+                }
+            ),
+        indexes = {
+                @Index(name = "idx_employee_period",
+                        columnList = "employee_id, period"),
+                @Index(name = "idx_employee_kpi_period",
+                        columnList = "employee_id, kpi_id, period")
+        }
 )
 @Getter
 @Setter

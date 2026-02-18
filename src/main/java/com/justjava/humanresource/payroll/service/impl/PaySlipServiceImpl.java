@@ -99,6 +99,40 @@ public class PaySlipServiceImpl implements PaySlipService {
                 .map(this::mapToDto)
                 .toList();
     }
+    @Override
+    public PaySlipDTO getLatestPaySlipForEmployeeForPeriod(
+            Long employeeId,
+            YearMonth period
+    ) {
+
+        LocalDate start = period.atDay(1);
+        LocalDate end = period.atEndOfMonth();
+
+        PaySlip slip = paySlipRepository
+                .findLatestByEmployeeAndPeriod(employeeId, start, end)
+                .orElseThrow(() ->
+                        new IllegalStateException(
+                                "No payslip found for employee "
+                                        + employeeId + " for period " + period
+                        )
+                );
+
+        return mapToDto(slip);
+    }
+    @Override
+    public List<PaySlipDTO> getLatestPaySlipsForPeriod(
+            YearMonth period
+    ) {
+
+        LocalDate start = period.atDay(1);
+        LocalDate end = period.atEndOfMonth();
+
+        return paySlipRepository
+                .findLatestForAllEmployeesForPeriod(start, end)
+                .stream()
+                .map(this::mapToDto)
+                .toList();
+    }
 
     /* ============================================================
        INTERNAL MAPPER
@@ -114,6 +148,7 @@ public class PaySlipServiceImpl implements PaySlipService {
                 .grossPay(paySlip.getGrossPay())
                 .totalDeductions(paySlip.getTotalDeductions())
                 .netPay(paySlip.getNetPay())
+                .employeeName(paySlip.getEmployee().getFullName())
                 .build();
     }
 }

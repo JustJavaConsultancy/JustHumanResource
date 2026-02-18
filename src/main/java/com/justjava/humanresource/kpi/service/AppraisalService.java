@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.util.List;
 
@@ -24,105 +25,126 @@ import java.util.List;
 @Transactional
 public class AppraisalService {
 
+    private static final BigDecimal KPI_WEIGHT = BigDecimal.valueOf(0.7);
+    private static final BigDecimal MANAGER_WEIGHT = BigDecimal.valueOf(0.3);
+
     private final EmployeeRepository employeeRepository;
     private final KpiAssignmentRepository assignmentRepository;
     private final KpiMeasurementRepository measurementRepository;
     private final EmployeeAppraisalRepository appraisalRepository;
 
-    public EmployeeAppraisal generateAppraisal(
+    /* =========================================================
+       STEP 1 — CREATE DRAFT APPRAISAL (KPI SCORE ONLY)
+       ========================================================= */
+
+    public EmployeeAppraisal createDraftAppraisal(
             Long employeeId,
-            AppraisalCycle cycle,
-            BigDecimal managerScore,
-            String managerComment
+            AppraisalCycle cycle
     ) {
 
-        Employee employee = employeeRepository.findById(employeeId)
-                .orElseThrow();
-
-        YearMonth period = cycle.getPeriod();
-        LocalDate referenceDate = period.atEndOfMonth();
-
-        // 1️⃣ Get effective KPI assignments
-        List<KpiAssignment> assignments =
-                assignmentRepository.findEffectiveAssignmentsForEmployee(
-                        employeeId,
-                        //employee.getJobStep().getId(),
-                        referenceDate
-                );
-
-        if (assignments.isEmpty()) {
+        if (appraisalRepository.existsByEmployee_IdAndCycle_Id(
+                employeeId, cycle.getId())) {
             throw new IllegalStateException(
-                    "No effective KPI assignments found for employee: " + employeeId);
+                    "Appraisal already exists for employee and cycle.");
         }
 
-        // 2️⃣ Fetch measurements for the cycle
-        List<KpiMeasurement> measurements =
-                measurementRepository.findByEmployee_IdAndPeriod(
-                        employeeId,
-                        period
+        Employee employee = employeeRepository.findById(employeeId)
+                .orElseThrow(() ->
+                        new IllegalStateException("Employee not found: " + employeeId)
                 );
 
-        BigDecimal weightedTotal = BigDecimal.ZERO;
-        BigDecimal totalWeight = BigDecimal.ZERO;
-
-        for (KpiAssignment assignment : assignments) {
-
-            BigDecimal weight = assignment.getWeight() != null
-                    ? assignment.getWeight()
-                    : BigDecimal.ZERO;
-
-            totalWeight = totalWeight.add(weight);
-
-            KpiMeasurement measurement =
-                    measurements.stream()
-                            .filter(m -> m.getKpi().getId()
-                                    .equals(assignment.getKpi().getId()))
-                            .findFirst()
-                            .orElse(null);
-
-            BigDecimal score = measurement != null
-                    ? measurement.getScore()
-                    : BigDecimal.ZERO;
-
-            weightedTotal = weightedTotal.add(
-                    score.multiply(weight)
-            );
-        }
-
-        BigDecimal kpiScore;
-
-        if (totalWeight.compareTo(BigDecimal.ZERO) == 0) {
-            kpiScore = BigDecimal.ZERO;
-        } else {
-            kpiScore = weightedTotal
-                    .divide(totalWeight, 2, RoundingMode.HALF_UP);
-        }
-
-        // 3️⃣ Combine with manager score
-        BigDecimal finalScore = calculateFinalScore(kpiScore, managerScore);
-
-        AppraisalOutcome outcome = determineOutcome(finalScore);
+        BigDecimal kpiScore = calculateKpiScore(employeeId, cycle);
 
         EmployeeAppraisal appraisal = EmployeeAppraisal.builder()
                 .employee(employee)
                 .cycle(cycle)
                 .kpiScore(kpiScore)
-                .managerScore(managerScore)
-                .finalScore(finalScore)
-                .outcome(outcome)
-                .managerComment(managerComment)
-                .completedAt(java.time.LocalDateTime.now())
                 .build();
 
-        log.info("Generated appraisal for employee {} with finalScore={}",
-                employeeId, finalScore);
+        log.info("Draft appraisal created for employee {} with kpiScore={}",
+                employeeId, kpiScore);
 
         return appraisalRepository.save(appraisal);
     }
 
     /* =========================================================
+       STEP 2 — FINALIZE APPRAISAL (ADD MANAGER SCORE)
+       ========================================================= */
+
+    public EmployeeAppraisal finalizeAppraisal(
+            Long appraisalId,
+            BigDecimal managerScore,
+            String managerComment
+    ) {
+
+        EmployeeAppraisal appraisal =
+                appraisalRepository.findById(appraisalId)
+                        .orElseThrow(() ->
+                                new IllegalStateException("Appraisal not found: " + appraisalId)
+                        );
+
+        if (appraisal.getCompletedAt() != null) {
+            throw new IllegalStateException("Appraisal already finalized.");
+        }
+
+        BigDecimal finalScore = calculateFinalScore(
+                appraisal.getKpiScore(),
+                managerScore
+        );
+
+        appraisal.setManagerScore(managerScore);
+        appraisal.setFinalScore(finalScore);
+        appraisal.setOutcome(determineOutcome(finalScore));
+        appraisal.setManagerComment(managerComment);
+        appraisal.setCompletedAt(LocalDateTime.now());
+
+        log.info("Appraisal finalized for employee {} with finalScore={}",
+                appraisal.getEmployee().getId(), finalScore);
+
+        return appraisalRepository.save(appraisal);
+    }
+
+    /* =========================================================
+       CORE KPI CALCULATION (Single Source of Truth)
+       ========================================================= */
+
+    private BigDecimal calculateKpiScore(
+            Long employeeId,
+            AppraisalCycle cycle
+    ) {
+
+        YearMonth start = cycle.getStartPeriod();
+        YearMonth end = cycle.getEndPeriod();
+
+        List<KpiMeasurement> measurements =
+                measurementRepository
+                        .findByEmployee_IdAndPeriodBetween(
+                                employeeId,
+                                start,
+                                end
+                        );
+
+        if (measurements.isEmpty()) {
+            throw new IllegalStateException(
+                    "No KPI measurements found for employee "
+                            + employeeId + " in cycle " + cycle.getName()
+            );
+        }
+
+        BigDecimal totalScore = BigDecimal.ZERO;
+
+        for (KpiMeasurement measurement : measurements) {
+            totalScore = totalScore.add(measurement.getScore());
+        }
+
+        return totalScore
+                .divide(BigDecimal.valueOf(measurements.size()),
+                        2,
+                        RoundingMode.HALF_UP);
+    }
+
+    /* =========================================================
        FINAL SCORE CALCULATION
-       Example: 70% KPI, 30% Manager
        ========================================================= */
 
     private BigDecimal calculateFinalScore(
@@ -134,8 +156,8 @@ public class AppraisalService {
             return kpiScore;
         }
 
-        return kpiScore.multiply(BigDecimal.valueOf(0.7))
-                .add(managerScore.multiply(BigDecimal.valueOf(0.3)))
+        return kpiScore.multiply(KPI_WEIGHT)
+                .add(managerScore.multiply(MANAGER_WEIGHT))
                 .setScale(2, RoundingMode.HALF_UP);
     }
 

@@ -43,7 +43,7 @@ public class Allowance extends BaseEntity {
     private BigDecimal percentageRate; // used when percentage-based
 
     @Column(length = 1000)
-    private String formulaExpression; // used for formula-driven
+    private String formulaExpression; // used for formula-driven 20% of BASIC
 
     @Column(nullable = false)
     private boolean proratable = false;

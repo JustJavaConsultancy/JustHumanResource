@@ -6,10 +6,7 @@ import com.justjava.humanresource.hr.dto.KpiBulkAssignmentRequestDTO;
 import com.justjava.humanresource.hr.entity.Employee;
 import com.justjava.humanresource.hr.entity.JobStep;
 import com.justjava.humanresource.hr.service.SetupService;
-import com.justjava.humanresource.kpi.entity.KpiAssignment;
-import com.justjava.humanresource.kpi.entity.KpiBulkMeasurementRequestDTO;
-import com.justjava.humanresource.kpi.entity.KpiDefinition;
-import com.justjava.humanresource.kpi.entity.KpiMeasurement;
+import com.justjava.humanresource.kpi.entity.*;
 import com.justjava.humanresource.kpi.service.KpiAssignmentService;
 import com.justjava.humanresource.kpi.service.KpiDefinitionService;
 import com.justjava.humanresource.kpi.service.KpiMeasurementService;
@@ -23,6 +20,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.math.BigDecimal;
+import java.time.YearMonth;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -248,7 +246,7 @@ public class KpiController {
     }
     @GetMapping("/fragments/kpi-measurements-table")
     public String getKpiMeasurementsTable(Model model) {
-        List<KpiMeasurement> measurements = kpiMeasurementService.getAllMeasurements();
+        List<KpiMeasurementResponseDTO> measurements = kpiMeasurementService.getAllEffectiveMeasurements(YearMonth.now());
         model.addAttribute("measurements", measurements);
         return "kpi/fragment/kpi-measurements-table";
     }
@@ -258,7 +256,7 @@ public class KpiController {
         kpiMeasurementService.recordBulkMeasurements(request);
         System.out.println("Successfully recorded KPI measurements for employee ID: " + request.getEmployeeId());
 
-        List<KpiMeasurement> measurements = kpiMeasurementService.getAllMeasurements();
+        List<KpiMeasurementResponseDTO> measurements = kpiMeasurementService.getAllEffectiveMeasurements(YearMonth.now());
         model.addAttribute("measurements", measurements);
         return "kpi/fragment/kpi-measurements-table";
     }

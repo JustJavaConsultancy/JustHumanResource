@@ -23,4 +23,5 @@ public class PaySlipDTO {
     BigDecimal totalDeductions;
 
     BigDecimal netPay;
+    String employeeName;
 }

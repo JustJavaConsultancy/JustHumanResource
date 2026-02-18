@@ -1,5 +1,6 @@
 package com.justjava.humanresource.kpi.entity;
 
+import com.justjava.humanresource.payroll.util.YearMonthAttributeConverter;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -7,8 +8,6 @@ import java.time.LocalDateTime;
 import java.time.YearMonth;
 
 @Entity
-@Table(name = "hr_appraisal_cycle",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"period"}))
 @Getter
 @Setter
 @Builder
@@ -22,7 +21,15 @@ public class AppraisalCycle {
 
     private String name; // e.g. 2026 Q1
 
-    private YearMonth period;
+    private int year;
+
+    private int quarter; // 1 - 4
+
+    @Convert(converter = YearMonthAttributeConverter.class)
+    private YearMonth startPeriod; // e.g. 2026-01
+
+    @Convert(converter = YearMonthAttributeConverter.class)
+    private YearMonth endPeriod;   // e.g. 2026-03
 
     private boolean active;
 

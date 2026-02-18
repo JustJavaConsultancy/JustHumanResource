@@ -13,4 +13,6 @@ public interface PaySlipService {
     List<PaySlipDTO> getPaySlipsForPeriod(YearMonth period);
 
     List<PaySlipDTO> getEmployeePaySlipsForPeriod(Long employeeId,YearMonth period);
+    public PaySlipDTO getLatestPaySlipForEmployeeForPeriod(Long employeeId,YearMonth period);
+    public List<PaySlipDTO> getLatestPaySlipsForPeriod(YearMonth period);
 }

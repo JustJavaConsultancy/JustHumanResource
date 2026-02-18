@@ -57,41 +57,56 @@ public class KpiMeasurementService {
 
         YearMonth period = request.getPeriod();
 
+        // 🔥 Bulk fetch KPI definitions
+        List<Long> kpiIds = request.getMeasurements().stream()
+                .map(KpiMeasurementItemRequestDTO::getKpiId)
+                .toList();
+
+        List<KpiDefinition> definitions =
+                kpiRepository.findAllById(kpiIds);
+
+        var kpiMap = definitions.stream()
+                .collect(Collectors.toMap(KpiDefinition::getId, k -> k));
+
         List<KpiMeasurementResponseDTO> responseList = new ArrayList<>();
 
         for (KpiMeasurementItemRequestDTO item : request.getMeasurements()) {
 
             validateActualValue(item.getActualValue());
 
-            KpiDefinition kpi = kpiRepository.findById(item.getKpiId())
-                    .orElseThrow();
+            KpiDefinition kpi = kpiMap.get(item.getKpiId());
+
+            if (kpi == null)
+                throw new IllegalStateException("Invalid KPI id: " + item.getKpiId());
 
             validateAssignmentExists(employee, kpi);
 
-            boolean exists = measurementRepository
-                    .findByEmployeeAndKpiAndPeriod(employee, kpi, period)
-                    .isPresent();
+            boolean exists =
+                    measurementRepository.existsByEmployee_IdAndKpi_IdAndPeriod(
+                            employee.getId(),
+                            kpi.getId(),
+                            period
+                    );
 
-            if (exists) {
-                // skip duplicate safely
+            if (exists)
                 continue;
-            }
 
             BigDecimal score = calculateScore(
                     item.getActualValue(),
                     kpi.getTargetValue()
             );
 
-            KpiMeasurement saved = measurementRepository.save(
-                    KpiMeasurement.builder()
-                            .employee(employee)
-                            .kpi(kpi)
-                            .actualValue(item.getActualValue())
-                            .score(score)
-                            .period(period)
-                            .recordedAt(LocalDateTime.now())
-                            .build()
-            );
+            KpiMeasurement saved =
+                    measurementRepository.save(
+                            KpiMeasurement.builder()
+                                    .employee(employee)
+                                    .kpi(kpi)
+                                    .actualValue(item.getActualValue())
+                                    .score(score)
+                                    .period(period)
+                                    .recordedAt(LocalDateTime.now())
+                                    .build()
+                    );
 
             responseList.add(
                     KpiMeasurementResponseDTO.builder()
@@ -143,9 +158,6 @@ public class KpiMeasurementService {
                 .filter(m -> assignedKpiIds.contains(m.getKpi().getId()))
                 .collect(Collectors.toList());
     }
-    public List<KpiMeasurement> getAllMeasurements(){
-        return measurementRepository.findAll();
-    }
     /* =========================================================
        FETCH EFFECTIVE MEASUREMENTS FOR JOBSTEP
        ========================================================= */
@@ -156,30 +168,40 @@ public class KpiMeasurementService {
             YearMonth period
     ) {
 
-/*        JobStep jobStep = jobStepRepository.findById(jobStepId)
-                .orElseThrow();*/
+        return measurementRepository
+                .findByEmployee_JobStep_IdAndPeriod(jobStepId, period);
+    }
+    @Transactional(readOnly = true)
+    public List<KpiMeasurementResponseDTO> getAllEffectiveMeasurements(
+            YearMonth period
+    ) {
+
+        if (period == null)
+            throw new IllegalArgumentException("Period is required");
 
         LocalDate referenceDate = period.atEndOfMonth();
 
-        List<KpiAssignment> roleAssignments =
-                assignmentRepository.findEffectiveAssignmentsForJobStep(
-                        jobStepId,
+        List<KpiMeasurement> measurements =
+                measurementRepository.findAllEffectiveMeasurementsForPeriod(
+                        period,
                         referenceDate
                 );
 
-        if (roleAssignments.isEmpty()) {
+        if (measurements.isEmpty()) {
             return Collections.emptyList();
         }
 
-        Set<Long> kpiIds = roleAssignments.stream()
-                .map(a -> a.getKpi().getId())
-                .collect(Collectors.toSet());
-
-        return measurementRepository.findAll().stream()
-                .filter(m -> m.getEmployee().getJobStep().getId().equals(jobStepId))
-                .filter(m -> m.getPeriod().equals(period))
-                .filter(m -> kpiIds.contains(m.getKpi().getId()))
-                .collect(Collectors.toList());
+        return measurements.stream()
+                .map(m -> KpiMeasurementResponseDTO.builder()
+                        .measurementId(m.getId())
+                        .kpiId(m.getKpi().getId())
+                        .kpiCode(m.getKpi().getCode())
+                        .actualValue(m.getActualValue())
+                        .score(m.getScore())
+                        .period(m.getPeriod())
+                        .build()
+                )
+                .toList();
     }
 
     /* =====================================================

@@ -13,7 +13,12 @@ public class CollectKpiDelegate implements JavaDelegate {
 
     @Override
     public void execute(DelegateExecution execution) {
-        execution.setVariable("evaluationPeriod", YearMonth.now().minusMonths(1));
+        // Period already passed from orchestrator.
+        // This delegate should trigger actual KPI data collection logic.
+        // Example:
+        // call external API, compute system metrics, etc.
+
+        // For now, do nothing.    }
     }
 }
 
