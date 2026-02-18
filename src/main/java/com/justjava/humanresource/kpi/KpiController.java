@@ -322,5 +322,9 @@ public class KpiController {
         model.addAttribute("definitionSize", kpiDefinitions.size());
             // Return the fragment (the part inside th:fragment="stats-cards")
             return "kpi/fragment/stats-cards :: stats-cards";
-        }
+    }
+    @GetMapping("/fragments/kpi-appraisal")
+    public String getAppraisalFragment(Model model) {
+        return "kpi/fragment/appraisal-fragment :: appraisal-content";
+    }
 }
