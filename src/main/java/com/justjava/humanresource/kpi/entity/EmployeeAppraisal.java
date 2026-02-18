@@ -36,6 +36,11 @@ public class EmployeeAppraisal {
     private AppraisalOutcome outcome;
 
     private String managerComment;
+    private BigDecimal selfScore;
 
+    @Column(length = 2000)
+    private String selfComment;
+
+    private LocalDateTime selfCompletedAt;
     private LocalDateTime completedAt;
 }

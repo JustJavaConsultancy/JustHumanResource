@@ -68,4 +68,5 @@ public interface KpiMeasurementRepository
             @Param("employeeId") Long employeeId,
             @Param("period") YearMonth period
     );
+
 }
