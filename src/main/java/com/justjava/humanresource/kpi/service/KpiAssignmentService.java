@@ -144,6 +144,36 @@ public class KpiAssignmentService {
 
         return response;
     }
+    @Transactional(readOnly = true)
+    public List<KpiAssignmentResponseDTO> getAssignmentsForJobStep(Long jobStepId) {
+
+        LocalDate today = LocalDate.now();
+
+        List<KpiAssignment> assignments =
+                repository.findEffectiveAssignmentsForJobStep(
+                        jobStepId,
+                        today
+                );
+
+        List<KpiAssignmentResponseDTO> response = new ArrayList<>();
+
+        for (KpiAssignment assignment : assignments) {
+
+            response.add(
+
+                    KpiAssignmentResponseDTO.builder()
+                            .assignmentId(assignment.getId())
+                            .kpiId(assignment.getKpi().getId())
+                            .kpiCode(assignment.getKpi().getCode())
+                            .weight(assignment.getWeight())
+                            .mandatory(assignment.isMandatory())
+                            .name(assignment.getKpi().getName())
+                            .build()
+            );
+        }
+
+        return response;
+    }
 
     public List<KpiAssignment> getAllAssignments() {
         return repository.findAll();

@@ -44,6 +44,20 @@ public interface KpiAssignmentRepository
             @Param("employeeId") Long employeeId,
             @Param("referenceDate") LocalDate referenceDate
     );
+    @Query("""
+           SELECT a
+           FROM KpiAssignment a
+           WHERE a.active = true
+           AND (
+                (a.employee.jobStep.id = :jobStepId)
+           )
+           AND (a.validFrom IS NULL OR a.validFrom <= :referenceDate)
+           AND (a.validTo IS NULL OR a.validTo >= :referenceDate)
+           """)
+    List<KpiAssignment> findEffectiveAssignmentsForJobStep(
+            @Param("employeeId") Long jobStepId,
+            @Param("referenceDate") LocalDate referenceDate
+    );
 
     /* =========================================================
        SIMPLE EXISTENCE CHECK (used by delegate)
