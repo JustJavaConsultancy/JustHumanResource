@@ -104,6 +104,7 @@ public class KpiAssignmentService {
                             .kpiCode(assignment.getKpi().getCode())
                             .weight(assignment.getWeight())
                             .mandatory(assignment.isMandatory())
+                            .name(assignment.getKpi().getName())
                             .build()
             );
         }
@@ -130,6 +131,7 @@ public class KpiAssignmentService {
         for (KpiAssignment assignment : assignments) {
 
             response.add(
+
                     KpiAssignmentResponseDTO.builder()
                             .assignmentId(assignment.getId())
                             .kpiId(assignment.getKpi().getId())
@@ -147,7 +149,7 @@ public class KpiAssignmentService {
     public List<KpiAssignment> getAllAssignments() {
         return repository.findAll();
     }
-    /* ==============================
+        /* ==============================
        INTERNAL VALIDATION
        ============================== */
 
