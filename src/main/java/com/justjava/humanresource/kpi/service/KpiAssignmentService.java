@@ -121,7 +121,6 @@ public class KpiAssignmentService {
         List<KpiAssignment> assignments =
                 repository.findEffectiveAssignmentsForEmployee(
                         employeeId,
-                        employee.getJobStep().getId(),
                         today
                 );
 

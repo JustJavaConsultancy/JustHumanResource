@@ -30,6 +30,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.script.ScriptEngine;
+import javax.script.ScriptEngineManager;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -465,6 +467,68 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
         amendment.setNetPay(BigDecimal.ZERO);
 
         return payrollRunRepository.save(amendment);
+    }
+    private BigDecimal computeComponentAmount(
+            Allowance allowance,
+            BigDecimal basicSalary,
+            BigDecimal currentGross,
+            BigDecimal taxableIncome
+    ) {
+
+        switch (allowance.getCalculationType()) {
+
+            case FIXED_AMOUNT:
+                return allowance.getAmount();
+
+            case PERCENTAGE_OF_BASIC:
+                return basicSalary
+                        .multiply(allowance.getPercentageRate())
+                        .divide(BigDecimal.valueOf(100));
+
+            case PERCENTAGE_OF_GROSS:
+                return currentGross
+                        .multiply(allowance.getPercentageRate())
+                        .divide(BigDecimal.valueOf(100));
+
+            case PERCENTAGE_OF_TAXABLE:
+                return taxableIncome
+                        .multiply(allowance.getPercentageRate())
+                        .divide(BigDecimal.valueOf(100));
+
+            case FORMULA:
+                return evaluateFormula(
+                        allowance.getFormulaExpression(),
+                        basicSalary,
+                        currentGross,
+                        taxableIncome
+                );
+
+            default:
+                throw new IllegalStateException("Unsupported calculation type");
+        }
+    }
+    private BigDecimal evaluateFormula(
+            String expression,
+            BigDecimal basic,
+            BigDecimal gross,
+            BigDecimal taxable
+    ) {
+
+        try {
+            ScriptEngine engine = new ScriptEngineManager()
+                    .getEngineByName("JavaScript");
+
+            engine.put("BASIC", basic);
+            engine.put("GROSS", gross);
+            engine.put("TAXABLE", taxable);
+
+            Object result = engine.eval(expression);
+
+            return new BigDecimal(result.toString());
+
+        } catch (Exception e) {
+            throw new IllegalStateException("Invalid formula: " + expression);
+        }
     }
 
 }

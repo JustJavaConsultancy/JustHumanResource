@@ -37,7 +37,7 @@ public class EvaluateKpiDelegate implements JavaDelegate {
         List<KpiAssignment> assignments =
                 assignmentRepository.findEffectiveAssignmentsForEmployee(
                         employeeId,
-                        employee.getJobStep().getId(),
+                        //employee.getJobStep().getId(),
                         period.atEndOfMonth()
                 );
 
