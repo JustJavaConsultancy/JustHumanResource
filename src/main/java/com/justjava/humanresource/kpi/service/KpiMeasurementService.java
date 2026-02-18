@@ -1,7 +1,9 @@
 package com.justjava.humanresource.kpi.service;
 
 import com.justjava.humanresource.hr.entity.Employee;
+import com.justjava.humanresource.hr.entity.JobStep;
 import com.justjava.humanresource.hr.repository.EmployeeRepository;
+import com.justjava.humanresource.hr.repository.JobStepRepository;
 import com.justjava.humanresource.kpi.entity.*;
 import com.justjava.humanresource.kpi.repositories.KpiAssignmentRepository;
 import com.justjava.humanresource.kpi.repositories.KpiDefinitionRepository;
@@ -12,10 +14,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +32,8 @@ public class KpiMeasurementService {
     private final KpiAssignmentRepository assignmentRepository;
     private final EmployeeRepository employeeRepository;
     private final KpiDefinitionRepository kpiRepository;
+
+    private final JobStepRepository jobStepRepository;
 
     /* =====================================================
        BULK MEASUREMENT ENTRY
@@ -98,6 +106,77 @@ public class KpiMeasurementService {
         }
 
         return responseList;
+    }
+    /* =========================================================
+       FETCH EFFECTIVE MEASUREMENTS FOR EMPLOYEE
+       ========================================================= */
+
+    @Transactional(readOnly = true)
+    public List<KpiMeasurement> getEffectiveMeasurementsForEmployee(
+            Long employeeId,
+            YearMonth period
+    ) {
+
+        Employee employee = employeeRepository.findById(employeeId)
+                .orElseThrow();
+
+        LocalDate referenceDate = period.atEndOfMonth();
+
+        List<KpiAssignment> assignments =
+                assignmentRepository.findEffectiveAssignmentsForEmployee(
+                        employeeId,
+                        referenceDate
+                );
+
+        if (assignments.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<KpiMeasurement> measurements =
+                measurementRepository.findByEmployee_IdAndPeriod(employeeId, period);
+
+        Set<Long> assignedKpiIds = assignments.stream()
+                .map(a -> a.getKpi().getId())
+                .collect(Collectors.toSet());
+
+        return measurements.stream()
+                .filter(m -> assignedKpiIds.contains(m.getKpi().getId()))
+                .collect(Collectors.toList());
+    }
+    /* =========================================================
+       FETCH EFFECTIVE MEASUREMENTS FOR JOBSTEP
+       ========================================================= */
+
+    @Transactional(readOnly = true)
+    public List<KpiMeasurement> getEffectiveMeasurementsForJobStep(
+            Long jobStepId,
+            YearMonth period
+    ) {
+
+/*        JobStep jobStep = jobStepRepository.findById(jobStepId)
+                .orElseThrow();*/
+
+        LocalDate referenceDate = period.atEndOfMonth();
+
+        List<KpiAssignment> roleAssignments =
+                assignmentRepository.findEffectiveAssignmentsForJobStep(
+                        jobStepId,
+                        referenceDate
+                );
+
+        if (roleAssignments.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        Set<Long> kpiIds = roleAssignments.stream()
+                .map(a -> a.getKpi().getId())
+                .collect(Collectors.toSet());
+
+        return measurementRepository.findAll().stream()
+                .filter(m -> m.getEmployee().getJobStep().getId().equals(jobStepId))
+                .filter(m -> m.getPeriod().equals(period))
+                .filter(m -> kpiIds.contains(m.getKpi().getId()))
+                .collect(Collectors.toList());
     }
 
     /* =====================================================
