@@ -7,9 +7,11 @@ import com.justjava.humanresource.hr.entity.Employee;
 import com.justjava.humanresource.hr.entity.JobStep;
 import com.justjava.humanresource.hr.service.SetupService;
 import com.justjava.humanresource.kpi.entity.KpiAssignment;
+import com.justjava.humanresource.kpi.entity.KpiBulkMeasurementRequestDTO;
 import com.justjava.humanresource.kpi.entity.KpiDefinition;
 import com.justjava.humanresource.kpi.service.KpiAssignmentService;
 import com.justjava.humanresource.kpi.service.KpiDefinitionService;
+import com.justjava.humanresource.kpi.service.KpiMeasurementService;
 import com.justjava.humanresource.onboarding.service.EmployeeOnboardingService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -30,6 +32,9 @@ import java.util.stream.Collectors;
 public class KpiController {
     @Autowired
     private KpiAssignmentService kpiAssignmentService;
+
+    @Autowired
+    KpiMeasurementService kpiMeasurementService;
 
     @Autowired
     private KpiDefinitionService kpiDefinitionService;
@@ -184,5 +189,18 @@ public class KpiController {
         );
         model.addAttribute("kpiDefinition", kpiDefinition);
         return "kpi/fragment/measurement-form-items-fragment :: kpi-measurement-items";
+    }
+    @GetMapping("/fragments/kpi-measurements-table")
+    public String getKpiMeasurementsTable() {
+
+        return "kpi/fragment/kpi-measurements-table";
+    }
+    @PostMapping("/kpi/measurements")
+    public String submitKpiMeasurements(KpiBulkMeasurementRequestDTO request, Model model) {
+        System.out.println("Received KPI Measurement Submission: " + request);
+        kpiMeasurementService.recordBulkMeasurements(request);
+        System.out.println("Successfully recorded KPI measurements for employee ID: " + request.getEmployeeId());
+
+        return "kpi/fragment/kpi-measurements-table";
     }
 }
