@@ -174,4 +174,15 @@ public class KpiController {
         // Return the fragment to reload the assignments tab
         return "kpi/fragment/kpi-assignments-fragment";
     }
+    @GetMapping("/kpi/measurements/form-items")
+    public String getMeasurementFormItems(@RequestParam Long employeeId, Model model) {
+        List<KpiAssignmentResponseDTO> kpiDefinition = kpiAssignmentService.getAssignmentsForEmployee(employeeId);
+        System.out.println("Received request for measurement form items for employee ID: " + employeeId);
+
+        kpiDefinition.forEach(
+                kpi -> System.out.println("KPI: " + kpi.getName() )
+        );
+        model.addAttribute("kpiDefinition", kpiDefinition);
+        return "kpi/fragment/measurement-form-items-fragment :: kpi-measurement-items";
+    }
 }

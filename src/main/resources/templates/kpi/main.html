@@ -549,23 +549,38 @@
         </div>
     </div>
 
-    <!-- KPI Measurements Content -->
+    <!-- KPI Measurements Content – FULLY DYNAMIC with HTMX -->
     <div id="content-measurements" class="tab-content hidden">
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
             <!-- Measurement Form for Multiple KPIs -->
             <div class="lg:col-span-1 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
                 <h3 class="text-lg font-bold mb-4">Record KPI Measurements</h3>
-                <form id="measurementForm" class="space-y-4">
+                <form id="measurementForm"
+                      hx-post="/kpi/measurements"
+                      hx-target="#measurementsTable"
+                      hx-swap="outerHTML"
+                      hx-indicator="#measurement-spinner"
+                      hx-on:htmx:after-request="if(event.detail.successful &amp;&amp; event.detail.requestConfig.verb === 'post') { this.reset(); document.getElementById('kpiMeasurementList').innerHTML = ''; showNotification('Measurements recorded successfully!', 'success'); }"
+                      class="space-y-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Employee *</label>
-                        <select id="measurementEmployee" onchange="loadEmployeeKPIs()" required
-                                class="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
-                            <option value="">Select Employee</option>
+                        <select id="measurementEmployee"
+                                name="employeeId"
+                                hx-get="/kpi/measurements/form-items"
+                                hx-target="#kpiMeasurementList"
+                                hx-swap="outerHTML"
+                        hx-trigger="change"
+                        hx-indicator="#kpi-loading-spinner"
+                        required
+                        class="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+                        <option value="">Select Employee</option>
+                        <option th:each="emp : ${employees}" th:value="${emp.id}" th:text="${emp.firstName + ' ' + emp.lastName}">Employee Name</option>
                         </select>
+                        <span id="kpi-loading-spinner" class="htmx-indicator text-sm text-primary-600">Loading KPIs...</span>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Period *</label>
-                        <select id="measurementPeriod" required
+                        <select id="measurementPeriod" name="period" required
                                 class="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
                             <option value="2024-01">January 2024</option>
                             <option value="2024-02">February 2024</option>
@@ -573,13 +588,15 @@
                         </select>
                     </div>
 
+                    <!-- Initial empty container – will be replaced on first load -->
                     <div id="kpiMeasurementList" class="space-y-3">
-                        <!-- KPI measurement items will be added here dynamically -->
+                        <!-- KPI measurement items will be loaded by HTMX -->
                     </div>
 
-                    <button type="button" onclick="recordMultipleMeasurements()" class="w-full bg-primary-600 text-white py-2 rounded-lg hover:bg-primary-700">
+                    <button type="submit" class="w-full bg-primary-600 text-white py-2 rounded-lg hover:bg-primary-700">
                         Record All Measurements
                     </button>
+                    <span id="measurement-spinner" class="htmx-indicator text-center block text-primary-600">Submitting...</span>
                 </form>
             </div>
 
@@ -601,28 +618,9 @@
                         </tr>
                         </thead>
                         <tbody id="measurementsTable">
-                        <!-- Hardcoded rows based on sample data -->
+                        <!-- This will be replaced by HTMX response after submission -->
                         <tr>
-                            <td class="px-4 py-3"><div class="font-medium">John Doe</div><div class="text-sm text-gray-500">Sales</div></td>
-                            <td class="px-4 py-3">January 2024</td>
-                            <td class="px-4 py-3"><div class="text-sm">3 KPIs</div><div class="text-xs text-gray-500">Click to view details</div></td>
-                            <td class="px-4 py-3"><div class="flex items-center"><div class="w-16 bg-gray-200 rounded-full h-2 mr-2"><div class="h-2 rounded-full kpi-score-good" style="width:85.3%"></div></div><span>85.3/100</span></div></td>
-                            <td class="px-4 py-3"><div class="flex items-center"><div class="w-16 bg-gray-200 rounded-full h-2 mr-2"><div class="h-2 rounded-full kpi-score-good" style="width:85.3%"></div></div><span>85.3</span></div></td>
-                            <td class="px-4 py-3">
-                                <button onclick="viewMeasurementDetails(1)" class="text-primary-600 hover:text-primary-900 mr-3"><span class="material-icons-round text-sm">visibility</span></button>
-                                <button onclick="editMeasurement(1)" class="text-blue-600 hover:text-blue-900"><span class="material-icons-round text-sm">edit</span></button>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="px-4 py-3"><div class="font-medium">Jane Smith</div><div class="text-sm text-gray-500">Engineering</div></td>
-                            <td class="px-4 py-3">January 2024</td>
-                            <td class="px-4 py-3"><div class="text-sm">2 KPIs</div><div class="text-xs text-gray-500">Click to view details</div></td>
-                            <td class="px-4 py-3"><div class="flex items-center"><div class="w-16 bg-gray-200 rounded-full h-2 mr-2"><div class="h-2 rounded-full kpi-score-excellent" style="width:92.8%"></div></div><span>92.8/100</span></div></td>
-                            <td class="px-4 py-3"><div class="flex items-center"><div class="w-16 bg-gray-200 rounded-full h-2 mr-2"><div class="h-2 rounded-full kpi-score-excellent" style="width:92.8%"></div></div><span>92.8</span></div></td>
-                            <td class="px-4 py-3">
-                                <button onclick="viewMeasurementDetails(2)" class="text-primary-600 hover:text-primary-900 mr-3"><span class="material-icons-round text-sm">visibility</span></button>
-                                <button onclick="editMeasurement(2)" class="text-blue-600 hover:text-blue-900"><span class="material-icons-round text-sm">edit</span></button>
-                            </td>
+                            <td colspan="6" class="px-4 py-3 text-center text-gray-500">No recent measurements</td>
                         </tr>
                         </tbody>
                     </table>
@@ -877,18 +875,8 @@
             { id: 3, jobStepId: 101, assignments: [ { kpiId: 1, weight: 0.6 }, { kpiId: 3, weight: 0.4 } ], mandatory: false, type: 'grade' }
         ];
 
-        let kpiMeasurements = [
-            { id: 1, employeeId: 1, period: '2024-01', measurements: [ { kpiId: 1, actualValue: 85, score: 85 }, { kpiId: 3, actualValue: 4.2, score: 84 }, { kpiId: 4, actualValue: 88, score: 88 } ], recordedAt: '2024-01-31T10:30:00', weightedScore: 85.3 },
-            { id: 2, employeeId: 2, period: '2024-01', measurements: [ { kpiId: 2, actualValue: 98, score: 98 }, { kpiId: 5, actualValue: 35, score: 87.5 } ], recordedAt: '2024-01-31T11:45:00', weightedScore: 92.75 }
-        ];
-
-        let employees = [
-            { id: 1, name: 'John Doe', department: 'Sales', jobRole: 'SALES_MANAGER' },
-            { id: 2, name: 'Jane Smith', department: 'Engineering', jobRole: 'SOFTWARE_ENGINEER' },
-            { id: 3, name: 'Mike Johnson', department: 'Marketing', jobRole: 'MARKETING_SPECIALIST' },
-            { id: 4, name: 'Sarah Williams', department: 'HR', jobRole: 'HR_MANAGER' },
-            { id: 5, name: 'David Brown', department: 'Product', jobRole: 'PRODUCT_MANAGER' }
-        ];
+        // Employees are now server-side, but keep a local reference for other functions (may be removed later)
+        let employees = [];
 
         // Tab Management (updated to load assignments via HTMX)
         function switchTab(tabName) {
@@ -914,7 +902,7 @@
                     });
                 }
             } else if (tabName === 'measurements') {
-                loadEmployeeOptions();
+                // Employee dropdown now populated by Thymeleaf, no need to call loadEmployeeOptions()
             } else if (tabName === 'performance') {
                 loadTopPerformers();
                 renderPerformanceChart();
@@ -1164,6 +1152,12 @@ function resetAssignmentForm() {
         jobStepSelect.required = true;
     }
 }
+function toggleMeasurementItem(kpiId, headerElement) {
+    const content = document.getElementById(`measurement-content-${kpiId}`);
+    const icon = headerElement.querySelector('.material-icons-round');
+    content.classList.toggle('hidden');
+    icon.textContent = content.classList.contains('hidden') ? 'expand_more' : 'expand_less';
+}
 
 // Setup radio toggle listeners with required attribute handling
 function setupAssignmentToggle() {
@@ -1372,193 +1366,19 @@ function handleAssignmentResponse(event) {
             }
         }
 
-        // KPI Measurement functions
-        function loadEmployeeOptions() {
-            const select = document.getElementById('measurementEmployee');
-            select.innerHTML = '<option value="">Select Employee</option>';
-            employees.forEach(emp => {
-                const option = document.createElement('option');
-                option.value = emp.id;
-                option.textContent = emp.name;
-                select.appendChild(option);
-            });
-        }
+        // KPI Measurement functions – most are now replaced by HTMX, but we keep helpers for notifications etc.
+        // loadEmployeeOptions is no longer needed – removed
 
-        function loadEmployeeKPIs() {
-            const employeeId = document.getElementById('measurementEmployee').value;
-            if (!employeeId) return;
-
-            const assignments = kpiAssignments.filter(a =>
-                a.type === 'employee' && a.employeeId === parseInt(employeeId)
-            );
-
-            const container = document.getElementById('kpiMeasurementList');
-            container.innerHTML = '';
-
-            assignments.forEach(assignment => {
-                assignment.assignments.forEach(a => {
-                    const kpi = kpiDefinitions.find(k => k.id === a.kpiId);
-                    if (kpi) {
-                        const div = document.createElement('div');
-                        div.className = 'kpi-item';
-                        div.innerHTML = `
-                            <div class="kpi-item-header" onclick="toggleMeasurementItem(${kpi.id})">
-                                <div class="flex items-center space-x-2">
-                                    <span class="material-icons-round text-sm">expand_more</span>
-                                    <span>${kpi.name}</span>
-                                </div>
-                                <div class="text-sm text-gray-500">Weight: ${(a.weight * 100).toFixed(0)}%</div>
-                            </div>
-                            <div id="measurement-content-${kpi.id}" class="kpi-item-content hidden">
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Target Value</label>
-                                        <input type="text" value="${kpi.targetValue} ${getUnitSymbol(kpi.unit)}"
-                                               class="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg" disabled>
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Weight</label>
-                                        <input type="text" value="${(a.weight * 100).toFixed(0)}%"
-                                               class="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg" disabled>
-                                    </div>
-                                </div>
-                                <div class="grid grid-cols-2 gap-4 mt-3">
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Actual Value *</label>
-                                        <input type="number" step="0.01" data-kpi-id="${kpi.id}"
-                                               class="measurement-actual w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Score (0-100) *</label>
-                                        <input type="number" min="0" max="100" data-kpi-id="${kpi.id}"
-                                               class="measurement-score w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                        container.appendChild(div);
-                    }
-                });
-            });
-        }
-
-        function toggleMeasurementItem(kpiId) {
-            const content = document.getElementById(`measurement-content-${kpiId}`);
-            const icon = content.parentElement.querySelector('.material-icons-round');
-            content.classList.toggle('hidden');
-            icon.textContent = content.classList.contains('hidden') ? 'expand_more' : 'expand_less';
-        }
-
-        function recordMultipleMeasurements() {
-            const employeeId = document.getElementById('measurementEmployee').value;
-            const period = document.getElementById('measurementPeriod').value;
-
-            if (!employeeId) {
-                alert('Please select an employee');
-                return;
-            }
-
-            const actualInputs = document.querySelectorAll('.measurement-actual');
-            const scoreInputs = document.querySelectorAll('.measurement-score');
-
-            if (actualInputs.length === 0) {
-                alert('No KPIs assigned to this employee');
-                return;
-            }
-
-            let hasError = false;
-            actualInputs.forEach(input => {
-                if (!input.value) hasError = true;
-            });
-            scoreInputs.forEach(input => {
-                if (!input.value || input.value < 0 || input.value > 100) hasError = true;
-            });
-
-            if (hasError) {
-                alert('Please fill in all required fields with valid values (score 0-100)');
-                return;
-            }
-
-            const measurements = [];
-            let weightedScore = 0;
-            let totalWeight = 0;
-
-            const assignments = kpiAssignments.filter(a =>
-                a.type === 'employee' && a.employeeId === parseInt(employeeId)
-            );
-
-            actualInputs.forEach(input => {
-                const kpiId = parseInt(input.getAttribute('data-kpi-id'));
-                const actualValue = parseFloat(input.value);
-                const scoreInput = document.querySelector(`.measurement-score[data-kpi-id="${kpiId}"]`);
-                const score = scoreInput ? parseFloat(scoreInput.value) : 0;
-
-                measurements.push({ kpiId, actualValue, score });
-
-                assignments.forEach(assignment => {
-                    const kpiAssignment = assignment.assignments.find(a => a.kpiId === kpiId);
-                    if (kpiAssignment) {
-                        weightedScore += score * kpiAssignment.weight;
-                        totalWeight += kpiAssignment.weight;
-                    }
-                });
-            });
-
-            weightedScore = totalWeight > 0 ? weightedScore / totalWeight : 0;
-
-            const newMeasurement = {
-                id: kpiMeasurements.length > 0 ? Math.max(...kpiMeasurements.map(m => m.id)) + 1 : 1,
-                employeeId: parseInt(employeeId),
-                period: period,
-                measurements: measurements,
-                recordedAt: new Date().toISOString(),
-                weightedScore: weightedScore
-            };
-
-            kpiMeasurements = kpiMeasurements.filter(m =>
-                !(m.employeeId === parseInt(employeeId) && m.period === period)
-            );
-            kpiMeasurements.push(newMeasurement);
-
-            document.getElementById('measurementForm').reset();
-            document.getElementById('kpiMeasurementList').innerHTML = '';
-
-            showNotification('Measurements recorded successfully!', 'success');
-        }
+        // The following functions are kept for potential future use but are not used by the dynamic form:
+        // loadEmployeeKPIs, recordMultipleMeasurements – removed.
 
         function viewMeasurementDetails(id) {
-            const measurement = kpiMeasurements.find(m => m.id === id);
-            if (!measurement) return;
-            const employee = employees.find(e => e.id === measurement.employeeId);
-            let details = `${employee?.name} - ${formatPeriod(measurement.period)}\n\n`;
-            measurement.measurements.forEach(m => {
-                const kpi = kpiDefinitions.find(k => k.id === m.kpiId);
-                if (kpi) {
-                    details += `${kpi.name}:\n`;
-                    details += `  Actual: ${m.actualValue} ${getUnitSymbol(kpi.unit)}\n`;
-                    details += `  Score: ${m.score}/100\n\n`;
-                }
-            });
-            details += `Weighted Score: ${measurement.weightedScore.toFixed(1)}/100`;
-            alert(details);
+            // This would need to fetch data from server; left as stub for now
+            alert('View details - server-side implementation needed');
         }
 
         function editMeasurement(id) {
-            const measurement = kpiMeasurements.find(m => m.id === id);
-            if (!measurement) return;
-            document.getElementById('measurementEmployee').value = measurement.employeeId;
-            document.getElementById('measurementPeriod').value = measurement.period;
-            loadEmployeeKPIs();
-            setTimeout(() => {
-                measurement.measurements.forEach(m => {
-                    const actualInput = document.querySelector(`.measurement-actual[data-kpi-id="${m.kpiId}"]`);
-                    const scoreInput = document.querySelector(`.measurement-score[data-kpi-id="${m.kpiId}"]`);
-                    if (actualInput) actualInput.value = m.actualValue;
-                    if (scoreInput) scoreInput.value = m.score;
-                });
-            }, 100);
-            switchTab('measurements');
-            kpiMeasurements = kpiMeasurements.filter(m => m.id !== id);
+            alert('Edit measurement - server-side implementation needed');
         }
 
         function formatPeriod(period) {
@@ -1579,25 +1399,13 @@ function handleAssignmentResponse(event) {
             const container = document.getElementById('topPerformersList');
             container.innerHTML = '';
 
-            const employeeScores = {};
-            kpiMeasurements.forEach(measurement => {
-                if (!employeeScores[measurement.employeeId]) {
-                    employeeScores[measurement.employeeId] = { total: 0, count: 0 };
-                }
-                employeeScores[measurement.employeeId].total += measurement.weightedScore;
-                employeeScores[measurement.employeeId].count++;
-            });
+            // This would normally fetch from server; using sample data
+            const sampleTopPerformers = [
+                { name: 'Jane Smith', department: 'Engineering', avgScore: 92.8 },
+                { name: 'John Doe', department: 'Sales', avgScore: 85.3 }
+            ];
 
-            const topPerformers = Object.entries(employeeScores)
-                .map(([empId, data]) => {
-                    const employee = employees.find(e => e.id === parseInt(empId));
-                    return { employee, avgScore: data.total / data.count };
-                })
-                .filter(item => item.employee)
-                .sort((a, b) => b.avgScore - a.avgScore)
-                .slice(0, 5);
-
-            topPerformers.forEach((item, index) => {
+            sampleTopPerformers.forEach((item, index) => {
                 const div = document.createElement('div');
                 div.className = 'flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 rounded-lg';
                 div.innerHTML = `
@@ -1606,8 +1414,8 @@ function handleAssignmentResponse(event) {
                             ${index + 1}
                         </div>
                         <div>
-                            <p class="font-medium">${item.employee.name}</p>
-                            <p class="text-sm text-gray-500">${item.employee.department}</p>
+                            <p class="font-medium">${item.name}</p>
+                            <p class="text-sm text-gray-500">${item.department}</p>
                         </div>
                     </div>
                     <div class="text-right">
@@ -1626,19 +1434,8 @@ function handleAssignmentResponse(event) {
 
         function renderPerformanceChart() {
             const categories = ['PRODUCTIVITY', 'ATTENDANCE', 'QUALITY'];
-            const data = categories.map(cat => {
-                const kpiIds = kpiDefinitions.filter(k => k.category === cat).map(k => k.id);
-                let totalScore = 0, count = 0;
-                kpiMeasurements.forEach(measurement => {
-                    measurement.measurements.forEach(m => {
-                        if (kpiIds.includes(m.kpiId)) {
-                            totalScore += m.score;
-                            count++;
-                        }
-                    });
-                });
-                return count > 0 ? totalScore / count : 0;
-            });
+            // Sample data – would come from server
+            const data = [75, 92, 88];
 
             const options = {
                 series: [{ name: 'Average Score', data: data }],
@@ -1708,7 +1505,6 @@ function handleAssignmentResponse(event) {
 
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
-            loadEmployeeOptions();
             setupGradeStepListener();
 
             window.onclick = function(event) {
