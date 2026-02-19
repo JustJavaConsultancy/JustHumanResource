@@ -27,22 +27,22 @@
             <td th:text="${#temporals.format(measurement.period, 'MMMM yyyy')}" class="px-4 py-3">January 2024</td>
             <td class="px-4 py-3">
                 <!-- Example of dynamic KPI count; adjust as needed -->
-                <div>2 KPIs</div>
+                <div th:text="${measurement.kpiName}">2 KPIs</div>
             </td>
             <td class="px-4 py-3">
                 <div class="flex items-center">
                     <div class="w-16 bg-gray-200 rounded-full h-2 mr-2">
                         <!-- Dynamically set width and color class based on score -->
-                        <div class="h-2 rounded-full kpi-score-excellent" style="width:92.8%"></div>
+                        <div class="h-2 rounded-full kpi-score-excellent" th:style="${'width:' + measurement.score + '%'}"></div>
                     </div>
-                    <span>92.8</span>
+                    <span th:text="${measurement.score}">92.8</span>
                 </div>
             </td>
             <td class="px-4 py-3">
-                <button th:onclick="'viewMeasurementDetails(' + ${measurement.id} + ')'" class="text-primary-600 hover:text-primary-900 mr-3">
+                <button th:onclick="'viewMeasurementDetails(' + ${measurement.measurementId} + ')'" class="text-primary-600 hover:text-primary-900 mr-3">
                     <span class="material-icons-round text-sm">visibility</span>
                 </button>
-                <button th:onclick="'editMeasurement(' + ${measurement.id} + ')'" class="text-blue-600 hover:text-blue-900">
+                <button th:onclick="'editMeasurement(' + ${measurement.measurementId} + ')'" class="text-blue-600 hover:text-blue-900">
                     <span class="material-icons-round text-sm">edit</span>
                 </button>
             </td>

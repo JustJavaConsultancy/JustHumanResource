@@ -193,8 +193,10 @@ public class KpiMeasurementService {
 
         return measurements.stream()
                 .map(m -> KpiMeasurementResponseDTO.builder()
+                        .employee(m.getEmployee())
                         .measurementId(m.getId())
                         .kpiId(m.getKpi().getId())
+                        .kpiName(m.getKpi().getName())
                         .kpiCode(m.getKpi().getCode())
                         .actualValue(m.getActualValue())
                         .score(m.getScore())
