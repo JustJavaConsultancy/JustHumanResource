@@ -1,8 +1,10 @@
 package com.justjava.humanresource.hr.dto;
 
+import com.justjava.humanresource.hr.entity.JobStep;
 import lombok.Builder;
 import lombok.Getter;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Getter
@@ -11,6 +13,8 @@ public class JobGradeResponseDTO {
 
     private Long id;
     private String name;
+    private String departmentName;
+
 
     private List<JobStepSummaryDTO> steps;
 
@@ -19,5 +23,6 @@ public class JobGradeResponseDTO {
     public static class JobStepSummaryDTO {
         private Long id;
         private String name;
+        private BigDecimal basicSalary;
     }
 }

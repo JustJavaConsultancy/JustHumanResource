@@ -82,6 +82,9 @@
     .step-row { transition: background-color 0.2s; }
     .step-row:hover { background-color: rgba(59, 130, 246, 0.03); }
     #gradeDetails .max-h-steps { max-height: 300px; overflow-y: auto; }
+    .grade-card.selected { ring: 2px solid #3b82f6; }
+    .column-flex { display: flex; flex-direction: column; height: 100%; }
+    .card-flex { flex: 1; }
   </style>
 </head>
 <body>
@@ -94,7 +97,7 @@
           <span class="material-icons-round text-blue-600 dark:text-blue-400">layers</span>
         </div>
       </div>
-      <h3 class="text-2xl font-bold mb-1" id="totalGrades">7</h3>
+      <h3 th:text="${#lists.size(grades)}" class="text-2xl font-bold mb-1" id="totalGrades">7</h3>
       <p class="text-gray-600 dark:text-gray-400 text-sm">Job Grades</p>
       <div class="mt-3 flex items-center text-xs text-gray-500">
         <span class="material-icons-round text-xs mr-1">check_circle</span>
@@ -107,7 +110,7 @@
           <span class="material-icons-round text-green-600 dark:text-green-400">stairs</span>
         </div>
       </div>
-      <h3 class="text-2xl font-bold mb-1" id="totalSteps">35</h3>
+      <h3 th:text="${totalSteps}" class="text-2xl font-bold mb-1" id="totalSteps">35</h3>
       <p class="text-gray-600 dark:text-gray-400 text-sm">Job Steps</p>
       <div class="mt-3 flex items-center text-xs text-gray-500">
         <span class="material-icons-round text-xs mr-1">timeline</span>
@@ -120,7 +123,7 @@
           <span class="material-icons-round text-purple-600 dark:text-purple-400">attach_money</span>
         </div>
       </div>
-      <h3 class="text-2xl font-bold mb-1">$2,500</h3>
+      <h3 class="text-2xl font-bold mb-1">₦2,500</h3>
       <p class="text-gray-600 dark:text-gray-400 text-sm">Avg Step Increase</p>
       <div class="mt-3">
         <div class="progress-bar"><div class="progress-fill bg-purple-500" style="width: 75%"></div></div>
@@ -134,7 +137,7 @@
         </div>
         <span class="badge badge-info">Distribution</span>
       </div>
-      <h3 class="text-2xl font-bold mb-1">1,248</h3>
+      <h3 class="text-2xl font-bold mb-1">0</h3>
       <p class="text-gray-600 dark:text-gray-400 text-sm">Employees Mapped</p>
       <div class="mt-3 flex items-center text-xs text-gray-500">
         <span class="material-icons-round text-xs mr-1">pie_chart</span>
@@ -146,8 +149,8 @@
   <!-- Two Column Layout -->
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
     <!-- Left Column - Job Grades Cards -->
-    <div class="lg:col-span-2 space-y-4 md:space-y-6">
-      <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+    <div class="lg:col-span-2 column-flex space-y-4 md:space-y-6">
+      <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 card-flex">
         <div class="p-4 md:p-6 border-b border-gray-200 dark:border-gray-700">
           <div class="flex items-center justify-between">
             <div class="flex items-center space-x-3">
@@ -162,17 +165,58 @@
         </div>
         <div class="p-4 md:p-6">
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="gradesList">
-            <!-- Grades will be loaded here dynamically -->
+            <!--
+              Each card embeds a data-steps attribute containing the grade's steps as a JSON array.
+              The Thymeleaf expression builds the JSON inline from grade.steps (each step has id, name, basicSalary).
+              JS reads this attribute directly — no separate fetch or hardcoded data array needed.
+            -->
+            <div th:each="grade, iterStat : ${grades}"
+                 th:id="'grade-card-' + ${grade.id}"
+                 class="grade-card border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:border-primary-500 transition-colors cursor-pointer"
+                 th:onclick="'selectGrade(' + ${grade.id} + ')'"
+                 th:attr="data-grade-id=${grade.id},
+                          data-grade-name=${grade.name},
+                          data-grade-dept=${grade.departmentName},
+                          data-grade-desc=${grade.name + ' positions'},
+                          data-steps=${grade.steps != null ?
+                            '[' + #strings.listJoin(
+                              grade.steps.!['{&quot;id&quot;:' + id + ',&quot;name&quot;:&quot;' + name + '&quot;,&quot;basicSalary&quot;:' + basicSalary + '}'],
+                            ',') + ']'
+                            : '[]'}">
+              <div class="flex items-start justify-between mb-2">
+                <div class="flex items-center space-x-2">
+                  <div th:text="${grade.id}"
+                       th:classappend="'grade-color-' + ${iterStat.index + 1 <= 7 ? iterStat.index + 1 : 1}"
+                       class="step-level-indicator">1</div>
+                  <div>
+                    <h4 th:text="${grade.name}" class="font-bold">Entry Level</h4>
+                    <p th:text="${grade.departmentName}" class="text-xs text-gray-500">General</p>
+                  </div>
+                </div>
+                <div class="flex space-x-1" onclick="event.stopPropagation()">
+                  <button th:onclick="'editGrade(' + ${grade.id} + ')'" class="p-1 text-gray-400 hover:text-primary-600">
+                    <span class="material-icons-round text-sm">edit</span>
+                  </button>
+                  <button th:onclick="'deleteGrade(' + ${grade.id} + ')'" class="p-1 text-gray-400 hover:text-red-600">
+                    <span class="material-icons-round text-sm">delete</span>
+                  </button>
+                </div>
+              </div>
+              <p th:text="${grade.name + ' positions'}" class="text-xs text-gray-600 dark:text-gray-400 mb-2">Entry level positions</p>
+              <div class="flex justify-end text-xs">
+                <span th:text="${(grade.steps != null ? grade.steps.size() : 0) + ' steps'}" class="font-medium">0 steps</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Right Column - Selected Grade Details + Statistics -->
-    <div class="space-y-4 md:space-y-6">
-      <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700" id="gradeDetails">
+    <!-- Right Column - Selected Grade Details -->
+    <div class="column-flex space-y-4 md:space-y-6">
+      <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 card-flex" id="gradeDetails">
         <div class="p-4 md:p-6 border-b border-gray-200 dark:border-gray-700">
-          <h3 class="text-lg font-bold">Grade & Steps Details</h3>
+          <h3 class="text-lg font-bold">Grade &amp; Steps Details</h3>
         </div>
         <div class="p-4 md:p-6">
           <div class="text-center py-8">
@@ -181,26 +225,12 @@
           </div>
         </div>
       </div>
-
-      <!-- Grade Statistics Card -->
-      <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-        <div class="p-4 md:p-6 border-b border-gray-200 dark:border-gray-700">
-          <h3 class="text-lg font-bold">Grade Statistics</h3>
-        </div>
-        <div class="p-4 md:p-6">
-          <div class="space-y-4">
-            <div><div class="flex justify-between mb-1"><span class="text-sm text-gray-600 dark:text-gray-400">Grade Distribution</span><span class="text-sm font-medium">100%</span></div><div class="progress-bar"><div class="progress-fill bg-blue-500" style="width:100%"></div></div></div>
-            <div><div class="flex justify-between mb-1"><span class="text-sm text-gray-600 dark:text-gray-400">Average Steps per Grade</span><span class="text-sm font-medium">5.0</span></div><div class="progress-bar"><div class="progress-fill bg-green-500" style="width:100%"></div></div></div>
-            <div><div class="flex justify-between mb-1"><span class="text-sm text-gray-600 dark:text-gray-400">Salary Range Coverage</span><span class="text-sm font-medium">$1,500 - $15,000</span></div><div class="progress-bar"><div class="progress-fill bg-purple-500" style="width:90%"></div></div></div>
-          </div>
-        </div>
-      </div>
     </div>
   </div>
 
   <!-- ========== MODALS ========== -->
 
-  <!-- ADD GRADE MODAL (aligned with CreateJobGradeWithStepsCommand) -->
+  <!-- ADD GRADE MODAL -->
   <div id="addGradeModal" class="modal">
     <div class="modal-content">
       <div class="p-6 border-b border-gray-200 dark:border-gray-700">
@@ -223,8 +253,7 @@
                         th:text="${department.name}">Engineering</option>
               </select>
             </div>
-
-            <!-- Steps container with indexed names -->
+            <!-- Steps container -->
             <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
               <label class="block text-sm font-medium mb-3">Steps (minimum one) *</label>
               <div id="stepsContainer" class="space-y-3"></div>
@@ -234,17 +263,16 @@
               </button>
             </div>
           </div>
-
           <div class="flex justify-end space-x-3 mt-6">
             <button type="button" onclick="closeModal('addGradeModal')" class="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700">Cancel</button>
-            <button type="submit" class="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700">Create Grade & Steps</button>
+            <button type="submit" class="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700">Create Grade &amp; Steps</button>
           </div>
         </form>
       </div>
     </div>
   </div>
 
-  <!-- EDIT GRADE MODAL (department dropdown updated to numeric) -->
+  <!-- EDIT GRADE MODAL -->
   <div id="editGradeModal" class="modal">
     <div class="modal-content">
       <div class="p-6 border-b border-gray-200 dark:border-gray-700">
@@ -254,21 +282,23 @@
         <form id="editGradeForm">
           <input type="hidden" name="id" id="editGradeId">
           <div class="space-y-4">
-            <div><label class="block text-sm font-medium mb-2">Grade Name</label><input type="text" required id="editGradeName" class="w-full px-4 py-2 border rounded-lg" name="name"></div>
-            <div><label class="block text-sm font-medium mb-2">Department</label>
+            <div>
+              <label class="block text-sm font-medium mb-2">Grade Name</label>
+              <input type="text" required id="editGradeName" class="w-full px-4 py-2 border rounded-lg" name="name">
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-2">Department</label>
               <select id="editGradeDept" class="w-full px-4 py-2 border rounded-lg" name="department">
                 <option value="">Select department</option>
-                <option value="1">Engineering</option>
-                <option value="2">Sales</option>
-                <option value="3">Marketing</option>
-                <option value="4">Operations</option>
-                <option value="5">Finance</option>
-                <option value="6">HR</option>
-                <option value="7">Executive</option>
+                <option th:each="department : ${departments}"
+                        th:value="${department.id}"
+                        th:text="${department.name}">Engineering</option>
               </select>
             </div>
-            <div><label class="block text-sm font-medium mb-2">Code</label><input type="text" id="editGradeCode" class="w-full px-4 py-2 border rounded-lg" name="code"></div>
-            <div><label class="block text-sm font-medium mb-2">Description</label><textarea id="editGradeDescription" rows="2" class="w-full px-4 py-2 border rounded-lg" name="description"></textarea></div>
+            <div>
+              <label class="block text-sm font-medium mb-2">Description</label>
+              <textarea id="editGradeDescription" rows="2" class="w-full px-4 py-2 border rounded-lg" name="description"></textarea>
+            </div>
           </div>
           <div class="flex justify-end space-x-3 mt-6">
             <button type="button" onclick="closeModal('editGradeModal')" class="px-4 py-2 border rounded-lg">Cancel</button>
@@ -280,303 +310,279 @@
   </div>
 
   <script>
-    // --- Data structures (updated to include stepName) ---
-    let jobGrades = [
-        { id: 1, code: 'GRD-001', name: 'Entry Level', department: 'General', level: 1, description: 'Entry level positions', employees: 150 },
-        { id: 2, code: 'GRD-002', name: 'Associate', department: 'Operations', level: 2, description: 'Junior associate roles', employees: 280 },
-        { id: 3, code: 'GRD-003', name: 'Senior Associate', department: 'Operations', level: 3, description: 'Experienced individual contributors', employees: 320 },
-        { id: 4, code: 'GRD-004', name: 'Team Lead', department: 'Engineering', level: 4, description: 'Team leadership positions', employees: 180 },
-        { id: 5, code: 'GRD-005', name: 'Manager', department: 'Sales', level: 5, description: 'Department managers', employees: 150 },
-        { id: 6, code: 'GRD-006', name: 'Senior Manager', department: 'Marketing', level: 6, description: 'Senior management roles', employees: 90 },
-        { id: 7, code: 'GRD-007', name: 'Director', department: 'Executive', level: 7, description: 'Executive leadership', employees: 78 }
-    ];
-
-    // Added stepName property to each step (using "Step N" for existing data)
-    let jobSteps = [
-        { id: 1, gradeId: 1, stepLevel: 1, stepName: 'Step 1', baseSalary: 1500.00, employees: 50 },
-        { id: 2, gradeId: 1, stepLevel: 2, stepName: 'Step 2', baseSalary: 1800.00, employees: 45 },
-        { id: 3, gradeId: 1, stepLevel: 3, stepName: 'Step 3', baseSalary: 2100.00, employees: 35 },
-        { id: 4, gradeId: 1, stepLevel: 4, stepName: 'Step 4', baseSalary: 2400.00, employees: 15 },
-        { id: 5, gradeId: 1, stepLevel: 5, stepName: 'Step 5', baseSalary: 2700.00, employees: 5 },
-        { id: 6, gradeId: 2, stepLevel: 1, stepName: 'Step 1', baseSalary: 2800.00, employees: 80 },
-        { id: 7, gradeId: 2, stepLevel: 2, stepName: 'Step 2', baseSalary: 3200.00, employees: 75 },
-        { id: 8, gradeId: 2, stepLevel: 3, stepName: 'Step 3', baseSalary: 3600.00, employees: 65 },
-        { id: 9, gradeId: 2, stepLevel: 4, stepName: 'Step 4', baseSalary: 4000.00, employees: 40 },
-        { id: 10, gradeId: 2, stepLevel: 5, stepName: 'Step 5', baseSalary: 4400.00, employees: 20 },
-        { id: 11, gradeId: 3, stepLevel: 1, stepName: 'Step 1', baseSalary: 4500.00, employees: 90 },
-        { id: 12, gradeId: 3, stepLevel: 2, stepName: 'Step 2', baseSalary: 5000.00, employees: 85 },
-        { id: 13, gradeId: 3, stepLevel: 3, stepName: 'Step 3', baseSalary: 5500.00, employees: 75 },
-        { id: 14, gradeId: 3, stepLevel: 4, stepName: 'Step 4', baseSalary: 6000.00, employees: 50 },
-        { id: 15, gradeId: 3, stepLevel: 5, stepName: 'Step 5', baseSalary: 6500.00, employees: 20 },
-        { id: 16, gradeId: 4, stepLevel: 1, stepName: 'Step 1', baseSalary: 7000.00, employees: 60 },
-        { id: 17, gradeId: 4, stepLevel: 2, stepName: 'Step 2', baseSalary: 7500.00, employees: 50 },
-        { id: 18, gradeId: 4, stepLevel: 3, stepName: 'Step 3', baseSalary: 8000.00, employees: 40 },
-        { id: 19, gradeId: 4, stepLevel: 4, stepName: 'Step 4', baseSalary: 8500.00, employees: 20 },
-        { id: 20, gradeId: 4, stepLevel: 5, stepName: 'Step 5', baseSalary: 9000.00, employees: 10 },
-        { id: 21, gradeId: 5, stepLevel: 1, stepName: 'Step 1', baseSalary: 9500.00, employees: 50 },
-        { id: 22, gradeId: 5, stepLevel: 2, stepName: 'Step 2', baseSalary: 10000.00, employees: 40 },
-        { id: 23, gradeId: 5, stepLevel: 3, stepName: 'Step 3', baseSalary: 10500.00, employees: 35 },
-        { id: 24, gradeId: 5, stepLevel: 4, stepName: 'Step 4', baseSalary: 11000.00, employees: 15 },
-        { id: 25, gradeId: 5, stepLevel: 5, stepName: 'Step 5', baseSalary: 11500.00, employees: 10 },
-        { id: 26, gradeId: 6, stepLevel: 1, stepName: 'Step 1', baseSalary: 12000.00, employees: 30 },
-        { id: 27, gradeId: 6, stepLevel: 2, stepName: 'Step 2', baseSalary: 12500.00, employees: 25 },
-        { id: 28, gradeId: 6, stepLevel: 3, stepName: 'Step 3', baseSalary: 13000.00, employees: 20 },
-        { id: 29, gradeId: 6, stepLevel: 4, stepName: 'Step 4', baseSalary: 13500.00, employees: 10 },
-        { id: 30, gradeId: 6, stepLevel: 5, stepName: 'Step 5', baseSalary: 14000.00, employees: 5 },
-        { id: 31, gradeId: 7, stepLevel: 1, stepName: 'Step 1', baseSalary: 14500.00, employees: 25 },
-        { id: 32, gradeId: 7, stepLevel: 2, stepName: 'Step 2', baseSalary: 15000.00, employees: 20 },
-        { id: 33, gradeId: 7, stepLevel: 3, stepName: 'Step 3', baseSalary: 15500.00, employees: 18 },
-        { id: 34, gradeId: 7, stepLevel: 4, stepName: 'Step 4', baseSalary: 16000.00, employees: 10 },
-        { id: 35, gradeId: 7, stepLevel: 5, stepName: 'Step 5', baseSalary: 16500.00, employees: 5 }
-    ];
-
     let selectedGradeId = null;
 
-    // Department mapping for local display
-    const departmentMap = {
-        1: 'Engineering',
-        2: 'Sales',
-        3: 'Marketing',
-        4: 'Operations',
-        5: 'Finance',
-        6: 'HR',
-        7: 'Executive'
-    };
+    // ─── Step rows (add modal) ────────────────────────────────────────────────
 
-    // --- Step rows management with indexed names (steps[0].stepName, steps[0].basicSalary) ---
     function refreshStepIndices() {
-        const container = document.getElementById('stepsContainer');
-        const rows = container.querySelectorAll('.step-row');
-        rows.forEach((row, index) => {
-            const nameInput = row.querySelector('input[name^="steps["]');
-            const salaryInput = row.querySelector('input[name^="steps["][type="number"]');
-            if (nameInput) {
-                nameInput.name = `steps[${index}].stepName`;
-            }
-            if (salaryInput) {
-                salaryInput.name = `steps[${index}].basicSalary`;
-            }
-        });
+      const rows = document.querySelectorAll('#stepsContainer .step-row');
+      rows.forEach((row, i) => {
+        const nameInput = row.querySelector('input[type="text"]');
+        const salaryInput = row.querySelector('input[type="number"]');
+        if (nameInput)   nameInput.name   = `steps[${i}].stepName`;
+        if (salaryInput) salaryInput.name = `steps[${i}].basicSalary`;
+      });
     }
 
     function addStepRow() {
-        const container = document.getElementById('stepsContainer');
-        const row = document.createElement('div');
-        row.className = 'step-row flex items-center space-x-3 mb-3';
-        const newIndex = container.children.length; // next index
-        row.innerHTML = `
-            <input type="text" name="steps[${newIndex}].stepName" placeholder="Step name (e.g. Entry, Junior)" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg dark:bg-gray-800" required>
-            <div class="relative flex-1">
-                <span class="absolute left-3 top-1/2 transform -translate-y-1/2">$</span>
-                <input type="number" name="steps[${newIndex}].basicSalary" placeholder="Basic salary" min="0" step="0.01" class="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg dark:bg-gray-800" required>
-            </div>
-            <button type="button" onclick="removeStepRow(this)" class="p-2 text-gray-400 hover:text-red-600">
-                <span class="material-icons-round text-sm">delete</span>
-            </button>
-        `;
-        container.appendChild(row);
-        // No need to refresh indices because we used the correct index at creation.
-        // But if we ever reorder or remove, we need to re-index.
+      const container = document.getElementById('stepsContainer');
+      const idx = container.children.length;
+      const row = document.createElement('div');
+      row.className = 'step-row flex items-center space-x-3 mb-3';
+      row.innerHTML = `
+        <input type="text" name="steps[${idx}].stepName" placeholder="Step name"
+               class="flex-1 px-3 py-2 border rounded-lg dark:bg-gray-800" required>
+        <div class="relative flex-1">
+          <span class="absolute left-3 top-1/2 -translate-y-1/2">₦</span>
+          <input type="number" name="steps[${idx}].basicSalary" placeholder="Salary"
+                 min="0" step="0.01"
+                 class="w-full pl-8 pr-4 py-2 border rounded-lg dark:bg-gray-800" required>
+        </div>
+        <button type="button" onclick="removeStepRow(this)"
+                class="p-2 text-gray-400 hover:text-red-600">
+          <span class="material-icons-round text-sm">delete</span>
+        </button>`;
+      container.appendChild(row);
     }
 
     function removeStepRow(btn) {
-        const container = document.getElementById('stepsContainer');
-        if (container.children.length <= 1) {
-            alert('At least one step is required.');
-            return;
-        }
-        btn.closest('.step-row').remove();
-        refreshStepIndices(); // renumber remaining rows
+      const container = document.getElementById('stepsContainer');
+      if (container.children.length <= 1) { alert('At least one step required.'); return; }
+      btn.closest('.step-row').remove();
+      refreshStepIndices();
     }
 
-    // --- Modal handlers ---
+    // ─── Modals ───────────────────────────────────────────────────────────────
+
     function openModal(id) {
-        if (id === 'addGradeModal') {
-            document.getElementById('addGradeForm').reset();
-            const container = document.getElementById('stepsContainer');
-            container.innerHTML = '';
-            addStepRow(); // one empty row with index 0
-        }
-        document.getElementById(id).classList.add('active');
-        document.body.style.overflow = 'hidden';
+      if (id === 'addGradeModal') {
+        document.getElementById('addGradeForm').reset();
+        document.getElementById('stepsContainer').innerHTML = '';
+        addStepRow();
+      }
+      document.getElementById(id).classList.add('active');
+      document.body.style.overflow = 'hidden';
     }
+
     function closeModal(id) {
-        document.getElementById(id).classList.remove('active');
-        document.body.style.overflow = 'auto';
+      document.getElementById(id).classList.remove('active');
+      document.body.style.overflow = 'auto';
     }
 
-    // --- Load Grades cards (show department) ---
-    function loadGrades() {
-        const container = document.getElementById('gradesList');
-        container.innerHTML = '';
-        jobGrades.forEach(grade => {
-            const el = document.createElement('div');
-            el.className = `border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:border-primary-500 transition-colors cursor-pointer ${selectedGradeId === grade.id ? 'ring-2 ring-primary-500' : ''}`;
-            el.onclick = () => selectGrade(grade.id);
-            const steps = getStepsForGrade(grade.id);
-            el.innerHTML = `
-                <div class="flex items-start justify-between mb-2">
-                    <div class="flex items-center space-x-2">
-                        <div class="step-level-indicator grade-color-${grade.level}">${grade.level}</div>
-                        <div>
-                            <h4 class="font-bold">${grade.name}</h4>
-                            <p class="text-xs text-gray-500">${grade.department}</p>
-                        </div>
-                    </div>
-                    <div class="flex space-x-1">
-                        <button onclick="event.stopPropagation();editGrade(${grade.id})" class="p-1 text-gray-400 hover:text-primary-600"><span class="material-icons-round text-sm">edit</span></button>
-                        <button onclick="event.stopPropagation();deleteGrade(${grade.id})" class="p-1 text-gray-400 hover:text-red-600"><span class="material-icons-round text-sm">delete</span></button>
-                    </div>
-                </div>
-                <p class="text-xs text-gray-600 dark:text-gray-400 mb-2">${grade.description || '—'}</p>
-                <div class="flex justify-between text-xs">
-                    <span>${grade.employees} emp</span>
-                    <span class="font-medium">${steps.length} steps</span>
-                </div>
-            `;
-            container.appendChild(el);
-        });
+    // ─── Grade selection ──────────────────────────────────────────────────────
+
+    /**
+     * Called when a card is clicked.
+     * Reads all data directly from the card's data-* attributes — no JS arrays needed.
+     */
+    function selectGrade(gradeId) {
+      // Clear ring from all cards
+      document.querySelectorAll('.grade-card').forEach(c =>
+        c.classList.remove('ring-2', 'ring-primary-500'));
+
+      const card = document.getElementById('grade-card-' + gradeId);
+      if (!card) return;
+
+      // Highlight selected card
+      card.classList.add('ring-2', 'ring-primary-500');
+      selectedGradeId = gradeId;
+
+      // Read grade metadata from data attributes
+      const gradeName = card.dataset.gradeName || '—';
+      const department = card.dataset.gradeDept  || '—';
+      const description = card.dataset.gradeDesc  || '—';
+
+      // Parse steps JSON embedded in the card at render time
+      let steps = [];
+      try {
+        const raw = card.dataset.steps;
+        if (raw) steps = JSON.parse(raw);
+      } catch (e) {
+        console.warn('Could not parse steps for grade', gradeId, e);
+      }
+
+      renderGradeDetails({ id: gradeId, name: gradeName, department, description }, steps);
     }
 
-    // --- Grade Details (displays step names) ---
-    function loadGradeDetails(gradeId) {
-        const grade = jobGrades.find(g => g.id === gradeId);
-        if (!grade) return;
-        const steps = getStepsForGrade(gradeId);
-        const minSal = steps.length ? Math.min(...steps.map(s => s.baseSalary)) : 0;
-        const maxSal = steps.length ? Math.max(...steps.map(s => s.baseSalary)) : 0;
-        const avgSal = steps.length ? (steps.reduce((a,s)=>a+s.baseSalary,0)/steps.length).toFixed(2) : 0;
+    // ─── Render details panel ─────────────────────────────────────────────────
 
-        let stepsHtml = '';
-        steps.forEach((s, idx) => {
-            stepsHtml += `<div class="flex justify-between items-center py-1 border-b border-gray-100 dark:border-gray-700 text-sm"><span>${s.stepName || 'Step ' + (idx+1)}</span><span class="font-mono">$${s.baseSalary.toFixed(2)}</span></div>`;
-        });
+    /**
+     * Renders the right-hand details panel from plain objects.
+     * @param {Object} grade  – { id, name, department, description }
+     * @param {Array}  steps  – [{ id, name, basicSalary }, ...]
+     */
+    function renderGradeDetails(grade, steps) {
+      const fmt = n => Number(n).toLocaleString('en-NG', { minimumFractionDigits: 2 });
 
-        document.getElementById('gradeDetails').innerHTML = `
-            <div class="p-4 border-b border-gray-200 dark:border-gray-700">
-                <div class="flex justify-between items-center">
-                    <h3 class="text-lg font-bold">${grade.name}</h3>
-                    <span class="text-xs bg-primary-100 text-primary-800 px-2 py-1 rounded">${grade.department}</span>
-                </div>
+      const minSal = steps.length ? Math.min(...steps.map(s => s.basicSalary)) : 0;
+      const maxSal = steps.length ? Math.max(...steps.map(s => s.basicSalary)) : 0;
+      const avgSal = steps.length
+        ? steps.reduce((a, s) => a + Number(s.basicSalary), 0) / steps.length
+        : 0;
+
+      const stepsHtml = steps.length
+        ? steps.map((s, i) => `
+            <div class="flex justify-between items-center py-1.5 border-b border-gray-100 dark:border-gray-700 text-sm last:border-0">
+              <span class="text-gray-700 dark:text-gray-300">${s.name || 'Step ' + (i + 1)}</span>
+              <span class="font-mono font-medium">₦${fmt(s.basicSalary)}</span>
+            </div>`).join('')
+        : '<p class="text-gray-400 italic text-sm py-2">No steps defined</p>';
+
+      document.getElementById('gradeDetails').innerHTML = `
+        <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+          <div class="flex justify-between items-center">
+            <h3 class="text-lg font-bold">${grade.name}</h3>
+            <span class="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 px-2 py-1 rounded-full font-medium">
+              ${grade.department}
+            </span>
+          </div>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">${grade.description}</p>
+        </div>
+
+        <div class="p-4 space-y-4">
+
+          <!-- Steps list -->
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <h4 class="font-semibold text-sm">Steps <span class="text-gray-400 font-normal">(${steps.length})</span></h4>
             </div>
-            <div class="p-4 space-y-3">
-                <p class="text-sm text-gray-600">${grade.description || 'No description'}</p>
-                <div class="grid grid-cols-2 gap-2 text-xs">
-                    <div class="bg-gray-50 dark:bg-gray-750 p-2 rounded"><span class="block text-gray-500">Code</span><span class="font-medium">${grade.code}</span></div>
-                    <div class="bg-gray-50 dark:bg-gray-750 p-2 rounded"><span class="block text-gray-500">Level</span><span class="font-medium">${grade.level}</span></div>
-                </div>
-                <div class="mt-4">
-                    <h4 class="font-medium text-sm mb-2">Steps (${steps.length})</h4>
-                    <div class="max-h-48 overflow-y-auto pr-1 border rounded p-2">${stepsHtml || '<p class="text-gray-400 italic">No steps defined</p>'}</div>
-                </div>
-                <div class="mt-3 pt-2 border-t border-gray-200 dark:border-gray-700 grid grid-cols-2 gap-2 text-xs">
-                    <div><span class="text-gray-500">Range</span><div class="font-medium">$${minSal} – $${maxSal}</div></div>
-                    <div><span class="text-gray-500">Avg salary</span><div class="font-medium">$${avgSal}</div></div>
-                </div>
+            <div class="max-h-48 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1">
+              ${stepsHtml}
             </div>
-        `;
+          </div>
+
+          <!-- Salary range -->
+          ${steps.length ? `
+          <div class="pt-3 border-t border-gray-200 dark:border-gray-700 grid grid-cols-3 gap-3">
+            <div class="bg-gray-50 dark:bg-gray-700/40 rounded-lg p-2 text-center">
+              <span class="block text-xs text-gray-500 mb-1">Min</span>
+              <span class="font-semibold text-sm">₦${fmt(minSal)}</span>
+            </div>
+            <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-2 text-center">
+              <span class="block text-xs text-gray-500 mb-1">Avg</span>
+              <span class="font-semibold text-sm text-blue-600 dark:text-blue-400">₦${fmt(avgSal)}</span>
+            </div>
+            <div class="bg-gray-50 dark:bg-gray-700/40 rounded-lg p-2 text-center">
+              <span class="block text-xs text-gray-500 mb-1">Max</span>
+              <span class="font-semibold text-sm">₦${fmt(maxSal)}</span>
+            </div>
+          </div>
+          <div class="salary-progression-bar"></div>
+          ` : ''}
+
+        </div>`;
     }
 
-    function selectGrade(id) {
-        selectedGradeId = id;
-        loadGrades();
-        loadGradeDetails(id);
-    }
-
-    function getStepsForGrade(gid) {
-        return jobSteps.filter(s => s.gradeId === gid);
-    }
-
-    function updateStats() {
-        document.getElementById('totalGrades').innerText = jobGrades.length;
-        document.getElementById('totalSteps').innerText = jobSteps.length;
-    }
+    // ─── Delete grade ─────────────────────────────────────────────────────────
 
     function deleteGrade(id) {
-        if (!confirm('Delete grade and all its steps?')) return;
-        jobGrades = jobGrades.filter(g => g.id !== id);
-        jobSteps = jobSteps.filter(s => s.gradeId !== id);
-        if (selectedGradeId === id) {
-            selectedGradeId = null;
-            document.getElementById('gradeDetails').innerHTML = `<div class="p-6 text-center text-gray-500">Select a grade</div>`;
-        }
-        loadGrades();
-        updateStats();
-        showNotification('Grade deleted', 'success');
+      if (!confirm('Delete this grade and all its steps?')) return;
+
+      // Remove card from DOM
+      const card = document.getElementById('grade-card-' + id);
+      if (card) card.remove();
+
+      // Clear details panel if it was the selected grade
+      if (selectedGradeId === id) {
+        selectedGradeId = null;
+        document.getElementById('gradeDetails').innerHTML = `
+          <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+            <h3 class="text-lg font-bold">Grade &amp; Steps Details</h3>
+          </div>
+          <div class="p-4 md:p-6">
+            <div class="text-center py-8">
+              <span class="material-icons-round text-gray-400 text-4xl mb-4">layers</span>
+              <p class="text-gray-500 dark:text-gray-400">Select a grade to view its steps</p>
+            </div>
+          </div>`;
+      }
+
+      // Update grade count badge
+      const remaining = document.querySelectorAll('.grade-card').length;
+      document.getElementById('totalGrades').innerText = remaining;
     }
+
+    // ─── Edit grade ───────────────────────────────────────────────────────────
 
     function editGrade(id) {
-        const grade = jobGrades.find(g => g.id === id);
-        if (!grade) return;
-        document.getElementById('editGradeId').value = grade.id;
-        document.getElementById('editGradeName').value = grade.name;
-        const deptSelect = document.getElementById('editGradeDept');
-        // Find the numeric value for the department (reverse map)
-        const deptId = Object.keys(departmentMap).find(key => departmentMap[key] === grade.department) || '';
-        if (deptId) deptSelect.value = deptId;
-        document.getElementById('editGradeCode').value = grade.code || '';
-        document.getElementById('editGradeDescription').value = grade.description || '';
-        openModal('editGradeModal');
+      const card = document.getElementById('grade-card-' + id);
+      if (!card) return;
+
+      document.getElementById('editGradeId').value          = id;
+      document.getElementById('editGradeName').value        = card.dataset.gradeName || '';
+      document.getElementById('editGradeDescription').value = card.dataset.gradeDesc || '';
+      // Department select: match by text content
+      const deptName = card.dataset.gradeDept || '';
+      const select   = document.getElementById('editGradeDept');
+      for (const opt of select.options) {
+        if (opt.text.trim() === deptName.trim()) { opt.selected = true; break; }
+      }
+
+      openModal('editGradeModal');
     }
+
+    // ─── Save edit ────────────────────────────────────────────────────────────
 
     function updateGrade(e) {
-        e.preventDefault();
-        const form = e.target;
-        const formData = new FormData(form);
-        const id = parseInt(formData.get('id'));
-        const index = jobGrades.findIndex(g => g.id === id);
-        if (index !== -1) {
-            // Convert department ID back to name
-            const deptId = formData.get('department');
-            jobGrades[index].name = formData.get('name');
-            jobGrades[index].department = departmentMap[deptId] || 'Unknown';
-            jobGrades[index].code = formData.get('code');
-            jobGrades[index].description = formData.get('description');
-            closeModal('editGradeModal');
-            loadGrades();
-            if (selectedGradeId === id) loadGradeDetails(id);
-            showNotification('Grade updated', 'success');
-        }
+      e.preventDefault();
+      const form     = e.target;
+      const formData = new FormData(form);
+      const id       = formData.get('id');
+      const card     = document.getElementById('grade-card-' + id);
+      if (!card) { closeModal('editGradeModal'); return; }
+
+      const newName = formData.get('name');
+      const newDesc = formData.get('description');
+      const select  = document.getElementById('editGradeDept');
+      const newDept = select.options[select.selectedIndex]?.text || card.dataset.gradeDept;
+
+      // Update data attributes so future reads stay in sync
+      card.dataset.gradeName = newName;
+      card.dataset.gradeDept = newDept;
+      card.dataset.gradeDesc = newDesc;
+
+      // Refresh visible text inside the card
+      const nameEl = card.querySelector('h4.font-bold');
+      const deptEl = card.querySelector('p.text-xs.text-gray-500');
+      const descEl = card.querySelector('p.text-xs.text-gray-600');
+      if (nameEl) nameEl.innerText = newName;
+      if (deptEl) deptEl.innerText = newDept;
+      if (descEl) descEl.innerText = newDesc || '—';
+
+      closeModal('editGradeModal');
+
+      // Re-render details panel if this grade is currently selected
+      if (selectedGradeId == id) {
+        let steps = [];
+        try { steps = JSON.parse(card.dataset.steps || '[]'); } catch (_) {}
+        renderGradeDetails({ id, name: newName, department: newDept, description: newDesc }, steps);
+      }
     }
 
-    function showNotification(msg, type) { alert(msg); } // simple
+    // ─── Misc ─────────────────────────────────────────────────────────────────
 
-    // --- Disable submit button on form submission to prevent double posting ---
     function disableSubmitButton(form) {
-        const submitBtn = form.querySelector('button[type="submit"]');
-        if (submitBtn) {
-            submitBtn.disabled = true;
-            submitBtn.innerText = 'Submitting...';
-        }
-        return true; // allow form submission
+      const btn = form.querySelector('button[type="submit"]');
+      if (btn) { btn.disabled = true; btn.innerText = 'Submitting…'; }
     }
 
-    // --- Initialization ---
-    document.addEventListener('DOMContentLoaded', function() {
-        const addForm = document.getElementById('addGradeForm');
-        addForm.addEventListener('submit', function(e) {
-            // Optional: perform any custom validation, then disable button
-            if (!disableSubmitButton(this)) {
-                e.preventDefault();
-                return false;
-            }
-            // If using Thymeleaf, the form will submit normally.
-        });
+    // ─── Init ─────────────────────────────────────────────────────────────────
 
-        document.getElementById('editGradeForm').addEventListener('submit', updateGrade);
-
-        loadGrades();
-        updateStats();
+    document.addEventListener('DOMContentLoaded', function () {
+      document.getElementById('addGradeForm').addEventListener('submit', function () {
+        disableSubmitButton(this);
+      });
+      document.getElementById('editGradeForm').addEventListener('submit', updateGrade);
     });
 
-    // Expose functions globally
-    window.openModal = openModal;
-    window.closeModal = closeModal;
-    window.addStepRow = addStepRow;
-    window.removeStepRow = removeStepRow;
-    window.selectGrade = selectGrade;
-    window.editGrade = editGrade;
-    window.deleteGrade = deleteGrade;
+    // Expose to inline onclick handlers
+    window.openModal      = openModal;
+    window.closeModal     = closeModal;
+    window.addStepRow     = addStepRow;
+    window.removeStepRow  = removeStepRow;
+    window.selectGrade    = selectGrade;
+    window.editGrade      = editGrade;
+    window.deleteGrade    = deleteGrade;
   </script>
 </main>
 </body>

@@ -19,20 +19,24 @@ public class JobStructureController {
 
     @GetMapping("/job-structure")
     public String getJobStructure(Model model) {
+
         List<JobGradeResponseDTO> jobGrades = setupService.getAllJobGrades();
-        jobGrades.forEach(
-                grade -> System.out.println("Job Grade: " + grade.getName() + ", Steps: " + grade.getSteps().size())
-        );
         List<Department> departments = setupService.getAllDepartments();
-        departments.forEach(
-                dept -> System.out.println("Department: " + dept.getName() + ", ID: " + dept.getId())
-        );
+
+        // Total steps across all grades
+        int totalSteps = jobGrades.stream()
+                .mapToInt(grade -> grade.getSteps().size())
+                .sum();
+
         model.addAttribute("departments", departments);
-        model.addAttribute("jobGrades", jobGrades);
+        model.addAttribute("grades", jobGrades);
+        model.addAttribute("totalSteps", totalSteps);
         model.addAttribute("title","Job Structure Management");
         model.addAttribute("subTitle","Define and manage job roles, hierarchies, and reporting structures");
+
         return "jobStructure/main";
     }
+
     @PostMapping("/addJobGroup")
     public String addJobGroup(CreateJobGradeWithStepsCommand command) {
         System.out.println("Received command to add job group: " + command.getGradeName());

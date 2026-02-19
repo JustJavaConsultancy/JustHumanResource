@@ -118,6 +118,7 @@ public class SetupServiceImpl implements SetupService {
                                         JobGradeResponseDTO.JobStepSummaryDTO.builder()
                                                 .id(step.getId())
                                                 .name(step.getName())
+                                                .basicSalary(step.getBasicSalary())
                                                 .build()
                                 )
                                 .toList()
@@ -135,6 +136,7 @@ public class SetupServiceImpl implements SetupService {
                         JobGradeResponseDTO.builder()
                                 .id(grade.getId())
                                 .name(grade.getName())
+                                .departmentName(grade.getDepartment().getName())
                                 .steps(
                                         grade.getJobSteps()
                                                 .stream()
@@ -142,6 +144,7 @@ public class SetupServiceImpl implements SetupService {
                                                         JobGradeResponseDTO.JobStepSummaryDTO.builder()
                                                                 .id(step.getId())
                                                                 .name(step.getName())
+                                                                .basicSalary(step.getBasicSalary())
                                                                 .build()
                                                 )
                                                 .toList()
