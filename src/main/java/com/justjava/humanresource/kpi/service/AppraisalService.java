@@ -5,6 +5,7 @@ import com.justjava.humanresource.hr.repository.EmployeeRepository;
 import com.justjava.humanresource.kpi.dto.EmployeeAppraisalDTO;
 import com.justjava.humanresource.kpi.entity.*;
 import com.justjava.humanresource.kpi.enums.AppraisalOutcome;
+import com.justjava.humanresource.kpi.repositories.AppraisalCycleRepository;
 import com.justjava.humanresource.kpi.repositories.EmployeeAppraisalRepository;
 import com.justjava.humanresource.kpi.repositories.KpiAssignmentRepository;
 import com.justjava.humanresource.kpi.repositories.KpiMeasurementRepository;
@@ -33,6 +34,7 @@ public class AppraisalService {
     private final KpiAssignmentRepository assignmentRepository;
     private final KpiMeasurementRepository measurementRepository;
     private final EmployeeAppraisalRepository appraisalRepository;
+    private final AppraisalCycleRepository cycleRepository;
 
     /* =========================================================
        STEP 1 — CREATE DRAFT APPRAISAL (KPI SCORE ONLY)
@@ -203,4 +205,62 @@ public class AppraisalService {
             return AppraisalOutcome.UNDERPERFORMING;
         }
     }
+
+
+    public AppraisalCycle createAppraisalCycle(
+            int year,
+            int quarter
+    ) {
+
+        if (quarter < 1 || quarter > 4) {
+            throw new IllegalArgumentException("Quarter must be between 1 and 4.");
+        }
+
+        if (cycleRepository.existsByYearAndQuarter(year, quarter)) {
+            throw new IllegalStateException(
+                    "AppraisalCycle already exists for year "
+                            + year + " and quarter " + quarter
+            );
+        }
+
+        int startMonth = (quarter - 1) * 3 + 1;
+
+        YearMonth startPeriod = YearMonth.of(year, startMonth);
+        YearMonth endPeriod = startPeriod.plusMonths(2);
+
+        String name = year + " Q" + quarter;
+
+        AppraisalCycle cycle = AppraisalCycle.builder()
+                .name(name)
+                .year(year)
+                .quarter(quarter)
+                .startPeriod(startPeriod)
+                .endPeriod(endPeriod)
+                .active(true)
+                .completed(false)
+                .totalEmployees(0)
+                .processedEmployees(0)
+                .startedAt(LocalDateTime.now())
+                .build();
+
+        log.info("AppraisalCycle manually created: {}", name);
+
+        return cycleRepository.save(cycle);
+    }
+
 }
+
+//Sample for Cycle
+/*
+        {
+            "year": 2026,
+            "quarter": 2
+        }
+*/
+
+//Sample for Employee Appraisal
+/*      {
+            "employeeId": 12,
+            "cycleId": 3
+        }
+        */
