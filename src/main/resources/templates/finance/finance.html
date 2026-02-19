@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+  <script>
+    tailwind.config = {
+        darkMode: "class",
+        theme: {
+            extend: {
+                colors: {
+                    primary: {
+                        50: '#eff6ff',
+                        100: '#dbeafe',
+                        200: '#bfdbfe',
+                        300: '#93c5fd',
+                        400: '#60a5fa',
+                        500: '#3b82f6',
+                        600: '#2563eb',
+                        700: '#1d4ed8',
+                        800: '#1e40af',
+                        900: '#1e3a8a',
+                    },
+                    secondary: {
+                        50: '#f8fafc',
+                        100: '#f1f5f9',
+                        200: '#e2e8f0',
+                        300: '#cbd5e1',
+                        400: '#94a3b8',
+                        500: '#64748b',
+                        600: '#475569',
+                        700: '#334155',
+                        800: '#1e293b',
+                        900: '#0f172a',
+                    }
+                },
+                fontFamily: {
+                    'sans': ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                },
+                borderRadius: {
+                    'xl': '1rem',
+                    '2xl': '1.5rem',
+                }
+            },
+        },
+    };
+  </script>
+  <style>
+    * {
+        font-family: 'Inter', sans-serif;
+    }
+
+    body {
+        overflow-x: hidden;
+    }
+
+    .sidebar-item {
+        transition: all 0.2s ease;
+        position: relative;
+    }
+
+    .sidebar-item.active {
+        background-color: rgba(59, 130, 246, 0.1);
+        color: #3b82f6;
+        border-left: 3px solid #3b82f6;
+    }
+
+    .sidebar-item.active .material-icons-round {
+        color: #3b82f6;
+    }
+
+    .sidebar-item:hover:not(.active) {
+        background-color: rgba(59, 130, 246, 0.05);
+    }
+
+    .dark .sidebar-item.active {
+        background-color: rgba(59, 130, 246, 0.2);
+    }
+
+    .stat-card {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+    }
+
+    .badge {
+        padding: 2px 8px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        border-radius: 9999px;
+    }
+
+    .badge-success {
+        background-color: #dcfce7;
+        color: #16a34a;
+    }
+
+    .badge-warning {
+        background-color: #fef3c7;
+        color: #d97706;
+    }
+
+    .badge-error {
+        background-color: #fee2e2;
+        color: #dc2626;
+    }
+
+    .badge-info {
+        background-color: #dbeafe;
+        color: #2563eb;
+    }
+
+    .progress-bar {
+        height: 8px;
+        border-radius: 4px;
+        overflow: hidden;
+        background-color: #e5e7eb;
+    }
+
+    .dark .progress-bar {
+        background-color: #374151;
+    }
+
+    .progress-fill {
+        height: 100%;
+        border-radius: 4px;
+    }
+
+    /* Custom scrollbar for sidebar */
+    .sidebar-scroll::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    .sidebar-scroll::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .sidebar-scroll::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+
+    .dark .sidebar-scroll::-webkit-scrollbar-thumb {
+        background: #4b5563;
+    }
+
+    /* Smooth transitions */
+    .transition-all {
+        transition-property: all;
+        transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+        transition-duration: 200ms;
+    }
+
+    /* Fix sidebar and main content positioning */
+    .sidebar-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        width: 16rem;
+        z-index: 40;
+        overflow-y: auto;
+    }
+
+    .main-content {
+        margin-left: 16rem;
+        width: calc(100% - 16rem);
+        min-height: 100vh;
+    }
+
+    @media (max-width: 1023px) {
+        .sidebar-container {
+            transform: translateX(-100%);
+        }
+
+        .sidebar-container.open {
+            transform: translateX(0);
+        }
+
+        .main-content {
+            margin-left: 0;
+            width: 100%;
+        }
+    }
+
+    /* Simple chart placeholder */
+    .chart-placeholder {
+        background: linear-gradient(90deg, #3b82f6 0%, #93c5fd 100%);
+        height: 8px;
+        border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+<!-- Main Finance Content -->
+<main layout:fragment="content">
+  <!-- Key Metrics Cards -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
+    <!-- Monthly Payroll -->
+    <div class="stat-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6">
+      <div class="flex items-center justify-between mb-4">
+        <div class="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+          <span class="material-icons-round text-blue-600 dark:text-blue-400">payments</span>
+        </div>
+        <span class="text-sm font-medium text-green-600 flex items-center">
+                            <span class="material-icons-round text-sm mr-1">trending_up</span>
+                            +3.2%
+                        </span>
+      </div>
+      <h3 class="text-2xl font-bold mb-1">$458,240</h3>
+      <p class="text-gray-600 dark:text-gray-400 text-sm">Monthly Payroll</p>
+      <div class="mt-3 flex items-center text-xs text-gray-500">
+        <span class="material-icons-round text-xs mr-1">people</span>
+        <span>1,248 employees</span>
+      </div>
+    </div>
+
+    <!-- Pending Payments -->
+    <div class="stat-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6">
+      <div class="flex items-center justify-between mb-4">
+        <div class="p-3 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
+          <span class="material-icons-round text-yellow-600 dark:text-yellow-400">pending_actions</span>
+        </div>
+        <span class="badge badge-warning">8 invoices</span>
+      </div>
+      <h3 class="text-2xl font-bold mb-1">$24,850</h3>
+      <p class="text-gray-600 dark:text-gray-400 text-sm">Pending Payments</p>
+      <div class="mt-3">
+        <div class="flex justify-between text-xs mb-1">
+          <span class="text-gray-500">Reimbursements</span>
+          <span class="font-medium">$12,200</span>
+        </div>
+        <div class="flex justify-between text-xs">
+          <span class="text-gray-500">Vendor invoices</span>
+          <span class="font-medium">$12,650</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Next Payroll -->
+    <div class="stat-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6">
+      <div class="flex items-center justify-between mb-4">
+        <div class="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+          <span class="material-icons-round text-purple-600 dark:text-purple-400">calendar_today</span>
+        </div>
+        <span class="text-sm text-gray-500">Upcoming</span>
+      </div>
+      <h3 class="text-2xl font-bold mb-1">Jan 31, 2024</h3>
+      <p class="text-gray-600 dark:text-gray-400 text-sm">Next Payroll Run</p>
+      <div class="mt-3 flex items-center text-xs text-gray-500">
+        <span class="material-icons-round text-xs mr-1">schedule</span>
+        <span>in 3 days</span>
+      </div>
+    </div>
+
+    <!-- YTD Spend -->
+    <div class="stat-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6">
+      <div class="flex items-center justify-between mb-4">
+        <div class="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
+          <span class="material-icons-round text-green-600 dark:text-green-400">account_balance</span>
+        </div>
+        <span class="badge badge-info">vs budget</span>
+      </div>
+      <h3 class="text-2xl font-bold mb-1">$3.24M</h3>
+      <p class="text-gray-600 dark:text-gray-400 text-sm">YTD Total Spend</p>
+      <div class="mt-3">
+        <div class="progress-bar">
+          <div class="progress-fill bg-green-500" style="width: 78%"></div>
+        </div>
+        <p class="text-xs text-gray-500 mt-1">78% of annual budget</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Two Column Layout -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
+    <!-- Left Column (2/3) -->
+    <div class="lg:col-span-2 space-y-4 md:space-y-6">
+      <!-- Upcoming Payroll Runs -->
+      <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+        <div class="p-4 md:p-6 border-b border-gray-200 dark:border-gray-700">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+              <span class="material-icons-round text-primary-600">payments</span>
+              <h3 class="text-lg font-bold">Upcoming Payroll Runs</h3>
+            </div>
+            <button class="text-primary-600 hover:text-primary-700 text-sm font-medium">View All</button>
+          </div>
+        </div>
+
+        <div class="divide-y divide-gray-200 dark:divide-gray-700">
+          <div class="p-4 md:p-6 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div class="flex items-center space-x-4">
+                <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
+                  <span class="material-icons-round text-blue-600 dark:text-blue-400">calendar_month</span>
+                </div>
+                <div>
+                  <p class="font-medium">Monthly Payroll (January)</p>
+                  <p class="text-sm text-gray-500 dark:text-gray-400">Processing date: Jan 31, 2024</p>
+                </div>
+              </div>
+              <div class="flex items-center space-x-4">
+                <span class="text-sm font-semibold">$458,240</span>
+                <span class="badge badge-info">Scheduled</span>
+              </div>
+            </div>
+          </div>
+          <div class="p-4 md:p-6 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div class="flex items-center space-x-4">
+                <div class="w-10 h-10 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center">
+                  <span class="material-icons-round text-green-600 dark:text-green-400">receipt</span>
+                </div>
+                <div>
+                  <p class="font-medium">Bonus Payout (Q1)</p>
+                  <p class="text-sm text-gray-500 dark:text-gray-400">Processing date: Feb 15, 2024</p>
+                </div>
+              </div>
+              <div class="flex items-center space-x-4">
+                <span class="text-sm font-semibold">$124,500</span>
+                <span class="badge badge-warning">Pending approval</span>
+              </div>
+            </div>
+          </div>
+          <div class="p-4 md:p-6 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div class="flex items-center space-x-4">
+                <div class="w-10 h-10 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center">
+                  <span class="material-icons-round text-purple-600 dark:text-purple-400">travel_expense</span>
+                </div>
+                <div>
+                  <p class="font-medium">Expense Reimbursements</p>
+                  <p class="text-sm text-gray-500 dark:text-gray-400">Processing date: Feb 5, 2024</p>
+                </div>
+              </div>
+              <div class="flex items-center space-x-4">
+                <span class="text-sm font-semibold">$12,650</span>
+                <span class="badge badge-warning">Pending</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Transactions -->
+      <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+        <div class="p-4 md:p-6 border-b border-gray-200 dark:border-gray-700">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-bold">Recent Transactions</h3>
+            <div class="flex items-center space-x-3">
+              <button class="p-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+                <span class="material-icons-round text-sm">download</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full min-w-[600px]">
+            <thead>
+            <tr class="bg-gray-50 dark:bg-gray-750">
+              <th class="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>
+              <th class="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Description</th>
+              <th class="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Category</th>
+              <th class="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Amount</th>
+              <th class="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+            </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+            <tr>
+              <td class="px-4 md:px-6 py-4 text-sm text-gray-600 dark:text-gray-400">Jan 25, 2024</td>
+              <td class="px-4 md:px-6 py-4 font-medium">Payroll - December</td>
+              <td class="px-4 md:px-6 py-4 text-sm">Salary</td>
+              <td class="px-4 md:px-6 py-4 font-medium">$458,240</td>
+              <td class="px-4 md:px-6 py-4"><span class="badge badge-success">Paid</span></td>
+            </tr>
+            <tr>
+              <td class="px-4 md:px-6 py-4 text-sm text-gray-600 dark:text-gray-400">Jan 23, 2024</td>
+              <td class="px-4 md:px-6 py-4 font-medium">Office Supplies</td>
+              <td class="px-4 md:px-6 py-4 text-sm">Expense</td>
+              <td class="px-4 md:px-6 py-4 font-medium">$2,350</td>
+              <td class="px-4 md:px-6 py-4"><span class="badge badge-success">Paid</span></td>
+            </tr>
+            <tr>
+              <td class="px-4 md:px-6 py-4 text-sm text-gray-600 dark:text-gray-400">Jan 20, 2024</td>
+              <td class="px-4 md:px-6 py-4 font-medium">Recruitment Agency</td>
+              <td class="px-4 md:px-6 py-4 text-sm">Vendor</td>
+              <td class="px-4 md:px-6 py-4 font-medium">$5,500</td>
+              <td class="px-4 md:px-6 py-4"><span class="badge badge-warning">Pending</span></td>
+            </tr>
+            <tr>
+              <td class="px-4 md:px-6 py-4 text-sm text-gray-600 dark:text-gray-400">Jan 18, 2024</td>
+              <td class="px-4 md:px-6 py-4 font-medium">Employee Wellness Program</td>
+              <td class="px-4 md:px-6 py-4 text-sm">Benefits</td>
+              <td class="px-4 md:px-6 py-4 font-medium">$3,200</td>
+              <td class="px-4 md:px-6 py-4"><span class="badge badge-success">Paid</span></td>
+            </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column (1/3) -->
+    <div class="space-y-4 md:space-y-6">
+      <!-- Budget Overview -->
+      <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-bold">Department Budgets</h3>
+          <button class="text-primary-600 hover:text-primary-700 text-sm font-medium">Details</button>
+        </div>
+
+        <div class="space-y-4">
+          <div>
+            <div class="flex justify-between text-sm mb-1">
+              <span class="font-medium">Engineering</span>
+              <span class="text-gray-600 dark:text-gray-400">$142k / $180k</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill bg-primary-500" style="width: 79%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="flex justify-between text-sm mb-1">
+              <span class="font-medium">Sales</span>
+              <span class="text-gray-600 dark:text-gray-400">$98k / $120k</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill bg-primary-500" style="width: 82%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="flex justify-between text-sm mb-1">
+              <span class="font-medium">Marketing</span>
+              <span class="text-gray-600 dark:text-gray-400">$67k / $90k</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill bg-primary-500" style="width: 74%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="flex justify-between text-sm mb-1">
+              <span class="font-medium">Operations</span>
+              <span class="text-gray-600 dark:text-gray-400">$103k / $150k</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill bg-primary-500" style="width: 69%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cash Flow Chart Placeholder -->
+      <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-bold">Cash Flow (Last 6 months)</h3>
+          <span class="material-icons-round text-gray-400">show_chart</span>
+        </div>
+        <div class="h-32 flex items-end justify-between gap-1">
+          <div class="w-1/6 bg-primary-200 dark:bg-primary-900 rounded-t" style="height: 40%"></div>
+          <div class="w-1/6 bg-primary-300 dark:bg-primary-700 rounded-t" style="height: 65%"></div>
+          <div class="w-1/6 bg-primary-400 dark:bg-primary-600 rounded-t" style="height: 55%"></div>
+          <div class="w-1/6 bg-primary-500 rounded-t" style="height: 80%"></div>
+          <div class="w-1/6 bg-primary-600 rounded-t" style="height: 70%"></div>
+          <div class="w-1/6 bg-primary-700 rounded-t" style="height: 90%"></div>
+        </div>
+        <div class="flex justify-between mt-2 text-xs text-gray-500">
+          <span>Aug</span><span>Sep</span><span>Oct</span><span>Nov</span><span>Dec</span><span>Jan</span>
+        </div>
+      </div>
+
+      <!-- Reimbursement Requests -->
+      <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-bold">Pending Reimbursements</h3>
+          <span class="badge badge-warning">12 requests</span>
+        </div>
+        <div class="space-y-3">
+          <div class="flex justify-between items-center">
+            <div>
+              <p class="text-sm font-medium">Emily Davis</p>
+              <p class="text-xs text-gray-500">Travel • Jan 22</p>
+            </div>
+            <span class="text-sm font-semibold">$450</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <div>
+              <p class="text-sm font-medium">James Wilson</p>
+              <p class="text-xs text-gray-500">Meals • Jan 21</p>
+            </div>
+            <span class="text-sm font-semibold">$125</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <div>
+              <p class="text-sm font-medium">Linda Brown</p>
+              <p class="text-xs text-gray-500">Training • Jan 20</p>
+            </div>
+            <span class="text-sm font-semibold">$1,200</span>
+          </div>
+        </div>
+        <button class="mt-4 w-full py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700">View All</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Additional row: Payroll Summary by Department -->
+  <div class="grid grid-cols-1 gap-4 md:gap-6">
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-bold">Payroll Distribution by Department</h3>
+        <button class="text-primary-600 hover:text-primary-700 text-sm font-medium">Export</button>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="p-3 bg-gray-50 dark:bg-gray-750 rounded-lg">
+          <p class="text-sm text-gray-500">Engineering</p>
+          <p class="text-xl font-bold">$182,400</p>
+          <p class="text-xs text-green-600">+4% vs last month</p>
+        </div>
+        <div class="p-3 bg-gray-50 dark:bg-gray-750 rounded-lg">
+          <p class="text-sm text-gray-500">Sales</p>
+          <p class="text-xl font-bold">$124,800</p>
+          <p class="text-xs text-green-600">+2% vs last month</p>
+        </div>
+        <div class="p-3 bg-gray-50 dark:bg-gray-750 rounded-lg">
+          <p class="text-sm text-gray-500">Marketing</p>
+          <p class="text-xl font-bold">$78,300</p>
+          <p class="text-xs text-red-600">-1% vs last month</p>
+        </div>
+        <div class="p-3 bg-gray-50 dark:bg-gray-750 rounded-lg">
+          <p class="text-sm text-gray-500">Operations</p>
+          <p class="text-xl font-bold">$72,740</p>
+          <p class="text-xs text-green-600">+1% vs last month</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Mobile Sidebar Toggle
+    const menuToggle = document.getElementById('menuToggle');
+    const mobileOverlay = document.getElementById('mobileOverlay');
+    const sidebar = document.querySelector('.sidebar-container');
+
+    menuToggle.addEventListener('click', () => {
+        sidebar.classList.toggle('open');
+        mobileOverlay.classList.toggle('hidden');
+        document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : 'auto';
+    });
+
+    mobileOverlay.addEventListener('click', () => {
+        sidebar.classList.remove('open');
+        mobileOverlay.classList.add('hidden');
+        document.body.style.overflow = 'auto';
+    });
+
+    // Theme Toggle
+    const themeToggle = document.getElementById('themeToggle');
+    const themeIcon = themeToggle.querySelector('.material-icons-round');
+
+    themeToggle.addEventListener('click', () => {
+        const isDark = document.documentElement.classList.toggle('dark');
+        themeIcon.textContent = isDark ? 'light_mode' : 'dark_mode';
+        localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    });
+
+    // Initialize theme
+    if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+        themeIcon.textContent = 'light_mode';
+    }
+
+    // Sidebar navigation active state
+    document.querySelectorAll('.sidebar-item').forEach(item => {
+        item.addEventListener('click', function(e) {
+            if (this.getAttribute('href') === '#') {
+                e.preventDefault();
+            }
+
+            // Remove active class from all items
+            document.querySelectorAll('.sidebar-item').forEach(nav => {
+                nav.classList.remove('active');
+            });
+
+            // Add active class to clicked item
+            this.classList.add('active');
+
+            // Close sidebar on mobile after clicking
+            if (window.innerWidth < 1024) {
+                sidebar.classList.remove('open');
+                mobileOverlay.classList.add('hidden');
+                document.body.style.overflow = 'auto';
+            }
+        });
+    });
+
+    // Close sidebar on window resize
+    window.addEventListener('resize', () => {
+        if (window.innerWidth >= 1024) {
+            sidebar.classList.remove('open');
+            mobileOverlay.classList.add('hidden');
+            document.body.style.overflow = 'auto';
+        }
+    });
+  </script>
+</main>
+</body>
+</html>
