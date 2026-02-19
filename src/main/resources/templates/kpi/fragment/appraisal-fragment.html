@@ -2,43 +2,124 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
   <meta charset="UTF-8">
-  <title>Appraisal Fragment (Hardcoded)</title>
+  <title>Appraisal Fragment with Slide-over</title>
 </head>
 <body>
 <div th:fragment="appraisal-content">
-  <!-- Filters (hardcoded options) -->
+
+  <!-- Slide-over Backdrop -->
+  <div id="appraisalSlideOverBackdrop" class="slide-over-backdrop" onclick="closeAppraisalSlideOver()"></div>
+
+  <!-- Slide-over Panel -->
+  <div id="appraisalSlideOver" class="slide-over">
+    <div class="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+      <h3 class="text-lg font-bold" id="appraisalSlideTitle">Edit Appraisal</h3>
+      <button onclick="closeAppraisalSlideOver()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+    <div class="flex-1 overflow-y-auto p-6">
+      <form id="appraisalSlideForm" class="space-y-6">
+        <input type="hidden" id="appraisalSlideId">
+
+        <!-- System Information (read-only) -->
+        <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+          <h4 class="font-semibold text-sm uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">System Information</h4>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs text-gray-500 dark:text-gray-400">Employee</label>
+              <p class="font-medium" id="appraisalSlideEmployeeName"></p>
+            </div>
+            <div>
+              <label class="block text-xs text-gray-500 dark:text-gray-400">Cycle</label>
+              <p class="font-medium" id="appraisalSlideCycle"></p>
+            </div>
+            <div>
+              <label class="block text-xs text-gray-500 dark:text-gray-400">KPI Score (system)</label>
+              <p class="font-medium" id="appraisalSlideKpiScore"></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Manager Review -->
+        <div class="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+          <h4 class="font-semibold text-sm uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">Manager Review</h4>
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Score (0–100)</label>
+              <input type="number" step="0.1" min="0" max="100" id="appraisalSlideManagerScore"
+                     oninput="calculateSlideFinalScore()"
+                     class="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Comment</label>
+              <textarea id="appraisalSlideManagerComment" rows="3"
+                        class="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Self Review -->
+        <div class="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+          <h4 class="font-semibold text-sm uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">Self Review</h4>
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Score (0–100)</label>
+              <input type="number" step="0.1" min="0" max="100" id="appraisalSlideSelfScore"
+                     oninput="calculateSlideFinalScore()"
+                     class="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Comment</label>
+              <textarea id="appraisalSlideSelfComment" rows="3"
+                        class="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Final Score -->
+        <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+          <div>
+            <label class="block text-xs text-gray-500 dark:text-gray-400">Final Score</label>
+            <p class="text-lg font-bold" id="appraisalSlideFinalScore">-</p>
+          </div>
+        </div>
+
+      </form>
+    </div>
+    <div class="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3">
+      <button onclick="closeAppraisalSlideOver()"
+              class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
+        Cancel
+      </button>
+      <button onclick="saveAppraisalFromSlide()"
+              class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
+        Save Appraisal
+      </button>
+    </div>
+  </div>
+
+  <!-- Filters -->
   <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 mb-6">
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Cycle</label>
-        <select id="appraisalFilterCycle" onchange="filterAppraisals()" class="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+        <select id="appraisalFilterCycle" onchange="filterAppraisals()"
+                class="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
           <option value="all">All Cycles</option>
-          <option value="2024-01">January 2024</option>
-          <option value="2024-02">February 2024</option>
-          <option value="2024-03">March 2024</option>
         </select>
       </div>
       <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Employee</label>
-        <select id="appraisalFilterEmployee" onchange="filterAppraisals()" class="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+        <select id="appraisalFilterEmployee" onchange="filterAppraisals()"
+                class="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
           <option value="all">All Employees</option>
-          <option value="1">John Doe</option>
-          <option value="2">Jane Smith</option>
-          <option value="3">Mike Johnson</option>
-        </select>
-      </div>
-      <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Status</label>
-        <select id="appraisalFilterStatus" onchange="filterAppraisals()" class="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
-          <option value="all">All</option>
-          <option value="pending">Pending</option>
-          <option value="completed">Completed</option>
         </select>
       </div>
     </div>
   </div>
 
-  <!-- Appraisals Table (hardcoded rows) -->
+  <!-- Appraisals Table -->
   <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
     <div class="p-4 md:p-6 border-b border-gray-200 dark:border-gray-700">
       <h3 class="text-lg font-bold">Employee Appraisals</h3>
@@ -50,122 +131,202 @@
           <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Employee</th>
           <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Cycle</th>
           <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">KPI Score</th>
-          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Manager</th>
-          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Self</th>
-          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Final</th>
-          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Outcome</th>
-          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Status</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Manager Score</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Self Score</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Final Score</th>
           <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Actions</th>
         </tr>
         </thead>
         <tbody class="divide-y divide-gray-200 dark:divide-gray-700" id="appraisalsTableBody">
-        <!-- Hardcoded row 1 -->
-        <tr>
+
+        <!-- Data Rows -->
+        <tr th:each="appraisal : ${appraisals}"
+            th:if="${appraisals != null and !#lists.isEmpty(appraisals)}"
+            class="table-row"
+            th:data-appraisal-id="${appraisal.appraisalId}"
+            th:data-employee-id="${appraisal.employeeId}"
+            th:data-employee-name="${appraisal.employeeName}"
+            th:data-cycle-id="${appraisal.cycleId}"
+            th:data-cycle-name="${appraisal.cycleName}"
+            th:data-kpi-score="${appraisal.kpiScore}"
+            th:data-manager-score="${appraisal.managerScore}"
+            th:data-manager-comment="${appraisal.managerComment}"
+            th:data-self-score="${appraisal.selfScore}"
+            th:data-self-comment="${appraisal.selfComment}"
+            th:data-final-score="${appraisal.finalScore}">
           <td class="px-4 py-3">
-            <div class="font-medium">John Doe</div>
-            <div class="text-sm text-gray-500">Sales</div>
+            <div th:text="${appraisal.employeeName}" class="font-medium"></div>
           </td>
-          <td class="px-4 py-3">January 2024</td>
-          <td class="px-4 py-3">85.3</td>
-          <td class="px-4 py-3">-</td>
-          <td class="px-4 py-3">-</td>
-          <td class="px-4 py-3 font-bold">85.3</td>
+          <td th:text="${appraisal.cycleName}" class="px-4 py-3"></td>
+          <td th:text="${appraisal.kpiScore != null ? appraisal.kpiScore : '-'}" class="px-4 py-3"></td>
+          <td th:text="${appraisal.managerScore != null ? appraisal.managerScore : '-'}" class="px-4 py-3"></td>
+          <td th:text="${appraisal.selfScore != null ? appraisal.selfScore : '-'}" class="px-4 py-3"></td>
+          <td th:text="${appraisal.finalScore != null ? appraisal.finalScore : '-'}" class="px-4 py-3"></td>
           <td class="px-4 py-3">
-            <span class="px-2 py-1 text-xs rounded-full appraisal-outcome-meets">MEETS</span>
-          </td>
-          <td class="px-4 py-3">
-            <span class="badge badge-warning">Pending</span>
-          </td>
-          <td class="px-4 py-3">
-            <button onclick="editAppraisal(1)" class="text-primary-600 hover:text-primary-900 mr-3">
+            <button th:onclick="'editAppraisal(' + ${appraisal.appraisalId} + ')'"
+                    class="text-primary-600 hover:text-primary-900 mr-3">
               <span class="material-icons-round text-sm">edit</span>
             </button>
-            <button onclick="deleteAppraisal(1)" class="text-red-600 hover:text-red-900">
+            <button th:onclick="'deleteAppraisal(' + ${appraisal.appraisalId} + ')'"
+                    class="text-red-600 hover:text-red-900">
               <span class="material-icons-round text-sm">delete</span>
-            </button>
-            <button onclick="markAppraisalCompleted(1)" class="text-green-600 hover:text-green-900">
-              <span class="material-icons-round text-sm">check_circle</span>
             </button>
           </td>
         </tr>
-        <!-- Hardcoded row 2 -->
-        <tr>
-          <td class="px-4 py-3">
-            <div class="font-medium">Jane Smith</div>
-            <div class="text-sm text-gray-500">Engineering</div>
-          </td>
-          <td class="px-4 py-3">January 2024</td>
-          <td class="px-4 py-3">92.8</td>
-          <td class="px-4 py-3">90.0</td>
-          <td class="px-4 py-3">95.0</td>
-          <td class="px-4 py-3 font-bold">92.5</td>
-          <td class="px-4 py-3">
-            <span class="px-2 py-1 text-xs rounded-full appraisal-outcome-exceeds">EXCEEDS</span>
-          </td>
-          <td class="px-4 py-3">
-            <span class="badge badge-success">Completed</span>
-          </td>
-          <td class="px-4 py-3">
-            <button onclick="editAppraisal(2)" class="text-primary-600 hover:text-primary-900 mr-3">
-              <span class="material-icons-round text-sm">edit</span>
-            </button>
-            <button onclick="deleteAppraisal(2)" class="text-red-600 hover:text-red-900">
-              <span class="material-icons-round text-sm">delete</span>
-            </button>
-            <!-- No "mark completed" button because already completed -->
+
+        <!-- Empty State -->
+        <tr th:if="${appraisals == null or #lists.isEmpty(appraisals)}">
+          <td colspan="7" class="px-4 py-10 text-center">
+            <div class="flex flex-col items-center justify-center space-y-3">
+              <div class="text-gray-400 text-4xl">📊</div>
+              <div class="text-gray-600 dark:text-gray-300 font-medium">No appraisals found</div>
+              <div class="text-sm text-gray-500 dark:text-gray-400">Appraisals will appear here once they are created.</div>
+            </div>
           </td>
         </tr>
-        <!-- Hardcoded row 3 -->
-        <tr>
-          <td class="px-4 py-3">
-            <div class="font-medium">Mike Johnson</div>
-            <div class="text-sm text-gray-500">Marketing</div>
-          </td>
-          <td class="px-4 py-3">February 2024</td>
-          <td class="px-4 py-3">78.5</td>
-          <td class="px-4 py-3">75.0</td>
-          <td class="px-4 py-3">80.0</td>
-          <td class="px-4 py-3 font-bold">77.5</td>
-          <td class="px-4 py-3">
-            <span class="px-2 py-1 text-xs rounded-full appraisal-outcome-needs">NEEDS IMPROVEMENT</span>
-          </td>
-          <td class="px-4 py-3">
-            <span class="badge badge-warning">Pending</span>
-          </td>
-          <td class="px-4 py-3">
-            <button onclick="editAppraisal(3)" class="text-primary-600 hover:text-primary-900 mr-3">
-              <span class="material-icons-round text-sm">edit</span>
-            </button>
-            <button onclick="deleteAppraisal(3)" class="text-red-600 hover:text-red-900">
-              <span class="material-icons-round text-sm">delete</span>
-            </button>
-            <button onclick="markAppraisalCompleted(3)" class="text-green-600 hover:text-green-900">
-              <span class="material-icons-round text-sm">check_circle</span>
-            </button>
-          </td>
-        </tr>
+
         </tbody>
       </table>
     </div>
   </div>
 
-  <!-- Placeholder script for filter actions (can be moved to main page later) -->
   <script>
-    function filterAppraisals() {
-        console.log('Filter changed – implement later');
-    }
     function editAppraisal(id) {
-        alert('Edit appraisal ' + id);
+      const row = document.querySelector(`tr[data-appraisal-id="${id}"]`);
+      if (!row) return;
+
+      document.getElementById('appraisalSlideId').value = id;
+      document.getElementById('appraisalSlideEmployeeName').innerText = row.dataset.employeeName || '-';
+      document.getElementById('appraisalSlideCycle').innerText = row.dataset.cycleName || '-';
+      document.getElementById('appraisalSlideKpiScore').innerText = row.dataset.kpiScore || '-';
+
+      const managerScore = row.dataset.managerScore;
+      const selfScore = row.dataset.selfScore;
+
+      document.getElementById('appraisalSlideManagerScore').value = (managerScore && managerScore !== 'null') ? managerScore : '';
+      document.getElementById('appraisalSlideManagerComment').value = row.dataset.managerComment || '';
+      document.getElementById('appraisalSlideSelfScore').value = (selfScore && selfScore !== 'null') ? selfScore : '';
+      document.getElementById('appraisalSlideSelfComment').value = row.dataset.selfComment || '';
+
+      calculateSlideFinalScore();
+
+      document.getElementById('appraisalSlideOver').classList.add('open');
+      document.getElementById('appraisalSlideOverBackdrop').classList.add('open');
+      document.body.style.overflow = 'hidden';
     }
+
+    function closeAppraisalSlideOver() {
+      document.getElementById('appraisalSlideOver').classList.remove('open');
+      document.getElementById('appraisalSlideOverBackdrop').classList.remove('open');
+      document.body.style.overflow = 'auto';
+    }
+
+    function calculateSlideFinalScore() {
+      const kpiScore = parseFloat(document.getElementById('appraisalSlideKpiScore').innerText) || 0;
+      const managerScore = parseFloat(document.getElementById('appraisalSlideManagerScore').value) || 0;
+      const selfScore = parseFloat(document.getElementById('appraisalSlideSelfScore').value) || 0;
+
+      let finalScore;
+      if (managerScore > 0 && selfScore > 0) {
+        finalScore = (managerScore + selfScore) / 2;
+      } else if (managerScore > 0) {
+        finalScore = managerScore;
+      } else if (selfScore > 0) {
+        finalScore = selfScore;
+      } else {
+        finalScore = kpiScore;
+      }
+
+      finalScore = Math.round(finalScore * 10) / 10;
+      document.getElementById('appraisalSlideFinalScore').innerText = finalScore > 0 ? finalScore.toFixed(1) : '-';
+    }
+
+    function saveAppraisalFromSlide() {
+      const id = document.getElementById('appraisalSlideId').value;
+      const row = document.querySelector(`tr[data-appraisal-id="${id}"]`);
+      if (!row) return;
+
+      const managerScore = document.getElementById('appraisalSlideManagerScore').value;
+      const managerComment = document.getElementById('appraisalSlideManagerComment').value;
+      const selfScore = document.getElementById('appraisalSlideSelfScore').value;
+      const selfComment = document.getElementById('appraisalSlideSelfComment').value;
+      const finalScore = document.getElementById('appraisalSlideFinalScore').innerText;
+
+      // Update data attributes
+      row.dataset.managerScore = managerScore || '';
+      row.dataset.managerComment = managerComment;
+      row.dataset.selfScore = selfScore || '';
+      row.dataset.selfComment = selfComment;
+      row.dataset.finalScore = finalScore;
+
+      // Update displayed cells (0=Employee,1=Cycle,2=KPI,3=Manager,4=Self,5=Final,6=Actions)
+      row.cells[3].innerText = managerScore || '-';
+      row.cells[4].innerText = selfScore || '-';
+      row.cells[5].innerText = finalScore;
+
+      closeAppraisalSlideOver();
+      showNotification('Appraisal updated successfully!', 'success');
+    }
+
     function deleteAppraisal(id) {
-        if (confirm('Delete appraisal ' + id + '?')) {
-            alert('Deleted ' + id);
-        }
+      if (confirm('Delete appraisal ' + id + '?')) {
+        const row = document.querySelector(`tr[data-appraisal-id="${id}"]`);
+        if (row) row.remove();
+        showNotification('Appraisal deleted.', 'success');
+      }
     }
-    function markAppraisalCompleted(id) {
-        alert('Mark completed ' + id);
+
+    function filterAppraisals() {
+      console.log('Filter changed – implement later');
+    }
+
+    function showNotification(message, type) {
+      const notification = document.createElement('div');
+      notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
+        type === 'success' ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-red-100 text-red-800 border border-red-200'
+      }`;
+      notification.innerHTML = `<div class="flex items-center space-x-3"><span class="material-icons-round">${type === 'success' ? 'check_circle' : 'error'}</span><span>${message}</span></div>`;
+      document.body.appendChild(notification);
+      setTimeout(() => { notification.remove(); }, 3000);
     }
   </script>
+
+  <style>
+    .slide-over {
+      position: fixed;
+      top: 0;
+      right: -100%;
+      width: 100%;
+      max-width: 32rem;
+      height: 100vh;
+      background-color: white;
+      box-shadow: -4px 0 10px rgba(0,0,0,0.1);
+      transition: right 0.3s ease;
+      z-index: 1001;
+      display: flex;
+      flex-direction: column;
+    }
+    .dark .slide-over {
+      background-color: #1f2937;
+    }
+    .slide-over.open {
+      right: 0;
+    }
+    .slide-over-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.5);
+      z-index: 1000;
+      display: none;
+    }
+    .slide-over-backdrop.open {
+      display: block;
+    }
+  </style>
+
 </div>
 </body>
 </html>

@@ -22,6 +22,9 @@ public class EmployeeAppraisalDTO {
     private BigDecimal kpiScore;
     private BigDecimal managerScore;
     private BigDecimal finalScore;
+    private BigDecimal selfScore;
+    private String selfComment;
+    private String managerComment;
 
     private AppraisalOutcome outcome;
 

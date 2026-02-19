@@ -6,7 +6,9 @@ import com.justjava.humanresource.hr.dto.KpiBulkAssignmentRequestDTO;
 import com.justjava.humanresource.hr.entity.Employee;
 import com.justjava.humanresource.hr.entity.JobStep;
 import com.justjava.humanresource.hr.service.SetupService;
+import com.justjava.humanresource.kpi.dto.EmployeeAppraisalDTO;
 import com.justjava.humanresource.kpi.entity.*;
+import com.justjava.humanresource.kpi.service.AppraisalService;
 import com.justjava.humanresource.kpi.service.KpiAssignmentService;
 import com.justjava.humanresource.kpi.service.KpiDefinitionService;
 import com.justjava.humanresource.kpi.service.KpiMeasurementService;
@@ -34,6 +36,9 @@ public class KpiController {
 
     @Autowired
     KpiMeasurementService kpiMeasurementService;
+
+    @Autowired
+    AppraisalService appraisalService;
 
     @Autowired
     private KpiDefinitionService kpiDefinitionService;
@@ -325,6 +330,16 @@ public class KpiController {
     }
     @GetMapping("/fragments/kpi-appraisal")
     public String getAppraisalFragment(Model model) {
+        List<EmployeeAppraisalDTO> appraisals = appraisalService.getAllActiveAppraisals();
+        appraisals.forEach(
+                appraisal-> System.out.println("Appraisal for Employee: " + appraisal.getEmployeeName() +
+                        ", KPI: " + appraisal.getKpiScore()+
+                        ", Score: " + appraisal.getFinalScore() +
+                        ", Status: " + appraisal.getOutcome()+
+                        "Cycle" + appraisal.getCycleName()+
+                        "manager" + appraisal.getManagerScore())
+        );
+        model.addAttribute("appraisals", appraisals);
         return "kpi/fragment/appraisal-fragment :: appraisal-content";
     }
 }

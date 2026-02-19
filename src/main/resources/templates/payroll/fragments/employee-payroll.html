@@ -261,53 +261,54 @@
       </div>
     </div>
   </div>
+
+  <!-- html2pdf library (added for PDF generation) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+  <!-- Download function -->
+  <script>
+    function downloadPayslip(button) {
+      // Find the parent row
+      const row = button.closest('tr');
+      if (!row) return;
+
+      // Extract cell data (indices: 0=Employee, 1=Pay Day, 2=Basic Salary, 4=Net Salary)
+      const cells = row.cells;
+      const employeeName = cells[0]?.textContent.trim() || 'N/A';
+      const payDate = cells[1]?.textContent.trim() || 'N/A';
+      const basicSalary = cells[2]?.textContent.trim() || '₦0';
+      const netPay = cells[4]?.textContent.trim() || '₦0';
+
+      // Populate template fields
+      document.getElementById('payslip-employee-name').textContent = employeeName;
+      document.getElementById('payslip-pay-date').textContent = payDate;
+      document.getElementById('payslip-basic-salary').textContent = basicSalary;
+      document.getElementById('payslip-net-pay').textContent = netPay;
+      document.getElementById('payslip-generated-date').textContent = new Date().toISOString().split('T')[0];
+
+      // Get the template element
+      const element = document.getElementById('payslip-content');
+
+      // Configure PDF options
+      const opt = {
+        margin:        [0.5, 0.5, 0.5, 0.5], // top, right, bottom, left (inches)
+        filename:     `payslip-${employeeName.replace(/\s+/g, '_')}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, letterRendering: true },
+        jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+      };
+
+      // Generate and download PDF
+      html2pdf().set(opt).from(element).save();
+    }
+
+    // Optional: define filter functions (if not defined elsewhere)
+    function filterEmployeePayroll() {
+      // Placeholder – implement your filtering logic
+      console.log('Filter changed');
+    }
+  </script>
 </main>
 
-<!-- html2pdf library (added for PDF generation) -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-
-<!-- Download function -->
-<script>
-  function downloadPayslip(button) {
-    // Find the parent row
-    const row = button.closest('tr');
-    if (!row) return;
-
-    // Extract cell data (indices: 0=Employee, 1=Pay Day, 2=Basic Salary, 4=Net Salary)
-    const cells = row.cells;
-    const employeeName = cells[0]?.textContent.trim() || 'N/A';
-    const payDate = cells[1]?.textContent.trim() || 'N/A';
-    const basicSalary = cells[2]?.textContent.trim() || '₦0';
-    const netPay = cells[4]?.textContent.trim() || '₦0';
-
-    // Populate template fields
-    document.getElementById('payslip-employee-name').textContent = employeeName;
-    document.getElementById('payslip-pay-date').textContent = payDate;
-    document.getElementById('payslip-basic-salary').textContent = basicSalary;
-    document.getElementById('payslip-net-pay').textContent = netPay;
-    document.getElementById('payslip-generated-date').textContent = new Date().toISOString().split('T')[0];
-
-    // Get the template element
-    const element = document.getElementById('payslip-content');
-
-    // Configure PDF options
-    const opt = {
-      margin:        [0.5, 0.5, 0.5, 0.5], // top, right, bottom, left (inches)
-      filename:     `payslip-${employeeName.replace(/\s+/g, '_')}.pdf`,
-      image:        { type: 'jpeg', quality: 0.98 },
-      html2canvas:  { scale: 2, letterRendering: true },
-      jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
-    };
-
-    // Generate and download PDF
-    html2pdf().set(opt).from(element).save();
-  }
-
-  // Optional: define filter functions (if not defined elsewhere)
-  function filterEmployeePayroll() {
-    // Placeholder – implement your filtering logic
-    console.log('Filter changed');
-  }
-</script>
 </body>
 </html>
