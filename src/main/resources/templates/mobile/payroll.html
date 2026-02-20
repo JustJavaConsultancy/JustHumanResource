@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" xmlns:th="http://www.w3.org/1999/xhtml"
+      layout:decorate="layouts/mobileEmployeeLayout">
+<head>
+    <meta charset="UTF-8">
+    <title>Payroll | JustHR Mobile</title>
+</head>
+<body>
+<main layout:fragment="content">
+
+    <!-- Current Payroll Summary -->
+    <div class="mobile-card p-4 mb-4">
+        <div class="flex items-center justify-between mb-3">
+            <h4 class="font-bold text-gray-900 dark:text-white">Current Payroll</h4>
+            <span class="badge badge-info text-xs">March 2025</span>
+        </div>
+
+        <div class="grid grid-cols-3 gap-3 mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+            <div class="text-center">
+                <span class="text-xs text-gray-500 dark:text-gray-400">Basic</span>
+                <p class="font-bold text-gray-900 dark:text-white text-sm">₦450k</p>
+            </div>
+            <div class="text-center">
+                <span class="text-xs text-gray-500 dark:text-gray-400">Gross</span>
+                <p class="font-bold text-green-600 dark:text-green-400 text-sm">₦620k</p>
+            </div>
+            <div class="text-center">
+                <span class="text-xs text-gray-500 dark:text-gray-400">Net</span>
+                <p class="font-bold text-primary-600 dark:text-primary-400 text-sm">₦540k</p>
+            </div>
+        </div>
+
+        <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-3">
+            <span>Paygroup: PG4 - Marketing</span>
+            <span>Next pay: 31 Mar 2025</span>
+        </div>
+
+        <button id="viewCurrentPayslipBtn" class="w-full px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-medium flex items-center justify-center">
+            <span class="material-icons-round text-sm mr-2">visibility</span>
+            View Current Payslip
+        </button>
+    </div>
+
+    <!-- Earnings Breakdown -->
+    <div class="mobile-card p-4 mb-4">
+        <h4 class="font-bold text-gray-900 dark:text-white mb-3">Earnings Breakdown</h4>
+
+        <div class="space-y-2">
+            <div class="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
+                <div class="flex items-center space-x-2">
+                    <span class="text-sm">Basic Salary</span>
+                </div>
+                <span class="text-sm font-medium">₦450,000</span>
+            </div>
+
+            <div class="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
+                <div class="flex items-center space-x-2">
+                    <span class="text-sm">Housing Allowance</span>
+                    <span class="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded text-xs">taxable</span>
+                </div>
+                <span class="text-sm font-medium">₦120,000</span>
+            </div>
+
+            <div class="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
+                <div class="flex items-center space-x-2">
+                    <span class="text-sm">Transport Allowance</span>
+                    <span class="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded text-xs">taxable</span>
+                </div>
+                <span class="text-sm font-medium">₦50,000</span>
+            </div>
+
+            <div class="flex justify-between items-center py-2">
+                <span class="text-sm">Lunch Allowance</span>
+                <span class="text-sm font-medium">₦30,000</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Deductions Breakdown -->
+    <div class="mobile-card p-4 mb-4">
+        <h4 class="font-bold text-gray-900 dark:text-white mb-3">Deductions</h4>
+
+        <div class="space-y-2">
+            <div class="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
+                <div class="flex items-center space-x-2">
+                    <span class="text-sm">PAYE Tax</span>
+                    <span class="px-1.5 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded text-xs">statutory</span>
+                </div>
+                <span class="text-sm font-medium text-red-600 dark:text-red-400">-₦65,000</span>
+            </div>
+
+            <div class="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
+                <div class="flex items-center space-x-2">
+                    <span class="text-sm">Pension</span>
+                    <span class="px-1.5 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded text-xs">statutory</span>
+                </div>
+                <span class="text-sm font-medium text-red-600 dark:text-red-400">-₦15,000</span>
+            </div>
+
+            <div class="flex justify-between items-center py-2">
+                <span class="text-sm">Health Insurance</span>
+                <span class="text-sm font-medium text-red-600 dark:text-red-400">-₦8,000</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Year-to-Date Summary -->
+    <div class="mobile-card p-4 mb-4">
+        <h4 class="font-bold text-gray-900 dark:text-white mb-3">Year-to-Date (2025)</h4>
+
+        <div class="grid grid-cols-2 gap-3">
+            <div class="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <span class="text-xs text-gray-500 dark:text-gray-400">Total Earnings</span>
+                <p class="font-bold text-gray-900 dark:text-white">₦1,860,000</p>
+            </div>
+            <div class="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <span class="text-xs text-gray-500 dark:text-gray-400">Total Tax</span>
+                <p class="font-bold text-gray-900 dark:text-white">₦195,000</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Method -->
+    <div class="mobile-card p-4 mb-4">
+        <h4 class="font-bold text-gray-900 dark:text-white mb-3">Payment Method</h4>
+
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+                <span class="material-icons-round text-blue-600 dark:text-blue-400">credit_card</span>
+            </div>
+            <div class="flex-1">
+                <p class="text-sm font-medium text-gray-900 dark:text-white">Bank Transfer</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">First Bank • **** 3456</p>
+            </div>
+        </div>
+
+        <div class="mt-3 text-xs text-gray-500 flex items-center">
+            <span class="material-icons-round text-xs mr-1">schedule</span>
+            Payment processed on last working day
+        </div>
+    </div>
+
+    <!-- Payroll Calendar -->
+    <div class="mobile-card p-4 mb-4">
+        <h4 class="font-bold text-gray-900 dark:text-white mb-3">Upcoming Payments</h4>
+
+        <div class="space-y-2">
+            <div class="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <span class="text-sm text-gray-600 dark:text-gray-300">March 2025</span>
+                <span class="text-sm font-medium text-gray-900 dark:text-white">31 Mar</span>
+            </div>
+            <div class="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <span class="text-sm text-gray-600 dark:text-gray-300">April 2025</span>
+                <span class="text-sm font-medium text-gray-900 dark:text-white">30 Apr</span>
+            </div>
+            <div class="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <span class="text-sm text-gray-600 dark:text-gray-300">May 2025</span>
+                <span class="text-sm font-medium text-gray-900 dark:text-white">30 May</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payslip History -->
+    <div class="mobile-card p-4 mb-6">
+        <div class="flex items-center justify-between mb-3">
+            <h4 class="font-bold text-gray-900 dark:text-white">Payslip History</h4>
+            <button class="text-primary-600 hover:text-primary-700 text-sm font-medium">
+                Download All
+            </button>
+        </div>
+
+        <div class="space-y-3">
+            <!-- March 2025 -->
+            <div class="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm font-medium text-gray-900 dark:text-white">Mar 2025</span>
+                    <span class="badge badge-success">Processed</span>
+                </div>
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">Gross:</span>
+                        <span>₦620,000</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">Net:</span>
+                        <span class="font-semibold text-primary-600 dark:text-primary-400">₦540,000</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">Tax:</span>
+                        <span>₦65,000</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">Pension:</span>
+                        <span>₦15,000</span>
+                    </div>
+                </div>
+                <div class="flex items-center justify-end space-x-2 mt-2">
+                    <button class="text-gray-500 hover:text-primary-600 p-1 view-payslip-btn" data-period="Mar 2025">
+                        <span class="material-icons-round text-lg">visibility</span>
+                    </button>
+                    <button class="text-gray-500 hover:text-primary-600 p-1">
+                        <span class="material-icons-round text-lg">download</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- February 2025 -->
+            <div class="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm font-medium text-gray-900 dark:text-white">Feb 2025</span>
+                    <span class="badge badge-success">Processed</span>
+                </div>
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">Gross:</span>
+                        <span>₦620,000</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">Net:</span>
+                        <span class="font-semibold text-primary-600 dark:text-primary-400">₦540,000</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">Tax:</span>
+                        <span>₦65,000</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">Pension:</span>
+                        <span>₦15,000</span>
+                    </div>
+                </div>
+                <div class="flex items-center justify-end space-x-2 mt-2">
+                    <button class="text-gray-500 hover:text-primary-600 p-1 view-payslip-btn" data-period="Feb 2025">
+                        <span class="material-icons-round text-lg">visibility</span>
+                    </button>
+                    <button class="text-gray-500 hover:text-primary-600 p-1">
+                        <span class="material-icons-round text-lg">download</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- January 2025 -->
+            <div class="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm font-medium text-gray-900 dark:text-white">Jan 2025</span>
+                    <span class="badge badge-success">Processed</span>
+                </div>
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">Gross:</span>
+                        <span>₦620,000</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">Net:</span>
+                        <span class="font-semibold text-primary-600 dark:text-primary-400">₦540,000</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">Tax:</span>
+                        <span>₦65,000</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">Pension:</span>
+                        <span>₦15,000</span>
+                    </div>
+                </div>
+                <div class="flex items-center justify-end space-x-2 mt-2">
+                    <button class="text-gray-500 hover:text-primary-600 p-1 view-payslip-btn" data-period="Jan 2025">
+                        <span class="material-icons-round text-lg">visibility</span>
+                    </button>
+                    <button class="text-gray-500 hover:text-primary-600 p-1">
+                        <span class="material-icons-round text-lg">download</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Info Footer -->
+    <div class="text-center text-xs text-gray-500 dark:text-gray-400 mb-6">
+        <span class="material-icons-round text-xs align-text-bottom mr-1">lock</span>
+        Payroll information is updated monthly. Contact HR for corrections.
+    </div>
+
+    <!-- Payslip Modal -->
+    <div id="payslipModal" class="modal-overlay">
+        <div class="modal-container">
+            <div class="swipe-indicator"></div>
+            <div class="p-4">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white">Payslip • March 2025</h3>
+                    <button class="close-modal text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                        <span class="material-icons-round">close</span>
+                    </button>
+                </div>
+
+                <!-- Company Header -->
+                <div class="border-b border-gray-200 dark:border-gray-700 pb-3 mb-4">
+                    <p class="text-sm font-bold text-gray-900 dark:text-white">HRPro Solutions Ltd.</p>
+                    <p class="text-xs text-gray-500">Period: 01 Mar 2025 – 31 Mar 2025</p>
+                    <div class="flex justify-between text-xs text-gray-500 mt-1">
+                        <span>Employee #: EMP-2021-042</span>
+                        <span>Paygroup: PG4</span>
+                    </div>
+                </div>
+
+                <!-- Employee Info -->
+                <div class="grid grid-cols-2 gap-3 mb-4 text-sm">
+                    <div>
+                        <p class="text-xs text-gray-500">Employee</p>
+                        <p class="font-medium">Jane Okafor</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500">Department</p>
+                        <p>Marketing</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500">Job Title</p>
+                        <p>Marketing Specialist</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500">Grade/Step</p>
+                        <p>Grade 3 • Step 2</p>
+                    </div>
+                </div>
+
+                <!-- Earnings -->
+                <div class="mb-4">
+                    <h5 class="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-2">Earnings</h5>
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-sm">
+                            <span>Basic Salary</span>
+                            <span class="font-medium">₦450,000</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span>Housing Allowance</span>
+                            <span>₦120,000</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span>Transport Allowance</span>
+                            <span>₦50,000</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span>Lunch Allowance</span>
+                            <span>₦30,000</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Deductions -->
+                <div class="mb-4">
+                    <h5 class="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-2">Deductions</h5>
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-sm">
+                            <span>PAYE Tax</span>
+                            <span>-₦65,000</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span>Pension (Employee)</span>
+                            <span>-₦15,000</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span>Health Insurance</span>
+                            <span>-₦8,000</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Totals -->
+                <div class="border-t border-gray-200 dark:border-gray-700 pt-3">
+                    <div class="flex justify-between text-sm mb-1">
+                        <span class="font-semibold">Gross Pay</span>
+                        <span>₦620,000</span>
+                    </div>
+                    <div class="flex justify-between text-sm mb-2">
+                        <span class="font-semibold">Total Deductions</span>
+                        <span>₦88,000</span>
+                    </div>
+                    <div class="flex justify-between text-base font-bold pt-2 border-t border-gray-200 dark:border-gray-700">
+                        <span>Net Pay</span>
+                        <span class="text-primary-600 dark:text-primary-400">₦540,000</span>
+                    </div>
+                </div>
+
+                <div class="flex space-x-3 mt-6">
+                    <button class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-center">
+                        <span class="material-icons-round text-sm mr-1">print</span> Print
+                    </button>
+                    <button class="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 flex items-center justify-center">
+                        <span class="material-icons-round text-sm mr-1">download</span> Download
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Payslip Modal Control
+        const payslipModal = document.getElementById('payslipModal');
+
+        function openPayslipModal() {
+            payslipModal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closePayslipModal() {
+            payslipModal.classList.remove('active');
+            document.body.style.overflow = 'auto';
+        }
+
+        // Open modal from buttons
+        document.getElementById('viewCurrentPayslipBtn').addEventListener('click', openPayslipModal);
+
+        document.querySelectorAll('.view-payslip-btn').forEach(btn => {
+            btn.addEventListener('click', openPayslipModal);
+        });
+
+        // Close via close button
+        document.querySelectorAll('.close-modal').forEach(btn => {
+            btn.addEventListener('click', closePayslipModal);
+        });
+
+        // Close when clicking overlay
+        payslipModal.addEventListener('click', (e) => {
+            if (e.target === payslipModal) {
+                closePayslipModal();
+            }
+        });
+
+        // Prevent modal container clicks from closing modal
+        payslipModal.querySelector('.modal-container').addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+
+        // Touch gestures for modal
+        (function() {
+            let startY = 0;
+            let currentY = 0;
+            let isDragging = false;
+
+            const modalContainer = payslipModal.querySelector('.modal-container');
+
+            modalContainer.addEventListener('touchstart', (e) => {
+                startY = e.touches[0].clientY;
+                isDragging = true;
+            });
+
+            modalContainer.addEventListener('touchmove', (e) => {
+                if (!isDragging) return;
+                currentY = e.touches[0].clientY;
+                const deltaY = currentY - startY;
+
+                if (deltaY > 0) {
+                    modalContainer.style.transform = `translateY(${deltaY}px)`;
+                }
+            });
+
+            modalContainer.addEventListener('touchend', () => {
+                if (!isDragging) return;
+                isDragging = false;
+
+                const deltaY = currentY - startY;
+                if (deltaY > 100) {
+                    closePayslipModal();
+                }
+                modalContainer.style.transform = '';
+            });
+        })();
+    </script>
+
+</main>
+</body>
+</html>

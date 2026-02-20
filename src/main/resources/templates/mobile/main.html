@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="layouts/mobileEmployeeLayout">
+<head>
+    <meta charset="UTF-8">
+    <title>Employee Management | JustHR Mobile</title>
+    <style>
+        .stat-card {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            border: 1px solid #e2e8f0;
+            border-radius: 1rem;
+            padding: 1rem;
+            transition: all 0.2s ease;
+        }
+
+        .dark .stat-card {
+            background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
+            border-color: #374151;
+        }
+
+        .stat-card:active {
+            transform: scale(0.98);
+        }
+
+        .employee-card {
+            background-color: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 1rem;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            transition: all 0.2s ease;
+        }
+
+        .dark .employee-card {
+            background-color: #1f2937;
+            border-color: #374151;
+        }
+
+        .employee-card:active {
+            transform: scale(0.98);
+            background-color: #f9fafb;
+        }
+
+        .dark .employee-card:active {
+            background-color: #111827;
+        }
+
+        .avatar-placeholder {
+            width: 3rem;
+            height: 3rem;
+            border-radius: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1rem;
+            background-color: #dbeafe;
+            color: #1e40af;
+        }
+
+        .dark .avatar-placeholder {
+            background-color: #1e3a8a;
+            color: #bfdbfe;
+        }
+
+        .status-badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.65rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+        }
+
+        .status-onboarding {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+
+        .status-active {
+            background-color: #dcfce7;
+            color: #166534;
+        }
+
+        .status-probation {
+            background-color: #dbeafe;
+            color: #1e40af;
+        }
+
+        .dark .status-onboarding {
+            background-color: #92400e;
+            color: #fbbf24;
+        }
+
+        .dark .status-active {
+            background-color: #14532d;
+            color: #86efac;
+        }
+
+        .dark .status-probation {
+            background-color: #1e3a8a;
+            color: #bfdbfe;
+        }
+
+        .filter-section {
+            background-color: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 1rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .dark .filter-section {
+            background-color: #1f2937;
+            border-color: #374151;
+        }
+
+        .filter-select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            background-color: white;
+            font-size: 0.875rem;
+        }
+
+        .dark .filter-select {
+            background-color: #374151;
+            border-color: #4b5563;
+            color: #f3f4f6;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            z-index: 100;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-container {
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            background-color: white;
+            border-radius: 1rem 1rem 0 0;
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        .dark .modal-container {
+            background-color: #1f2937;
+        }
+
+        .modal-overlay.active .modal-container {
+            transform: translateY(0);
+        }
+
+        .swipe-indicator {
+            width: 2rem;
+            height: 0.25rem;
+            background-color: #d1d5db;
+            border-radius: 9999px;
+            margin: 0.75rem auto 0;
+        }
+
+        .dark .swipe-indicator {
+            background-color: #4b5563;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            background-color: white;
+            font-size: 0.875rem;
+        }
+
+        .dark .form-input {
+            background-color: #374151;
+            border-color: #4b5563;
+            color: #f3f4f6;
+        }
+
+        .form-input:focus {
+            border-color: #2563eb;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .floating-action {
+            position: fixed;
+            bottom: calc(5.5rem + env(safe-area-inset-bottom));
+            right: 1rem;
+            z-index: 40;
+            background: #2563eb;
+            color: white;
+            border-radius: 50%;
+            width: 3.5rem;
+            height: 3.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+            transition: all 0.2s ease;
+        }
+
+        .floating-action:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 16px rgba(37, 99, 235, 0.5);
+        }
+    </style>
+</head>
+<body>
+<main layout:fragment="content">
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-2 gap-3 mb-4">
+        <div class="stat-card">
+            <div class="flex items-center justify-between mb-2">
+                <div class="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+                    <span class="material-icons-round text-blue-600 dark:text-blue-400 text-lg">people</span>
+                </div>
+                <span class="text-xs text-green-600 font-medium">+2.4%</span>
+            </div>
+            <p class="text-xl font-bold text-gray-900 dark:text-white" th:text="${#lists.size(employees)}">24</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">Total Employees</p>
+        </div>
+
+        <div class="stat-card">
+            <div class="flex items-center justify-between mb-2">
+                <div class="w-8 h-8 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg flex items-center justify-center">
+                    <span class="material-icons-round text-yellow-600 dark:text-yellow-400 text-lg">person_add</span>
+                </div>
+            </div>
+            <p class="text-xl font-bold text-gray-900 dark:text-white">3</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">Onboarding</p>
+        </div>
+
+        <div class="stat-card">
+            <div class="flex items-center justify-between mb-2">
+                <div class="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
+                    <span class="material-icons-round text-green-600 dark:text-green-400 text-lg">work</span>
+                </div>
+            </div>
+            <p class="text-xl font-bold text-gray-900 dark:text-white">21</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">Active</p>
+        </div>
+
+        <div class="stat-card">
+            <div class="flex items-center justify-between mb-2">
+                <div class="w-8 h-8 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
+                    <span class="material-icons-round text-purple-600 dark:text-purple-400 text-lg">assignment</span>
+                </div>
+            </div>
+            <p class="text-xl font-bold text-gray-900 dark:text-white" th:text="${#lists.size(departments)}">6</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">Departments</p>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-section">
+        <h4 class="font-semibold text-gray-900 dark:text-white mb-3">Filters</h4>
+        <div class="grid grid-cols-2 gap-3">
+            <select class="filter-select">
+                <option value="">All Departments</option>
+                <option>Engineering</option>
+                <option>Marketing</option>
+                <option>Sales</option>
+            </select>
+            <select class="filter-select">
+                <option value="">All Status</option>
+                <option>Onboarding</option>
+                <option>Active</option>
+                <option>Probation</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Employee List -->
+    <div class="space-y-3 mb-6">
+        <!-- Employee Cards -->
+        <div th:each="employee : ${employees}"
+             th:if="${employees != null and !#lists.isEmpty(employees)}"
+             class="employee-card"
+             th:onclick="'viewEmployee(' + ${employee.id} + ')'">
+
+            <div class="flex items-center space-x-3">
+                <div class="avatar-placeholder"
+                     th:text="${employee.firstName.substring(0,1) + employee.lastName.substring(0,1)}">
+                    JD
+                </div>
+                <div class="flex-1">
+                    <p class="font-semibold text-gray-900 dark:text-white"
+                       th:text="${employee.firstName + ' ' + employee.lastName}">John Doe</p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400"
+                       th:text="${employee.department != null ? employee.department.name : 'No Department'}">Engineering</p>
+                    <div class="flex items-center space-x-2 mt-1">
+                        <span class="status-badge status-onboarding"
+                              th:text="${employee.status}"
+                              th:class="'status-badge status-' + ${#strings.toLowerCase(employee.status)}">Active</span>
+                        <span class="text-xs text-gray-500 dark:text-gray-400"
+                              th:text="${'ID: ' + employee.id}">ID: 001</span>
+                    </div>
+                </div>
+                <div class="flex flex-col items-end">
+                    <p class="text-sm font-medium text-gray-900 dark:text-white"
+                       th:text="${employee.jobStep != null ? employee.jobStep.jobGrade.name : 'No Grade'}">Grade 3</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400" th:text="${employee.email}">john@company.com</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Empty State -->
+        <div th:if="${employees == null or #lists.isEmpty(employees)}"
+             class="text-center py-12">
+            <div class="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span class="material-icons-round text-gray-400 text-2xl">people</span>
+            </div>
+            <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-2">No Employees Found</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Start by adding a new employee to begin managing your team.</p>
+            <button onclick="openAddEmployeeModal()"
+                    class="px-4 py-2 bg-primary-600 text-white rounded-lg font-medium">
+                Add Employee
+            </button>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    <div class="mobile-card p-4 mb-6">
+        <div class="flex items-center justify-between">
+            <div class="text-sm text-gray-500 dark:text-gray-400">
+                Showing <span class="font-medium">1</span> to <span class="font-medium">10</span> of <span class="font-medium">24</span> employees
+            </div>
+            <div class="flex space-x-2">
+                <button class="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm">Prev</button>
+                <button class="px-3 py-1 bg-primary-600 text-white rounded text-sm">1</button>
+                <button class="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm">2</button>
+                <button class="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm">Next</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Action Button -->
+    <button onclick="openAddEmployeeModal()" class="floating-action">
+        <span class="material-icons-round">person_add</span>
+    </button>
+
+    <!-- Add Employee Modal -->
+    <div id="addEmployeeModal" class="modal-overlay">
+        <div class="modal-container">
+            <div class="swipe-indicator"></div>
+            <div class="p-4">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white">Add New Employee</h3>
+                    <button onclick="closeAddEmployeeModal()" class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg">
+                        <span class="material-icons-round">close</span>
+                    </button>
+                </div>
+
+                <form th:action="@{/mobile/onboarding}" method="post">
+                    <!-- Personal Information -->
+                    <div class="mb-6">
+                        <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Personal Information</h4>
+                        <div class="space-y-3">
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        First Name <span class="text-red-500">*</span>
+                                    </label>
+                                    <input type="text" name="firstName" class="form-input" placeholder="John" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        Last Name <span class="text-red-500">*</span>
+                                    </label>
+                                    <input type="text" name="lastName" class="form-input" placeholder="Doe" required>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    Email Address <span class="text-red-500">*</span>
+                                </label>
+                                <input type="email" name="email" class="form-input" placeholder="john.doe@company.com" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    Phone Number
+                                </label>
+                                <input type="text" name="phoneNumber" class="form-input" placeholder="+1 (555) 000-0000">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Employment Details -->
+                    <div class="mb-6">
+                        <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Employment Details</h4>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    Employment Status <span class="text-red-500">*</span>
+                                </label>
+                                <select name="employmentStatus" class="form-input" required>
+                                    <option value="ONBOARDING">Onboarding</option>
+                                    <option value="ACTIVE">Active</option>
+                                    <option value="PROBATION">Probation</option>
+                                    <option value="ON_LEAVE">On Leave</option>
+                                    <option value="TERMINATED">Terminated</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    Department <span class="text-red-500">*</span>
+                                </label>
+                                <select name="departmentId" class="form-input" required>
+                                    <option value="">Select Department</option>
+                                    <option th:each="dept : ${departments}" th:value="${dept.id}" th:text="${dept.name}">Engineering</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    Job Grade <span class="text-red-500">*</span>
+                                </label>
+                                <select id="mobileJobGradeId" class="form-input">
+                                    <option value="">Select Job Grade</option>
+                                    <option th:each="grade : ${jobGrades}" th:value="${grade.id}" th:text="${grade.name}">Grade 1</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    Job Step <span class="text-red-500">*</span>
+                                </label>
+                                <select name="jobStepId" id="mobileJobStepId" class="form-input" required disabled>
+                                    <option value="">Select Job Step</option>
+                                </select>
+                                <p class="text-xs text-gray-500 mt-1">Select a job grade first</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    Pay Group <span class="text-red-500">*</span>
+                                </label>
+                                <select name="payGroupId" class="form-input" required>
+                                    <option value="">Select Pay Group</option>
+                                    <option th:each="pg : ${payGroups}" th:value="${pg.id}" th:text="${pg.name}">Executive</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <button type="button" onclick="closeAddEmployeeModal()"
+                                class="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 font-medium">
+                            Cancel
+                        </button>
+                        <button type="submit"
+                                class="flex-1 px-4 py-3 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700">
+                            Add Employee
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Employee Modal -->
+    <div id="viewEmployeeModal" class="modal-overlay">
+        <div class="modal-container">
+            <div class="swipe-indicator"></div>
+            <div class="p-4">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white" id="viewEmployeeName">Employee Details</h3>
+                    <button onclick="closeViewEmployeeModal()" class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg">
+                        <span class="material-icons-round">close</span>
+                    </button>
+                </div>
+                <div class="space-y-3 text-gray-700 dark:text-gray-300" id="viewEmployeeDetails">
+                    <!-- Employee details will be populated here -->
+                </div>
+                <div class="mt-6">
+                    <button onclick="closeViewEmployeeModal()"
+                            class="w-full px-4 py-3 bg-primary-600 text-white rounded-lg font-medium">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        // Server-side data
+        const jobGrades = [[${jobGrades}]] || [];
+        const departments = [[${departments}]] || [];
+        const payGroups = [[${payGroups}]] || [];
+
+        // Build jobSteps array
+        let jobSteps = [];
+        if (Array.isArray(jobGrades) && jobGrades.length > 0) {
+            jobGrades.forEach(grade => {
+                const stepsList = grade.steps || grade.jobSteps || [];
+                if (Array.isArray(stepsList) && stepsList.length > 0) {
+                    stepsList.forEach(step => {
+                        jobSteps.push({
+                            id: step.id,
+                            gradeId: grade.id,
+                            display: grade.name + ' - ' + step.name
+                        });
+                    });
+                }
+            });
+        }
+
+        // Modal functions
+        function openAddEmployeeModal() {
+            document.getElementById('addEmployeeModal').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeAddEmployeeModal() {
+            document.getElementById('addEmployeeModal').classList.remove('active');
+            document.body.style.overflow = 'auto';
+        }
+
+        function openViewEmployeeModal() {
+            document.getElementById('viewEmployeeModal').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeViewEmployeeModal() {
+            document.getElementById('viewEmployeeModal').classList.remove('active');
+            document.body.style.overflow = 'auto';
+        }
+
+        // Employee functions
+        window.viewEmployee = function(id) {
+            // Implement view employee functionality
+            openViewEmployeeModal();
+        };
+
+        window.editEmployee = function(id) {
+            // Implement edit employee functionality
+            console.log('Edit employee', id);
+        };
+
+        // Initialize after DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            // Job grade -> job step population
+            const gradeSelect = document.getElementById('mobileJobGradeId');
+            const stepSelect = document.getElementById('mobileJobStepId');
+
+            if (gradeSelect && stepSelect) {
+                gradeSelect.addEventListener('change', function() {
+                    const selectedGradeId = this.value;
+
+                    stepSelect.innerHTML = '<option value="">Select Job Step</option>';
+                    stepSelect.disabled = true;
+
+                    if (!selectedGradeId) return;
+
+                    const filteredSteps = jobSteps.filter(step => String(step.gradeId) === String(selectedGradeId));
+
+                    if (filteredSteps.length === 0) {
+                        const option = document.createElement('option');
+                        option.value = '';
+                        option.textContent = 'No steps available for this grade';
+                        option.disabled = true;
+                        stepSelect.appendChild(option);
+                    } else {
+                        filteredSteps.forEach(step => {
+                            const option = document.createElement('option');
+                            option.value = step.id;
+                            option.textContent = step.display;
+                            stepSelect.appendChild(option);
+                        });
+                        stepSelect.disabled = false;
+                    }
+                });
+            }
+        });
+
+        // Close modals when clicking overlay
+        document.querySelectorAll('.modal-overlay').forEach(modal => {
+            modal.addEventListener('click', (e) => {
+                if (e.target.classList.contains('modal-overlay')) {
+                    modal.classList.remove('active');
+                    document.body.style.overflow = 'auto';
+                }
+            });
+        });
+
+        // Touch gestures for modals
+        document.querySelectorAll('.modal-container').forEach(container => {
+            let startY = 0;
+            let currentY = 0;
+            let isDragging = false;
+
+            container.addEventListener('touchstart', (e) => {
+                startY = e.touches[0].clientY;
+                isDragging = true;
+            });
+
+            container.addEventListener('touchmove', (e) => {
+                if (!isDragging) return;
+                currentY = e.touches[0].clientY;
+                const deltaY = currentY - startY;
+
+                if (deltaY > 0) {
+                    container.style.transform = `translateY(${deltaY}px)`;
+                }
+            });
+
+            container.addEventListener('touchend', () => {
+                if (!isDragging) return;
+                isDragging = false;
+
+                const deltaY = currentY - startY;
+                if (deltaY > 100) {
+                    container.closest('.modal-overlay').classList.remove('active');
+                    document.body.style.overflow = 'auto';
+                }
+                container.style.transform = '';
+            });
+        });
+        /*]]>*/
+    </script>
+
+</main>
+</body>
+</html>
