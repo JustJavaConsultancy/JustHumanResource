@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" xmlns:th="http://www.w3.org/1999/xhtml"
+      layout:decorate="layouts/mobileEmployeeLayout">
+<head>
+    <meta charset="UTF-8">
+    <title>Profile | JustHR Mobile</title>
+    <style>
+        .profile-section {
+            margin-bottom: 1rem;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        .dark .info-row {
+            border-bottom-color: #374151;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            font-size: 0.875rem;
+            color: #6b7280;
+            font-weight: 500;
+        }
+
+        .dark .info-label {
+            color: #9ca3af;
+        }
+
+        .info-value {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #111827;
+            text-align: right;
+        }
+
+        .dark .info-value {
+            color: #f3f4f6;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+
+        .section-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #111827;
+            display: flex;
+            align-items: center;
+        }
+
+        .dark .section-title {
+            color: #f3f4f6;
+        }
+
+        .edit-btn {
+            color: #2563eb;
+            font-size: 0.875rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+        }
+
+        .edit-btn:hover {
+            color: #1d4ed8;
+        }
+
+        .dark .edit-btn {
+            color: #60a5fa;
+        }
+
+        .dark .edit-btn:hover {
+            color: #93c5fd;
+        }
+
+        /* Mobile Modal Styles */
+        .mobile-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            z-index: 100;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+
+        .mobile-modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .mobile-modal-container {
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            background-color: white;
+            border-radius: 1rem 1rem 0 0;
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        .dark .mobile-modal-container {
+            background-color: #1f2937;
+        }
+
+        .mobile-modal-overlay.active .mobile-modal-container {
+            transform: translateY(0);
+        }
+
+        .modal-swipe-indicator {
+            width: 2rem;
+            height: 0.25rem;
+            background-color: #d1d5db;
+            border-radius: 9999px;
+            margin: 0.75rem auto 0;
+        }
+
+        .dark .modal-swipe-indicator {
+            background-color: #4b5563;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #6b7280;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+        }
+
+        .dark .form-label {
+            color: #9ca3af;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            background-color: white;
+            color: #111827;
+            font-size: 0.875rem;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .dark .form-input {
+            background-color: #374151;
+            border-color: #4b5563;
+            color: #f3f4f6;
+        }
+
+        .dark .form-input:focus {
+            border-color: #60a5fa;
+            box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.1);
+        }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 4rem;
+        }
+
+        .btn-primary {
+            background-color: #2563eb;
+            color: white;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            width: 100%;
+        }
+
+        .btn-primary:hover {
+            background-color: #1d4ed8;
+        }
+
+        .btn-secondary {
+            background-color: transparent;
+            color: #6b7280;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            border: 1px solid #d1d5db;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            width: 100%;
+        }
+
+        .btn-secondary:hover {
+            background-color: #f9fafb;
+        }
+
+        .dark .btn-secondary {
+            color: #d1d5db;
+            border-color: #4b5563;
+        }
+
+        .dark .btn-secondary:hover {
+            background-color: #374151;
+        }
+    </style>
+</head>
+<body>
+<main layout:fragment="content">
+
+    <!-- Profile Header -->
+    <div class="mobile-card p-4 mb-4">
+        <div class="flex items-center space-x-4">
+            <div class="relative">
+                <img src="https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=80&h=80&q=80"
+                     class="w-20 h-20 rounded-xl object-cover ring-2 ring-gray-200 dark:ring-gray-700">
+                <button id="editPhotoBtn" class="absolute bottom-0 right-0 bg-white dark:bg-gray-800 rounded-full p-1 shadow-md border border-gray-200 dark:border-gray-600">
+                    <span class="material-icons-round text-primary-600 dark:text-primary-400 text-sm">camera_alt</span>
+                </button>
+            </div>
+            <div class="flex-1">
+                <h3 class="text-xl font-bold text-gray-900 dark:text-white">Jane Okafor</h3>
+                <div class="flex flex-wrap gap-2 mt-2">
+                    <span class="badge badge-info">Grade 3 • Step 2</span>
+                    <span class="badge badge-success">Active</span>
+                </div>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1 flex items-center">
+                    <span class="material-icons-round text-xs mr-1">badge</span>
+                    EMP-2021-042
+                </p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <div class="text-center">
+                <p class="text-xs text-gray-500 dark:text-gray-400">Department</p>
+                <p class="font-semibold text-gray-900 dark:text-white">Marketing</p>
+            </div>
+            <div class="text-center">
+                <p class="text-xs text-gray-500 dark:text-gray-400">Date of Hire</p>
+                <p class="font-semibold text-gray-900 dark:text-white">12 Apr 2021</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Personal Information -->
+    <div class="mobile-card p-4 mb-4">
+        <div class="section-header">
+            <h4 class="section-title">
+                <span class="material-icons-round text-primary-600 dark:text-primary-400 mr-2">person_outline</span>
+                Personal Information
+            </h4>
+            <button id="editPersonalInfoBtn" class="edit-btn">
+                <span class="material-icons-round text-sm mr-1">edit</span>
+                Edit
+            </button>
+        </div>
+
+        <div class="profile-section">
+            <div class="info-row">
+                <span class="info-label">Full Name</span>
+                <span class="info-value">Jane Okafor</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Email</span>
+                <span class="info-value">jane.okafor@company.com</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Phone</span>
+                <span class="info-value">+234 801 234 5678</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Date of Birth</span>
+                <span class="info-value">15 May 1990</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Gender</span>
+                <span class="info-value">Female</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Marital Status</span>
+                <span class="info-value">Married</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Address</span>
+                <span class="info-value">14 Admiralty Way, Lekki Phase 1, Lagos</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Employment Details -->
+    <div class="mobile-card p-4 mb-4">
+        <div class="section-header">
+            <h4 class="section-title">
+                <span class="material-icons-round text-primary-600 dark:text-primary-400 mr-2">work_outline</span>
+                Employment Details
+            </h4>
+            <button id="editEmploymentBtn" class="edit-btn">
+                <span class="material-icons-round text-sm mr-1">edit</span>
+                Edit
+            </button>
+        </div>
+
+        <div class="profile-section">
+            <div class="info-row">
+                <span class="info-label">Employee Number</span>
+                <span class="info-value">EMP-2021-042</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Employment Status</span>
+                <span class="info-value"><span class="badge badge-success text-xs">Active</span> (Permanent)</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Job Title</span>
+                <span class="info-value">Marketing Specialist</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Department</span>
+                <span class="info-value">Marketing</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Grade / Step</span>
+                <span class="info-value">Grade 3 • Step 2</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Pay Group</span>
+                <span class="info-value">PG4 - Marketing</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Reports To</span>
+                <span class="info-value">Michael Adenuga</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Work Location</span>
+                <span class="info-value">Lagos HQ</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Compensation Summary -->
+    <div class="mobile-card p-4 mb-4">
+        <div class="section-header">
+            <h4 class="section-title">
+                <span class="material-icons-round text-primary-600 dark:text-primary-400 mr-2">payments</span>
+                Compensation
+            </h4>
+            <button class="edit-btn">
+                View Payslip
+                <span class="material-icons-round text-sm ml-1">arrow_forward</span>
+            </button>
+        </div>
+
+        <div class="space-y-3">
+            <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <span class="text-sm text-gray-600 dark:text-gray-300">Basic Salary</span>
+                <span class="font-semibold text-gray-900 dark:text-white">₦450,000</span>
+            </div>
+            <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <span class="text-sm text-gray-600 dark:text-gray-300">Gross Pay</span>
+                <span class="font-semibold text-green-600 dark:text-green-400">₦620,000</span>
+            </div>
+            <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <span class="text-sm text-gray-600 dark:text-gray-300">Net Pay</span>
+                <span class="font-semibold text-primary-600 dark:text-primary-400">₦540,000</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bank Details -->
+    <div class="mobile-card p-4 mb-4">
+        <div class="section-header">
+            <h4 class="section-title">
+                <span class="material-icons-round text-primary-600 dark:text-primary-400 mr-2">account_balance</span>
+                Bank Details
+            </h4>
+            <button id="editBankBtn" class="edit-btn">
+                <span class="material-icons-round text-sm mr-1">edit</span>
+                Edit
+            </button>
+        </div>
+
+        <div class="profile-section">
+            <div class="info-row">
+                <span class="info-label">Account Holder</span>
+                <span class="info-value">Jane Okafor</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Bank Name</span>
+                <span class="info-value">First Bank of Nigeria</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Account Number</span>
+                <span class="info-value">**** **** 3456</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Account Type</span>
+                <span class="info-value">Savings</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Emergency Contact -->
+    <div class="mobile-card p-4 mb-4">
+        <div class="section-header">
+            <h4 class="section-title">
+                <span class="material-icons-round text-primary-600 dark:text-primary-400 mr-2">contact_emergency</span>
+                Emergency Contact
+            </h4>
+            <button id="editEmergencyBtn" class="edit-btn">
+                <span class="material-icons-round text-sm mr-1">edit</span>
+                Edit
+            </button>
+        </div>
+
+        <div class="profile-section">
+            <div class="info-row">
+                <span class="info-label">Name</span>
+                <span class="info-value">Chidi Okafor</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Relationship</span>
+                <span class="info-value">Spouse</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Phone</span>
+                <span class="info-value">+234 802 345 6789</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Alt Phone</span>
+                <span class="info-value">+234 803 456 7890</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Email</span>
+                <span class="info-value">chidi.okafor@email.com</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Documents -->
+    <div class="mobile-card p-4 mb-4">
+        <div class="section-header">
+            <h4 class="section-title">
+                <span class="material-icons-round text-primary-600 dark:text-primary-400 mr-2">description</span>
+                Documents
+            </h4>
+            <button class="edit-btn">
+                View All
+                <span class="material-icons-round text-sm ml-1">arrow_forward</span>
+            </button>
+        </div>
+
+        <div class="space-y-2">
+            <a href="#" class="flex items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <span class="material-icons-round text-red-500 mr-3">picture_as_pdf</span>
+                <div class="flex-1">
+                    <p class="text-sm font-medium">Employment Contract.pdf</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">2.1 MB</p>
+                </div>
+                <span class="material-icons-round text-gray-400">download</span>
+            </a>
+            <a href="#" class="flex items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <span class="material-icons-round text-blue-500 mr-3">image</span>
+                <div class="flex-1">
+                    <p class="text-sm font-medium">ID Card.jpg</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">1.5 MB</p>
+                </div>
+                <span class="material-icons-round text-gray-400">download</span>
+            </a>
+            <a href="#" class="flex items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <span class="material-icons-round text-red-500 mr-3">description</span>
+                <div class="flex-1">
+                    <p class="text-sm font-medium">Tax Certificate.pdf</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">890 KB</p>
+                </div>
+                <span class="material-icons-round text-gray-400">download</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="mobile-card p-4 mb-6">
+        <div class="section-header">
+            <h4 class="section-title">
+                <span class="material-icons-round text-primary-600 dark:text-primary-400 mr-2">history</span>
+                Recent Activity
+            </h4>
+            <button class="edit-btn">
+                View All
+                <span class="material-icons-round text-sm ml-1">arrow_forward</span>
+            </button>
+        </div>
+
+        <div class="space-y-3">
+            <div class="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div class="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
+                    <span class="material-icons-round text-green-600 dark:text-green-400 text-sm">check</span>
+                </div>
+                <div class="flex-1">
+                    <p class="text-sm font-medium">Leave approved</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Annual PTO • 5 days (21–25 Mar 2025)</p>
+                </div>
+                <span class="text-xs text-gray-500">2 days ago</span>
+            </div>
+
+            <div class="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div class="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
+                    <span class="material-icons-round text-blue-600 dark:text-blue-400 text-sm">trending_up</span>
+                </div>
+                <div class="flex-1">
+                    <p class="text-sm font-medium">Promotion approved</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Grade 2 → Grade 3 • Step 2</p>
+                </div>
+                <span class="text-xs text-gray-500">01 Jun 2024</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== MOBILE MODALS ========== -->
+
+    <!-- Modal: Edit Photo -->
+    <div id="editPhotoModal" class="mobile-modal-overlay">
+        <div class="mobile-modal-container">
+            <div class="modal-swipe-indicator"></div>
+            <div class="p-4">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white">Update Profile Photo</h3>
+                    <button class="close-modal text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                        <span class="material-icons-round">close</span>
+                    </button>
+                </div>
+
+                <div class="text-center mb-6">
+                    <img src="https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=120&h=120&q=80"
+                         class="w-24 h-24 rounded-xl object-cover ring-4 ring-gray-100 dark:ring-gray-700 mx-auto mb-4">
+                    <label class="btn-primary cursor-pointer">
+                        Choose New Photo
+                        <input type="file" accept="image/*" class="hidden">
+                    </label>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">JPG, PNG or GIF up to 5MB</p>
+                </div>
+
+                <div class="flex space-x-3">
+                    <button class="btn-secondary close-modal">Cancel</button>
+                    <button class="btn-primary">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Edit Personal Information -->
+    <div id="editPersonalInfoModal" class="mobile-modal-overlay">
+        <div class="mobile-modal-container">
+            <div class="modal-swipe-indicator"></div>
+            <div class="p-4">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white">Edit Personal Information</h3>
+                    <button class="close-modal text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                        <span class="material-icons-round">close</span>
+                    </button>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="form-group">
+                        <label class="form-label">Full Name</label>
+                        <input type="text" value="Jane Okafor" class="form-input">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Email Address</label>
+                        <input type="email" value="jane.okafor@company.com" class="form-input">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Phone Number</label>
+                        <input type="tel" value="+234 801 234 5678" class="form-input">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Date of Birth</label>
+                        <input type="date" value="1990-05-15" class="form-input">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Gender</label>
+                        <select class="form-input">
+                            <option selected>Female</option>
+                            <option>Male</option>
+                            <option>Other</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Marital Status</label>
+                        <select class="form-input">
+                            <option>Single</option>
+                            <option selected>Married</option>
+                            <option>Divorced</option>
+                            <option>Widowed</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Residential Address</label>
+                        <textarea class="form-input form-textarea">14 Admiralty Way, Lekki Phase 1, Lagos</textarea>
+                    </div>
+                </div>
+
+                <div class="flex space-x-3 mt-6">
+                    <button class="btn-secondary close-modal">Cancel</button>
+                    <button class="btn-primary">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Edit Employment Details -->
+    <div id="editEmploymentModal" class="mobile-modal-overlay">
+        <div class="mobile-modal-container">
+            <div class="modal-swipe-indicator"></div>
+            <div class="p-4">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white">Edit Employment Details</h3>
+                    <button class="close-modal text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                        <span class="material-icons-round">close</span>
+                    </button>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="form-group">
+                        <label class="form-label">Employee Number</label>
+                        <input type="text" value="EMP-2021-042" readonly class="form-input bg-gray-100 dark:bg-gray-700">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Job Title</label>
+                        <input type="text" value="Marketing Specialist" class="form-input">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Department</label>
+                        <select class="form-input">
+                            <option selected>Marketing</option>
+                            <option>Engineering</option>
+                            <option>Sales</option>
+                            <option>Operations</option>
+                        </select>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="form-group">
+                            <label class="form-label">Job Grade</label>
+                            <select class="form-input">
+                                <option>Grade 1</option>
+                                <option>Grade 2</option>
+                                <option selected>Grade 3</option>
+                                <option>Grade 4</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Step Level</label>
+                            <select class="form-input">
+                                <option>Step 1</option>
+                                <option selected>Step 2</option>
+                                <option>Step 3</option>
+                                <option>Step 4</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Pay Group</label>
+                        <select class="form-input">
+                            <option selected>PG4 - Marketing</option>
+                            <option>PG1 - Executive</option>
+                            <option>PG2 - Engineering</option>
+                            <option>PG3 - Sales</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Reports To</label>
+                        <input type="text" value="Michael Adenuga" class="form-input">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Work Location</label>
+                        <input type="text" value="Lagos HQ" class="form-input">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Employment Status</label>
+                        <select class="form-input">
+                            <option selected>Active (Permanent)</option>
+                            <option>Probation</option>
+                            <option>Contract</option>
+                            <option>Intern</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex space-x-3 mt-6">
+                    <button class="btn-secondary close-modal">Cancel</button>
+                    <button class="btn-primary">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Edit Emergency Contact -->
+    <div id="editEmergencyModal" class="mobile-modal-overlay">
+        <div class="mobile-modal-container">
+            <div class="modal-swipe-indicator"></div>
+            <div class="p-4">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white">Edit Emergency Contact</h3>
+                    <button class="close-modal text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                        <span class="material-icons-round">close</span>
+                    </button>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="form-group">
+                        <label class="form-label">Full Name</label>
+                        <input type="text" value="Chidi Okafor" class="form-input">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Relationship</label>
+                        <select class="form-input">
+                            <option selected>Spouse</option>
+                            <option>Parent</option>
+                            <option>Sibling</option>
+                            <option>Friend</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Phone Number</label>
+                        <input type="tel" value="+234 802 345 6789" class="form-input">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Alternative Phone</label>
+                        <input type="tel" value="+234 803 456 7890" class="form-input">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Email Address</label>
+                        <input type="email" value="chidi.okafor@email.com" class="form-input">
+                    </div>
+                </div>
+
+                <div class="flex space-x-3 mt-6">
+                    <button class="btn-secondary close-modal">Cancel</button>
+                    <button class="btn-primary">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Edit Bank Details -->
+    <div id="editBankModal" class="mobile-modal-overlay">
+        <div class="mobile-modal-container">
+            <div class="modal-swipe-indicator"></div>
+            <div class="p-4">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white">Edit Bank Details</h3>
+                    <button class="close-modal text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                        <span class="material-icons-round">close</span>
+                    </button>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="form-group">
+                        <label class="form-label">Account Holder Name</label>
+                        <input type="text" value="Jane Okafor" class="form-input">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Bank Name</label>
+                        <input type="text" value="First Bank of Nigeria" class="form-input">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Account Number</label>
+                        <input type="text" value="**** **** 3456" class="form-input">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Account Type</label>
+                        <select class="form-input">
+                            <option selected>Savings</option>
+                            <option>Current</option>
+                            <option>Domiciliary</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex space-x-3 mt-6">
+                    <button class="btn-secondary close-modal">Cancel</button>
+                    <button class="btn-primary">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ========== MOBILE MODAL CONTROL ==========
+        const modals = {
+            editPhoto: document.getElementById('editPhotoModal'),
+            editPersonalInfo: document.getElementById('editPersonalInfoModal'),
+            editEmployment: document.getElementById('editEmploymentModal'),
+            editEmergency: document.getElementById('editEmergencyModal'),
+            editBank: document.getElementById('editBankModal')
+        };
+
+        // Open modal
+        function openModal(modal) {
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        // Close modal
+        function closeModal(modal) {
+            modal.classList.remove('active');
+            document.body.style.overflow = 'auto';
+        }
+
+        // Attach open events to buttons
+        document.getElementById('editPhotoBtn').addEventListener('click', (e) => {
+            e.preventDefault();
+            openModal(modals.editPhoto);
+        });
+        document.getElementById('editPersonalInfoBtn').addEventListener('click', (e) => {
+            e.preventDefault();
+            openModal(modals.editPersonalInfo);
+        });
+        document.getElementById('editEmploymentBtn').addEventListener('click', (e) => {
+            e.preventDefault();
+            openModal(modals.editEmployment);
+        });
+        document.getElementById('editEmergencyBtn').addEventListener('click', (e) => {
+            e.preventDefault();
+            openModal(modals.editEmergency);
+        });
+        document.getElementById('editBankBtn').addEventListener('click', (e) => {
+            e.preventDefault();
+            openModal(modals.editBank);
+        });
+
+        // Close modal via close buttons
+        document.querySelectorAll('.close-modal').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const modal = e.target.closest('.mobile-modal-overlay');
+                if (modal) closeModal(modal);
+            });
+        });
+
+        // Close when clicking overlay (background)
+        Object.values(modals).forEach(modal => {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    closeModal(modal);
+                }
+            });
+        });
+
+        // Prevent closing when clicking inside modal container
+        document.querySelectorAll('.mobile-modal-container').forEach(container => {
+            container.addEventListener('click', (e) => e.stopPropagation());
+        });
+
+        // Touch gestures for modal dismissal
+        (function() {
+            document.querySelectorAll('.mobile-modal-container').forEach(modalContainer => {
+                let startY = 0;
+                let currentY = 0;
+                let isDragging = false;
+
+                modalContainer.addEventListener('touchstart', (e) => {
+                    startY = e.touches[0].clientY;
+                    isDragging = true;
+                });
+
+                modalContainer.addEventListener('touchmove', (e) => {
+                    if (!isDragging) return;
+                    currentY = e.touches[0].clientY;
+                    const deltaY = currentY - startY;
+
+                    if (deltaY > 0) {
+                        modalContainer.style.transform = `translateY(${deltaY}px)`;
+                    }
+                });
+
+                modalContainer.addEventListener('touchend', () => {
+                    if (!isDragging) return;
+                    isDragging = false;
+
+                    const deltaY = currentY - startY;
+                    if (deltaY > 100) {
+                        const modal = modalContainer.closest('.mobile-modal-overlay');
+                        closeModal(modal);
+                    }
+                    modalContainer.style.transform = '';
+                });
+            });
+        })();
+    </script>
+
+</main>
+</body>
+</html>

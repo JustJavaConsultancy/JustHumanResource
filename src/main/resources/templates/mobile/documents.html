@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" xmlns:th="http://www.w3.org/1999/xhtml"
+      layout:decorate="layouts/mobileEmployeeLayout">
+<head>
+    <meta charset="UTF-8">
+    <title>Documents | JustHR Mobile</title>
+    <style>
+        .document-category-card {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            border: 1px solid #e2e8f0;
+            border-radius: 1rem;
+            padding: 1rem;
+            transition: all 0.2s ease;
+        }
+
+        .dark .document-category-card {
+            background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
+            border-color: #374151;
+        }
+
+        .document-category-card:active {
+            transform: scale(0.98);
+        }
+
+        .document-item {
+            background-color: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            transition: all 0.2s ease;
+        }
+
+        .dark .document-item {
+            background-color: #1f2937;
+            border-color: #374151;
+        }
+
+        .document-item:active {
+            transform: scale(0.98);
+            background-color: #f9fafb;
+        }
+
+        .dark .document-item:active {
+            background-color: #111827;
+        }
+
+        .filter-chip {
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .filter-chip.active {
+            background-color: #2563eb;
+            color: white;
+        }
+
+        .filter-chip:not(.active) {
+            background-color: #f3f4f6;
+            color: #6b7280;
+        }
+
+        .dark .filter-chip:not(.active) {
+            background-color: #374151;
+            color: #d1d5db;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            z-index: 100;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-container {
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            background-color: white;
+            border-radius: 1rem 1rem 0 0;
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        .dark .modal-container {
+            background-color: #1f2937;
+        }
+
+        .modal-overlay.active .modal-container {
+            transform: translateY(0);
+        }
+
+        .swipe-indicator {
+            width: 2rem;
+            height: 0.25rem;
+            background-color: #d1d5db;
+            border-radius: 9999px;
+            margin: 0.75rem auto 0;
+        }
+
+        .dark .swipe-indicator {
+            background-color: #4b5563;
+        }
+    </style>
+</head>
+<body>
+<main layout:fragment="content">
+
+    <!-- Document Summary -->
+    <div class="mobile-card p-4 mb-4">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-indigo-100 dark:bg-indigo-900/30 rounded-xl flex items-center justify-center">
+                    <span class="material-icons-round text-indigo-600 dark:text-indigo-400">folder</span>
+                </div>
+                <div>
+                    <h3 class="font-bold text-gray-900 dark:text-white">Document Center</h3>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">8 documents • 12.4 MB used</p>
+                </div>
+            </div>
+            <button class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg">
+                <span class="material-icons-round">more_vert</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Document Categories -->
+    <div class="grid grid-cols-2 gap-3 mb-4">
+        <div class="document-category-card">
+            <div class="flex items-center justify-between mb-2">
+                <div class="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+                    <span class="material-icons-round text-blue-600 dark:text-blue-400 text-lg">description</span>
+                </div>
+                <span class="text-xs text-gray-500 dark:text-gray-400">2 files</span>
+            </div>
+            <p class="font-semibold text-gray-900 dark:text-white">Contracts</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Employment • Offer</p>
+        </div>
+
+        <div class="document-category-card">
+            <div class="flex items-center justify-between mb-2">
+                <div class="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
+                    <span class="material-icons-round text-green-600 dark:text-green-400 text-lg">receipt</span>
+                </div>
+                <span class="text-xs text-gray-500 dark:text-gray-400">3 files</span>
+            </div>
+            <p class="font-semibold text-gray-900 dark:text-white">Tax & Finance</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Payslips • Tax Certs</p>
+        </div>
+
+        <div class="document-category-card">
+            <div class="flex items-center justify-between mb-2">
+                <div class="w-8 h-8 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
+                    <span class="material-icons-round text-purple-600 dark:text-purple-400 text-lg">badge</span>
+                </div>
+                <span class="text-xs text-gray-500 dark:text-gray-400">2 files</span>
+            </div>
+            <p class="font-semibold text-gray-900 dark:text-white">HR Documents</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">ID • Reviews</p>
+        </div>
+
+        <div class="document-category-card">
+            <div class="flex items-center justify-between mb-2">
+                <div class="w-8 h-8 bg-amber-100 dark:bg-amber-900/30 rounded-lg flex items-center justify-center">
+                    <span class="material-icons-round text-amber-600 dark:text-amber-400 text-lg">health_and_safety</span>
+                </div>
+                <span class="text-xs text-gray-500 dark:text-gray-400">1 file</span>
+            </div>
+            <p class="font-semibold text-gray-900 dark:text-white">Benefits</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Health Insurance</p>
+        </div>
+    </div>
+
+    <!-- Filter Chips -->
+    <div class="flex space-x-2 mb-4 overflow-x-auto pb-2">
+        <button class="filter-chip active">All</button>
+        <button class="filter-chip">Contracts</button>
+        <button class="filter-chip">Tax & Finance</button>
+        <button class="filter-chip">HR Docs</button>
+        <button class="filter-chip">Benefits</button>
+    </div>
+
+    <!-- Documents List -->
+    <div class="space-y-3 mb-6">
+        <!-- Employment Contract -->
+        <div class="document-item" onclick="openDocumentModal('Employment Contract')">
+            <div class="flex items-center space-x-3">
+                <span class="material-icons-round text-red-500 text-2xl">picture_as_pdf</span>
+                <div class="flex-1">
+                    <p class="font-medium text-gray-900 dark:text-white">Employment Contract.pdf</p>
+                    <div class="flex items-center justify-between mt-1">
+                        <span class="badge badge-success">Active</span>
+                        <span class="text-xs text-gray-500 dark:text-gray-400">1.2 MB • 12 Apr 2021</span>
+                    </div>
+                </div>
+                <div class="flex space-x-2">
+                    <button class="p-2 text-gray-400 hover:text-primary-600 rounded-lg">
+                        <span class="material-icons-round text-lg">visibility</span>
+                    </button>
+                    <button class="p-2 text-gray-400 hover:text-primary-600 rounded-lg">
+                        <span class="material-icons-round text-lg">download</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Offer Letter -->
+        <div class="document-item" onclick="openDocumentModal('Offer Letter')">
+            <div class="flex items-center space-x-3">
+                <span class="material-icons-round text-red-500 text-2xl">picture_as_pdf</span>
+                <div class="flex-1">
+                    <p class="font-medium text-gray-900 dark:text-white">Offer Letter.pdf</p>
+                    <div class="flex items-center justify-between mt-1">
+                        <span class="badge badge-success">Active</span>
+                        <span class="text-xs text-gray-500 dark:text-gray-400">0.8 MB • 01 Apr 2021</span>
+                    </div>
+                </div>
+                <div class="flex space-x-2">
+                    <button class="p-2 text-gray-400 hover:text-primary-600 rounded-lg">
+                        <span class="material-icons-round text-lg">visibility</span>
+                    </button>
+                    <button class="p-2 text-gray-400 hover:text-primary-600 rounded-lg">
+                        <span class="material-icons-round text-lg">download</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payslip -->
+        <div class="document-item" onclick="openDocumentModal('Payslip March 2025')">
+            <div class="flex items-center space-x-3">
+                <span class="material-icons-round text-red-500 text-2xl">picture_as_pdf</span>
+                <div class="flex-1">
+                    <p class="font-medium text-gray-900 dark:text-white">Payslip_Mar2025.pdf</p>
+                    <div class="flex items-center justify-between mt-1">
+                        <span class="badge badge-success">Current</span>
+                        <span class="text-xs text-gray-500 dark:text-gray-400">0.5 MB • 31 Mar 2025</span>
+                    </div>
+                </div>
+                <div class="flex space-x-2">
+                    <button class="p-2 text-gray-400 hover:text-primary-600 rounded-lg">
+                        <span class="material-icons-round text-lg">visibility</span>
+                    </button>
+                    <button class="p-2 text-gray-400 hover:text-primary-600 rounded-lg">
+                        <span class="material-icons-round text-lg">download</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tax Certificate -->
+        <div class="document-item" onclick="openDocumentModal('Tax Certificate 2024')">
+            <div class="flex items-center space-x-3">
+                <span class="material-icons-round text-red-500 text-2xl">picture_as_pdf</span>
+                <div class="flex-1">
+                    <p class="font-medium text-gray-900 dark:text-white">Tax_Certificate_2024.pdf</p>
+                    <div class="flex items-center justify-between mt-1">
+                        <span class="badge badge-neutral">Archived</span>
+                        <span class="text-xs text-gray-500 dark:text-gray-400">0.6 MB • 15 Jan 2025</span>
+                    </div>
+                </div>
+                <div class="flex space-x-2">
+                    <button class="p-2 text-gray-400 hover:text-primary-600 rounded-lg">
+                        <span class="material-icons-round text-lg">visibility</span>
+                    </button>
+                    <button class="p-2 text-gray-400 hover:text-primary-600 rounded-lg">
+                        <span class="material-icons-round text-lg">download</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ID Card -->
+        <div class="document-item" onclick="openDocumentModal('ID Card')">
+            <div class="flex items-center space-x-3">
+                <span class="material-icons-round text-blue-500 text-2xl">image</span>
+                <div class="flex-1">
+                    <p class="font-medium text-gray-900 dark:text-white">Employee_ID_Card.jpg</p>
+                    <div class="flex items-center justify-between mt-1">
+                        <span class="badge badge-success">Active</span>
+                        <span class="text-xs text-gray-500 dark:text-gray-400">2.3 MB • 20 Apr 2021</span>
+                    </div>
+                </div>
+                <div class="flex space-x-2">
+                    <button class="p-2 text-gray-400 hover:text-primary-600 rounded-lg">
+                        <span class="material-icons-round text-lg">visibility</span>
+                    </button>
+                    <button class="p-2 text-gray-400 hover:text-primary-600 rounded-lg">
+                        <span class="material-icons-round text-lg">download</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Performance Review -->
+        <div class="document-item" onclick="openDocumentModal('Performance Review')">
+            <div class="flex items-center space-x-3">
+                <span class="material-icons-round text-red-500 text-2xl">picture_as_pdf</span>
+                <div class="flex-1">
+                    <p class="font-medium text-gray-900 dark:text-white">Performance_Review_Q4_2024.pdf</p>
+                    <div class="flex items-center justify-between mt-1">
+                        <span class="badge badge-success">Current</span>
+                        <span class="text-xs text-gray-500 dark:text-gray-400">0.9 MB • 10 Jan 2025</span>
+                    </div>
+                </div>
+                <div class="flex space-x-2">
+                    <button class="p-2 text-gray-400 hover:text-primary-600 rounded-lg">
+                        <span class="material-icons-round text-lg">visibility</span>
+                    </button>
+                    <button class="p-2 text-gray-400 hover:text-primary-600 rounded-lg">
+                        <span class="material-icons-round text-lg">download</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Health Insurance -->
+        <div class="document-item" onclick="openDocumentModal('Health Insurance')">
+            <div class="flex items-center space-x-3">
+                <span class="material-icons-round text-red-500 text-2xl">picture_as_pdf</span>
+                <div class="flex-1">
+                    <p class="font-medium text-gray-900 dark:text-white">Health_Insurance_Certificate.pdf</p>
+                    <div class="flex items-center justify-between mt-1">
+                        <span class="badge badge-success">Active</span>
+                        <span class="text-xs text-gray-500 dark:text-gray-400">1.1 MB • 01 Jan 2025</span>
+                    </div>
+                </div>
+                <div class="flex space-x-2">
+                    <button class="p-2 text-gray-400 hover:text-primary-600 rounded-lg">
+                        <span class="material-icons-round text-lg">visibility</span>
+                    </button>
+                    <button class="p-2 text-gray-400 hover:text-primary-600 rounded-lg">
+                        <span class="material-icons-round text-lg">download</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Training Certificate -->
+        <div class="document-item" onclick="openDocumentModal('Training Certificate')">
+            <div class="flex items-center space-x-3">
+                <span class="material-icons-round text-red-500 text-2xl">picture_as_pdf</span>
+                <div class="flex-1">
+                    <p class="font-medium text-gray-900 dark:text-white">Digital_Marketing_Certificate.pdf</p>
+                    <div class="flex items-center justify-between mt-1">
+                        <span class="badge badge-neutral">Archived</span>
+                        <span class="text-xs text-gray-500 dark:text-gray-400">1.5 MB • 15 Aug 2024</span>
+                    </div>
+                </div>
+                <div class="flex space-x-2">
+                    <button class="p-2 text-gray-400 hover:text-primary-600 rounded-lg">
+                        <span class="material-icons-round text-lg">visibility</span>
+                    </button>
+                    <button class="p-2 text-gray-400 hover:text-primary-600 rounded-lg">
+                        <span class="material-icons-round text-lg">download</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help Text -->
+    <div class="text-center text-xs text-gray-500 dark:text-gray-400 mb-6">
+        <span class="material-icons-round text-xs align-text-bottom mr-1">lock</span>
+        Documents are provided by HR. Contact HR support for missing documents.
+    </div>
+
+    <!-- Document Preview Modal -->
+    <div id="documentModal" class="modal-overlay">
+        <div class="modal-container">
+            <div class="swipe-indicator"></div>
+            <div class="p-4">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center space-x-3">
+                        <span class="material-icons-round text-red-500 text-2xl" id="modalIcon">picture_as_pdf</span>
+                        <h3 class="font-bold text-gray-900 dark:text-white" id="modalTitle">Employment Contract.pdf</h3>
+                    </div>
+                    <button onclick="closeDocumentModal()" class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg">
+                        <span class="material-icons-round">close</span>
+                    </button>
+                </div>
+
+                <!-- Document Preview Placeholder -->
+                <div class="bg-gray-100 dark:bg-gray-800 rounded-lg p-8 mb-4 flex flex-col items-center justify-center min-h-[200px] border border-gray-200 dark:border-gray-700">
+                    <span class="material-icons-round text-gray-400 text-4xl mb-3">description</span>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-2 text-center">Document preview not available in demo</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 text-center" id="modalFileInfo">File: Employment_Contract.pdf • 1.2 MB</p>
+                </div>
+
+                <!-- Document Info -->
+                <div class="grid grid-cols-2 gap-3 mb-4 text-sm">
+                    <div>
+                        <p class="text-xs text-gray-500">Category</p>
+                        <p class="font-medium" id="modalCategory">Contracts</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500">Uploaded</p>
+                        <p class="font-medium" id="modalDate">12 Apr 2021</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500">Status</p>
+                        <p id="modalStatus"><span class="badge badge-success">Active</span></p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500">Size</p>
+                        <p class="font-medium" id="modalSize">1.2 MB</p>
+                    </div>
+                </div>
+
+                <div class="flex space-x-3">
+                    <button class="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-center">
+                        <span class="material-icons-round text-sm mr-2">download</span>
+                        Download
+                    </button>
+                    <button onclick="closeDocumentModal()" class="flex-1 px-4 py-3 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 flex items-center justify-center">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Document data for modal
+        const documentData = {
+            "Employment Contract": {
+                title: "Employment Contract.pdf",
+                filename: "Employment_Contract.pdf",
+                category: "Contracts",
+                date: "12 Apr 2021",
+                status: "Active",
+                statusClass: "badge-success",
+                size: "1.2 MB",
+                icon: "picture_as_pdf"
+            },
+            "Offer Letter": {
+                title: "Offer Letter.pdf",
+                filename: "Offer_Letter.pdf",
+                category: "Contracts",
+                date: "01 Apr 2021",
+                status: "Active",
+                statusClass: "badge-success",
+                size: "0.8 MB",
+                icon: "picture_as_pdf"
+            },
+            "Payslip March 2025": {
+                title: "Payslip_Mar2025.pdf",
+                filename: "Payslip_Mar2025.pdf",
+                category: "Tax & Finance",
+                date: "31 Mar 2025",
+                status: "Current",
+                statusClass: "badge-success",
+                size: "0.5 MB",
+                icon: "picture_as_pdf"
+            },
+            "Tax Certificate 2024": {
+                title: "Tax_Certificate_2024.pdf",
+                filename: "Tax_Certificate_2024.pdf",
+                category: "Tax & Finance",
+                date: "15 Jan 2025",
+                status: "Archived",
+                statusClass: "badge-neutral",
+                size: "0.6 MB",
+                icon: "picture_as_pdf"
+            },
+            "ID Card": {
+                title: "Employee_ID_Card.jpg",
+                filename: "Employee_ID_Card.jpg",
+                category: "HR Documents",
+                date: "20 Apr 2021",
+                status: "Active",
+                statusClass: "badge-success",
+                size: "2.3 MB",
+                icon: "image"
+            },
+            "Performance Review": {
+                title: "Performance_Review_Q4_2024.pdf",
+                filename: "Performance_Review_Q4_2024.pdf",
+                category: "HR Documents",
+                date: "10 Jan 2025",
+                status: "Current",
+                statusClass: "badge-success",
+                size: "0.9 MB",
+                icon: "picture_as_pdf"
+            },
+            "Health Insurance": {
+                title: "Health_Insurance_Certificate.pdf",
+                filename: "Health_Insurance_Certificate.pdf",
+                category: "Benefits",
+                date: "01 Jan 2025",
+                status: "Active",
+                statusClass: "badge-success",
+                size: "1.1 MB",
+                icon: "picture_as_pdf"
+            },
+            "Training Certificate": {
+                title: "Digital_Marketing_Certificate.pdf",
+                filename: "Digital_Marketing_Certificate.pdf",
+                category: "Others",
+                date: "15 Aug 2024",
+                status: "Archived",
+                statusClass: "badge-neutral",
+                size: "1.5 MB",
+                icon: "picture_as_pdf"
+            }
+        };
+
+        function openDocumentModal(docKey) {
+            const data = documentData[docKey] || documentData["Employment Contract"];
+            const modal = document.getElementById('documentModal');
+
+            document.getElementById('modalTitle').textContent = data.title;
+            document.getElementById('modalFileInfo').textContent = `File: ${data.filename} • ${data.size}`;
+            document.getElementById('modalCategory').textContent = data.category;
+            document.getElementById('modalDate').textContent = data.date;
+            document.getElementById('modalStatus').innerHTML = `<span class="badge ${data.statusClass}">${data.status}</span>`;
+            document.getElementById('modalSize').textContent = data.size;
+            document.getElementById('modalIcon').textContent = data.icon;
+
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeDocumentModal() {
+            const modal = document.getElementById('documentModal');
+            modal.classList.remove('active');
+            document.body.style.overflow = 'auto';
+        }
+
+        // Filter chips functionality
+        document.querySelectorAll('.filter-chip').forEach(chip => {
+            chip.addEventListener('click', function() {
+                document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+
+        // Close modal when clicking overlay
+        document.getElementById('documentModal').addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal-overlay')) {
+                closeDocumentModal();
+            }
+        });
+
+        // Touch gestures for modal
+        (function() {
+            let startY = 0;
+            let currentY = 0;
+            let isDragging = false;
+
+            const modalContainer = document.querySelector('#documentModal .modal-container');
+
+            modalContainer.addEventListener('touchstart', (e) => {
+                startY = e.touches[0].clientY;
+                isDragging = true;
+            });
+
+            modalContainer.addEventListener('touchmove', (e) => {
+                if (!isDragging) return;
+                currentY = e.touches[0].clientY;
+                const deltaY = currentY - startY;
+
+                if (deltaY > 0) {
+                    modalContainer.style.transform = `translateY(${deltaY}px)`;
+                }
+            });
+
+            modalContainer.addEventListener('touchend', () => {
+                if (!isDragging) return;
+                isDragging = false;
+
+                const deltaY = currentY - startY;
+                if (deltaY > 100) {
+                    closeDocumentModal();
+                }
+                modalContainer.style.transform = '';
+            });
+        })();
+    </script>
+
+</main>
+</body>
+</html>
