@@ -2,9 +2,12 @@ package com.justjava.humanresource.hr.entity;
 
 import com.justjava.humanresource.core.entity.BaseEntity;
 import com.justjava.humanresource.core.enums.RecordStatus;
+import com.justjava.humanresource.orgStructure.entity.Company;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.time.LocalDate;
 
 @Getter
 @Setter
@@ -21,6 +24,21 @@ public class Department extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private RecordStatus status = RecordStatus.ACTIVE;
+
+    /* ===== NEW FIELDS (SAFE EXTENSION) ===== */
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "company_id", nullable = false)
+    private Company company;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parent_department_id")
+    private Department parentDepartment;
+
+    @Column(nullable = false)
+    private LocalDate effectiveFrom;
+
+    private LocalDate effectiveTo;
 }
 
 
