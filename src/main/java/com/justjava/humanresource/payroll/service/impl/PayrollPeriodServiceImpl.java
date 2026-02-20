@@ -181,6 +181,12 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
                 Map.of("periodId", periodId)
         );
     }
+    public void initiateClosePeriod() {
+        runtimeService.startProcessInstanceByKey(
+                "payrollPeriodCloseProcess",
+                Map.of("periodId", getCurrentOpenPeriod().getId())
+        );
+    }
     @Override
     public boolean isPayrollDateInOpenPeriod(LocalDate payrollDate) {
 
