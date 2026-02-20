@@ -36,6 +36,7 @@ public class PayrollController {
     @Autowired
     private PaySlipServiceImpl paySlipService;
 
+
     @GetMapping("/payroll")
     public String getPayroll(Model model) {
         List<Allowance> allowances = payrollSetupService.getActiveAllowances();
@@ -49,7 +50,8 @@ public class PayrollController {
                 .stream()
                 .filter(Deduction:: isStatutory)
                 .toList();
-        System.out.println("Allowance amount is " + allowances.size() + "Deduction amount is " + deductions.size());
+        System.out.println("The payroll is " + payrollPeriodService.getPeriodStatusForDate(LocalDate.now()));
+        model.addAttribute("payrollStatus", payrollPeriodService.getPeriodStatusForDate(LocalDate.now()));
         model.addAttribute("allowances", allowances.size());
         model.addAttribute("taxableAllowances", taxableAllowances.size());
         model.addAttribute("saturatoryDeductions", saturatoryDeductions.size());
@@ -217,6 +219,11 @@ public class PayrollController {
     public String openPayroll() {
         YearMonth yearMonth = YearMonth.now();
         payrollPeriodService.openPeriod(yearMonth);
+        return "redirect:/payroll";
+    }
+    @PostMapping("/setup/payroll/close")
+    public String closePayroll() {
+        payrollPeriodService.initiateClosePeriod();
         return "redirect:/payroll";
     }
 }

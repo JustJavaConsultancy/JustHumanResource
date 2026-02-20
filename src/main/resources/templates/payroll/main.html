@@ -67,6 +67,32 @@
 </head>
 <body>
 <main layout:fragment="content">
+    <!-- Payroll status banner (CLOSED) -->
+    <div th:if="${payrollStatus == null or payrollStatus == T(com.justjava.humanresource.payroll.entity.PayrollPeriodStatus).CLOSED}" class="mb-6 p-4 rounded-lg border flex items-center justify-between transition-colors duration-200 bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800">
+        <div class="flex items-center space-x-3">
+            <span id="periodStatusIcon" class="material-icons-round text-red-600 dark:text-red-400">lock</span>
+            <div>
+                <p class="font-medium text-gray-800 dark:text-gray-200">Payroll Period is CLOSED.</p>
+                <p class="text-sm text-gray-600 dark:text-gray-400">All payroll actions are disabled. Open the period to start processing.</p>
+            </div>
+        </div>
+        <!-- Open button triggers confirmation modal with 'activate' action -->
+        <button onclick="openToggleModal('activate')" class="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors">Open Period</button>
+    </div>
+
+    <!-- Payroll status banner (OPEN) -->
+    <div th:if="${payrollStatus == T(com.justjava.humanresource.payroll.entity.PayrollPeriodStatus).OPEN}" class="mb-6 p-4 rounded-lg border flex items-center justify-between transition-colors duration-200 bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800">
+        <div class="flex items-center space-x-3">
+            <span class="material-icons-round text-green-600 dark:text-green-400">lock_open</span>
+            <div>
+                <p id="periodStatusMessage" class="font-medium text-gray-800 dark:text-gray-200">Payroll Period is OPEN.</p>
+                <p id="periodStatusSubtext" class="text-sm text-gray-600 dark:text-gray-400">You can now process payroll. Click to close the period when finished.</p>
+            </div>
+        </div>
+        <!-- Close button triggers confirmation modal with 'deactivate' action -->
+        <button onclick="openToggleModal('deactivate')" class="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors">Close Period</button>
+    </div>
+
     <!-- Stats Cards -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6">
@@ -105,27 +131,6 @@
             <p class="text-gray-600 dark:text-gray-400 text-sm">Net Payroll</p>
             <div class="mt-3"><div class="flex justify-between text-xs"><span class="text-gray-500">Gross: ₦458,240</span><span class="font-medium">Tax: ₦68,736</span></div></div>
         </div>
-    </div>
-
-    <!-- Clean Status Banner -->
-    <div th:if="${payrollActive}" class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-4 mb-6 flex items-center justify-between">
-        <div class="flex items-center space-x-3">
-            <span class="material-icons-round text-green-600 dark:text-green-400">check_circle</span>
-            <span class="text-green-800 dark:text-green-200 font-medium">Payroll period is open – all processing is enabled.</span>
-        </div>
-        <button onclick="openToggleModal('deactivate')" class="px-4 py-2 bg-white dark:bg-gray-800 border border-green-300 dark:border-green-700 text-green-700 dark:text-green-300 rounded-lg text-sm font-medium hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors flex items-center space-x-1">
-            <span>Close period</span>
-        </button>
-    </div>
-
-    <div th:unless="${payrollActive}" class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 mb-6 flex items-center justify-between">
-        <div class="flex items-center space-x-3">
-            <span class="material-icons-round text-blue-600 dark:text-blue-400">info</span>
-            <span class="text-blue-800 dark:text-blue-200 font-medium">Payroll period is not open – no processing can be performed.</span>
-        </div>
-        <button onclick="openToggleModal('activate')" class="px-4 py-2 bg-white dark:bg-gray-800 border border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300 rounded-lg text-sm font-medium hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors flex items-center space-x-1">
-            <span>Open period</span>
-        </button>
     </div>
 
     <!-- Quick Actions + Run Payroll button -->
@@ -295,7 +300,7 @@
         </div>
     </div>
 
-    <!-- Toggle Payroll Status Modal (Clean confirmation dialog) -->
+    <!-- Toggle Payroll Status Modal (Clean professional confirmation dialog) -->
     <div id="togglePayrollModal" class="fixed inset-0 z-50 hidden">
         <div class="modal-backdrop fixed inset-0"></div>
         <div class="fixed inset-0 flex items-center justify-center p-4">
@@ -310,11 +315,12 @@
                 </div>
                 <div class="p-6">
                     <p id="toggleModalMessage" class="text-gray-600 dark:text-gray-400 mb-6">Are you sure you want to change payroll status?</p>
-                    <form th:action="@{/setup/payroll/open}" method="post" onsubmit="disableSubmitButton(this)">
-                    <div class="flex justify-end space-x-3">
-                        <button onclick="closeModal('togglePayrollModal')" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">Cancel</button>
-                        <button id="toggleConfirmBtn" type="submit" class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">Confirm</button>
-                    </div>
+                    <!-- Dynamic form: action set by JavaScript, includes CSRF automatically if using Thymeleaf security -->
+                    <form id="togglePayrollForm" method="post" onsubmit="return disableSubmitButton(this);">
+                        <div class="flex justify-end space-x-3">
+                            <button type="button" onclick="closeModal('togglePayrollModal')" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">Cancel</button>
+                            <button id="toggleConfirmBtn" type="submit" class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">Confirm</button>
+                        </div>
                     </form>
                 </div>
             </div>
@@ -333,9 +339,8 @@
             document.body.style.overflow = 'auto';
         }
 
-
-        // Toggle payroll status logic
-        let currentAction = '';
+        // Toggle payroll status logic with dynamic modal configuration
+        let currentAction = ''; // 'activate' or 'deactivate'
 
         function openToggleModal(action) {
             currentAction = action;
@@ -343,30 +348,46 @@
             const title = document.getElementById('toggleModalTitle');
             const message = document.getElementById('toggleModalMessage');
             const confirmBtn = document.getElementById('toggleConfirmBtn');
+            const form = document.getElementById('togglePayrollForm');
 
             if (action === 'activate') {
                 title.innerText = 'Open Payroll Period';
                 message.innerText = 'Are you sure you want to open the payroll period? This will allow processing to begin.';
                 confirmBtn.className = 'px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700';
                 confirmBtn.innerText = 'Open Period';
-            } else {
+                // Set form action to open endpoint
+                form.action = '/setup/payroll/open';  // Adjust if needed: use th:action or context-relative
+            } else { // deactivate
                 title.innerText = 'Close Payroll Period';
                 message.innerText = 'Are you sure you want to close the payroll period? This will pause all processing.';
                 confirmBtn.className = 'px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600';
                 confirmBtn.innerText = 'Close Period';
+                // Set form action to close endpoint
+                form.action = '/setup/payroll/close'; // Adjust if needed
             }
+
             openModal('togglePayrollModal');
         }
-       function disableSubmitButton(form) {
-      const submitButton = form.querySelector('button[type="submit"]');
-      if (submitButton) {
-        submitButton.disabled = true;
-        submitButton.classList.add('opacity-50', 'cursor-not-allowed');
-        submitButton.innerHTML = 'Submitting...';
-      }
-      return true;
-    }
 
+        function disableSubmitButton(form) {
+            const submitButton = form.querySelector('button[type="submit"]');
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.classList.add('opacity-50', 'cursor-not-allowed');
+                submitButton.innerHTML = 'Submitting...';
+            }
+            return true; // Allow form submission
+        }
+
+        // Close modal when clicking backdrop (optional enhancement)
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('modal-backdrop')) {
+                const openModal = document.querySelector('.fixed.inset-0.z-50:not(.hidden)');
+                if (openModal) {
+                    closeModal(openModal.id);
+                }
+            }
+        });
     </script>
 </main>
 </body>

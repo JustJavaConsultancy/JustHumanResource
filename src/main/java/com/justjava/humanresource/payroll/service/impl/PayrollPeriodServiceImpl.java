@@ -95,6 +95,17 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
                         new IllegalStateException("No OPEN payroll period."));
     }
 
+    @Override
+    public PayrollPeriodStatus getPeriodStatusForDate(LocalDate date) {
+
+        return repository
+                .findByStartDateLessThanEqualAndEndDateGreaterThanEqual(
+                        date,
+                        date
+                )
+                .map(PayrollPeriod::getStatus)
+                .orElse(null);
+    }
     /* ============================================================
        VALIDATE PAYROLL DATE
        ============================================================ */
