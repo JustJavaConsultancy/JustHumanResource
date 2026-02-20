@@ -33,7 +33,7 @@ public class ClosePeriodDelegate implements JavaDelegate {
 */
 
 
-        payrollPeriodService.closeCurrentPeriodAndOpenNext();
+        payrollPeriodService.closeCurrentPeriod();
         auditService.log(
                 "PayrollPeriod",
                 periodId,
