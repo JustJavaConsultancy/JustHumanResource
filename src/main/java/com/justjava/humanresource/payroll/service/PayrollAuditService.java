@@ -25,7 +25,7 @@ public class PayrollAuditService {
         log.setEntityType(entityType);
         log.setEntityId(entityId);
         log.setAction(action);
-        log.setPerformedBy(performedBy);
+        log.setPerformedBy("HR");
         log.setPerformedRole(performedRole);
         log.setPerformedAt(LocalDateTime.now());
         log.setDetails(details);

@@ -37,23 +37,35 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
                 { throw new IllegalStateException(
                         "Another period is already OPEN."); });
 
-        repository.findByYearAndMonth(
+        repository.findByYearAndMonthAndStatus(
                 yearMonth.getYear(),
-                yearMonth.getMonthValue()
+                yearMonth.getMonthValue(),
+                PayrollPeriodStatus.OPEN
         ).ifPresent(p ->
         { throw new IllegalStateException(
                 "Period already exists."); });
 
-        PayrollPeriod period = new PayrollPeriod();
-        period.setYear(yearMonth.getYear());
-        period.setMonth(yearMonth.getMonthValue());
-        period.setStartDate(yearMonth.atDay(1));
-        period.setEndDate(yearMonth.atEndOfMonth());
-        period.setStatus(PayrollPeriodStatus.OPEN);
+        //PayrollPeriod currentOpen = getCurrentOpenPeriod();
+        YearMonth next =
+                YearMonth.of(yearMonth.getYear(), yearMonth.getMonth())
+                        .plusMonths(1);
 
-        return repository.save(period);
+        if(isNewSetup()){
+            next =YearMonth.of(yearMonth.getYear(), yearMonth.getMonth());
+        }
+
+        PayrollPeriod nextPeriod = new PayrollPeriod();
+        nextPeriod.setYear(next.getYear());
+        nextPeriod.setMonth(next.getMonthValue());
+        nextPeriod.setStartDate(next.atDay(1));
+        nextPeriod.setEndDate(next.atEndOfMonth());
+        nextPeriod.setStatus(PayrollPeriodStatus.OPEN);
+        return repository.save(nextPeriod);
     }
 
+    public boolean isNewSetup() {
+        return repository.count() == 0;
+    }
     /* ============================================================
        CLOSE PERIOD
        ============================================================ */
@@ -91,21 +103,26 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
 
         return repository
                 .findByStatus(PayrollPeriodStatus.OPEN)
-                .orElseThrow(() ->
-                        new IllegalStateException("No OPEN payroll period."));
+                .orElse(null);
     }
 
     @Override
     public PayrollPeriodStatus getPeriodStatusForDate(LocalDate date) {
 
-        return repository
-                .findByStartDateLessThanEqualAndEndDateGreaterThanEqual(
-                        date,
-                        date
-                )
-                .map(PayrollPeriod::getStatus)
-                .orElse(null);
-    }
+
+        PayrollPeriod period = getCurrentOpenPeriod();
+        if(period==null)
+            return null;
+        return period.getStatus();
+
+//        return repository
+//                .findByStartDateLessThanEqualAndEndDateGreaterThanEqual(
+//                        date,
+//                        date
+//                )
+//                .map(PayrollPeriod::getStatus)
+//                .orElse(null);
+   }
     /* ============================================================
        VALIDATE PAYROLL DATE
        ============================================================ */

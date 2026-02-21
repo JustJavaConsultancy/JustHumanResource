@@ -13,12 +13,14 @@ import java.util.Optional;
 
 public interface PayrollPeriodRepository extends JpaRepository<PayrollPeriod, Long> {
     Optional<PayrollPeriod> findByYearAndMonth(int year, int month);
+    Optional<PayrollPeriod> findByYearAndMonthAndStatus(int year, int month, PayrollPeriodStatus status);
     Optional<PayrollPeriod> findByStatus(PayrollPeriodStatus status);
     boolean existsByYearAndMonthAndStatus(int year, int month, PayrollPeriodStatus status);
     Optional<PayrollPeriod> findByStartDateLessThanEqualAndEndDateGreaterThanEqual(
             LocalDate start,
             LocalDate end
     );
+
 
 
 }

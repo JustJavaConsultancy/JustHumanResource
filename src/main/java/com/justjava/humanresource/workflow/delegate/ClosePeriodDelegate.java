@@ -38,7 +38,7 @@ public class ClosePeriodDelegate implements JavaDelegate {
                 "PayrollPeriod",
                 periodId,
                 "CLOSE",
-                approvedBy,
+                "HR",
                 "FINANCE",
                 "Period closed via approval workflow"
         );

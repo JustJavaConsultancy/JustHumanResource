@@ -114,6 +114,7 @@ public class OrganogramController {
     }
     @GetMapping("/companies/tree")
     public List<CompanyTreeDTO> getCompanyStructure() {
+
         return organogramService.getCompanyStructure();
     }
 
