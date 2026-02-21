@@ -34,8 +34,8 @@ public class DepartmentsController {
         model.addAttribute("employees", employees.size());
         model.addAttribute("departments", departments);
         model.addAttribute("totalDepartments", departments.size());
-        model.addAttribute("title","Department Management");
-        model.addAttribute("subTitle","Organize and manage company departments, teams, and hierarchies");
+        model.addAttribute("title","Company Organogram");
+        model.addAttribute("subTitle","Visual hierarchy · Reporting lines · Live data");
         return "departments/main";
     }
     @PostMapping("/addDepartment")
