@@ -9,6 +9,8 @@ import com.justjava.humanresource.hr.repository.PayGroupRepository;
 import org.mapstruct.*;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import java.util.List;
+
 @Mapper(
         componentModel = MappingConstants.ComponentModel.SPRING,
         unmappedTargetPolicy = ReportingPolicy.IGNORE
@@ -67,5 +69,11 @@ public abstract class EmployeeMapper {
         return payGroupRepository.findById(id)
                 .orElseThrow(() ->
                         new ResourceNotFoundException("PayGroup", id));
+    }
+
+    public List<EmployeeDTO> toDtoList(List<Employee> employees) {
+        return employees.stream()
+                .map(this::toDto)
+                .toList();
     }
 }

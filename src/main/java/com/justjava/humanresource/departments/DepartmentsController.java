@@ -35,7 +35,7 @@ public class DepartmentsController {
         model.addAttribute("departments", departments);
         model.addAttribute("totalDepartments", departments.size());
         model.addAttribute("title","Company Organogram");
-        model.addAttribute("subTitle","Visual hierarchy · Reporting lines · Live data");
+        model.addAttribute("subTitle","A comprehensive view of your organizational hierarchy, reporting lines, and dynamic workforce data");
         return "departments/main";
     }
     @PostMapping("/addDepartment")

@@ -6,6 +6,7 @@ import com.justjava.humanresource.hr.entity.Employee;
 import com.justjava.humanresource.hr.entity.PayGroup;
 
 import java.time.LocalDate;
+import java.util.List;
 
 public interface EmployeeService {
 
@@ -15,7 +16,7 @@ public interface EmployeeService {
 
     Employee createEmployee(EmployeeDTO employee);
     EmployeeDTO createAndActivateEmployee(EmployeeDTO dto);
-
+    List<EmployeeDTO> getAllEmployees();
     Employee getByEmployeeNumber(String employeeNumber);
 
     /* =========================

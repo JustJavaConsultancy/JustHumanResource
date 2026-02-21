@@ -5,97 +5,86 @@
       layout:decorate="~{layout}">
 <head>
   <meta charset="UTF-8">
-  <title>Title</title>
+  <title>Organogram</title>
   <script>
     tailwind.config = {
-        darkMode: "class",
-        theme: {
-            extend: {
-                colors: {
-                    primary: { 50: '#eff6ff', 100: '#dbeafe', 200: '#bfdbfe', 300: '#93c5fd', 400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8', 800: '#1e40af', 900: '#1e3a8a' },
-                    secondary: { 50: '#f8fafc', 100: '#f1f5f9', 200: '#e2e8f0', 300: '#cbd5e1', 400: '#94a3b8', 500: '#64748b', 600: '#475569', 700: '#334155', 800: '#1e293b', 900: '#0f172a' }
-                },
-                fontFamily: { 'sans': ['"DM Sans"', 'system-ui', 'sans-serif'], 'mono': ['"DM Mono"', 'monospace'] }
-            }
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            primary: { 50:'#eff6ff',100:'#dbeafe',200:'#bfdbfe',300:'#93c5fd',400:'#60a5fa',500:'#3b82f6',600:'#2563eb',700:'#1d4ed8',800:'#1e40af',900:'#1e3a8a' },
+            secondary:{ 50:'#f8fafc',100:'#f1f5f9',200:'#e2e8f0',300:'#cbd5e1',400:'#94a3b8',500:'#64748b',600:'#475569',700:'#334155',800:'#1e293b',900:'#0f172a' }
+          },
+          fontFamily: { sans:['"DM Sans"','system-ui','sans-serif'], mono:['"DM Mono"','monospace'] }
         }
+      }
     };
   </script>
   <style>
     * { font-family: 'DM Sans', sans-serif; }
     body { overflow-x: clip; }
 
-    .sidebar-item { transition: all 0.18s ease; position: relative; }
-    .sidebar-item.active { background-color: rgba(37,99,235,0.08); color: #2563eb; border-left: 3px solid #2563eb; }
-    .sidebar-item.active .material-icons-round { color: #2563eb; }
-    .dark .sidebar-item.active { background-color: rgba(59,130,246,0.18); }
-    .sidebar-container { position: fixed; top: 0; left: 0; height: 100vh; width: 16rem; z-index: 40; overflow-y: auto; }
-    .main-content { margin-left: 16rem; width: calc(100% - 16rem); min-height: 100vh; }
-    @media (max-width: 1023px) {
-        .sidebar-container { transform: translateX(-100%); transition: transform 0.25s; }
-        .sidebar-container.open { transform: translateX(0); }
-        .main-content { margin-left: 0; width: 100%; }
+    /* ── Badges ── */
+    .badge { padding:2px 9px; font-size:.72rem; font-weight:600; border-radius:9999px; letter-spacing:.01em; }
+    .badge-success { background-color:#dcfce7; color:#15803d; }
+    .badge-info    { background-color:#dbeafe; color:#1d4ed8; }
+    .badge-orange  { background-color:#ffedd5; color:#c2410c; }
+    .badge-red     { background-color:#fee2e2; color:#b91c1c; }
+
+    /* ── Org chart ── */
+    .connector-v { width:2px; height:24px; background:#cbd5e1; margin:3px auto; }
+    .dark .connector-v { background:#475569; }
+    .v-up { width:2px; height:20px; background:#cbd5e1; margin-bottom:2px; }
+    .dark .v-up { background:#475569; }
+    .org-node-wrap { display:flex; flex-direction:column; align-items:center; position:relative; padding:0 10px; }
+    .org-children-row { display:flex; align-items:flex-start; justify-content:center; position:relative; gap:16px; }
+    .connector-h-line { position:absolute; top:0; height:2px; background:#cbd5e1; z-index:0; pointer-events:none; }
+    .dark .connector-h-line { background:#475569; }
+    .org-node { transition:all .18s ease; cursor:pointer; min-width:148px; position:relative; z-index:1; }
+    .org-node:hover { border-color:#3b82f6 !important; box-shadow:0 8px 24px -8px rgba(59,130,246,.35); transform:translateY(-2px); }
+    .org-tree-empty { display:flex !important; width:100% !important; justify-content:center !important; align-items:center !important; min-height:200px !important; padding:24px !important; }
+
+    /* ── Modals ── */
+    .modal-backdrop { background:rgba(0,0,0,.45); backdrop-filter:blur(5px); }
+    .modal-card { animation:scaleIn .18s ease-out; }
+    @keyframes scaleIn { from{opacity:0;transform:scale(.94) translateY(6px);}to{opacity:1;transform:scale(1) translateY(0);} }
+
+    /* ── Forms ── */
+    .form-input,.form-select {
+      border:1.5px solid #e2e8f0; border-radius:.55rem; padding:.58rem .8rem;
+      width:100%; transition:border-color .18s,box-shadow .18s;
+      background:white; font-size:.875rem;
     }
+    .dark .form-input,.dark .form-select { background:#1e293b; border-color:#334155; color:#f1f5f9; }
+    .form-input:focus,.form-select:focus { outline:none; border-color:#3b82f6; box-shadow:0 0 0 3px rgba(59,130,246,.12); }
+    .form-label { font-size:.8rem; font-weight:600; color:#475569; margin-bottom:4px; display:block; letter-spacing:.01em; }
+    .dark .form-label { color:#94a3b8; }
 
-    .badge { padding: 2px 9px; font-size: 0.72rem; font-weight: 600; border-radius: 9999px; letter-spacing: 0.01em; }
-    .badge-success { background-color: #dcfce7; color: #15803d; }
-    .badge-info    { background-color: #dbeafe; color: #1d4ed8; }
-    .badge-orange  { background-color: #ffedd5; color: #c2410c; }
-    .badge-red     { background-color: #fee2e2; color: #b91c1c; }
+    /* ── Toast ── */
+    #toast { transition:opacity .25s,transform .25s; }
+    #toast.hidden { opacity:0; pointer-events:none; transform:translateY(8px); }
 
-    .connector-v { width: 2px; height: 24px; background: #cbd5e1; margin: 3px auto; }
-    .dark .connector-v { background: #475569; }
-    .v-up { width: 2px; height: 20px; background: #cbd5e1; margin-bottom: 2px; }
-    .dark .v-up { background: #475569; }
-    .org-node-wrap { display: flex; flex-direction: column; align-items: center; position: relative; padding: 0 10px; }
-    .org-children-row { display: flex; align-items: flex-start; justify-content: center; position: relative; gap: 16px; }
-    .connector-h-line { position: absolute; top: 0; height: 2px; background: #cbd5e1; z-index: 0; pointer-events: none; }
-    .dark .connector-h-line { background: #475569; }
-    .org-node { transition: all 0.18s ease; cursor: pointer; min-width: 148px; position: relative; z-index: 1; }
-    .org-node:hover { border-color: #3b82f6 !important; box-shadow: 0 8px 24px -8px rgba(59,130,246,0.35); transform: translateY(-2px); }
+    /* ── Alerts ── */
+    .api-error { background:#fef2f2; border:1px solid #fca5a5; color:#b91c1c; border-radius:.5rem; padding:.6rem .9rem; font-size:.8rem; }
+    .dark .api-error { background:#450a0a; border-color:#7f1d1d; color:#fca5a5; }
 
-    /* Empty state for org chart */
-    .org-tree-empty {
-        display: flex !important;
-        width: 100% !important;
-        justify-content: center !important;
-        align-items: center !important;
-        min-height: 200px !important;
-        padding: 24px !important;
-    }
+    /* ── Reporting tree ── */
+    .rep-node { border-left:2px solid #3b82f6; padding-left:12px; margin-left:8px; }
+    .rep-root { border-left:none; padding-left:0; margin-left:0; }
 
-    .modal-backdrop { background: rgba(0,0,0,0.45); backdrop-filter: blur(5px); }
-    .modal-card { animation: scaleIn 0.18s ease-out; }
-    @keyframes scaleIn { from { opacity:0; transform:scale(0.94) translateY(6px); } to { opacity:1; transform:scale(1) translateY(0); } }
+    /* ── Skeleton loader ── */
+    .skeleton { background:linear-gradient(90deg,#e2e8f0 25%,#f1f5f9 50%,#e2e8f0 75%); background-size:200%; animation:shimmer 1.4s infinite; border-radius:6px; }
+    @keyframes shimmer { from{background-position:200% 0;}to{background-position:-200% 0;} }
 
-    .form-input, .form-select {
-        border: 1.5px solid #e2e8f0; border-radius: 0.55rem; padding: 0.58rem 0.8rem;
-        width: 100%; transition: border-color 0.18s, box-shadow 0.18s;
-        background: white; font-size: 0.875rem;
-    }
-    .dark .form-input, .dark .form-select { background: #1e293b; border-color: #334155; color: #f1f5f9; }
-    .form-input:focus, .form-select:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.12); }
-    .form-label { font-size: 0.8rem; font-weight: 600; color: #475569; margin-bottom: 4px; display: block; letter-spacing: 0.01em; }
-    .dark .form-label { color: #94a3b8; }
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width:5px; height:5px; }
+    ::-webkit-scrollbar-track { background:transparent; }
+    ::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:10px; }
+    .dark ::-webkit-scrollbar-thumb { background:#475569; }
 
-    #toast { transition: opacity 0.25s, transform 0.25s; }
-    #toast.hidden { opacity: 0; pointer-events: none; transform: translateY(8px); }
-
-    .api-error { background: #fef2f2; border: 1px solid #fca5a5; color: #b91c1c; border-radius: 0.5rem; padding: 0.6rem 0.9rem; font-size: 0.8rem; }
-    .dark .api-error { background: #450a0a; border-color: #7f1d1d; color: #fca5a5; }
-
-    .rep-node { border-left: 2px solid #3b82f6; padding-left: 12px; margin-left: 8px; }
-    .rep-root { border-left: none; padding-left: 0; margin-left: 0; }
-
-    .skeleton { background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%); background-size: 200%; animation: shimmer 1.4s infinite; border-radius: 6px; }
-    @keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
-
-    ::-webkit-scrollbar { width: 5px; height: 5px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-    .dark ::-webkit-scrollbar-thumb { background: #475569; }
-
-    .code-tag { font-family: 'DM Mono', monospace; font-size: 0.72rem; background: #f1f5f9; padding: 1px 6px; border-radius: 4px; color: #475569; }
-    .dark .code-tag { background: #334155; color: #94a3b8; }
+    /* ── Code tag ── */
+    .code-tag { font-family:'DM Mono',monospace; font-size:.72rem; background:#f1f5f9; padding:1px 6px; border-radius:4px; color:#475569; }
+    .dark .code-tag { background:#334155; color:#94a3b8; }
   </style>
 </head>
 <body>
@@ -134,13 +123,13 @@
     <div class="flex flex-wrap items-center justify-between gap-3 p-5 border-b border-gray-200 dark:border-gray-700">
       <div>
         <h3 class="font-bold text-base">Department Tree</h3>
-        <p class="text-xs text-gray-500 mt-0.5">Live from <span class="code-tag">GET /departments/tree</span> · Click node for details</p>
+        <p class="text-xs text-gray-500 mt-0.5">Click a node to view details</p>
       </div>
       <div class="flex items-center gap-3">
         <span id="chartLiveBadge" class="badge badge-info text-[10px] flex items-center gap-1"><span class="w-1.5 h-1.5 bg-blue-400 rounded-full"></span>Loading</span>
         <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-1 flex gap-1">
           <button id="chartViewBtn" class="px-3 py-1.5 text-xs font-medium rounded flex items-center gap-1 bg-white dark:bg-gray-800 shadow-sm text-primary-600" onclick="setView('chart')"><span class="material-icons-round text-sm">account_tree</span> Chart</button>
-          <button id="listViewBtn" class="px-3 py-1.5 text-xs font-medium rounded flex items-center gap-1 text-gray-600 dark:text-gray-300" onclick="setView('list')"><span class="material-icons-round text-sm">format_list_bulleted</span> List</button>
+          <button id="listViewBtn"  class="px-3 py-1.5 text-xs font-medium rounded flex items-center gap-1 text-gray-600 dark:text-gray-300" onclick="setView('list')"><span class="material-icons-round text-sm">format_list_bulleted</span> List</button>
         </div>
       </div>
     </div>
@@ -199,7 +188,6 @@
       <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
         <div>
           <h4 class="font-bold text-sm">Company Structure</h4>
-          <p class="text-[10px] text-gray-400 font-mono mt-0.5">GET /companies/tree</p>
         </div>
         <button onclick="openModal('companyModal')" class="px-2.5 py-1.5 bg-primary-600 text-white rounded-lg text-xs font-medium flex items-center gap-1 hover:bg-primary-700 transition"><span class="material-icons-round text-sm">add</span> Add</button>
       </div>
@@ -210,13 +198,10 @@
       </div>
     </div>
 
-    <!-- Reporting Lines actions card -->
+    <!-- Reporting Lines -->
     <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-md overflow-hidden">
       <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-        <div>
-          <h4 class="font-bold text-sm">Reporting Lines</h4>
-          <p class="text-[10px] text-gray-400 font-mono mt-0.5">POST &amp; PUT /reporting/*</p>
-        </div>
+        <h4 class="font-bold text-sm">Reporting Lines</h4>
       </div>
       <div class="p-4 space-y-3">
         <p class="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">Manage who reports to whom. Assign primary or matrix reporting lines, or end an existing one.</p>
@@ -225,7 +210,6 @@
             <span class="w-8 h-8 rounded-lg bg-primary-600 text-white flex items-center justify-center flex-shrink-0"><span class="material-icons-round text-[18px]">supervisor_account</span></span>
             <div class="text-left">
               <p class="text-sm font-semibold text-primary-700 dark:text-primary-300">Assign Manager</p>
-              <p class="text-[10px] text-primary-500 font-mono">POST /reporting/assign</p>
             </div>
             <span class="material-icons-round text-primary-400 ml-auto text-[18px]">chevron_right</span>
           </button>
@@ -233,7 +217,6 @@
             <span class="w-8 h-8 rounded-lg bg-red-500 text-white flex items-center justify-center flex-shrink-0"><span class="material-icons-round text-[18px]">person_remove</span></span>
             <div class="text-left">
               <p class="text-sm font-semibold text-red-700 dark:text-red-300">Remove Manager</p>
-              <p class="text-[10px] text-red-400 font-mono">PUT /reporting/remove</p>
             </div>
             <span class="material-icons-round text-red-300 ml-auto text-[18px]">chevron_right</span>
           </button>
@@ -241,7 +224,6 @@
             <span class="w-8 h-8 rounded-lg bg-gray-600 text-white flex items-center justify-center flex-shrink-0"><span class="material-icons-round text-[18px]">account_tree</span></span>
             <div class="text-left">
               <p class="text-sm font-semibold text-gray-700 dark:text-gray-200">View Reporting Tree</p>
-              <p class="text-[10px] text-gray-400 font-mono">GET /reporting/tree/{id}</p>
             </div>
             <span class="material-icons-round text-gray-400 ml-auto text-[18px]">chevron_right</span>
           </button>
@@ -254,20 +236,20 @@
       <div class="p-4 border-b border-gray-200 dark:border-gray-700"><h4 class="font-bold text-sm">Quick Actions</h4></div>
       <div class="p-4 grid grid-cols-2 gap-2.5">
         <button onclick="openModal('deptModal')" class="p-3 border border-gray-200 dark:border-gray-700 rounded-xl flex flex-col items-center gap-1.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-300 transition group">
-          <span class="material-icons-round text-primary-600 text-[22px]">add_circle</span><span class="text-xs font-medium text-gray-700 dark:text-gray-300">New Dept</span>
-          <span class="text-[9px] text-gray-400 font-mono">POST /departments</span>
+          <span class="material-icons-round text-primary-600 text-[22px]">add_circle</span>
+          <span class="text-xs font-medium text-gray-700 dark:text-gray-300">New Dept</span>
         </button>
         <button onclick="openModal('moveModal')" class="p-3 border border-gray-200 dark:border-gray-700 rounded-xl flex flex-col items-center gap-1.5 hover:bg-orange-50 dark:hover:bg-orange-900/20 hover:border-orange-300 transition">
-          <span class="material-icons-round text-orange-500 text-[22px]">swap_horiz</span><span class="text-xs font-medium text-gray-700 dark:text-gray-300">Move Dept</span>
-          <span class="text-[9px] text-gray-400 font-mono">PUT /move/{id}</span>
+          <span class="material-icons-round text-orange-500 text-[22px]">swap_horiz</span>
+          <span class="text-xs font-medium text-gray-700 dark:text-gray-300">Move Dept</span>
         </button>
         <button onclick="openModal('reportModal')" class="p-3 border border-gray-200 dark:border-gray-700 rounded-xl flex flex-col items-center gap-1.5 hover:bg-green-50 dark:hover:bg-green-900/20 hover:border-green-300 transition">
-          <span class="material-icons-round text-green-600 text-[22px]">supervisor_account</span><span class="text-xs font-medium text-gray-700 dark:text-gray-300">Assign Mgr</span>
-          <span class="text-[9px] text-gray-400 font-mono">POST /assign</span>
+          <span class="material-icons-round text-green-600 text-[22px]">supervisor_account</span>
+          <span class="text-xs font-medium text-gray-700 dark:text-gray-300">Assign Mgr</span>
         </button>
         <button onclick="openModal('removeModal')" class="p-3 border border-gray-200 dark:border-gray-700 rounded-xl flex flex-col items-center gap-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-red-300 transition">
-          <span class="material-icons-round text-red-500 text-[22px]">person_remove</span><span class="text-xs font-medium text-gray-700 dark:text-gray-300">Remove Mgr</span>
-          <span class="text-[9px] text-gray-400 font-mono">PUT /remove</span>
+          <span class="material-icons-round text-red-500 text-[22px]">person_remove</span>
+          <span class="text-xs font-medium text-gray-700 dark:text-gray-300">Remove Mgr</span>
         </button>
       </div>
     </div>
@@ -286,30 +268,32 @@
     </div>
   </div>
 
-  <!-- ── REPORTING TREE EXPLORER (full width) ── -->
+  <!-- Reporting Tree Explorer -->
   <div id="reportingExplorer" class="mt-5 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-md hidden">
     <div class="flex flex-wrap items-center justify-between gap-3 p-5 border-b border-gray-200 dark:border-gray-700">
       <div>
         <h3 class="font-bold text-base">Reporting Tree Explorer</h3>
-        <p class="text-xs text-gray-500 mt-0.5 font-mono">GET /api/organogram/reporting/tree/{id}?type=PRIMARY&amp;date=2026-02-01</p>
+        <p class="text-xs text-gray-500 mt-0.5">View the reporting hierarchy for any employee</p>
       </div>
       <button onclick="closeReportingExplorer()" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-gray-400"><span class="material-icons-round">close</span></button>
     </div>
     <div class="grid grid-cols-1 lg:grid-cols-3 divide-y lg:divide-y-0 lg:divide-x divide-gray-200 dark:divide-gray-700">
-      <!-- LEFT: Controls -->
+      <!-- Controls -->
       <div class="p-6 space-y-4">
         <div>
           <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-3">Query Parameters</p>
           <div class="space-y-3">
             <div>
-              <label class="form-label">Employee ID <span class="text-red-400">*</span></label>
-              <input type="number" id="repTreeEmpId" class="form-input" placeholder="e.g. 5" min="1">
+              <label class="form-label">Employee <span class="text-red-400">*</span></label>
+              <select id="repTreeEmpId" class="form-select">
+                <option value="">Select an employee</option>
+              </select>
             </div>
             <div>
               <label class="form-label">Reporting Type</label>
               <div class="flex gap-2 mt-1">
                 <button id="typePrimary" onclick="setRepType('PRIMARY')" class="flex-1 py-2 text-xs font-semibold rounded-lg border-2 border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-700 transition">PRIMARY</button>
-                <button id="typeMatrix" onclick="setRepType('MATRIX')" class="flex-1 py-2 text-xs font-semibold rounded-lg border-2 border-gray-200 dark:border-gray-600 text-gray-500 transition">MATRIX</button>
+                <button id="typeMatrix"  onclick="setRepType('MATRIX')"  class="flex-1 py-2 text-xs font-semibold rounded-lg border-2 border-gray-200 dark:border-gray-600 text-gray-500 transition">MATRIX</button>
               </div>
               <input type="hidden" id="repTreeType" value="PRIMARY">
             </div>
@@ -322,26 +306,18 @@
             </button>
           </div>
         </div>
-        <div class="pt-3 border-t border-gray-100 dark:border-gray-700">
-          <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">Request Preview</p>
-          <div class="bg-gray-900 dark:bg-gray-950 rounded-xl p-3 font-mono text-[11px] text-green-400 leading-relaxed" id="repRequestPreview">
-            GET /api/organogram/reporting/tree/{id}<br>?type=PRIMARY<br>&amp;date=…
-          </div>
-        </div>
       </div>
-      <!-- RIGHT: Tree output -->
+      <!-- Tree output -->
       <div class="lg:col-span-2 p-6">
-        <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-4">Response · Reporting Hierarchy</p>
+        <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-4">Reporting Hierarchy</p>
         <div id="repTreeResult" class="space-y-1">
-          <span class="text-xs text-gray-400">Enter an Employee ID and click Fetch.</span>
+          <span class="text-xs text-gray-400">Select an employee and click Fetch.</span>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- ======================================================
-       MODALS
-  ====================================================== -->
+  <!-- ── MODALS ── -->
 
   <!-- 1. Add Company -->
   <div id="companyModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
@@ -349,10 +325,7 @@
     <div class="modal-card relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md border border-gray-200 dark:border-gray-700">
       <div class="p-6 border-b border-gray-200 dark:border-gray-700">
         <div class="flex justify-between items-center">
-          <div>
-            <h3 class="font-bold text-lg">Add Company</h3>
-            <p class="text-xs text-gray-400 font-mono mt-0.5" id="companyModalEndpoint">POST /api/organogram/companies</p>
-          </div>
+          <h3 class="font-bold text-lg">Add Company</h3>
           <button onclick="closeModal('companyModal')" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"><span class="material-icons-round text-gray-400">close</span></button>
         </div>
       </div>
@@ -360,8 +333,8 @@
         <div>
           <label class="form-label">Company Type *</label>
           <div class="flex gap-2 mt-1">
-            <button id="typeBtnParent" onclick="setCompanyType('parent')" class="flex-1 py-2 text-sm font-medium rounded-lg border-2 border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-700 transition">Parent Company</button>
-            <button id="typeBtnSub" onclick="setCompanyType('subsidiary')" class="flex-1 py-2 text-sm font-medium rounded-lg border-2 border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 transition">Subsidiary</button>
+            <button id="typeBtnParent" onclick="setCompanyType('parent')"     class="flex-1 py-2 text-sm font-medium rounded-lg border-2 border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-700 transition">Parent Company</button>
+            <button id="typeBtnSub"    onclick="setCompanyType('subsidiary')" class="flex-1 py-2 text-sm font-medium rounded-lg border-2 border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 transition">Subsidiary</button>
           </div>
         </div>
         <div id="parentCompanyField" class="hidden">
@@ -369,7 +342,6 @@
           <select id="compParentId" class="form-select">
             <option value="">Select a parent company</option>
           </select>
-          <p class="text-[10px] text-gray-400 mt-1 font-mono">Endpoint: POST /api/organogram/companies/{id}/subsidiaries</p>
         </div>
         <div>
           <label class="form-label">Company Name *</label>
@@ -396,10 +368,7 @@
     <div class="modal-card relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md border border-gray-200 dark:border-gray-700">
       <div class="p-6 border-b border-gray-200 dark:border-gray-700">
         <div class="flex justify-between items-center">
-          <div>
-            <h3 class="font-bold text-lg">Create Department</h3>
-            <p class="text-xs text-gray-400 font-mono mt-0.5">POST /api/organogram/departments</p>
-          </div>
+          <h3 class="font-bold text-lg">Create Department</h3>
           <button onclick="closeModal('deptModal')" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"><span class="material-icons-round text-gray-400">close</span></button>
         </div>
       </div>
@@ -445,17 +414,14 @@
     <div class="modal-card relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md border border-gray-200 dark:border-gray-700">
       <div class="p-6 border-b border-gray-200 dark:border-gray-700">
         <div class="flex justify-between items-center">
-          <div>
-            <h3 class="font-bold text-lg">Move Department</h3>
-            <p class="text-xs text-gray-400 font-mono mt-0.5">PUT /api/organogram/departments/{id}/move/{newParentId}</p>
-          </div>
+          <h3 class="font-bold text-lg">Move Department</h3>
           <button onclick="closeModal('moveModal')" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"><span class="material-icons-round text-gray-400">close</span></button>
         </div>
       </div>
       <div class="p-6 space-y-4">
         <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 text-xs text-amber-700 dark:text-amber-400">
           <span class="material-icons-round text-sm align-middle mr-1">info</span>
-          Calls <span class="font-mono">PUT /api/organogram/departments/<b>{departmentId}</b>/move/<b>{newParentDepartmentId}</b></span>
+          Moving a department will update its position in the hierarchy.
         </div>
         <div>
           <label class="form-label">Department to Move *</label>
@@ -486,21 +452,22 @@
     <div class="modal-card relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md border border-gray-200 dark:border-gray-700">
       <div class="p-6 border-b border-gray-200 dark:border-gray-700">
         <div class="flex justify-between items-center">
-          <div>
-            <h3 class="font-bold text-lg">Assign Reporting Line</h3>
-            <p class="text-xs text-gray-400 font-mono mt-0.5">POST /api/organogram/reporting/assign</p>
-          </div>
+          <h3 class="font-bold text-lg">Assign Reporting Line</h3>
           <button onclick="closeModal('reportModal')" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"><span class="material-icons-round text-gray-400">close</span></button>
         </div>
       </div>
       <div class="p-6 space-y-4">
         <div>
-          <label class="form-label">Employee ID *</label>
-          <input type="number" id="reportEmpId" placeholder="e.g. 5" class="form-input" min="1">
+          <label class="form-label">Employee *</label>
+          <select id="reportEmpId" class="form-select">
+            <option value="">Select an employee</option>
+          </select>
         </div>
         <div>
-          <label class="form-label">Manager ID *</label>
-          <input type="number" id="reportMgrId" placeholder="e.g. 2" class="form-input" min="1">
+          <label class="form-label">Manager *</label>
+          <select id="reportMgrId" class="form-select">
+            <option value="">Select a manager</option>
+          </select>
         </div>
         <div>
           <label class="form-label">Reporting Type *</label>
@@ -530,21 +497,20 @@
     <div class="modal-card relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md border border-gray-200 dark:border-gray-700">
       <div class="p-6 border-b border-gray-200 dark:border-gray-700">
         <div class="flex justify-between items-center">
-          <div>
-            <h3 class="font-bold text-lg">Remove Reporting Line</h3>
-            <p class="text-xs text-gray-400 font-mono mt-0.5">PUT /api/organogram/reporting/remove</p>
-          </div>
+          <h3 class="font-bold text-lg">Remove Reporting Line</h3>
           <button onclick="closeModal('removeModal')" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"><span class="material-icons-round text-gray-400">close</span></button>
         </div>
       </div>
       <div class="p-6 space-y-4">
         <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 text-xs text-red-700 dark:text-red-400">
           <span class="material-icons-round text-sm align-middle mr-1">warning</span>
-          Sets an <code>effectiveTo</code> date on the reporting line — does not permanently delete it.
+          This will end the active reporting line — it is not permanently deleted.
         </div>
         <div>
-          <label class="form-label">Employee ID *</label>
-          <input type="number" id="removeEmpId" placeholder="e.g. 5" class="form-input" min="1">
+          <label class="form-label">Employee *</label>
+          <select id="removeEmpId" class="form-select">
+            <option value="">Select an employee</option>
+          </select>
         </div>
         <div>
           <label class="form-label">Reporting Type *</label>
@@ -574,691 +540,822 @@
     <span id="toastMsg">Done</span>
   </div>
 
-  <!-- ======================================================
-       JAVASCRIPT
-  ====================================================== -->
+  <!-- ── JAVASCRIPT ── -->
   <script>
     (function () {
 
-        const API_BASE = 'http://localhost:9006/api/organogram';
+      const API_BASE = '/api/organogram';
 
-        // ── State ─────────────────────────────────────────────
-        let companyTree = [];
-        let deptTree    = [];
-        let companyType = 'parent';
+      // ── State ──────────────────────────────────────────────────────────
+      let companyTree  = [];
+      let deptTree     = [];
+      let employees    = [];
+      let companyType  = 'parent';
 
-        // Helper: flatten companies tree to array of {id, name, code}
-        function flattenCompanies(nodes) {
-            let result = [];
-            function recurse(arr) {
-                arr.forEach(c => {
-                    const id = c.id || c.companyId; // try both common field names
-                    if (id) {
-                        result.push({ id: id, name: c.name, code: c.code });
-                    } else {
-                        console.warn('Company missing ID, skipping:', c);
-                    }
-                    if (c.subsidiaries) recurse(c.subsidiaries);
-                });
-            }
-            recurse(nodes);
-            return result;
+      // Lookup maps so we can safely bind click handlers without inline JSON
+      const deptNodeMap = {};
+
+      // ── Helpers: flatten trees ─────────────────────────────────────────
+      function flattenCompanies(nodes) {
+        const result = [];
+        function recurse(arr) {
+          arr.forEach(c => {
+            const id = c.id || c.companyId;
+            if (id) result.push({ id, name: c.name, code: c.code });
+            if (c.subsidiaries) recurse(c.subsidiaries);
+          });
         }
+        recurse(nodes);
+        return result;
+      }
 
-        // Helper: flatten departments tree to array of {id, name, code}
-        function flattenDepartments(nodes) {
-            let result = [];
-            function recurse(arr) {
-                arr.forEach(d => {
-                    const id = d.id || d.departmentId; // try both common field names
-                    if (id) {
-                        result.push({ id: id, name: d.name, code: d.code });
-                    } else {
-                        console.warn('Department missing ID, skipping:', d);
-                    }
-                    if (d.children || d.subDepartments) recurse(d.children || d.subDepartments);
-                });
-            }
-            recurse(nodes);
-            return result;
+      function flattenDepartments(nodes) {
+        const result = [];
+        function recurse(arr) {
+          arr.forEach(d => {
+            const id = d.id || d.departmentId;
+            if (id) result.push({ id, name: d.name, code: d.code });
+            const kids = d.children || d.subDepartments;
+            if (kids) recurse(kids);
+          });
         }
+        recurse(nodes);
+        return result;
+      }
 
-        // Populate company dropdowns
-        function populateCompanyDropdown(selectId, includeBlank = true) {
-            const select = document.getElementById(selectId);
-            if (!select) return;
-            select.innerHTML = '';
-            if (includeBlank) {
-                const blank = document.createElement('option');
-                blank.value = '';
-                blank.textContent = 'Select a company';
-                select.appendChild(blank);
-            }
-            const flat = flattenCompanies(companyTree);
-            flat.forEach(c => {
-                const opt = document.createElement('option');
-                opt.value = c.id;
-                opt.textContent = `${c.name} (${c.code})`;
-                select.appendChild(opt);
-            });
-        }
-
-        // Populate department dropdowns
-        function populateDepartmentDropdown(selectId, includeBlank = true) {
-            const select = document.getElementById(selectId);
-            if (!select) return;
-            select.innerHTML = '';
-            if (includeBlank) {
-                const blank = document.createElement('option');
-                blank.value = '';
-                blank.textContent = selectId === 'deptParentId' ? '— None (top-level) —' : 'Select a department';
-                select.appendChild(blank);
-            }
-            const flat = flattenDepartments(deptTree);
-            flat.forEach(d => {
-                const opt = document.createElement('option');
-                opt.value = d.id;
-                opt.textContent = `${d.name} (${d.code})`;
-                select.appendChild(opt);
-            });
-        }
-
-        // ── Real API fetch ─────────────────────────────────────
-        async function apiFetch(path, options = {}) {
-            const url = API_BASE + path;
-            const res = await fetch(url, {
-                headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
-                ...options
-            });
-            if (!res.ok) {
-                let msg = `HTTP ${res.status}`;
-                try {
-                    const err = await res.json();
-                    msg = err.message || err.error || err.detail || msg;
-                } catch (_) {}
-                throw new Error(msg);
-            }
-            // 204 No Content or empty body
-            if (res.status === 204) return null;
-            const text = await res.text();
-            return text ? JSON.parse(text) : null;
-        }
-
-        // ── Utilities ─────────────────────────────────────────
-        function showToast(msg, type = 'success') {
-            const t = document.getElementById('toast');
-            const icon = document.getElementById('toastIcon');
-            const text = document.getElementById('toastMsg');
-            t.className = t.className.replace(/bg-\S+/g, '').trim();
-            if (type === 'success') {
-                t.classList.add('bg-gray-900', 'text-white');
-                icon.textContent = 'check_circle';
-            } else if (type === 'error') {
-                t.classList.add('bg-red-600', 'text-white');
-                icon.textContent = 'error';
-            } else {
-                t.classList.add('bg-blue-600', 'text-white');
-                icon.textContent = 'info';
-            }
-            text.textContent = msg;
-            t.classList.remove('hidden');
-            setTimeout(() => t.classList.add('hidden'), 3200);
-        }
-
-        function showError(elementId, msg) {
-            const el = document.getElementById(elementId);
-            el.textContent = msg;
-            el.classList.remove('hidden');
-        }
-        function hideError(elementId) {
-            const el = document.getElementById(elementId);
-            el.classList.add('hidden');
-            el.textContent = '';
-        }
-
-        function setLoading(btnId, loading) {
-            const btn = document.getElementById(btnId);
-            if (!btn) return;
-            btn.disabled = loading;
-            btn.style.opacity = loading ? '0.7' : '1';
-        }
-
-        // ── Modal helpers ──────────────────────────────────────
-        window.openModal  = id => {
-            document.getElementById(id).classList.remove('hidden');
-            // Refresh dropdowns when modals open
-            if (id === 'companyModal') {
-                populateCompanyDropdown('compParentId');
-            } else if (id === 'deptModal') {
-                populateCompanyDropdown('deptCompanyId');
-                populateDepartmentDropdown('deptParentId');
-            } else if (id === 'moveModal') {
-                populateDepartmentDropdown('moveDeptId');
-                populateDepartmentDropdown('moveNewParentId');
-            }
-        };
-        window.closeModal = id => document.getElementById(id).classList.add('hidden');
-
-        // ── View toggle ────────────────────────────────────────
-        window.setView = function (v) {
-            ['chart', 'list'].forEach(mode => {
-                const btn = document.getElementById(mode + 'ViewBtn');
-                const isActive = v === mode;
-                btn.classList.toggle('bg-white', isActive);
-                btn.classList.toggle('dark:bg-gray-800', isActive);
-                btn.classList.toggle('shadow-sm', isActive);
-                btn.classList.toggle('text-primary-600', isActive);
-                btn.classList.toggle('text-gray-600', !isActive);
-            });
-            document.getElementById('orgChartView').classList.toggle('hidden', v !== 'chart');
-            document.getElementById('orgListView').classList.toggle('hidden',  v !== 'list');
-            if (v === 'chart') setTimeout(drawConnectors, 60);
-        };
-
-        // ── Node detail panel ──────────────────────────────────
-        window.showDetail = function (node) {
-            const initials = (node.name || '??').split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
-            document.getElementById('ndAvatar').textContent = initials;
-            document.getElementById('ndName').textContent   = node.name || '—';
-            document.getElementById('ndMeta').textContent   = node.code || node.departmentId || '—';
-            document.getElementById('ndEmp').textContent    = node.employeeCount ?? '—';
-            document.getElementById('ndSub').textContent    = (node.children || node.subDepartments || []).length;
-            document.getElementById('ndCode').textContent   = node.code || '—';
-            document.getElementById('nodeDetail').classList.remove('hidden');
-        };
-        window.closeDetail = () => document.getElementById('nodeDetail').classList.add('hidden');
-
-        // ── Org Chart Rendering ────────────────────────────────
-        function renderNode(node, container) {
-            const isRoot = !node.parentDepartmentId;
-            const children = node.children || node.subDepartments || [];
-            const wrap = document.createElement('div');
-            wrap.className = 'org-node-wrap';
-
-            const nodeDiv = document.createElement('div');
-            const initials = (node.name || 'XX').split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
-            nodeDiv.className = `org-node rounded-xl border-2 p-4 shadow-md ${
-                isRoot
-                ? 'bg-primary-600 text-white border-primary-400'
-                : children.length > 0
-                ? 'bg-white dark:bg-gray-800 border-blue-300 dark:border-blue-700'
-                : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600'
-            }`;
-            nodeDiv.innerHTML = `
-                <div class="flex flex-col items-center">
-                    <div class="w-11 h-11 rounded-full flex items-center justify-center text-xs font-bold font-mono mb-2 ${
-                        isRoot ? 'bg-white/20 text-white' : children.length > 0 ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700' : 'bg-gray-100 dark:bg-gray-700 text-gray-700'
-                    }">${initials}</div>
-                    <div class="font-semibold text-sm text-center leading-tight">${node.name || '—'}</div>
-                    ${node.code ? `<div class="code-tag mt-1">${node.code}</div>` : ''}
-                    ${node.employeeCount != null ? `<div class="mt-2 text-xs px-2 py-1 rounded-full ${isRoot ? 'bg-white/20' : 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'}">${node.employeeCount} emp</div>` : ''}
-                </div>
-            `;
-            nodeDiv.onclick = e => { e.stopPropagation(); showDetail(node); };
-            wrap.appendChild(nodeDiv);
-
-            if (children.length > 0) {
-                const vLine = document.createElement('div'); vLine.className = 'connector-v'; wrap.appendChild(vLine);
-                const childContainer = document.createElement('div'); childContainer.className = 'flex flex-col items-center w-full';
-                const row = document.createElement('div'); row.className = 'org-children-row';
-                const hLine = document.createElement('div'); hLine.className = 'connector-h-line'; row.appendChild(hLine);
-                children.forEach(child => {
-                    const childWrap = document.createElement('div'); childWrap.className = 'flex flex-col items-center';
-                    const vUp = document.createElement('div'); vUp.className = 'v-up'; childWrap.appendChild(vUp);
-                    renderNode(child, childWrap);
-                    row.appendChild(childWrap);
-                });
-                childContainer.appendChild(row);
-                wrap.appendChild(childContainer);
-            }
-            container.appendChild(wrap);
-        }
-
-        function drawConnectors() {
-            document.querySelectorAll('.org-children-row').forEach(row => {
-                const hLine = row.querySelector('.connector-h-line');
-                if (!hLine) return;
-                const children = Array.from(row.children).filter(el => !el.classList.contains('connector-h-line'));
-                if (children.length < 2) { hLine.style.display = 'none'; return; }
-                hLine.style.display = 'block';
-                const rowRect   = row.getBoundingClientRect();
-                const firstRect = children[0].querySelector('.org-node')?.getBoundingClientRect();
-                const lastRect  = children[children.length - 1].querySelector('.org-node')?.getBoundingClientRect();
-                if (!firstRect || !lastRect) return;
-                hLine.style.left  = (firstRect.left + firstRect.width / 2 - rowRect.left) + 'px';
-                hLine.style.right = (rowRect.right - (lastRect.left + lastRect.width / 2)) + 'px';
-            });
-        }
-        window.addEventListener('resize', () => setTimeout(drawConnectors, 30));
-
-        // ── Dept table (list view) ─────────────────────────────
-        function flattenDepts(nodes, parent = '—', acc = []) {
-            nodes.forEach(n => {
-                acc.push({ ...n, _parent: parent });
-                const children = n.children || n.subDepartments || [];
-                if (children.length) flattenDepts(children, n.name, acc);
-            });
-            return acc;
-        }
-
-        function buildDeptTable(nodes) {
-            const tbody = document.getElementById('deptTableBody'); tbody.innerHTML = '';
-            flattenDepts(nodes).forEach(n => {
-                const tr = document.createElement('tr');
-                tr.className = 'border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750 cursor-pointer';
-                tr.onclick = () => showDetail(n);
-                const initials = (n.name || 'XX').split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
-                tr.innerHTML = `
-                    <td class="p-3">
-                        <div class="flex items-center gap-2">
-                            <span class="w-7 h-7 rounded-lg bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-[10px] font-bold text-primary-700 font-mono">${initials}</span>
-                            <span class="font-medium text-sm">${n.name || '—'}</span>
-                        </div>
-                    </td>
-                    <td class="p-3"><span class="code-tag">${n.code || '—'}</span></td>
-                    <td class="p-3 text-sm text-gray-600 dark:text-gray-400">${n._parent}</td>
-                    <td class="p-3"><span class="badge badge-success text-[10px]">Active</span></td>
-                    <td class="p-3"><button onclick="event.stopPropagation();showDetail(${JSON.stringify(n).replace(/'/g,"\\'")})" class="text-primary-600 text-xs hover:underline">View</button></td>
-                `;
-                tbody.appendChild(tr);
-            });
-        }
-
-        function buildDeptSummary(nodes) {
-            const cont = document.getElementById('deptSummaryList'); cont.innerHTML = '';
-            const colors = ['#3b82f6','#0ea5e9','#16a34a','#7c3aed','#ea580c','#db2777','#0891b2','#d97706'];
-            flattenDepts(nodes).forEach((n, i) => {
-                const item = document.createElement('div');
-                item.className = 'flex items-center gap-2.5 py-2 border-b border-gray-100 dark:border-gray-700 last:border-0 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-750 px-1 rounded transition';
-                item.onclick = () => showDetail(n);
-                item.innerHTML = `
-                    <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:${colors[i % colors.length]}"></span>
-                    <span class="flex-1 text-sm font-medium truncate">${n.name || '—'}</span>
-                    <span class="code-tag flex-shrink-0">${n.code || '—'}</span>
-                `;
-                cont.appendChild(item);
-            });
-        }
-
-        // ── Company tree panel ─────────────────────────────────
-        function buildCompanyPanel(tree) {
-            const panel = document.getElementById('companyTreePanel'); panel.innerHTML = '';
-            function renderCompany(company, depth = 0) {
-                const item = document.createElement('div');
-                item.className = depth > 0 ? 'ml-6 pl-4 border-l-2 border-gray-200 dark:border-gray-700 mt-2' : '';
-                const initials = (company.code || company.name || 'CO').substring(0, 3).toUpperCase();
-                const bgColors = ['bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300', 'bg-green-100 dark:bg-green-900/30 text-green-700', 'bg-orange-100 dark:bg-orange-900/30 text-orange-700'];
-                const color = bgColors[depth % bgColors.length];
-                item.innerHTML = `
-                    <div class="flex items-center gap-2.5 py-1">
-                        <div class="w-8 h-8 rounded-lg ${color} flex items-center justify-center text-[10px] font-bold font-mono flex-shrink-0">${initials}</div>
-                        <div class="min-w-0">
-                            <p class="font-semibold text-sm truncate">${company.name || '—'}</p>
-                            <p class="text-[10px] text-gray-500">${depth === 0 ? 'Parent' : 'Subsidiary'} · <span class="font-mono">${company.code || '—'}</span></p>
-                        </div>
-                        ${depth === 0 ? `<span class="badge badge-info text-[9px] ml-auto flex-shrink-0">${(company.subsidiaries||[]).length} subs</span>` : '<span class="badge badge-success text-[9px] ml-auto flex-shrink-0">Active</span>'}
-                    </div>
-                `;
-                panel.appendChild(item);
-                (company.subsidiaries || []).forEach(sub => renderCompany(sub, depth + 1));
-            }
-            if (!tree.length) {
-                panel.innerHTML = '<p class="text-xs text-gray-400 text-center py-4">No companies found. Add one above.</p>';
-                return;
-            }
-            tree.forEach(c => renderCompany(c));
-        }
-
-        // ── Reporting tree render ──────────────────────────────
-        function renderRepTree(node, container, depth = 0) {
-            const div = document.createElement('div');
-            div.className = depth === 0 ? 'rep-root' : 'rep-node mt-2';
-            const initials = ((node.employeeName || node.name || 'EMP')).split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
-            div.innerHTML = `
-                <div class="flex items-center gap-2 py-1">
-                    <div class="w-7 h-7 rounded-full ${depth===0?'bg-primary-600 text-white':'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'} flex items-center justify-center text-[10px] font-bold">${initials}</div>
-                    <div>
-                        <p class="text-sm font-medium">${node.employeeName || node.name || 'Employee ' + (node.employeeId || '')}</p>
-                        <p class="text-[10px] text-gray-500">${node.role || node.designation || ''} ${node.reportingType ? '· <span class="badge badge-info text-[9px]">'+node.reportingType+'</span>' : ''}</p>
-                    </div>
-                </div>
-            `;
-            container.appendChild(div);
-            (node.directReports || node.children || []).forEach(child => renderRepTree(child, div, depth + 1));
-        }
-
-        // ── Reporting Explorer ─────────────────────────────────
-        window.openReportingExplorer = function () {
-            const ex = document.getElementById('reportingExplorer');
-            ex.classList.remove('hidden');
-            ex.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            updateRepPreview();
-        };
-        window.closeReportingExplorer = function () {
-            document.getElementById('reportingExplorer').classList.add('hidden');
-        };
-
-        window.setRepType = function (type) {
-            document.getElementById('repTreeType').value = type;
-            document.getElementById('typePrimary').className = `flex-1 py-2 text-xs font-semibold rounded-lg border-2 transition ${type==='PRIMARY'?'border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-700':'border-gray-200 dark:border-gray-600 text-gray-500'}`;
-            document.getElementById('typeMatrix').className  = `flex-1 py-2 text-xs font-semibold rounded-lg border-2 transition ${type==='MATRIX'?'border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-700':'border-gray-200 dark:border-gray-600 text-gray-500'}`;
-            updateRepPreview();
-        };
-
-        function updateRepPreview() {
-            const empId = document.getElementById('repTreeEmpId')?.value || '{id}';
-            const type  = document.getElementById('repTreeType')?.value || 'PRIMARY';
-            const date  = document.getElementById('repTreeDate')?.value  || '(required)';
-            const prev  = document.getElementById('repRequestPreview');
-            if (prev) prev.innerHTML = `GET /api/organogram/reporting/tree/${empId}<br>?type=${type}<br>&amp;date=${date}`;
-        }
-
-        window.fetchReportingTree = async function () {
-            const empId  = document.getElementById('repTreeEmpId').value;
-            const type   = document.getElementById('repTreeType').value;
-            const date   = document.getElementById('repTreeDate').value;
-            const result = document.getElementById('repTreeResult');
-            updateRepPreview();
-            if (!empId) { result.innerHTML = '<div class="api-error">Please enter an Employee ID.</div>'; return; }
-            if (!date)  { result.innerHTML = '<div class="api-error">Date is required by the API.</div>'; return; }
-            result.innerHTML = '<div class="flex items-center gap-2 text-gray-400 text-sm"><span class="material-icons-round animate-spin text-[18px]">refresh</span>Fetching tree…</div>';
-            setLoading('fetchRepBtn', true);
-            try {
-                const data = await apiFetch(`/reporting/tree/${empId}?type=${type}&date=${date}`);
-                if (!data || (Array.isArray(data) && !data.length)) {
-                    result.innerHTML = '<span class="text-xs text-gray-400">No reporting data found for this employee.</span>';
-                    return;
-                }
-                result.innerHTML = '';
-                // API returns List<EmployeeNodeDTO> — render each root
-                const nodes = Array.isArray(data) ? data : [data];
-                nodes.forEach(node => renderRepTree(node, result));
-            } catch (e) {
-                result.innerHTML = `<div class="api-error">${e.message}</div>`;
-            } finally {
-                setLoading('fetchRepBtn', false);
-            }
-        };
-
-        // ── Fetch company tree ─────────────────────────────────
-        async function fetchCompanyTree() {
-            try {
-                const data = await apiFetch('/companies/tree');
-                companyTree = Array.isArray(data) ? data : (data ? [data] : []);
-                buildCompanyPanel(companyTree);
-                let total = 0;
-                function countCompanies(arr) { arr.forEach(c => { total++; countCompanies(c.subsidiaries||[]); }); }
-                countCompanies(companyTree);
-                document.getElementById('statCompanies').textContent = total || '0';
-                const roots = companyTree.length;
-                document.getElementById('statCompanySub').textContent = `${roots} Parent · ${total - roots} Subsidiaries`;
-                if (total === 0) {
-                    document.getElementById('statCompanySub').textContent = 'No companies';
-                }
-            } catch (e) {
-                document.getElementById('companyTreePanel').innerHTML = `<div class="api-error">${e.message}</div>`;
-                document.getElementById('statCompanies').textContent = 'Err';
-                document.getElementById('statCompanySub').textContent = e.message;
-            }
-        }
-
-        // ── Fetch department tree ──────────────────────────────
-        async function fetchDeptTree() {
-            const badge = document.getElementById('chartLiveBadge');
-            badge.innerHTML = `<span class="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse"></span>Loading`;
-            badge.className = 'badge badge-orange text-[10px] flex items-center gap-1';
-            try {
-                const data = await apiFetch('/departments/tree');
-                deptTree = Array.isArray(data) ? data : (data ? [data] : []);
-
-                // Get reference to orgTree element
-                const orgTreeEl = document.getElementById('orgTree');
-
-                // EMPTY STATE HANDLING
-                if (deptTree.length === 0) {
-                    // Apply empty state styling
-                    orgTreeEl.classList.add('org-tree-empty');
-                    orgTreeEl.innerHTML = `
-                        <div class="flex flex-col items-center justify-center text-gray-400">
-                            <span class="material-icons-round text-4xl mb-2">account_tree</span>
-                            <p class="text-sm">No departments found. Create one using the "New Dept" action.</p>
-                        </div>`;
-                    // List view
-                    document.getElementById('deptTableBody').innerHTML = `
-                        <tr><td colspan="5" class="text-center py-8 text-gray-400">No departments available</td></tr>`;
-                    // Department summary
-                    document.getElementById('deptSummaryList').innerHTML = `
-                        <div class="text-center py-4 text-gray-400 text-sm">No departments</div>`;
-                    // Stats
-                    document.getElementById('statDepts').textContent = '0';
-                    document.getElementById('deptSummaryCount').textContent = '0 total';
-                    document.getElementById('statDeptSub').textContent = '0 active departments';
-                    document.getElementById('statEmps').textContent = '0';
-                    // Reporting lines stat (could be estimated, but leave as — for now)
-                    document.getElementById('statLines').textContent = '—';
-                } else {
-                    // Remove empty state styling if previously applied
-                    orgTreeEl.classList.remove('org-tree-empty');
-                    // Restore original inline styles (already present, but ensure they're not overridden)
-                    orgTreeEl.style.display = 'inline-flex';
-                    orgTreeEl.style.flexDirection = 'column';
-                    orgTreeEl.style.alignItems = 'center';
-                    orgTreeEl.style.minWidth = 'max-content';
-                    orgTreeEl.style.padding = '24px 60px 32px';
-                    // Clear and draw org chart
-                    orgTreeEl.innerHTML = '';
-                    const rootWrap  = document.createElement('div'); rootWrap.className = 'flex flex-col items-center';
-                    deptTree.forEach(root => renderNode(root, rootWrap));
-                    orgTreeEl.appendChild(rootWrap);
-                    setTimeout(drawConnectors, 100);
-
-                    buildDeptTable(deptTree);
-                    buildDeptSummary(deptTree);
-
-                    const flat = flattenDepts(deptTree);
-                    document.getElementById('statDepts').textContent = flat.length;
-                    document.getElementById('deptSummaryCount').textContent = flat.length + ' total';
-                    document.getElementById('statDeptSub').textContent = flat.length + ' active departments';
-                    const empTotal = flat.reduce((s, n) => s + (n.employeeCount || 0), 0);
-                    document.getElementById('statEmps').textContent = empTotal || '—';
-                    // Reporting lines stat — no dedicated endpoint, show placeholder
-                    document.getElementById('statLines').textContent = '—';
-                }
-
-                badge.innerHTML = `<span class="w-1.5 h-1.5 bg-green-500 rounded-full"></span>Live`;
-                badge.className = 'badge badge-success text-[10px] flex items-center gap-1';
-            } catch (e) {
-                document.getElementById('orgTree').innerHTML = `<div class="api-error m-4">${e.message}</div>`;
-                badge.innerHTML = `<span class="w-1.5 h-1.5 bg-red-500 rounded-full"></span>Error`;
-                badge.className = 'badge badge-red text-[10px] flex items-center gap-1';
-                document.getElementById('statDepts').textContent = 'Err';
-            }
-        }
-
-        // ── Company type toggle ────────────────────────────────
-        window.setCompanyType = function (type) {
-            companyType = type;
-            const isParent = type === 'parent';
-            document.getElementById('typeBtnParent').className = `flex-1 py-2 text-sm font-medium rounded-lg border-2 transition ${isParent ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-700' : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400'}`;
-            document.getElementById('typeBtnSub').className    = `flex-1 py-2 text-sm font-medium rounded-lg border-2 transition ${!isParent ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-700' : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400'}`;
-            document.getElementById('parentCompanyField').classList.toggle('hidden', isParent);
-            document.getElementById('companyModalEndpoint').textContent = isParent
-                ? 'POST /api/organogram/companies'
-                : 'POST /api/organogram/companies/{parentId}/subsidiaries';
-        };
-
-        // ── Save: Company ──────────────────────────────────────
-        window.saveCompany = async function () {
-            hideError('companyError');
-            const name = document.getElementById('compName').value.trim();
-            const code = document.getElementById('compCode').value.trim();
-            if (!name || !code) { showError('companyError', 'Name and Code are required.'); return; }
-
-            let path, body;
-            if (companyType === 'parent') {
-                path = '/companies';
-                body = { name, code };
-            } else {
-                const parentId = document.getElementById('compParentId').value;
-                // Validate: not empty, not the literal "undefined", and can be parsed to a number
-                if (!parentId || parentId === 'undefined' || isNaN(parseInt(parentId))) {
-                    showError('companyError', 'Please select a valid parent company.');
-                    return;
-                }
-                path = `/companies/${parentId}/subsidiaries`;
-                body = { name, code };
-            }
-
-            setLoading('saveCompanyBtn', true);
-            try {
-                await apiFetch(path, { method: 'POST', body: JSON.stringify(body) });
-                closeModal('companyModal');
-                showToast(`Company "${name}" created successfully`);
-                document.getElementById('compName').value = '';
-                document.getElementById('compCode').value = '';
-                fetchCompanyTree();
-            } catch (e) {
-                showError('companyError', e.message);
-            } finally {
-                setLoading('saveCompanyBtn', false);
-            }
-        };
-
-        // ── Save: Department ───────────────────────────────────
-        window.saveDept = async function () {
-            hideError('deptError');
-            const name          = document.getElementById('deptName').value.trim();
-            const code          = document.getElementById('deptCode').value.trim();
-            const companyId     = document.getElementById('deptCompanyId').value;
-            const parentDeptId  = document.getElementById('deptParentId').value;
-            const effectiveFrom = document.getElementById('deptEffectiveFrom').value;
-            if (!name || !code || !companyId || !effectiveFrom) {
-                showError('deptError', 'Name, Code, Company, and Effective From are required.');
-                return;
-            }
-            const body = {
-                name,
-                code,
-                companyId: parseInt(companyId),
-                parentDepartmentId: parentDeptId ? parseInt(parentDeptId) : null,
-                effectiveFrom
-            };
-            setLoading('saveDeptBtn', true);
-            try {
-                await apiFetch('/departments', { method: 'POST', body: JSON.stringify(body) });
-                closeModal('deptModal');
-                showToast(`Department "${name}" created`);
-                document.getElementById('deptName').value = '';
-                document.getElementById('deptCode').value = '';
-                // Keep dropdowns as they are, but clear selections? We'll leave it as is.
-                fetchDeptTree();
-            } catch (e) {
-                showError('deptError', e.message);
-            } finally {
-                setLoading('saveDeptBtn', false);
-            }
-        };
-
-        // ── Save: Move Department ──────────────────────────────
-        window.saveMove = async function () {
-            hideError('moveError');
-            const deptId      = document.getElementById('moveDeptId').value;
-            const newParentId = document.getElementById('moveNewParentId').value;
-            if (!deptId || !newParentId) { showError('moveError', 'Please select both a department and a new parent.'); return; }
-            setLoading('saveMoveBtn', true);
-            try {
-                await apiFetch(`/departments/${deptId}/move/${newParentId}`, { method: 'PUT' });
-                closeModal('moveModal');
-                showToast('Department moved successfully');
-                // Reset dropdown selections
-                document.getElementById('moveDeptId').value = '';
-                document.getElementById('moveNewParentId').value = '';
-                fetchDeptTree();
-            } catch (e) {
-                showError('moveError', e.message);
-            } finally {
-                setLoading('saveMoveBtn', false);
-            }
-        };
-
-        // ── Save: Assign Reporting Line ────────────────────────
-        window.saveReport = async function () {
-            hideError('reportError');
-            const employeeId    = document.getElementById('reportEmpId').value;
-            const managerId     = document.getElementById('reportMgrId').value;
-            const reportingType = document.getElementById('reportType').value;
-            const effectiveFrom = document.getElementById('reportEffectiveFrom').value;
-            if (!employeeId || !managerId || !effectiveFrom) {
-                showError('reportError', 'Employee ID, Manager ID, and Effective From are required.');
-                return;
-            }
-            const body = {
-                employeeId:    parseInt(employeeId),
-                managerId:     parseInt(managerId),
-                reportingType,
-                effectiveFrom
-            };
-            setLoading('saveReportBtn', true);
-            try {
-                await apiFetch('/reporting/assign', { method: 'POST', body: JSON.stringify(body) });
-                closeModal('reportModal');
-                showToast('Manager assigned successfully');
-                ['reportEmpId','reportMgrId','reportEffectiveFrom'].forEach(id => document.getElementById(id).value = '');
-            } catch (e) {
-                showError('reportError', e.message);
-            } finally {
-                setLoading('saveReportBtn', false);
-            }
-        };
-
-        // ── Save: Remove Reporting Line ────────────────────────
-        window.saveRemove = async function () {
-            hideError('removeError');
-            const employeeId    = document.getElementById('removeEmpId').value;
-            const reportingType = document.getElementById('removeType').value;
-            const effectiveTo   = document.getElementById('removeEffectiveTo').value;
-            if (!employeeId || !effectiveTo) {
-                showError('removeError', 'Employee ID and Effective To date are required.');
-                return;
-            }
-            const body = {
-                employeeId:    parseInt(employeeId),
-                reportingType,
-                effectiveTo
-            };
-            setLoading('saveRemoveBtn', true);
-            try {
-                await apiFetch('/reporting/remove', { method: 'PUT', body: JSON.stringify(body) });
-                closeModal('removeModal');
-                showToast('Reporting line removed', 'info');
-                ['removeEmpId','removeEffectiveTo'].forEach(id => document.getElementById(id).value = '');
-            } catch (e) {
-                showError('removeError', e.message);
-            } finally {
-                setLoading('saveRemoveBtn', false);
-            }
-        };
-
-        // ── Default date fields ────────────────────────────────
-        const today = new Date().toISOString().split('T')[0];
-        ['deptEffectiveFrom', 'reportEffectiveFrom', 'repTreeDate'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.value = today;
+      function flattenDepts(nodes, parent, acc) {
+        parent = parent || '—';
+        acc    = acc    || [];
+        nodes.forEach(n => {
+          acc.push(Object.assign({}, n, { _parent: parent }));
+          const kids = n.children || n.subDepartments || [];
+          if (kids.length) flattenDepts(kids, n.name, acc);
         });
-        const eoy = new Date(); eoy.setMonth(11); eoy.setDate(31);
-        const removeEl = document.getElementById('removeEffectiveTo');
-        if (removeEl) removeEl.value = eoy.toISOString().split('T')[0];
+        return acc;
+      }
 
-        // Live-update request preview as user types
-        ['repTreeEmpId', 'repTreeDate'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.addEventListener('input', updateRepPreview);
+      // ── Populate dropdowns ────────────────────────────────────────────
+      function populateSelect(selectId, items, blankLabel) {
+        const select = document.getElementById(selectId);
+        if (!select) return;
+        select.innerHTML = '';
+        if (blankLabel) {
+          const blank = document.createElement('option');
+          blank.value = '';
+          blank.textContent = blankLabel;
+          select.appendChild(blank);
+        }
+        items.forEach(item => {
+          const opt = document.createElement('option');
+          opt.value = item.id;
+          opt.textContent = item.code ? item.name + ' (' + item.code + ')' : item.name;
+          select.appendChild(opt);
         });
-        updateRepPreview();
+      }
 
-        // ── Boot ───────────────────────────────────────────────
-        fetchCompanyTree();
-        fetchDeptTree();
+      function populateCompanyDropdown(selectId) {
+        populateSelect(selectId, flattenCompanies(companyTree), 'Select a company');
+      }
+
+      function populateDepartmentDropdown(selectId) {
+        const blank = selectId === 'deptParentId' ? '— None (top-level) —' : 'Select a department';
+        populateSelect(selectId, flattenDepartments(deptTree), blank);
+      }
+
+      function populateEmployeeDropdown(selectId) {
+        const items = employees.map(e => ({
+          id:   e.id,
+          name: e.firstName + ' ' + e.lastName
+        }));
+        populateSelect(selectId, items, 'Select an employee');
+      }
+
+      // ── API fetch ──────────────────────────────────────────────────────
+      async function apiFetch(path, options) {
+        options = options || {};
+        const res = await fetch(API_BASE + path, {
+          headers: Object.assign({ 'Content-Type': 'application/json' }, options.headers || {}),
+          method:  options.method || 'GET',
+          body:    options.body   || undefined
+        });
+        if (!res.ok) {
+          // Parse error body but never expose internal details to UI
+          let serverMsg = '';
+          try {
+            const err = await res.json();
+            serverMsg = err.message || err.error || err.detail || '';
+          } catch (_) {}
+          // Map status codes to user-friendly messages
+          const friendlyMsg = friendlyError(res.status, serverMsg);
+          throw new Error(friendlyMsg);
+        }
+        if (res.status === 204) return null;
+        const text = await res.text();
+        return text ? JSON.parse(text) : null;
+      }
+
+      function friendlyError(status, serverMsg) {
+        if (status === 400) return serverMsg || 'The request was invalid. Please check your inputs.';
+        if (status === 401) return 'You are not authorised to perform this action.';
+        if (status === 403) return 'You do not have permission to perform this action.';
+        if (status === 404) return 'The requested record could not be found.';
+        if (status === 409) return 'A conflict occurred — the record may already exist.';
+        if (status >= 500) return 'A server error occurred. Please try again later.';
+        return 'An unexpected error occurred. Please try again.';
+      }
+
+      // ── Toast ──────────────────────────────────────────────────────────
+      function showToast(msg, type) {
+        type = type || 'success';
+        const t    = document.getElementById('toast');
+        const icon = document.getElementById('toastIcon');
+        const text = document.getElementById('toastMsg');
+        // Strip old colour classes
+        t.className = t.className.replace(/bg-\S+/g, '').trim();
+        if (type === 'success') {
+          t.classList.add('bg-gray-900', 'text-white');
+          icon.textContent = 'check_circle';
+        } else if (type === 'error') {
+          t.classList.add('bg-red-600', 'text-white');
+          icon.textContent = 'error';
+        } else {
+          t.classList.add('bg-blue-600', 'text-white');
+          icon.textContent = 'info';
+        }
+        text.textContent = msg;
+        t.classList.remove('hidden');
+        setTimeout(function () { t.classList.add('hidden'); }, 3200);
+      }
+
+      function showError(elementId, msg) {
+        const el = document.getElementById(elementId);
+        if (!el) return;
+        el.textContent = msg;
+        el.classList.remove('hidden');
+      }
+
+      function hideError(elementId) {
+        const el = document.getElementById(elementId);
+        if (!el) return;
+        el.classList.add('hidden');
+        el.textContent = '';
+      }
+
+      function setLoading(btnId, loading) {
+        const btn = document.getElementById(btnId);
+        if (!btn) return;
+        btn.disabled    = loading;
+        btn.style.opacity = loading ? '0.7' : '1';
+      }
+
+      // ── Modal helpers ──────────────────────────────────────────────────
+      window.openModal = function (id) {
+        document.getElementById(id).classList.remove('hidden');
+        if (id === 'companyModal') {
+          populateCompanyDropdown('compParentId');
+        } else if (id === 'deptModal') {
+          populateCompanyDropdown('deptCompanyId');
+          populateDepartmentDropdown('deptParentId');
+        } else if (id === 'moveModal') {
+          populateDepartmentDropdown('moveDeptId');
+          populateDepartmentDropdown('moveNewParentId');
+        } else if (id === 'reportModal') {
+          populateEmployeeDropdown('reportEmpId');
+          populateEmployeeDropdown('reportMgrId');
+        } else if (id === 'removeModal') {
+          populateEmployeeDropdown('removeEmpId');
+        }
+      };
+
+      window.closeModal = function (id) {
+        document.getElementById(id).classList.add('hidden');
+      };
+
+      // ── View toggle ────────────────────────────────────────────────────
+      window.setView = function (v) {
+        ['chart', 'list'].forEach(function (mode) {
+          const btn      = document.getElementById(mode + 'ViewBtn');
+          const isActive = v === mode;
+          btn.classList.toggle('bg-white',         isActive);
+          btn.classList.toggle('dark:bg-gray-800', isActive);
+          btn.classList.toggle('shadow-sm',        isActive);
+          btn.classList.toggle('text-primary-600', isActive);
+          btn.classList.toggle('text-gray-600',    !isActive);
+        });
+        document.getElementById('orgChartView').classList.toggle('hidden', v !== 'chart');
+        document.getElementById('orgListView').classList.toggle('hidden',  v !== 'list');
+        if (v === 'chart') setTimeout(drawConnectors, 60);
+      };
+
+      // ── Node detail panel ──────────────────────────────────────────────
+      window.showDetail = function (node) {
+        const initials = (node.name || '??').split(' ').map(function (w) { return w[0]; }).join('').substring(0, 2).toUpperCase();
+        document.getElementById('ndAvatar').textContent = initials;
+        document.getElementById('ndName').textContent   = node.name || '—';
+        document.getElementById('ndMeta').textContent   = node.code || node.departmentId || '—';
+        document.getElementById('ndEmp').textContent    = node.employeeCount != null ? node.employeeCount : '—';
+        document.getElementById('ndSub').textContent    = (node.children || node.subDepartments || []).length;
+        document.getElementById('ndCode').textContent   = node.code || '—';
+        document.getElementById('nodeDetail').classList.remove('hidden');
+      };
+
+      window.closeDetail = function () {
+        document.getElementById('nodeDetail').classList.add('hidden');
+      };
+
+      // ── Org Chart Rendering ────────────────────────────────────────────
+      function renderNode(node, container) {
+        const isRoot   = !node.parentDepartmentId;
+        const children = node.children || node.subDepartments || [];
+        const wrap     = document.createElement('div');
+        wrap.className = 'org-node-wrap';
+
+        const nodeDiv   = document.createElement('div');
+        const initials  = (node.name || 'XX').split(' ').map(function (w) { return w[0]; }).join('').substring(0, 2).toUpperCase();
+        const nodeClass = isRoot
+          ? 'bg-primary-600 text-white border-primary-400'
+          : children.length > 0
+          ? 'bg-white dark:bg-gray-800 border-blue-300 dark:border-blue-700'
+          : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600';
+        nodeDiv.className = 'org-node rounded-xl border-2 p-4 shadow-md ' + nodeClass;
+
+        const avatarClass = isRoot
+          ? 'bg-white/20 text-white'
+          : children.length > 0
+          ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700'
+          : 'bg-gray-100 dark:bg-gray-700 text-gray-700';
+
+        const countBadge = node.employeeCount != null
+          ? '<div class="mt-2 text-xs px-2 py-1 rounded-full ' + (isRoot ? 'bg-white/20' : 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300') + '">' + node.employeeCount + ' emp</div>'
+          : '';
+
+        const codeBadge = node.code
+          ? '<div class="code-tag mt-1">' + escapeHtml(node.code) + '</div>'
+          : '';
+
+        nodeDiv.innerHTML =
+          '<div class="flex flex-col items-center">' +
+            '<div class="w-11 h-11 rounded-full flex items-center justify-center text-xs font-bold font-mono mb-2 ' + avatarClass + '">' + escapeHtml(initials) + '</div>' +
+            '<div class="font-semibold text-sm text-center leading-tight">' + escapeHtml(node.name || '—') + '</div>' +
+            codeBadge +
+            countBadge +
+          '</div>';
+
+        nodeDiv.addEventListener('click', function (e) {
+          e.stopPropagation();
+          showDetail(node);
+        });
+        wrap.appendChild(nodeDiv);
+
+        if (children.length > 0) {
+          const vLine = document.createElement('div');
+          vLine.className = 'connector-v';
+          wrap.appendChild(vLine);
+
+          const childContainer = document.createElement('div');
+          childContainer.className = 'flex flex-col items-center w-full';
+
+          const row   = document.createElement('div');
+          row.className = 'org-children-row';
+
+          const hLine = document.createElement('div');
+          hLine.className = 'connector-h-line';
+          row.appendChild(hLine);
+
+          children.forEach(function (child) {
+            const childWrap = document.createElement('div');
+            childWrap.className = 'flex flex-col items-center';
+            const vUp = document.createElement('div');
+            vUp.className = 'v-up';
+            childWrap.appendChild(vUp);
+            renderNode(child, childWrap);
+            row.appendChild(childWrap);
+          });
+
+          childContainer.appendChild(row);
+          wrap.appendChild(childContainer);
+        }
+
+        container.appendChild(wrap);
+      }
+
+      function drawConnectors() {
+        document.querySelectorAll('.org-children-row').forEach(function (row) {
+          const hLine   = row.querySelector('.connector-h-line');
+          if (!hLine) return;
+          const children = Array.from(row.children).filter(function (el) { return !el.classList.contains('connector-h-line'); });
+          if (children.length < 2) { hLine.style.display = 'none'; return; }
+          hLine.style.display = 'block';
+          const rowRect   = row.getBoundingClientRect();
+          const firstRect = children[0].querySelector('.org-node') && children[0].querySelector('.org-node').getBoundingClientRect();
+          const lastRect  = children[children.length - 1].querySelector('.org-node') && children[children.length - 1].querySelector('.org-node').getBoundingClientRect();
+          if (!firstRect || !lastRect) return;
+          hLine.style.left  = (firstRect.left + firstRect.width / 2 - rowRect.left) + 'px';
+          hLine.style.right = (rowRect.right - (lastRect.left + lastRect.width / 2)) + 'px';
+        });
+      }
+
+      window.addEventListener('resize', function () { setTimeout(drawConnectors, 30); });
+
+      // ── Dept table (list view) ─────────────────────────────────────────
+      function buildDeptTable(nodes) {
+        const tbody = document.getElementById('deptTableBody');
+        tbody.innerHTML = '';
+        flattenDepts(nodes).forEach(function (n) {
+          // Store node in map keyed by its numeric ID so onclick can look it up safely
+          const nodeId = n.id || n.departmentId;
+          if (nodeId) deptNodeMap[nodeId] = n;
+
+          const tr = document.createElement('tr');
+          tr.className = 'border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750 cursor-pointer';
+          tr.addEventListener('click', function () { showDetail(n); });
+
+          const initials = (n.name || 'XX').split(' ').map(function (w) { return w[0]; }).join('').substring(0, 2).toUpperCase();
+
+          const tdName = document.createElement('td');
+          tdName.className = 'p-3';
+          tdName.innerHTML =
+            '<div class="flex items-center gap-2">' +
+              '<span class="w-7 h-7 rounded-lg bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-[10px] font-bold text-primary-700 font-mono">' + escapeHtml(initials) + '</span>' +
+              '<span class="font-medium text-sm">' + escapeHtml(n.name || '—') + '</span>' +
+            '</div>';
+
+          const tdCode = document.createElement('td');
+          tdCode.className = 'p-3';
+          tdCode.innerHTML = '<span class="code-tag">' + escapeHtml(n.code || '—') + '</span>';
+
+          const tdParent = document.createElement('td');
+          tdParent.className = 'p-3 text-sm text-gray-600 dark:text-gray-400';
+          tdParent.textContent = n._parent;
+
+          const tdStatus = document.createElement('td');
+          tdStatus.className = 'p-3';
+          tdStatus.innerHTML = '<span class="badge badge-success text-[10px]">Active</span>';
+
+          const tdAction = document.createElement('td');
+          tdAction.className = 'p-3';
+          const viewBtn = document.createElement('button');
+          viewBtn.className = 'text-primary-600 text-xs hover:underline';
+          viewBtn.textContent = 'View';
+          viewBtn.addEventListener('click', function (e) { e.stopPropagation(); showDetail(n); });
+          tdAction.appendChild(viewBtn);
+
+          tr.appendChild(tdName);
+          tr.appendChild(tdCode);
+          tr.appendChild(tdParent);
+          tr.appendChild(tdStatus);
+          tr.appendChild(tdAction);
+          tbody.appendChild(tr);
+        });
+      }
+
+      function buildDeptSummary(nodes) {
+        const cont   = document.getElementById('deptSummaryList');
+        cont.innerHTML = '';
+        const colors = ['#3b82f6','#0ea5e9','#16a34a','#7c3aed','#ea580c','#db2777','#0891b2','#d97706'];
+        flattenDepts(nodes).forEach(function (n, i) {
+          const item = document.createElement('div');
+          item.className = 'flex items-center gap-2.5 py-2 border-b border-gray-100 dark:border-gray-700 last:border-0 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-750 px-1 rounded transition';
+          item.addEventListener('click', function () { showDetail(n); });
+          item.innerHTML =
+            '<span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:' + colors[i % colors.length] + '"></span>' +
+            '<span class="flex-1 text-sm font-medium truncate">' + escapeHtml(n.name || '—') + '</span>' +
+            '<span class="code-tag flex-shrink-0">' + escapeHtml(n.code || '—') + '</span>';
+          cont.appendChild(item);
+        });
+      }
+
+      // ── Company tree panel ─────────────────────────────────────────────
+      function buildCompanyPanel(tree) {
+        const panel = document.getElementById('companyTreePanel');
+        panel.innerHTML = '';
+        if (!tree.length) {
+          panel.innerHTML = '<p class="text-xs text-gray-400 text-center py-4">No companies found. Add one above.</p>';
+          return;
+        }
+        function renderCompany(company, depth) {
+          depth = depth || 0;
+          const item = document.createElement('div');
+          item.className = depth > 0 ? 'ml-6 pl-4 border-l-2 border-gray-200 dark:border-gray-700 mt-2' : '';
+          const initials = (company.code || company.name || 'CO').substring(0, 3).toUpperCase();
+          const bgColors = [
+            'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300',
+            'bg-green-100 dark:bg-green-900/30 text-green-700',
+            'bg-orange-100 dark:bg-orange-900/30 text-orange-700'
+          ];
+          const color = bgColors[depth % bgColors.length];
+          const subsBadge = depth === 0
+            ? '<span class="badge badge-info text-[9px] ml-auto flex-shrink-0">' + (company.subsidiaries || []).length + ' subs</span>'
+            : '<span class="badge badge-success text-[9px] ml-auto flex-shrink-0">Active</span>';
+          item.innerHTML =
+            '<div class="flex items-center gap-2.5 py-1">' +
+              '<div class="w-8 h-8 rounded-lg ' + color + ' flex items-center justify-center text-[10px] font-bold font-mono flex-shrink-0">' + escapeHtml(initials) + '</div>' +
+              '<div class="min-w-0">' +
+                '<p class="font-semibold text-sm truncate">' + escapeHtml(company.name || '—') + '</p>' +
+                '<p class="text-[10px] text-gray-500">' + (depth === 0 ? 'Parent' : 'Subsidiary') + ' · <span class="font-mono">' + escapeHtml(company.code || '—') + '</span></p>' +
+              '</div>' +
+              subsBadge +
+            '</div>';
+          panel.appendChild(item);
+          (company.subsidiaries || []).forEach(function (sub) { renderCompany(sub, depth + 1); });
+        }
+        tree.forEach(function (c) { renderCompany(c, 0); });
+      }
+
+      // ── Reporting tree render ──────────────────────────────────────────
+      function renderRepTree(node, container, depth) {
+        depth = depth || 0;
+        const div = document.createElement('div');
+        div.className = depth === 0 ? 'rep-root' : 'rep-node mt-2';
+
+        const empId = node.employeeId || node.id;
+        const emp   = employees.find(function (e) { return String(e.id) === String(empId); });
+        let displayName = '';
+        if (emp) {
+          displayName = emp.firstName + ' ' + emp.lastName;
+        } else if (node.employeeName || node.name) {
+          displayName = node.employeeName || node.name;
+        } else {
+          displayName = 'Employee ' + (empId || '');
+        }
+
+        const initials   = displayName.split(' ').map(function (w) { return w[0]; }).join('').substring(0, 2).toUpperCase();
+        const avatarClass = depth === 0 ? 'bg-primary-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300';
+        const typeTag    = node.reportingType
+          ? ' · <span class="badge badge-info text-[9px]">' + escapeHtml(node.reportingType) + '</span>'
+          : '';
+
+        div.innerHTML =
+          '<div class="flex items-center gap-2 py-1">' +
+            '<div class="w-7 h-7 rounded-full ' + avatarClass + ' flex items-center justify-center text-[10px] font-bold">' + escapeHtml(initials) + '</div>' +
+            '<div>' +
+              '<p class="text-sm font-medium">' + escapeHtml(displayName) + '</p>' +
+              '<p class="text-[10px] text-gray-500">' + escapeHtml(node.role || node.designation || '') + typeTag + '</p>' +
+            '</div>' +
+          '</div>';
+
+        container.appendChild(div);
+        (node.directReports || node.children || []).forEach(function (child) {
+          renderRepTree(child, div, depth + 1);
+        });
+      }
+
+      // ── Reporting Explorer ─────────────────────────────────────────────
+      window.openReportingExplorer = function () {
+        const ex = document.getElementById('reportingExplorer');
+        ex.classList.remove('hidden');
+        ex.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        populateEmployeeDropdown('repTreeEmpId');
+      };
+
+      window.closeReportingExplorer = function () {
+        document.getElementById('reportingExplorer').classList.add('hidden');
+      };
+
+      window.setRepType = function (type) {
+        document.getElementById('repTreeType').value = type;
+        const activeClass   = 'flex-1 py-2 text-xs font-semibold rounded-lg border-2 transition border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-700';
+        const inactiveClass = 'flex-1 py-2 text-xs font-semibold rounded-lg border-2 transition border-gray-200 dark:border-gray-600 text-gray-500';
+        document.getElementById('typePrimary').className = type === 'PRIMARY' ? activeClass : inactiveClass;
+        document.getElementById('typeMatrix').className  = type === 'MATRIX'  ? activeClass : inactiveClass;
+      };
+
+      window.fetchReportingTree = async function () {
+        const empId  = document.getElementById('repTreeEmpId').value;
+        const type   = document.getElementById('repTreeType').value;
+        const date   = document.getElementById('repTreeDate').value;
+        const result = document.getElementById('repTreeResult');
+
+        if (!empId) { result.innerHTML = '<div class="api-error">Please select an employee.</div>'; return; }
+        if (!date)  { result.innerHTML = '<div class="api-error">An as-of date is required.</div>'; return; }
+
+        result.innerHTML = '<div class="flex items-center gap-2 text-gray-400 text-sm"><span class="material-icons-round animate-spin text-[18px]">refresh</span>Fetching tree…</div>';
+        setLoading('fetchRepBtn', true);
+        try {
+          const data = await apiFetch('/reporting/tree/' + empId + '?type=' + type + '&date=' + date);
+          if (!data || (Array.isArray(data) && !data.length)) {
+            result.innerHTML = '<span class="text-xs text-gray-400">No reporting data found for this employee.</span>';
+            return;
+          }
+          result.innerHTML = '';
+          const nodes = Array.isArray(data) ? data : [data];
+          nodes.forEach(function (node) { renderRepTree(node, result, 0); });
+        } catch (e) {
+          result.innerHTML = '<div class="api-error">' + escapeHtml(e.message) + '</div>';
+        } finally {
+          setLoading('fetchRepBtn', false);
+        }
+      };
+
+      // ── Fetch: Company tree ────────────────────────────────────────────
+      async function fetchCompanyTree() {
+        try {
+          const data = await apiFetch('/companies/tree');
+          companyTree = Array.isArray(data) ? data : (data ? [data] : []);
+          buildCompanyPanel(companyTree);
+          let total = 0;
+          function countCompanies(arr) { arr.forEach(function (c) { total++; countCompanies(c.subsidiaries || []); }); }
+          countCompanies(companyTree);
+          document.getElementById('statCompanies').textContent = total || '0';
+          const roots = companyTree.length;
+          document.getElementById('statCompanySub').textContent = total === 0
+            ? 'No companies'
+            : roots + ' Parent · ' + (total - roots) + ' Subsidiaries';
+        } catch (e) {
+          document.getElementById('companyTreePanel').innerHTML = '<div class="api-error">Could not load company data.</div>';
+          document.getElementById('statCompanies').textContent = '—';
+          document.getElementById('statCompanySub').textContent = 'Unavailable';
+        }
+      }
+
+      // ── Fetch: Department tree ─────────────────────────────────────────
+      async function fetchDeptTree() {
+        const badge = document.getElementById('chartLiveBadge');
+        badge.innerHTML  = '<span class="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse"></span>Loading';
+        badge.className  = 'badge badge-orange text-[10px] flex items-center gap-1';
+        try {
+          const data = await apiFetch('/departments/tree');
+          deptTree = Array.isArray(data) ? data : (data ? [data] : []);
+
+          const orgTreeEl = document.getElementById('orgTree');
+
+          if (deptTree.length === 0) {
+            orgTreeEl.classList.add('org-tree-empty');
+            orgTreeEl.innerHTML =
+              '<div class="flex flex-col items-center justify-center text-gray-400">' +
+                '<span class="material-icons-round text-4xl mb-2">account_tree</span>' +
+                '<p class="text-sm">No departments found. Create one using the "New Dept" action.</p>' +
+              '</div>';
+            document.getElementById('deptTableBody').innerHTML =
+              '<tr><td colspan="5" class="text-center py-8 text-gray-400">No departments available</td></tr>';
+            document.getElementById('deptSummaryList').innerHTML =
+              '<div class="text-center py-4 text-gray-400 text-sm">No departments</div>';
+            document.getElementById('statDepts').textContent       = '0';
+            document.getElementById('deptSummaryCount').textContent = '0 total';
+            document.getElementById('statDeptSub').textContent     = '0 active departments';
+            document.getElementById('statEmps').textContent        = '0';
+          } else {
+            orgTreeEl.classList.remove('org-tree-empty');
+            orgTreeEl.style.display       = 'inline-flex';
+            orgTreeEl.style.flexDirection = 'column';
+            orgTreeEl.style.alignItems    = 'center';
+            orgTreeEl.style.minWidth      = 'max-content';
+            orgTreeEl.style.padding       = '24px 60px 32px';
+            orgTreeEl.innerHTML           = '';
+
+            const rootWrap = document.createElement('div');
+            rootWrap.className = 'flex flex-col items-center';
+            deptTree.forEach(function (root) { renderNode(root, rootWrap); });
+            orgTreeEl.appendChild(rootWrap);
+            setTimeout(drawConnectors, 100);
+
+            buildDeptTable(deptTree);
+            buildDeptSummary(deptTree);
+
+            const flat     = flattenDepts(deptTree);
+            const empTotal = flat.reduce(function (s, n) { return s + (n.employeeCount || 0); }, 0);
+            document.getElementById('statDepts').textContent        = flat.length;
+            document.getElementById('deptSummaryCount').textContent  = flat.length + ' total';
+            document.getElementById('statDeptSub').textContent       = flat.length + ' active departments';
+            document.getElementById('statEmps').textContent          = empTotal;
+          }
+
+          badge.innerHTML = '<span class="w-1.5 h-1.5 bg-green-500 rounded-full"></span>Live';
+          badge.className = 'badge badge-success text-[10px] flex items-center gap-1';
+        } catch (e) {
+          document.getElementById('orgTree').innerHTML = '<div class="api-error m-4">Could not load department data.</div>';
+          badge.innerHTML = '<span class="w-1.5 h-1.5 bg-red-500 rounded-full"></span>Error';
+          badge.className = 'badge badge-red text-[10px] flex items-center gap-1';
+          document.getElementById('statDepts').textContent = '—';
+          document.getElementById('statDeptSub').textContent = 'Unavailable';
+        }
+      }
+
+      // ── Fetch: Employees ───────────────────────────────────────────────
+      async function fetchEmployees() {
+        try {
+          employees = await apiFetch('/employees/list') || [];
+        } catch (e) {
+          employees = [];
+        }
+      }
+
+      // ── Fetch: Reporting lines count ───────────────────────────────────
+      async function fetchReportingLinesCount() {
+        try {
+          const data = await apiFetch('/reporting/lines');
+          if (Array.isArray(data)) {
+            document.getElementById('statLines').textContent = data.length;
+          } else if (data && typeof data === 'object' && data.count !== undefined) {
+            document.getElementById('statLines').textContent = data.count;
+          } else {
+            document.getElementById('statLines').textContent = '—';
+          }
+        } catch (e) {
+          document.getElementById('statLines').textContent = '—';
+        }
+      }
+
+      // ── Company type toggle ────────────────────────────────────────────
+      window.setCompanyType = function (type) {
+        companyType   = type;
+        const isParent = type === 'parent';
+        const active   = 'flex-1 py-2 text-sm font-medium rounded-lg border-2 transition border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-700';
+        const inactive = 'flex-1 py-2 text-sm font-medium rounded-lg border-2 transition border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400';
+        document.getElementById('typeBtnParent').className = isParent  ? active : inactive;
+        document.getElementById('typeBtnSub').className    = !isParent ? active : inactive;
+        document.getElementById('parentCompanyField').classList.toggle('hidden', isParent);
+      };
+
+      // ── Save: Company ──────────────────────────────────────────────────
+      window.saveCompany = async function () {
+        hideError('companyError');
+        const name = document.getElementById('compName').value.trim();
+        const code = document.getElementById('compCode').value.trim();
+        if (!name || !code) { showError('companyError', 'Company name and code are required.'); return; }
+
+        let path;
+        if (companyType === 'parent') {
+          path = '/companies';
+        } else {
+          const parentId = document.getElementById('compParentId').value;
+          if (!parentId || isNaN(parseInt(parentId, 10))) {
+            showError('companyError', 'Please select a valid parent company.');
+            return;
+          }
+          path = '/companies/' + parentId + '/subsidiaries';
+        }
+
+        setLoading('saveCompanyBtn', true);
+        try {
+          await apiFetch(path, { method: 'POST', body: JSON.stringify({ name: name, code: code }) });
+          closeModal('companyModal');
+          showToast('Company "' + name + '" created successfully');
+          document.getElementById('compName').value = '';
+          document.getElementById('compCode').value = '';
+          fetchCompanyTree();
+        } catch (e) {
+          showError('companyError', e.message);
+        } finally {
+          setLoading('saveCompanyBtn', false);
+        }
+      };
+
+      // ── Save: Department ───────────────────────────────────────────────
+      window.saveDept = async function () {
+        hideError('deptError');
+        const name          = document.getElementById('deptName').value.trim();
+        const code          = document.getElementById('deptCode').value.trim();
+        const companyId     = document.getElementById('deptCompanyId').value;
+        const parentDeptId  = document.getElementById('deptParentId').value;
+        const effectiveFrom = document.getElementById('deptEffectiveFrom').value;
+        if (!name || !code || !companyId || !effectiveFrom) {
+          showError('deptError', 'Name, code, company, and effective-from date are all required.');
+          return;
+        }
+        const body = {
+          name:               name,
+          code:               code,
+          companyId:          parseInt(companyId, 10),
+          parentDepartmentId: parentDeptId ? parseInt(parentDeptId, 10) : null,
+          effectiveFrom:      effectiveFrom
+        };
+        setLoading('saveDeptBtn', true);
+        try {
+          await apiFetch('/departments', { method: 'POST', body: JSON.stringify(body) });
+          closeModal('deptModal');
+          showToast('Department "' + name + '" created');
+          document.getElementById('deptName').value = '';
+          document.getElementById('deptCode').value = '';
+          fetchDeptTree();
+        } catch (e) {
+          showError('deptError', e.message);
+        } finally {
+          setLoading('saveDeptBtn', false);
+        }
+      };
+
+      // ── Save: Move Department ──────────────────────────────────────────
+      window.saveMove = async function () {
+        hideError('moveError');
+        const deptId      = document.getElementById('moveDeptId').value;
+        const newParentId = document.getElementById('moveNewParentId').value;
+        if (!deptId || !newParentId) {
+          showError('moveError', 'Please select both a department and a new parent.');
+          return;
+        }
+        if (deptId === newParentId) {
+          showError('moveError', 'A department cannot be moved to itself.');
+          return;
+        }
+        setLoading('saveMoveBtn', true);
+        try {
+          await apiFetch('/departments/' + deptId + '/move/' + newParentId, { method: 'PUT' });
+          closeModal('moveModal');
+          showToast('Department moved successfully');
+          document.getElementById('moveDeptId').value      = '';
+          document.getElementById('moveNewParentId').value = '';
+          fetchDeptTree();
+        } catch (e) {
+          showError('moveError', e.message);
+        } finally {
+          setLoading('saveMoveBtn', false);
+        }
+      };
+
+      // ── Save: Assign Reporting Line ────────────────────────────────────
+      window.saveReport = async function () {
+        hideError('reportError');
+        const employeeId    = document.getElementById('reportEmpId').value;
+        const managerId     = document.getElementById('reportMgrId').value;
+        const reportingType = document.getElementById('reportType').value;
+        const effectiveFrom = document.getElementById('reportEffectiveFrom').value;
+        if (!employeeId || !managerId || !effectiveFrom) {
+          showError('reportError', 'Please select an employee, a manager, and an effective-from date.');
+          return;
+        }
+        if (employeeId === managerId) {
+          showError('reportError', 'An employee cannot report to themselves.');
+          return;
+        }
+        const body = {
+          employeeId:    parseInt(employeeId, 10),
+          managerId:     parseInt(managerId, 10),
+          reportingType: reportingType,
+          effectiveFrom: effectiveFrom
+        };
+        setLoading('saveReportBtn', true);
+        try {
+          await apiFetch('/reporting/assign', { method: 'POST', body: JSON.stringify(body) });
+          closeModal('reportModal');
+          showToast('Manager assigned successfully');
+          document.getElementById('reportEmpId').value         = '';
+          document.getElementById('reportMgrId').value         = '';
+          document.getElementById('reportEffectiveFrom').value = todayStr;
+        } catch (e) {
+          showError('reportError', e.message);
+        } finally {
+          setLoading('saveReportBtn', false);
+        }
+      };
+
+      // ── Save: Remove Reporting Line ────────────────────────────────────
+      window.saveRemove = async function () {
+        hideError('removeError');
+        const employeeId    = document.getElementById('removeEmpId').value;
+        const reportingType = document.getElementById('removeType').value;
+        const effectiveTo   = document.getElementById('removeEffectiveTo').value;
+        if (!employeeId || !effectiveTo) {
+          showError('removeError', 'Please select an employee and an end date.');
+          return;
+        }
+        const body = {
+          employeeId:    parseInt(employeeId, 10),
+          reportingType: reportingType,
+          effectiveTo:   effectiveTo
+        };
+        setLoading('saveRemoveBtn', true);
+        try {
+          await apiFetch('/reporting/remove', { method: 'PUT', body: JSON.stringify(body) });
+          closeModal('removeModal');
+          showToast('Reporting line removed', 'info');
+          document.getElementById('removeEmpId').value        = '';
+          document.getElementById('removeEffectiveTo').value  = eoyStr;
+        } catch (e) {
+          showError('removeError', e.message);
+        } finally {
+          setLoading('saveRemoveBtn', false);
+        }
+      };
+
+      // ── XSS protection ─────────────────────────────────────────────────
+      function escapeHtml(str) {
+        if (str == null) return '';
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      // ── Date defaults ──────────────────────────────────────────────────
+      const todayStr = new Date().toISOString().split('T')[0];
+      const eoyDate  = new Date(); eoyDate.setMonth(11); eoyDate.setDate(31);
+      const eoyStr   = eoyDate.toISOString().split('T')[0];
+
+      ['deptEffectiveFrom', 'reportEffectiveFrom', 'repTreeDate'].forEach(function (id) {
+        const el = document.getElementById(id);
+        if (el) el.value = todayStr;
+      });
+      const removeEl = document.getElementById('removeEffectiveTo');
+      if (removeEl) removeEl.value = eoyStr;
+
+      // ── Boot ────────────────────────────────────────────────────────────
+      fetchCompanyTree();
+      fetchDeptTree();
+      fetchEmployees();
+      fetchReportingLinesCount();
 
     })();
   </script>

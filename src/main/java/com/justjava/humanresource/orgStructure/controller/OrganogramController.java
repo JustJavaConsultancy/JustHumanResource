@@ -1,5 +1,9 @@
 package com.justjava.humanresource.orgStructure.controller;
 
+import com.justjava.humanresource.hr.dto.EmployeeDTO;
+import com.justjava.humanresource.hr.entity.Employee;
+import com.justjava.humanresource.hr.service.EmployeeService;
+import com.justjava.humanresource.onboarding.service.EmployeeOnboardingService;
 import com.justjava.humanresource.orgStructure.dto.*;
 import com.justjava.humanresource.orgStructure.enums.ReportingType;
 import com.justjava.humanresource.orgStructure.services.OrganogramService;
@@ -16,6 +20,7 @@ import java.util.List;
 public class OrganogramController {
 
     private final OrganogramService organogramService;
+    private final EmployeeService employeeService;
 
 
     /* =========================================================
@@ -60,6 +65,10 @@ public class OrganogramController {
     /* =========================================================
        REPORTING MANAGEMENT
        ========================================================= */
+    @GetMapping("/employees/list")
+    public List<EmployeeDTO> getAllEmployees() {
+        return employeeService.getAllEmployees();
+    }
 
     @PostMapping("/reporting/assign")
     public void assignManager(@RequestBody AssignManagerRequest request) {
