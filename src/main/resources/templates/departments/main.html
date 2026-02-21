@@ -24,7 +24,6 @@
     * { font-family: 'DM Sans', sans-serif; }
     body { overflow-x: clip; }
 
-    /* ── Sidebar ── */
     .sidebar-item { transition: all 0.18s ease; position: relative; }
     .sidebar-item.active { background-color: rgba(37,99,235,0.08); color: #2563eb; border-left: 3px solid #2563eb; }
     .sidebar-item.active .material-icons-round { color: #2563eb; }
@@ -37,14 +36,12 @@
         .main-content { margin-left: 0; width: 100%; }
     }
 
-    /* ── Badges ── */
     .badge { padding: 2px 9px; font-size: 0.72rem; font-weight: 600; border-radius: 9999px; letter-spacing: 0.01em; }
     .badge-success { background-color: #dcfce7; color: #15803d; }
     .badge-info    { background-color: #dbeafe; color: #1d4ed8; }
     .badge-orange  { background-color: #ffedd5; color: #c2410c; }
     .badge-red     { background-color: #fee2e2; color: #b91c1c; }
 
-    /* ── Org chart ── */
     .connector-v { width: 2px; height: 24px; background: #cbd5e1; margin: 3px auto; }
     .dark .connector-v { background: #475569; }
     .v-up { width: 2px; height: 20px; background: #cbd5e1; margin-bottom: 2px; }
@@ -56,12 +53,20 @@
     .org-node { transition: all 0.18s ease; cursor: pointer; min-width: 148px; position: relative; z-index: 1; }
     .org-node:hover { border-color: #3b82f6 !important; box-shadow: 0 8px 24px -8px rgba(59,130,246,0.35); transform: translateY(-2px); }
 
-    /* ── Modal ── */
+    /* Empty state for org chart */
+    .org-tree-empty {
+        display: flex !important;
+        width: 100% !important;
+        justify-content: center !important;
+        align-items: center !important;
+        min-height: 200px !important;
+        padding: 24px !important;
+    }
+
     .modal-backdrop { background: rgba(0,0,0,0.45); backdrop-filter: blur(5px); }
     .modal-card { animation: scaleIn 0.18s ease-out; }
     @keyframes scaleIn { from { opacity:0; transform:scale(0.94) translateY(6px); } to { opacity:1; transform:scale(1) translateY(0); } }
 
-    /* ── Form ── */
     .form-input, .form-select {
         border: 1.5px solid #e2e8f0; border-radius: 0.55rem; padding: 0.58rem 0.8rem;
         width: 100%; transition: border-color 0.18s, box-shadow 0.18s;
@@ -72,29 +77,23 @@
     .form-label { font-size: 0.8rem; font-weight: 600; color: #475569; margin-bottom: 4px; display: block; letter-spacing: 0.01em; }
     .dark .form-label { color: #94a3b8; }
 
-    /* ── Toast ── */
     #toast { transition: opacity 0.25s, transform 0.25s; }
     #toast.hidden { opacity: 0; pointer-events: none; transform: translateY(8px); }
 
-    /* ── API state banners ── */
     .api-error { background: #fef2f2; border: 1px solid #fca5a5; color: #b91c1c; border-radius: 0.5rem; padding: 0.6rem 0.9rem; font-size: 0.8rem; }
     .dark .api-error { background: #450a0a; border-color: #7f1d1d; color: #fca5a5; }
 
-    /* ── Reporting tree viz ── */
     .rep-node { border-left: 2px solid #3b82f6; padding-left: 12px; margin-left: 8px; }
     .rep-root { border-left: none; padding-left: 0; margin-left: 0; }
 
-    /* ── Skeleton ── */
     .skeleton { background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%); background-size: 200%; animation: shimmer 1.4s infinite; border-radius: 6px; }
     @keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
 
-    /* ── Custom scrollbar ── */
     ::-webkit-scrollbar { width: 5px; height: 5px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     .dark ::-webkit-scrollbar-thumb { background: #475569; }
 
-    /* ── Code font for codes ── */
     .code-tag { font-family: 'DM Mono', monospace; font-size: 0.72rem; background: #f1f5f9; padding: 1px 6px; border-radius: 4px; color: #475569; }
     .dark .code-tag { background: #334155; color: #94a3b8; }
   </style>
@@ -304,7 +303,7 @@
           <div class="space-y-3">
             <div>
               <label class="form-label">Employee ID <span class="text-red-400">*</span></label>
-              <input type="number" id="repTreeEmpId" class="form-input" placeholder="e.g. 5" min="1" value="5">
+              <input type="number" id="repTreeEmpId" class="form-input" placeholder="e.g. 5" min="1">
             </div>
             <div>
               <label class="form-label">Reporting Type</label>
@@ -315,7 +314,7 @@
               <input type="hidden" id="repTreeType" value="PRIMARY">
             </div>
             <div>
-              <label class="form-label">As-of Date</label>
+              <label class="form-label">As-of Date <span class="text-red-400">*</span></label>
               <input type="date" id="repTreeDate" class="form-input">
             </div>
             <button onclick="fetchReportingTree()" id="fetchRepBtn" class="w-full py-2.5 bg-primary-600 text-white text-sm font-semibold rounded-xl hover:bg-primary-700 transition flex items-center justify-center gap-2">
@@ -326,23 +325,25 @@
         <div class="pt-3 border-t border-gray-100 dark:border-gray-700">
           <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">Request Preview</p>
           <div class="bg-gray-900 dark:bg-gray-950 rounded-xl p-3 font-mono text-[11px] text-green-400 leading-relaxed" id="repRequestPreview">
-            GET /reporting/tree/5<br>?type=PRIMARY<br>&amp;date=2026-02-21
+            GET /api/organogram/reporting/tree/{id}<br>?type=PRIMARY<br>&amp;date=…
           </div>
         </div>
       </div>
       <!-- RIGHT: Tree output -->
       <div class="lg:col-span-2 p-6">
         <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-4">Response · Reporting Hierarchy</p>
-        <div id="repTreeResult" class="space-y-1"></div>
+        <div id="repTreeResult" class="space-y-1">
+          <span class="text-xs text-gray-400">Enter an Employee ID and click Fetch.</span>
+        </div>
       </div>
     </div>
   </div>
 
   <!-- ======================================================
-     MODALS
-====================================================== -->
+       MODALS
+  ====================================================== -->
 
-  <!-- 1. Add Company (parent OR subsidiary) -->
+  <!-- 1. Add Company -->
   <div id="companyModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
     <div class="modal-backdrop absolute inset-0" onclick="closeModal('companyModal')"></div>
     <div class="modal-card relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md border border-gray-200 dark:border-gray-700">
@@ -350,7 +351,7 @@
         <div class="flex justify-between items-center">
           <div>
             <h3 class="font-bold text-lg">Add Company</h3>
-            <p class="text-xs text-gray-400 font-mono mt-0.5" id="companyModalEndpoint">POST /companies</p>
+            <p class="text-xs text-gray-400 font-mono mt-0.5" id="companyModalEndpoint">POST /api/organogram/companies</p>
           </div>
           <button onclick="closeModal('companyModal')" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"><span class="material-icons-round text-gray-400">close</span></button>
         </div>
@@ -364,9 +365,11 @@
           </div>
         </div>
         <div id="parentCompanyField" class="hidden">
-          <label class="form-label">Parent Company ID *</label>
-          <input type="number" id="compParentId" placeholder="e.g. 1" class="form-input" min="1">
-          <p class="text-[10px] text-gray-400 mt-1 font-mono">Endpoint changes to POST /companies/{id}/subsidiaries</p>
+          <label class="form-label">Parent Company *</label>
+          <select id="compParentId" class="form-select">
+            <option value="">Select a parent company</option>
+          </select>
+          <p class="text-[10px] text-gray-400 mt-1 font-mono">Endpoint: POST /api/organogram/companies/{id}/subsidiaries</p>
         </div>
         <div>
           <label class="form-label">Company Name *</label>
@@ -410,13 +413,16 @@
           <input type="text" id="deptCode" placeholder="e.g. 100001" class="form-input" style="font-family:'DM Mono',monospace;">
         </div>
         <div>
-          <label class="form-label">Company ID *</label>
-          <input type="number" id="deptCompanyId" placeholder="e.g. 1" class="form-input" min="1">
-          <p class="text-[10px] text-gray-400 mt-1">The company this department belongs to</p>
+          <label class="form-label">Company *</label>
+          <select id="deptCompanyId" class="form-select">
+            <option value="">Select a company</option>
+          </select>
         </div>
         <div>
-          <label class="form-label">Parent Department ID <span class="text-gray-400 font-normal">(optional — leave blank for top-level)</span></label>
-          <input type="number" id="deptParentId" placeholder="e.g. 2" class="form-input" min="1">
+          <label class="form-label">Parent Department <span class="text-gray-400 font-normal">(optional)</span></label>
+          <select id="deptParentId" class="form-select">
+            <option value="">— None (top-level) —</option>
+          </select>
         </div>
         <div>
           <label class="form-label">Effective From *</label>
@@ -441,7 +447,7 @@
         <div class="flex justify-between items-center">
           <div>
             <h3 class="font-bold text-lg">Move Department</h3>
-            <p class="text-xs text-gray-400 font-mono mt-0.5">PUT /departments/{id}/move/{newParentId}</p>
+            <p class="text-xs text-gray-400 font-mono mt-0.5">PUT /api/organogram/departments/{id}/move/{newParentId}</p>
           </div>
           <button onclick="closeModal('moveModal')" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"><span class="material-icons-round text-gray-400">close</span></button>
         </div>
@@ -449,17 +455,19 @@
       <div class="p-6 space-y-4">
         <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 text-xs text-amber-700 dark:text-amber-400">
           <span class="material-icons-round text-sm align-middle mr-1">info</span>
-          This calls <span class="font-mono">PUT /api/organogram/departments/<b>{departmentId}</b>/move/<b>{newParentDepartmentId}</b></span>
+          Calls <span class="font-mono">PUT /api/organogram/departments/<b>{departmentId}</b>/move/<b>{newParentDepartmentId}</b></span>
         </div>
         <div>
-          <label class="form-label">Department ID to Move *</label>
-          <input type="number" id="moveDeptId" placeholder="e.g. 2" class="form-input" min="1">
-          <p class="text-[10px] text-gray-400 mt-1">The department being relocated</p>
+          <label class="form-label">Department to Move *</label>
+          <select id="moveDeptId" class="form-select">
+            <option value="">Select a department</option>
+          </select>
         </div>
         <div>
-          <label class="form-label">New Parent Department ID *</label>
-          <input type="number" id="moveNewParentId" placeholder="e.g. 1" class="form-input" min="1">
-          <p class="text-[10px] text-gray-400 mt-1">The department it will report into</p>
+          <label class="form-label">New Parent Department *</label>
+          <select id="moveNewParentId" class="form-select">
+            <option value="">Select a new parent</option>
+          </select>
         </div>
         <div id="moveError" class="api-error hidden"></div>
       </div>
@@ -532,7 +540,7 @@
       <div class="p-6 space-y-4">
         <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 text-xs text-red-700 dark:text-red-400">
           <span class="material-icons-round text-sm align-middle mr-1">warning</span>
-          Sets an <code>effectiveTo</code> date on the reporting line — it does not permanently delete it.
+          Sets an <code>effectiveTo</code> date on the reporting line — does not permanently delete it.
         </div>
         <div>
           <label class="form-label">Employee ID *</label>
@@ -571,10 +579,110 @@
   ====================================================== -->
   <script>
     (function () {
+
+        const API_BASE = 'http://localhost:9006/api/organogram';
+
         // ── State ─────────────────────────────────────────────
         let companyTree = [];
         let deptTree    = [];
-        let companyType = 'parent'; // 'parent' | 'subsidiary'
+        let companyType = 'parent';
+
+        // Helper: flatten companies tree to array of {id, name, code}
+        function flattenCompanies(nodes) {
+            let result = [];
+            function recurse(arr) {
+                arr.forEach(c => {
+                    const id = c.id || c.companyId; // try both common field names
+                    if (id) {
+                        result.push({ id: id, name: c.name, code: c.code });
+                    } else {
+                        console.warn('Company missing ID, skipping:', c);
+                    }
+                    if (c.subsidiaries) recurse(c.subsidiaries);
+                });
+            }
+            recurse(nodes);
+            return result;
+        }
+
+        // Helper: flatten departments tree to array of {id, name, code}
+        function flattenDepartments(nodes) {
+            let result = [];
+            function recurse(arr) {
+                arr.forEach(d => {
+                    const id = d.id || d.departmentId; // try both common field names
+                    if (id) {
+                        result.push({ id: id, name: d.name, code: d.code });
+                    } else {
+                        console.warn('Department missing ID, skipping:', d);
+                    }
+                    if (d.children || d.subDepartments) recurse(d.children || d.subDepartments);
+                });
+            }
+            recurse(nodes);
+            return result;
+        }
+
+        // Populate company dropdowns
+        function populateCompanyDropdown(selectId, includeBlank = true) {
+            const select = document.getElementById(selectId);
+            if (!select) return;
+            select.innerHTML = '';
+            if (includeBlank) {
+                const blank = document.createElement('option');
+                blank.value = '';
+                blank.textContent = 'Select a company';
+                select.appendChild(blank);
+            }
+            const flat = flattenCompanies(companyTree);
+            flat.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.id;
+                opt.textContent = `${c.name} (${c.code})`;
+                select.appendChild(opt);
+            });
+        }
+
+        // Populate department dropdowns
+        function populateDepartmentDropdown(selectId, includeBlank = true) {
+            const select = document.getElementById(selectId);
+            if (!select) return;
+            select.innerHTML = '';
+            if (includeBlank) {
+                const blank = document.createElement('option');
+                blank.value = '';
+                blank.textContent = selectId === 'deptParentId' ? '— None (top-level) —' : 'Select a department';
+                select.appendChild(blank);
+            }
+            const flat = flattenDepartments(deptTree);
+            flat.forEach(d => {
+                const opt = document.createElement('option');
+                opt.value = d.id;
+                opt.textContent = `${d.name} (${d.code})`;
+                select.appendChild(opt);
+            });
+        }
+
+        // ── Real API fetch ─────────────────────────────────────
+        async function apiFetch(path, options = {}) {
+            const url = API_BASE + path;
+            const res = await fetch(url, {
+                headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+                ...options
+            });
+            if (!res.ok) {
+                let msg = `HTTP ${res.status}`;
+                try {
+                    const err = await res.json();
+                    msg = err.message || err.error || err.detail || msg;
+                } catch (_) {}
+                throw new Error(msg);
+            }
+            // 204 No Content or empty body
+            if (res.status === 204) return null;
+            const text = await res.text();
+            return text ? JSON.parse(text) : null;
+        }
 
         // ── Utilities ─────────────────────────────────────────
         function showToast(msg, type = 'success') {
@@ -616,7 +724,19 @@
         }
 
         // ── Modal helpers ──────────────────────────────────────
-        window.openModal  = id => document.getElementById(id).classList.remove('hidden');
+        window.openModal  = id => {
+            document.getElementById(id).classList.remove('hidden');
+            // Refresh dropdowns when modals open
+            if (id === 'companyModal') {
+                populateCompanyDropdown('compParentId');
+            } else if (id === 'deptModal') {
+                populateCompanyDropdown('deptCompanyId');
+                populateDepartmentDropdown('deptParentId');
+            } else if (id === 'moveModal') {
+                populateDepartmentDropdown('moveDeptId');
+                populateDepartmentDropdown('moveNewParentId');
+            }
+        };
         window.closeModal = id => document.getElementById(id).classList.add('hidden');
 
         // ── View toggle ────────────────────────────────────────
@@ -630,10 +750,8 @@
                 btn.classList.toggle('text-primary-600', isActive);
                 btn.classList.toggle('text-gray-600', !isActive);
             });
-            const chartEl = document.getElementById('orgChartView');
-            const listEl  = document.getElementById('orgListView');
-            chartEl.classList.toggle('hidden', v !== 'chart');
-            listEl.classList.toggle('hidden',  v !== 'list');
+            document.getElementById('orgChartView').classList.toggle('hidden', v !== 'chart');
+            document.getElementById('orgListView').classList.toggle('hidden',  v !== 'list');
             if (v === 'chart') setTimeout(drawConnectors, 60);
         };
 
@@ -652,7 +770,7 @@
 
         // ── Org Chart Rendering ────────────────────────────────
         function renderNode(node, container) {
-            const isRoot = !node.parentDepartmentId && !node.companyId;
+            const isRoot = !node.parentDepartmentId;
             const children = node.children || node.subDepartments || [];
             const wrap = document.createElement('div');
             wrap.className = 'org-node-wrap';
@@ -830,9 +948,9 @@
         function updateRepPreview() {
             const empId = document.getElementById('repTreeEmpId')?.value || '{id}';
             const type  = document.getElementById('repTreeType')?.value || 'PRIMARY';
-            const date  = document.getElementById('repTreeDate')?.value  || '(omit)';
+            const date  = document.getElementById('repTreeDate')?.value  || '(required)';
             const prev  = document.getElementById('repRequestPreview');
-            if (prev) prev.innerHTML = `GET /reporting/tree/${empId}<br>?type=${type}<br>&amp;date=${date}`;
+            if (prev) prev.innerHTML = `GET /api/organogram/reporting/tree/${empId}<br>?type=${type}<br>&amp;date=${date}`;
         }
 
         window.fetchReportingTree = async function () {
@@ -842,25 +960,19 @@
             const result = document.getElementById('repTreeResult');
             updateRepPreview();
             if (!empId) { result.innerHTML = '<div class="api-error">Please enter an Employee ID.</div>'; return; }
+            if (!date)  { result.innerHTML = '<div class="api-error">Date is required by the API.</div>'; return; }
             result.innerHTML = '<div class="flex items-center gap-2 text-gray-400 text-sm"><span class="material-icons-round animate-spin text-[18px]">refresh</span>Fetching tree…</div>';
             setLoading('fetchRepBtn', true);
             try {
-                let url = `/reporting/tree/${empId}?type=${type}`;
-                if (date) url += `&date=${date}`;
-                const data = await apiFetch(url);
-                // Guard against empty or missing data
-                if (!data) {
-                    result.innerHTML = '<span class="text-xs text-gray-400">No data returned.</span>';
-                    return;
-                }
-                const treeData = Array.isArray(data) ? data[0] : data;
-                if (!treeData) {
-                    result.innerHTML = '<span class="text-xs text-gray-400">No reporting data found.</span>';
+                const data = await apiFetch(`/reporting/tree/${empId}?type=${type}&date=${date}`);
+                if (!data || (Array.isArray(data) && !data.length)) {
+                    result.innerHTML = '<span class="text-xs text-gray-400">No reporting data found for this employee.</span>';
                     return;
                 }
                 result.innerHTML = '';
-                renderRepTree(treeData, result);
-                if (!result.children.length) result.innerHTML = '<span class="text-xs text-gray-400">No reporting data found.</span>';
+                // API returns List<EmployeeNodeDTO> — render each root
+                const nodes = Array.isArray(data) ? data : [data];
+                nodes.forEach(node => renderRepTree(node, result));
             } catch (e) {
                 result.innerHTML = `<div class="api-error">${e.message}</div>`;
             } finally {
@@ -868,174 +980,98 @@
             }
         };
 
-        // ── Dummy Data ─────────────────────────────────────────
-        const DUMMY_COMPANY_TREE = [
-            {
-                companyId: 1, name: 'JustJava Holdings', code: 'JJH',
-                subsidiaries: [
-                    { companyId: 2, name: 'JustJava Nigeria Ltd',  code: 'JJN', subsidiaries: [] },
-                    { companyId: 3, name: 'JustJava Ghana Ltd',    code: 'JJG', subsidiaries: [] },
-                    { companyId: 4, name: 'JustJava Kenya Ltd',    code: 'JJK', subsidiaries: [] }
-                ]
-            }
-        ];
-
-        const DUMMY_DEPT_TREE = [
-            {
-                departmentId: 1, name: 'JustJava Holdings', code: 'JJH',
-                employeeCount: 248, parentDepartmentId: null,
-                children: [
-                    {
-                        departmentId: 2, name: 'Human Resources', code: '100001',
-                        employeeCount: 34, parentDepartmentId: 1,
-                        children: [
-                            { departmentId: 5,  name: 'Payroll',       code: '100002', employeeCount: 8,  parentDepartmentId: 2, children: [] },
-                            { departmentId: 6,  name: 'Talent Acq.',   code: '100003', employeeCount: 10, parentDepartmentId: 2, children: [] },
-                            { departmentId: 7,  name: 'L&D',           code: '100004', employeeCount: 7,  parentDepartmentId: 2, children: [] },
-                            { departmentId: 8,  name: 'Compliance',    code: '100005', employeeCount: 9,  parentDepartmentId: 2, children: [] }
-                        ]
-                    },
-                    {
-                        departmentId: 3, name: 'Finance', code: '200001',
-                        employeeCount: 28, parentDepartmentId: 1,
-                        children: [
-                            { departmentId: 9,  name: 'Treasury',      code: '200002', employeeCount: 6,  parentDepartmentId: 3, children: [] },
-                            { departmentId: 10, name: 'Tax & Audit',   code: '200003', employeeCount: 9,  parentDepartmentId: 3, children: [] },
-                            { departmentId: 11, name: 'Accounts',      code: '200004', employeeCount: 13, parentDepartmentId: 3, children: [] }
-                        ]
-                    },
-                    {
-                        departmentId: 4, name: 'Technology', code: '300001',
-                        employeeCount: 42, parentDepartmentId: 1,
-                        children: [
-                            { departmentId: 12, name: 'Engineering',   code: '300002', employeeCount: 20, parentDepartmentId: 4, children: [] },
-                            { departmentId: 13, name: 'Infrastructure',code: '300003', employeeCount: 12, parentDepartmentId: 4, children: [] },
-                            { departmentId: 14, name: 'Cybersecurity', code: '300004', employeeCount: 10, parentDepartmentId: 4, children: [] }
-                        ]
-                    },
-                    {
-                        departmentId: 15, name: 'Operations', code: '400001',
-                        employeeCount: 55, parentDepartmentId: 1,
-                        children: [
-                            { departmentId: 16, name: 'Logistics',     code: '400002', employeeCount: 28, parentDepartmentId: 15, children: [] },
-                            { departmentId: 17, name: 'Facilities',    code: '400003', employeeCount: 27, parentDepartmentId: 15, children: [] }
-                        ]
-                    },
-                    {
-                        departmentId: 18, name: 'Legal', code: '500001',
-                        employeeCount: 14, parentDepartmentId: 1,
-                        children: []
-                    },
-                    {
-                        departmentId: 19, name: 'Marketing', code: '600001',
-                        employeeCount: 22, parentDepartmentId: 1,
-                        children: [
-                            { departmentId: 20, name: 'Brand',         code: '600002', employeeCount: 9,  parentDepartmentId: 19, children: [] },
-                            { departmentId: 21, name: 'Digital',       code: '600003', employeeCount: 13, parentDepartmentId: 19, children: [] }
-                        ]
-                    }
-                ]
-            }
-        ];
-
-        const DUMMY_REP_TREE = {
-            employeeId: 5, employeeName: 'Sarah Miller', role: 'HR Director', reportingType: 'PRIMARY',
-            directReports: [
-                {
-                    employeeId: 6, employeeName: 'Chidi Okafor', role: 'Payroll Manager', reportingType: 'PRIMARY',
-                    directReports: [
-                        { employeeId: 9, employeeName: 'Amara Eze', role: 'Payroll Officer', reportingType: 'PRIMARY', directReports: [] },
-                        { employeeId: 10, employeeName: 'Bayo Lawal', role: 'Payroll Analyst', reportingType: 'PRIMARY', directReports: [] }
-                    ]
-                },
-                {
-                    employeeId: 7, employeeName: 'Grace Ndidi', role: 'Talent Lead', reportingType: 'PRIMARY',
-                    directReports: [
-                        { employeeId: 11, employeeName: 'Emeka Uche', role: 'Recruiter', reportingType: 'PRIMARY', directReports: [] }
-                    ]
-                },
-                {
-                    employeeId: 8, employeeName: 'Fatima Bello', role: 'L&D Coordinator', reportingType: 'PRIMARY',
-                    directReports: []
-                }
-            ]
-        };
-
-        // ── Mock API (returns dummy data, simulates network delay) ──
-        async function apiFetch(path, options = {}) {
-            await new Promise(r => setTimeout(r, 420)); // simulate latency
-            const method = (options.method || 'GET').toUpperCase();
-
-            // GET /companies/tree
-            if (method === 'GET' && path.includes('/companies/tree'))
-                return JSON.parse(JSON.stringify(DUMMY_COMPANY_TREE));
-
-            // GET /departments/tree
-            if (method === 'GET' && path.includes('/departments/tree'))
-                return JSON.parse(JSON.stringify(DUMMY_DEPT_TREE));
-
-            // GET /reporting/tree/{id}
-            if (method === 'GET' && path.includes('/reporting/tree'))
-                return JSON.parse(JSON.stringify(DUMMY_REP_TREE));
-
-            // All mutating calls — simulate success
-            if (['POST','PUT','PATCH','DELETE'].includes(method))
-                return { success: true, message: 'Operation completed (demo mode)' };
-
-            throw new Error('Unknown endpoint: ' + path);
-        }
-
-        // ── API Calls ──────────────────────────────────────────
-
+        // ── Fetch company tree ─────────────────────────────────
         async function fetchCompanyTree() {
             try {
                 const data = await apiFetch('/companies/tree');
-                companyTree = Array.isArray(data) ? data : [data];
+                companyTree = Array.isArray(data) ? data : (data ? [data] : []);
                 buildCompanyPanel(companyTree);
                 let total = 0;
                 function countCompanies(arr) { arr.forEach(c => { total++; countCompanies(c.subsidiaries||[]); }); }
                 countCompanies(companyTree);
-                document.getElementById('statCompanies').textContent = total;
+                document.getElementById('statCompanies').textContent = total || '0';
                 const roots = companyTree.length;
-                const subs  = total - roots;
-                document.getElementById('statCompanySub').textContent = `${roots} Parent · ${subs} Subsidiaries`;
-                // Removed references to missing element 'apiStatus'
+                document.getElementById('statCompanySub').textContent = `${roots} Parent · ${total - roots} Subsidiaries`;
+                if (total === 0) {
+                    document.getElementById('statCompanySub').textContent = 'No companies';
+                }
             } catch (e) {
                 document.getElementById('companyTreePanel').innerHTML = `<div class="api-error">${e.message}</div>`;
+                document.getElementById('statCompanies').textContent = 'Err';
+                document.getElementById('statCompanySub').textContent = e.message;
             }
         }
 
+        // ── Fetch department tree ──────────────────────────────
         async function fetchDeptTree() {
             const badge = document.getElementById('chartLiveBadge');
             badge.innerHTML = `<span class="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse"></span>Loading`;
             badge.className = 'badge badge-orange text-[10px] flex items-center gap-1';
             try {
                 const data = await apiFetch('/departments/tree');
-                deptTree = Array.isArray(data) ? data : [data];
+                deptTree = Array.isArray(data) ? data : (data ? [data] : []);
 
-                const container = document.getElementById('orgTree'); container.innerHTML = '';
-                const rootWrap  = document.createElement('div'); rootWrap.className = 'flex flex-col items-center';
-                deptTree.forEach(root => renderNode(root, rootWrap));
-                container.appendChild(rootWrap);
-                setTimeout(drawConnectors, 100);
+                // Get reference to orgTree element
+                const orgTreeEl = document.getElementById('orgTree');
 
-                buildDeptTable(deptTree);
-                buildDeptSummary(deptTree);
+                // EMPTY STATE HANDLING
+                if (deptTree.length === 0) {
+                    // Apply empty state styling
+                    orgTreeEl.classList.add('org-tree-empty');
+                    orgTreeEl.innerHTML = `
+                        <div class="flex flex-col items-center justify-center text-gray-400">
+                            <span class="material-icons-round text-4xl mb-2">account_tree</span>
+                            <p class="text-sm">No departments found. Create one using the "New Dept" action.</p>
+                        </div>`;
+                    // List view
+                    document.getElementById('deptTableBody').innerHTML = `
+                        <tr><td colspan="5" class="text-center py-8 text-gray-400">No departments available</td></tr>`;
+                    // Department summary
+                    document.getElementById('deptSummaryList').innerHTML = `
+                        <div class="text-center py-4 text-gray-400 text-sm">No departments</div>`;
+                    // Stats
+                    document.getElementById('statDepts').textContent = '0';
+                    document.getElementById('deptSummaryCount').textContent = '0 total';
+                    document.getElementById('statDeptSub').textContent = '0 active departments';
+                    document.getElementById('statEmps').textContent = '0';
+                    // Reporting lines stat (could be estimated, but leave as — for now)
+                    document.getElementById('statLines').textContent = '—';
+                } else {
+                    // Remove empty state styling if previously applied
+                    orgTreeEl.classList.remove('org-tree-empty');
+                    // Restore original inline styles (already present, but ensure they're not overridden)
+                    orgTreeEl.style.display = 'inline-flex';
+                    orgTreeEl.style.flexDirection = 'column';
+                    orgTreeEl.style.alignItems = 'center';
+                    orgTreeEl.style.minWidth = 'max-content';
+                    orgTreeEl.style.padding = '24px 60px 32px';
+                    // Clear and draw org chart
+                    orgTreeEl.innerHTML = '';
+                    const rootWrap  = document.createElement('div'); rootWrap.className = 'flex flex-col items-center';
+                    deptTree.forEach(root => renderNode(root, rootWrap));
+                    orgTreeEl.appendChild(rootWrap);
+                    setTimeout(drawConnectors, 100);
 
-                const flat = flattenDepts(deptTree);
-                document.getElementById('statDepts').textContent = flat.length - 1; // exclude root holding
-                document.getElementById('deptSummaryCount').textContent = (flat.length - 1) + ' total';
-                document.getElementById('statDeptSub').textContent = (flat.length - 1) + ' active departments';
-                const empTotal = flat.reduce((s, n) => s + (n.employeeCount || 0), 0);
-                document.getElementById('statEmps').textContent = 248;
-                document.getElementById('statLines').textContent = 186;
+                    buildDeptTable(deptTree);
+                    buildDeptSummary(deptTree);
 
-                badge.innerHTML = `<span class="w-1.5 h-1.5 bg-green-500 rounded-full"></span>Demo`;
+                    const flat = flattenDepts(deptTree);
+                    document.getElementById('statDepts').textContent = flat.length;
+                    document.getElementById('deptSummaryCount').textContent = flat.length + ' total';
+                    document.getElementById('statDeptSub').textContent = flat.length + ' active departments';
+                    const empTotal = flat.reduce((s, n) => s + (n.employeeCount || 0), 0);
+                    document.getElementById('statEmps').textContent = empTotal || '—';
+                    // Reporting lines stat — no dedicated endpoint, show placeholder
+                    document.getElementById('statLines').textContent = '—';
+                }
+
+                badge.innerHTML = `<span class="w-1.5 h-1.5 bg-green-500 rounded-full"></span>Live`;
                 badge.className = 'badge badge-success text-[10px] flex items-center gap-1';
             } catch (e) {
                 document.getElementById('orgTree').innerHTML = `<div class="api-error m-4">${e.message}</div>`;
                 badge.innerHTML = `<span class="w-1.5 h-1.5 bg-red-500 rounded-full"></span>Error`;
                 badge.className = 'badge badge-red text-[10px] flex items-center gap-1';
+                document.getElementById('statDepts').textContent = 'Err';
             }
         }
 
@@ -1046,7 +1082,9 @@
             document.getElementById('typeBtnParent').className = `flex-1 py-2 text-sm font-medium rounded-lg border-2 transition ${isParent ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-700' : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400'}`;
             document.getElementById('typeBtnSub').className    = `flex-1 py-2 text-sm font-medium rounded-lg border-2 transition ${!isParent ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-700' : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400'}`;
             document.getElementById('parentCompanyField').classList.toggle('hidden', isParent);
-            document.getElementById('companyModalEndpoint').textContent = isParent ? 'POST /companies' : 'POST /companies/{parentId}/subsidiaries';
+            document.getElementById('companyModalEndpoint').textContent = isParent
+                ? 'POST /api/organogram/companies'
+                : 'POST /api/organogram/companies/{parentId}/subsidiaries';
         };
 
         // ── Save: Company ──────────────────────────────────────
@@ -1059,10 +1097,14 @@
             let path, body;
             if (companyType === 'parent') {
                 path = '/companies';
-                body = { name, code, parentCompanyId: null };
+                body = { name, code };
             } else {
                 const parentId = document.getElementById('compParentId').value;
-                if (!parentId) { showError('companyError', 'Parent Company ID is required for a subsidiary.'); return; }
+                // Validate: not empty, not the literal "undefined", and can be parsed to a number
+                if (!parentId || parentId === 'undefined' || isNaN(parseInt(parentId))) {
+                    showError('companyError', 'Please select a valid parent company.');
+                    return;
+                }
                 path = `/companies/${parentId}/subsidiaries`;
                 body = { name, code };
             }
@@ -1091,7 +1133,7 @@
             const parentDeptId  = document.getElementById('deptParentId').value;
             const effectiveFrom = document.getElementById('deptEffectiveFrom').value;
             if (!name || !code || !companyId || !effectiveFrom) {
-                showError('deptError', 'Name, Code, Company ID, and Effective From are required.');
+                showError('deptError', 'Name, Code, Company, and Effective From are required.');
                 return;
             }
             const body = {
@@ -1106,7 +1148,9 @@
                 await apiFetch('/departments', { method: 'POST', body: JSON.stringify(body) });
                 closeModal('deptModal');
                 showToast(`Department "${name}" created`);
-                ['deptName','deptCode','deptCompanyId','deptParentId','deptEffectiveFrom'].forEach(id => document.getElementById(id).value = '');
+                document.getElementById('deptName').value = '';
+                document.getElementById('deptCode').value = '';
+                // Keep dropdowns as they are, but clear selections? We'll leave it as is.
                 fetchDeptTree();
             } catch (e) {
                 showError('deptError', e.message);
@@ -1120,12 +1164,13 @@
             hideError('moveError');
             const deptId      = document.getElementById('moveDeptId').value;
             const newParentId = document.getElementById('moveNewParentId').value;
-            if (!deptId || !newParentId) { showError('moveError', 'Both Department ID and New Parent ID are required.'); return; }
+            if (!deptId || !newParentId) { showError('moveError', 'Please select both a department and a new parent.'); return; }
             setLoading('saveMoveBtn', true);
             try {
                 await apiFetch(`/departments/${deptId}/move/${newParentId}`, { method: 'PUT' });
                 closeModal('moveModal');
                 showToast('Department moved successfully');
+                // Reset dropdown selections
                 document.getElementById('moveDeptId').value = '';
                 document.getElementById('moveNewParentId').value = '';
                 fetchDeptTree();
@@ -1194,45 +1239,26 @@
             }
         };
 
-        // ── Set default date fields to today ───────────────────
+        // ── Default date fields ────────────────────────────────
         const today = new Date().toISOString().split('T')[0];
-        ['deptEffectiveFrom','reportEffectiveFrom','repTreeDate'].forEach(id => {
+        ['deptEffectiveFrom', 'reportEffectiveFrom', 'repTreeDate'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.value = today;
         });
-        // default remove effectiveTo to end of year
         const eoy = new Date(); eoy.setMonth(11); eoy.setDate(31);
         const removeEl = document.getElementById('removeEffectiveTo');
         if (removeEl) removeEl.value = eoy.toISOString().split('T')[0];
 
-        // ── Initial stat placeholders ──────────────────────────
-        document.getElementById('statEmps').textContent = '—';
-        document.getElementById('statLines').textContent = '—';
+        // Live-update request preview as user types
+        ['repTreeEmpId', 'repTreeDate'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('input', updateRepPreview);
+        });
+        updateRepPreview();
 
         // ── Boot ───────────────────────────────────────────────
         fetchCompanyTree();
         fetchDeptTree();
-
-        // Pre-open reporting explorer with dummy data
-        setTimeout(() => {
-            // set default date
-            const today2 = new Date().toISOString().split('T')[0];
-            const repDate = document.getElementById('repTreeDate');
-            if (repDate) repDate.value = today2;
-            updateRepPreview();
-            // auto-load the tree
-            const result = document.getElementById('repTreeResult');
-            if (result) {
-                result.innerHTML = '';
-                renderRepTree(DUMMY_REP_TREE, result);
-            }
-            document.getElementById('statLines').textContent = 186;
-            // Add input listeners so the preview updates live
-            ['repTreeEmpId','repTreeDate'].forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.addEventListener('input', updateRepPreview);
-            });
-        }, 700);
 
     })();
   </script>
