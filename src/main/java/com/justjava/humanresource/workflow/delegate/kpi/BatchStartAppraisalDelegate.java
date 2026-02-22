@@ -74,8 +74,8 @@ public class BatchStartAppraisalDelegate implements JavaDelegate {
                             Map.of(
                                     "employeeId", employee.getId(),
                                     "cycleId", cycleId,
-                                    "managerComplete",false,
-                                    "selfComplete",false
+                                    "managerComplete",true,
+                                    "selfComplete",true
                             )
                     );
                 }
