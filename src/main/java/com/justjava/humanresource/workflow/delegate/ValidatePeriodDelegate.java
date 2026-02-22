@@ -33,6 +33,9 @@ public class ValidatePeriodDelegate implements JavaDelegate {
                     "Only OPEN period can be validated.");
         }
 
+
+        System.out.println(" The Period Start date==="+period.getStartDate());
+        System.out.println(" The Period End date==="+period.getEndDate());
         long postedCount =
                 payrollRunRepository.countByPayrollDateBetweenAndStatus(
                         period.getStartDate(),

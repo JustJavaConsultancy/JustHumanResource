@@ -23,9 +23,11 @@ public class InitializeKpiCycleDelegate implements JavaDelegate {
 
         YearMonth period = YearMonth.now().minusMonths(1);
 
+        System.out.println("Checking for existing KPI cycle for period: " + period);
         repository.findByPeriod(period)
                 .ifPresentOrElse(
-                        existing -> execution.setVariable("cycleId", existing.getId()),
+                        existing ->
+                                execution.setVariable("cycleId", existing.getId()),
                         () -> {
                             KpiEvaluationCycle cycle =
                                     repository.save(
@@ -42,6 +44,7 @@ public class InitializeKpiCycleDelegate implements JavaDelegate {
                         }
                 );
 
+        System.out.println(" Initialized KPI cycle for period:======" + period);
         execution.setVariable("evaluationPeriod", period);
     }
 }

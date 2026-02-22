@@ -23,6 +23,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -46,6 +48,11 @@ public class EmployeeServiceImpl implements EmployeeService {
         Employee employee = employeeMapper.toEntity(dto);
         return employeeRepository.save(employee);
     }
+    @Override
+    public List<EmployeeDTO> getAllEmployees() {
+        List<Employee> employees = employeeRepository.findAll();
+        return employeeMapper.toDtoList(employees);
+    }
     public EmployeeDTO createAndActivateEmployee(EmployeeDTO dto) {
 
         Employee employee = createEmployee(dto);
@@ -56,6 +63,7 @@ public class EmployeeServiceImpl implements EmployeeService {
                 LocalDate.now()
         );
     }
+
     @Override
     public Employee getByEmployeeNumber(String employeeNumber) {
         return employeeRepository.findByEmployeeNumber(employeeNumber)

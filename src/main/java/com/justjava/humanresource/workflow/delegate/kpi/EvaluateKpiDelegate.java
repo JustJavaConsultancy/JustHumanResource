@@ -25,7 +25,7 @@ public class EvaluateKpiDelegate implements JavaDelegate {
 
         YearMonth period =
                 (YearMonth) execution.getVariable("evaluationPeriod");
-
+        System.out.println("Evaluating KPIs for employee " + employeeId + " for period " + period);
         boolean hasMeasurements =
                 !measurementRepository
                         .findByEmployee_IdAndPeriod(employeeId, period)

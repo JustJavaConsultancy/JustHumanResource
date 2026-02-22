@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" xmlns:th="http://www.w3.org/1999/xhtml"
+      layout:decorate="layouts/mobileEmployeeLayout">
+<head>
+    <meta charset="UTF-8">
+    <title>Leave | JustHR Mobile</title>
+    <style>
+        .leave-balance-card {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            border: 1px solid #e2e8f0;
+            border-radius: 1rem;
+            padding: 1rem;
+            transition: all 0.2s ease;
+        }
+
+        .dark .leave-balance-card {
+            background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
+            border-color: #374151;
+        }
+
+        .leave-balance-card:active {
+            transform: scale(0.98);
+        }
+
+        .progress-bar {
+            height: 4px;
+            border-radius: 2px;
+            overflow: hidden;
+            background-color: #e5e7eb;
+        }
+
+        .dark .progress-bar {
+            background-color: #374151;
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 2px;
+            transition: width 0.3s ease;
+        }
+
+        .leave-request-item {
+            background-color: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            transition: all 0.2s ease;
+        }
+
+        .dark .leave-request-item {
+            background-color: #1f2937;
+            border-color: #374151;
+        }
+
+        .leave-request-item:active {
+            transform: scale(0.98);
+            background-color: #f9fafb;
+        }
+
+        .dark .leave-request-item:active {
+            background-color: #111827;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            z-index: 100;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-container {
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            background-color: white;
+            border-radius: 1rem 1rem 0 0;
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        .dark .modal-container {
+            background-color: #1f2937;
+        }
+
+        .modal-overlay.active .modal-container {
+            transform: translateY(0);
+        }
+
+        .swipe-indicator {
+            width: 2rem;
+            height: 0.25rem;
+            background-color: #d1d5db;
+            border-radius: 9999px;
+            margin: 0.75rem auto 0;
+        }
+
+        .dark .swipe-indicator {
+            background-color: #4b5563;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            background-color: white;
+            font-size: 0.875rem;
+        }
+
+        .dark .form-input {
+            background-color: #374151;
+            border-color: #4b5563;
+            color: #f3f4f6;
+        }
+
+        .form-input:focus {
+            border-color: #2563eb;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .floating-action {
+            position: fixed;
+            bottom: calc(5.5rem + env(safe-area-inset-bottom));
+            right: 1rem;
+            z-index: 40;
+            background: #2563eb;
+            color: white;
+            border-radius: 50%;
+            width: 3.5rem;
+            height: 3.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+            transition: all 0.2s ease;
+        }
+
+        .floating-action:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 16px rgba(37, 99, 235, 0.5);
+        }
+    </style>
+</head>
+<body>
+<main layout:fragment="content">
+
+    <!-- Leave Year Info -->
+    <div class="mobile-card p-4 mb-4">
+        <div class="flex items-center justify-between">
+            <div>
+                <h3 class="font-bold text-gray-900 dark:text-white">Leave Overview</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Current leave year: Jan 2025 – Dec 2025</p>
+            </div>
+            <button onclick="openRequestModal()" class="p-2 bg-primary-600 text-white rounded-lg">
+                <span class="material-icons-round">add</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Leave Balance Cards -->
+    <div class="grid grid-cols-2 gap-3 mb-4">
+        <!-- Annual Leave -->
+        <div class="leave-balance-card">
+            <div class="flex items-center justify-between mb-2">
+                <div class="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+                    <span class="material-icons-round text-blue-600 dark:text-blue-400 text-lg">beach_access</span>
+                </div>
+                <span class="text-xs text-gray-500 dark:text-gray-400">Annual</span>
+            </div>
+            <p class="text-xl font-bold text-gray-900 dark:text-white">16 <span class="text-sm font-normal text-gray-500">days</span></p>
+            <div class="mt-2">
+                <div class="flex items-center justify-between text-xs mb-1">
+                    <span class="text-gray-500">Used: 9</span>
+                    <span class="font-medium text-gray-700 dark:text-gray-300">25 total</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill bg-blue-600" style="width: 36%"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sick Leave -->
+        <div class="leave-balance-card">
+            <div class="flex items-center justify-between mb-2">
+                <div class="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
+                    <span class="material-icons-round text-green-600 dark:text-green-400 text-lg">healing</span>
+                </div>
+                <span class="text-xs text-gray-500 dark:text-gray-400">Sick</span>
+            </div>
+            <p class="text-xl font-bold text-gray-900 dark:text-white">8 <span class="text-sm font-normal text-gray-500">days</span></p>
+            <div class="mt-2">
+                <div class="flex items-center justify-between text-xs mb-1">
+                    <span class="text-gray-500">Used: 4</span>
+                    <span class="font-medium text-gray-700 dark:text-gray-300">12 total</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill bg-green-600" style="width: 33%"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Unpaid Leave -->
+        <div class="leave-balance-card">
+            <div class="flex items-center justify-between mb-2">
+                <div class="w-8 h-8 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center">
+                    <span class="material-icons-round text-orange-600 dark:text-orange-400 text-lg">money_off</span>
+                </div>
+                <span class="text-xs text-gray-500 dark:text-gray-400">Unpaid</span>
+            </div>
+            <p class="text-xl font-bold text-gray-900 dark:text-white">5 <span class="text-sm font-normal text-gray-500">days</span></p>
+            <div class="mt-2">
+                <div class="flex items-center justify-between text-xs mb-1">
+                    <span class="text-gray-500">Used: 2</span>
+                    <span class="font-medium text-gray-700 dark:text-gray-300">7 total</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill bg-orange-600" style="width: 28%"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Maternity/Paternity -->
+        <div class="leave-balance-card">
+            <div class="flex items-center justify-between mb-2">
+                <div class="w-8 h-8 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
+                    <span class="material-icons-round text-purple-600 dark:text-purple-400 text-lg">family_restroom</span>
+                </div>
+                <span class="text-xs text-gray-500 dark:text-gray-400">Maternity</span>
+            </div>
+            <p class="text-xl font-bold text-gray-900 dark:text-white">0 <span class="text-sm font-normal text-gray-500">days</span></p>
+            <div class="mt-2">
+                <div class="flex items-center justify-between text-xs mb-1">
+                    <span class="text-gray-500">Used: 0</span>
+                    <span class="font-medium text-gray-700 dark:text-gray-300">90 total</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill bg-purple-600" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upcoming Leave -->
+    <div class="mobile-card p-4 mb-4">
+        <h4 class="font-bold text-gray-900 dark:text-white mb-3">Upcoming Leave</h4>
+        <div class="flex flex-col items-center justify-center py-4">
+            <span class="material-icons-round text-gray-300 dark:text-gray-600 text-4xl mb-2">event_busy</span>
+            <p class="text-gray-500 dark:text-gray-400 text-sm text-center mb-3">No upcoming leave scheduled</p>
+            <button onclick="openRequestModal()" class="text-primary-600 hover:text-primary-700 text-sm font-medium flex items-center">
+                <span class="material-icons-round text-sm mr-1">add_circle</span> Request Leave
+            </button>
+        </div>
+        <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <div class="grid grid-cols-2 gap-4 text-sm">
+                <div class="flex justify-between">
+                    <span class="text-gray-600 dark:text-gray-300">Leave taken</span>
+                    <span class="font-semibold text-gray-900 dark:text-white">15 days</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600 dark:text-gray-300">Pending</span>
+                    <span class="font-semibold text-yellow-600 dark:text-yellow-400">0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Leave Requests -->
+    <div class="mobile-card p-4 mb-4">
+        <div class="flex items-center justify-between mb-3">
+            <h4 class="font-bold text-gray-900 dark:text-white">Recent Requests</h4>
+            <a href="#" class="text-primary-600 hover:text-primary-700 text-sm font-medium">View All</a>
+        </div>
+
+        <div class="space-y-3">
+            <!-- Approved Annual Leave -->
+            <div class="leave-request-item">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center space-x-3">
+                        <span class="material-icons-round text-blue-500 text-xl">beach_access</span>
+                        <div>
+                            <p class="font-medium text-gray-900 dark:text-white">Annual Leave</p>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">21 Mar – 25 Mar 2025</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="badge badge-success">Approved</span>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">5 days</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rejected Sick Leave -->
+            <div class="leave-request-item">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center space-x-3">
+                        <span class="material-icons-round text-green-500 text-xl">healing</span>
+                        <div>
+                            <p class="font-medium text-gray-900 dark:text-white">Sick Leave</p>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">10 Feb 2025</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="badge badge-error">Rejected</span>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">1 day</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Approved Unpaid Leave -->
+            <div class="leave-request-item">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center space-x-3">
+                        <span class="material-icons-round text-orange-500 text-xl">money_off</span>
+                        <div>
+                            <p class="font-medium text-gray-900 dark:text-white">Unpaid Leave</p>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">05 Jan – 06 Jan 2025</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="badge badge-success">Approved</span>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">2 days</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Previous Annual Leave -->
+            <div class="leave-request-item">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center space-x-3">
+                        <span class="material-icons-round text-blue-500 text-xl">beach_access</span>
+                        <div>
+                            <p class="font-medium text-gray-900 dark:text-white">Annual Leave</p>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">15 Dec – 20 Dec 2024</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="badge badge-success">Approved</span>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">6 days</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leave Policy Summary -->
+    <div class="mobile-card p-4 mb-6">
+        <div class="flex items-start space-x-3">
+            <div class="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center flex-shrink-0">
+                <span class="material-icons-round text-blue-600 dark:text-blue-400 text-lg">description</span>
+            </div>
+            <div>
+                <h4 class="font-semibold text-gray-900 dark:text-white mb-2">Leave Policy Summary</h4>
+                <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                    Annual leave: 25 days/year • Sick leave: 12 days/year • Unpaid leave: at manager's discretion • Carryover max 5 days
+                </p>
+                <a href="#" class="inline-flex items-center text-primary-600 hover:text-primary-700 text-sm font-medium">
+                    View Full Policy
+                    <span class="material-icons-round text-sm ml-1">open_in_new</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Action Button -->
+    <button onclick="openRequestModal()" class="floating-action">
+        <span class="material-icons-round">add</span>
+    </button>
+
+    <!-- Request Leave Modal -->
+    <div id="requestLeaveModal" class="modal-overlay">
+        <div class="modal-container">
+            <div class="swipe-indicator"></div>
+            <div class="p-4">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white">Request Leave</h3>
+                    <button onclick="closeRequestModal()" class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg">
+                        <span class="material-icons-round">close</span>
+                    </button>
+                </div>
+
+                <form class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Leave Type</label>
+                        <select class="form-input">
+                            <option>Annual Leave</option>
+                            <option>Sick Leave</option>
+                            <option>Unpaid Leave</option>
+                            <option>Maternity Leave</option>
+                            <option>Paternity Leave</option>
+                        </select>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date</label>
+                            <input type="date" class="form-input">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">End Date</label>
+                            <input type="date" class="form-input">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Number of Days</label>
+                        <input type="number" placeholder="Auto-calculated" readonly class="form-input bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Reason / Comments</label>
+                        <textarea rows="3" class="form-input" placeholder="Please provide a reason for your leave request"></textarea>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Attachment (optional)</label>
+                        <div class="flex items-center space-x-2">
+                            <label class="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer flex items-center justify-center">
+                                <span class="material-icons-round text-sm mr-2">attach_file</span>
+                                Choose File
+                                <input type="file" class="hidden">
+                            </label>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1">No file chosen</p>
+                    </div>
+
+                    <div class="flex space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <button type="button" onclick="closeRequestModal()" class="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 font-medium">
+                            Cancel
+                        </button>
+                        <button type="submit" class="flex-1 px-4 py-3 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700">
+                            Submit Request
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Modal functions
+        function openRequestModal() {
+            document.getElementById('requestLeaveModal').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeRequestModal() {
+            document.getElementById('requestLeaveModal').classList.remove('active');
+            document.body.style.overflow = 'auto';
+        }
+
+        // Close modal when clicking overlay
+        document.getElementById('requestLeaveModal').addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal-overlay')) {
+                closeRequestModal();
+            }
+        });
+
+        // Touch gestures for modal
+        (function() {
+            let startY = 0;
+            let currentY = 0;
+            let isDragging = false;
+
+            const modalContainer = document.querySelector('#requestLeaveModal .modal-container');
+
+            modalContainer.addEventListener('touchstart', (e) => {
+                startY = e.touches[0].clientY;
+                isDragging = true;
+            });
+
+            modalContainer.addEventListener('touchmove', (e) => {
+                if (!isDragging) return;
+                currentY = e.touches[0].clientY;
+                const deltaY = currentY - startY;
+
+                if (deltaY > 0) {
+                    modalContainer.style.transform = `translateY(${deltaY}px)`;
+                }
+            });
+
+            modalContainer.addEventListener('touchend', () => {
+                if (!isDragging) return;
+                isDragging = false;
+
+                const deltaY = currentY - startY;
+                if (deltaY > 100) {
+                    closeRequestModal();
+                }
+                modalContainer.style.transform = '';
+            });
+        })();
+    </script>
+
+</main>
+</body>
+</html>

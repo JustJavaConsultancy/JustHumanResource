@@ -5,1179 +5,1359 @@
       layout:decorate="~{layout}">
 <head>
   <meta charset="UTF-8">
-  <title>Title</title>
+  <title>Organogram</title>
   <script>
     tailwind.config = {
-        darkMode: "class",
-        theme: {
-            extend: {
-                colors: {
-                    primary: {
-                        50: '#eff6ff',
-                        100: '#dbeafe',
-                        200: '#bfdbfe',
-                        300: '#93c5fd',
-                        400: '#60a5fa',
-                        500: '#3b82f6',
-                        600: '#2563eb',
-                        700: '#1d4ed8',
-                        800: '#1e40af',
-                        900: '#1e3a8a',
-                    },
-                    secondary: {
-                        50: '#f8fafc',
-                        100: '#f1f5f9',
-                        200: '#e2e8f0',
-                        300: '#cbd5e1',
-                        400: '#94a3b8',
-                        500: '#64748b',
-                        600: '#475569',
-                        700: '#334155',
-                        800: '#1e293b',
-                        900: '#0f172a',
-                    }
-                },
-                fontFamily: {
-                    'sans': ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
-                },
-                borderRadius: {
-                    'xl': '1rem',
-                    '2xl': '1.5rem',
-                }
-            },
-        },
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            primary: { 50:'#eff6ff',100:'#dbeafe',200:'#bfdbfe',300:'#93c5fd',400:'#60a5fa',500:'#3b82f6',600:'#2563eb',700:'#1d4ed8',800:'#1e40af',900:'#1e3a8a' },
+            secondary:{ 50:'#f8fafc',100:'#f1f5f9',200:'#e2e8f0',300:'#cbd5e1',400:'#94a3b8',500:'#64748b',600:'#475569',700:'#334155',800:'#1e293b',900:'#0f172a' }
+          },
+          fontFamily: { sans:['"DM Sans"','system-ui','sans-serif'], mono:['"DM Mono"','monospace'] }
+        }
+      }
     };
   </script>
   <style>
-    * {
-        font-family: 'Inter', sans-serif;
+    * { font-family: 'DM Sans', sans-serif; }
+    body { overflow-x: clip; }
+
+    /* ── Badges ── */
+    .badge { padding:2px 9px; font-size:.72rem; font-weight:600; border-radius:9999px; letter-spacing:.01em; }
+    .badge-success { background-color:#dcfce7; color:#15803d; }
+    .badge-info    { background-color:#dbeafe; color:#1d4ed8; }
+    .badge-orange  { background-color:#ffedd5; color:#c2410c; }
+    .badge-red     { background-color:#fee2e2; color:#b91c1c; }
+
+    /* ── Org chart ── */
+    .connector-v { width:2px; height:24px; background:#cbd5e1; margin:3px auto; }
+    .dark .connector-v { background:#475569; }
+    .v-up { width:2px; height:20px; background:#cbd5e1; margin-bottom:2px; }
+    .dark .v-up { background:#475569; }
+    .org-node-wrap { display:flex; flex-direction:column; align-items:center; position:relative; padding:0 10px; }
+    .org-children-row { display:flex; align-items:flex-start; justify-content:center; position:relative; gap:16px; }
+    .connector-h-line { position:absolute; top:0; height:2px; background:#cbd5e1; z-index:0; pointer-events:none; }
+    .dark .connector-h-line { background:#475569; }
+    .org-node { transition:all .18s ease; cursor:pointer; min-width:148px; position:relative; z-index:1; }
+    .org-node:hover { border-color:#3b82f6 !important; box-shadow:0 8px 24px -8px rgba(59,130,246,.35); transform:translateY(-2px); }
+    .org-tree-empty { display:flex !important; width:100% !important; justify-content:center !important; align-items:center !important; min-height:200px !important; padding:24px !important; }
+
+    /* ── Modals ── */
+    .modal-backdrop { background:rgba(0,0,0,.45); backdrop-filter:blur(5px); }
+    .modal-card { animation:scaleIn .18s ease-out; }
+    @keyframes scaleIn { from{opacity:0;transform:scale(.94) translateY(6px);}to{opacity:1;transform:scale(1) translateY(0);} }
+
+    /* ── Forms ── */
+    .form-input,.form-select {
+      border:1.5px solid #e2e8f0; border-radius:.55rem; padding:.58rem .8rem;
+      width:100%; transition:border-color .18s,box-shadow .18s;
+      background:white; font-size:.875rem;
     }
+    .dark .form-input,.dark .form-select { background:#1e293b; border-color:#334155; color:#f1f5f9; }
+    .form-input:focus,.form-select:focus { outline:none; border-color:#3b82f6; box-shadow:0 0 0 3px rgba(59,130,246,.12); }
+    .form-label { font-size:.8rem; font-weight:600; color:#475569; margin-bottom:4px; display:block; letter-spacing:.01em; }
+    .dark .form-label { color:#94a3b8; }
 
-    body {
-        overflow-x: hidden;
-    }
+    /* ── Toast ── */
+    #toast { transition:opacity .25s,transform .25s; }
+    #toast.hidden { opacity:0; pointer-events:none; transform:translateY(8px); }
 
-    .sidebar-item {
-        transition: all 0.2s ease;
-        position: relative;
-    }
+    /* ── Alerts ── */
+    .api-error { background:#fef2f2; border:1px solid #fca5a5; color:#b91c1c; border-radius:.5rem; padding:.6rem .9rem; font-size:.8rem; }
+    .dark .api-error { background:#450a0a; border-color:#7f1d1d; color:#fca5a5; }
 
-    .sidebar-item.active {
-        background-color: rgba(59, 130, 246, 0.1);
-        color: #3b82f6;
-        border-left: 3px solid #3b82f6;
-    }
+    /* ── Reporting tree ── */
+    .rep-node { border-left:2px solid #3b82f6; padding-left:12px; margin-left:8px; }
+    .rep-root { border-left:none; padding-left:0; margin-left:0; }
 
-    .sidebar-item.active .material-icons-round {
-        color: #3b82f6;
-    }
+    /* ── Skeleton loader ── */
+    .skeleton { background:linear-gradient(90deg,#e2e8f0 25%,#f1f5f9 50%,#e2e8f0 75%); background-size:200%; animation:shimmer 1.4s infinite; border-radius:6px; }
+    @keyframes shimmer { from{background-position:200% 0;}to{background-position:-200% 0;} }
 
-    .sidebar-item:hover:not(.active) {
-        background-color: rgba(59, 130, 246, 0.05);
-    }
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width:5px; height:5px; }
+    ::-webkit-scrollbar-track { background:transparent; }
+    ::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:10px; }
+    .dark ::-webkit-scrollbar-thumb { background:#475569; }
 
-    .dark .sidebar-item.active {
-        background-color: rgba(59, 130, 246, 0.2);
-    }
-
-    .badge {
-        padding: 2px 8px;
-        font-size: 0.75rem;
-        font-weight: 500;
-        border-radius: 9999px;
-    }
-
-    .badge-success {
-        background-color: #dcfce7;
-        color: #16a34a;
-    }
-
-    .badge-error {
-        background-color: #fee2e2;
-        color: #dc2626;
-    }
-
-    .badge-info {
-        background-color: #dbeafe;
-        color: #2563eb;
-    }
-
-    .form-input {
-        border: 1px solid #e2e8f0;
-        border-radius: 0.5rem;
-        padding: 0.75rem;
-        width: 100%;
-        transition: border-color 0.2s;
-    }
-
-    .form-input:focus {
-        outline: none;
-        border-color: #3b82f6;
-        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-    }
-
-    .modal-backdrop {
-        background-color: rgba(0, 0, 0, 0.5);
-        backdrop-filter: blur(4px);
-    }
-
-    .sidebar-container {
-        position: fixed;
-        top: 0;
-        left: 0;
-        height: 100vh;
-        width: 16rem;
-        z-index: 40;
-        overflow-y: auto;
-    }
-
-    .main-content {
-        margin-left: 16rem;
-        width: calc(100% - 16rem);
-        min-height: 100vh;
-    }
-
-    @media (max-width: 1023px) {
-        .sidebar-container {
-            transform: translateX(-100%);
-        }
-
-        .sidebar-container.open {
-            transform: translateX(0);
-        }
-
-        .main-content {
-            margin-left: 0;
-            width: 100%;
-        }
-    }
-
-    .custom-scrollbar::-webkit-scrollbar {
-        width: 6px;
-    }
-
-    .custom-scrollbar::-webkit-scrollbar-track {
-        background: #f1f5f9;
-        border-radius: 3px;
-    }
-
-    .dark .custom-scrollbar::-webkit-scrollbar-track {
-        background: #1e293b;
-    }
-
-    .custom-scrollbar::-webkit-scrollbar-thumb {
-        background: #cbd5e1;
-        border-radius: 3px;
-    }
-
-    .dark .custom-scrollbar::-webkit-scrollbar-thumb {
-        background: #475569;
-    }
-
-    .progress-bar {
-        height: 8px;
-        border-radius: 4px;
-        overflow: hidden;
-        background-color: #e5e7eb;
-    }
-
-    .dark .progress-bar {
-        background-color: #374151;
-    }
-
-    .progress-fill {
-        height: 100%;
-        border-radius: 4px;
-    }
-
-    .department-stats-card {
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-
-    .department-stats-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
-    }
-
-    .department-color-engineering { background-color: #3b82f6; }
-    .department-color-sales { background-color: #10b981; }
-    .department-color-marketing { background-color: #8b5cf6; }
-    .department-color-hr { background-color: #f59e0b; }
-    .department-color-finance { background-color: #ef4444; }
-    .department-color-operations { background-color: #6366f1; }
-
-    .department-badge {
-        padding: 4px 12px;
-        border-radius: 20px;
-        font-weight: 500;
-        font-size: 0.75rem;
-    }
-
-    .status-active {
-        background-color: #dcfce7;
-        color: #16a34a;
-    }
-
-    .status-inactive {
-        background-color: #f1f5f9;
-        color: #64748b;
-    }
-
-    /* Spinner animation */
-    @keyframes spin {
-        from { transform: rotate(0deg); }
-        to { transform: rotate(360deg); }
-    }
-    .animate-spin {
-        animation: spin 1s linear infinite;
-    }
+    /* ── Code tag ── */
+    .code-tag { font-family:'DM Mono',monospace; font-size:.72rem; background:#f1f5f9; padding:1px 6px; border-radius:4px; color:#475569; }
+    .dark .code-tag { background:#334155; color:#94a3b8; }
   </style>
 </head>
 <body>
-<main layout:fragment="content">
+<main layout:fragment="content" class="flex-1 p-4 md:p-6 overflow-y-auto">
 
-  <!-- Stats Grid -->
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
-    <!-- Total Departments -->
-    <div class="department-stats-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6">
-      <div class="flex items-center justify-between mb-4">
-        <div class="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-          <span class="material-icons-round text-blue-600 dark:text-blue-400">business</span>
-        </div>
-        <span class="text-sm font-medium text-green-600 flex items-center">
-                            <span class="material-icons-round text-sm mr-1">trending_up</span>
-                            +2
-                        </span>
-      </div>
-      <h3 th:text="${totalDepartments}" class="text-2xl font-bold mb-1">12</h3>
-      <p class="text-gray-600 dark:text-gray-400 text-sm">Total Departments</p>
-      <div class="mt-3 flex items-center text-xs text-gray-500">
-        <span class="material-icons-round text-xs mr-1">check_circle</span>
-        <span th:text="${totalDepartments +  ' active • 0 inactive'}">10 active • 2 inactive</span>
-      </div>
+  <!-- Stats Row -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-7" id="statsRow">
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm">
+      <div class="flex items-center gap-3 mb-3"><div class="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg"><span class="material-icons-round text-blue-600 dark:text-blue-400 text-[20px]">business</span></div></div>
+      <h3 class="text-2xl font-bold" id="statCompanies">—</h3>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Companies</p>
+      <div class="mt-1 text-xs text-gray-400" id="statCompanySub">Loading…</div>
     </div>
-
-    <!-- Active Departments -->
-    <div class="department-stats-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6">
-      <div class="flex items-center justify-between mb-4">
-        <div class="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
-          <span class="material-icons-round text-green-600 dark:text-green-400">check_circle</span>
-        </div>
-        <span class="badge badge-success">Active</span>
-      </div>
-      <h3 th:text="${totalDepartments}" class="text-2xl font-bold mb-1">10</h3>
-      <p class="text-gray-600 dark:text-gray-400 text-sm">Active Departments</p>
-      <div class="mt-3">
-        <div class="progress-bar">
-          <div class="progress-fill bg-green-500" style="width: 100%"></div>
-        </div>
-        <p class="text-xs text-gray-500 mt-1">100% of all departments</p>
-      </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm">
+      <div class="flex items-center gap-3 mb-3"><div class="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg"><span class="material-icons-round text-green-600 dark:text-green-400 text-[20px]">layers</span></div></div>
+      <h3 class="text-2xl font-bold" id="statDepts">—</h3>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Departments</p>
+      <div class="mt-1 text-xs text-gray-400" id="statDeptSub">Loading…</div>
     </div>
-
-    <!-- Total Employees -->
-    <div class="department-stats-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6">
-      <div class="flex items-center justify-between mb-4">
-        <div class="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-          <span class="material-icons-round text-purple-600 dark:text-purple-400">people</span>
-        </div>
-        <span class="text-sm text-gray-500">Organization</span>
-      </div>
-      <h3 th:text="${employees}" class="text-2xl font-bold mb-1">1,248</h3>
-      <p class="text-gray-600 dark:text-gray-400 text-sm">Total Employees</p>
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm">
+      <div class="flex items-center gap-3 mb-3"><div class="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg"><span class="material-icons-round text-purple-600 dark:text-purple-400 text-[20px]">people</span></div></div>
+      <h3 class="text-2xl font-bold" id="statEmps">—</h3>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Employees mapped</p>
+      <div class="mt-1 text-xs text-gray-400">From department tree</div>
     </div>
-
-    <!-- Largest Department -->
-    <div class="department-stats-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6">
-      <div class="flex items-center justify-between mb-4">
-        <div class="p-3 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
-          <span class="material-icons-round text-orange-600 dark:text-orange-400">leaderboard</span>
-        </div>
-        <span class="badge badge-info">Largest</span>
-      </div>
-      <h3 class="text-2xl font-bold mb-1">4</h3>
-      <p class="text-gray-600 dark:text-gray-400 text-sm">Engineering Department</p>
-      <div class="mt-3">
-        <div class="flex items-center text-xs text-gray-500">
-          <span class="material-icons-round text-xs mr-1">pie_chart</span>
-          <span>26% of total employees</span>
-        </div>
-      </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm">
+      <div class="flex items-center gap-3 mb-3"><div class="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg"><span class="material-icons-round text-orange-600 dark:text-orange-400 text-[20px]">share</span></div></div>
+      <h3 class="text-2xl font-bold" id="statLines">—</h3>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Reporting lines</p>
+      <div class="mt-1 text-xs text-gray-400">Primary + matrix</div>
     </div>
   </div>
 
-  <div style="display:flex;justify-content:end;margin-bottom:20px">
-    <button onclick="openAddDepartmentModal()" class="hidden md:flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">
-      <span class="material-icons-round text-sm">add</span>
-      <span>Add Department</span>
-    </button>
-  </div>
-  <!-- Department Overview -->
-  <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 mb-6">
-    <div class="flex items-center justify-between mb-6">
-      <h3 class="text-lg font-bold">Department Overview</h3>
-      <button onclick="openAddDepartmentModal()" class="md:hidden p-2 bg-primary-600 text-white rounded-lg">
-        <span class="material-icons-round">add</span>
-      </button>
-    </div>
-    <div th:if="${#lists.isEmpty(departments)}" class="border border-gray-200 dark:border-gray-700 rounded-lg p-12 text-center">
-      <div class="flex flex-col items-center justify-center space-y-4">
-        <!-- Professional icon using Material Icons -->
-        <span class="material-icons-round text-gray-400 text-6xl">business</span>
-        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">No departments yet</h3>
-        <p class="text-gray-500 dark:text-gray-400 max-w-sm">Get started by creating your first department to organize your team and track performance.</p>
+  <!-- ORG CHART CARD -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-md mb-7">
+    <div class="flex flex-wrap items-center justify-between gap-3 p-5 border-b border-gray-200 dark:border-gray-700">
+      <div>
+        <h3 class="font-bold text-base">Department Tree</h3>
+        <p class="text-xs text-gray-500 mt-0.5">Click a node to view details</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <span id="chartLiveBadge" class="badge badge-info text-[10px] flex items-center gap-1"><span class="w-1.5 h-1.5 bg-blue-400 rounded-full"></span>Loading</span>
+        <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-1 flex gap-1">
+          <button id="chartViewBtn" class="px-3 py-1.5 text-xs font-medium rounded flex items-center gap-1 bg-white dark:bg-gray-800 shadow-sm text-primary-600" onclick="setView('chart')"><span class="material-icons-round text-sm">account_tree</span> Chart</button>
+          <button id="listViewBtn"  class="px-3 py-1.5 text-xs font-medium rounded flex items-center gap-1 text-gray-600 dark:text-gray-300" onclick="setView('list')"><span class="material-icons-round text-sm">format_list_bulleted</span> List</button>
+        </div>
       </div>
     </div>
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      <!-- Engineering Department Card -->
-      <!-- Departments List (shown when not empty) -->
-      <div th:if="${not #lists.isEmpty(departments)}" class="space-y-4">
-        <div th:each="department : ${departments}" class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
-          <div class="flex items-center justify-between mb-3">
-            <div class="flex items-center space-x-3">
-              <div>
-                <h4 th:text="${department.departmentName}" class="font-bold">Engineering</h4>
-                <p th:text="${#strings.toUpperCase(
-                        #strings.substring(
-                            department.departmentName,
-                            0,
-                            department.departmentName.length() > 3 ? 3 : department.departmentName.length()
-                        )
-                    )}" class="text-sm text-gray-500">ENG</p>
-              </div>
-            </div>
-            <span class="status-active department-badge">Active</span>
+
+    <!-- Node detail panel -->
+    <div id="nodeDetail" class="mx-5 mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl hidden">
+      <div class="flex items-start gap-4">
+        <div class="w-11 h-11 rounded-xl bg-primary-600 text-white flex items-center justify-center text-sm font-bold font-mono" id="ndAvatar">—</div>
+        <div class="flex-1">
+          <div class="flex justify-between items-start">
+            <div><h4 class="font-bold" id="ndName">—</h4><p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5" id="ndMeta">—</p></div>
+            <button onclick="closeDetail()" class="text-gray-400 hover:text-gray-600 ml-4"><span class="material-icons-round text-lg">close</span></button>
           </div>
-          <div class="space-y-2">
-            <div class="flex justify-between text-sm">
-              <span class="text-gray-500">Employees</span>
-              <span th:text="${department.totalEmployees}" class="font-bold">324</span>
-            </div>
-            <div class="flex justify-between text-sm">
-              <span class="text-gray-500">Avg. KPI Score</span>
-              <span th:text="${department.averageKpiScore + '/100'}" class="font-bold text-green-600">84/100</span>
-            </div>
-            <div class="flex justify-between text-sm">
-              <span class="text-gray-500">Total Gross Salary</span>
-              <span th:text="${'₦' + department.totalGrossSalary}" class="font-bold text-green-600">₦1,200,000</span>
-            </div>
-          </div>
-          <div class="flex justify-between mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-            <button onclick="viewDepartmentDetails('ENG')" class="text-primary-600 hover:text-primary-700 text-sm font-medium">View Details</button>
-            <div class="flex space-x-2">
-              <button onclick="editDepartment('ENG')" class="text-gray-500 hover:text-gray-700">
-                <span class="material-icons-round text-sm">edit</span>
-              </button>
-              <button onclick="deleteDepartment('ENG')" class="text-red-500 hover:text-red-700">
-                <span class="material-icons-round text-sm">delete</span>
-              </button>
-            </div>
+          <div class="grid grid-cols-3 gap-2 mt-3">
+            <div class="bg-white dark:bg-gray-800 rounded-lg p-2 text-center border border-gray-100 dark:border-gray-700"><span class="font-bold text-primary-600 text-lg" id="ndEmp">—</span><div class="text-[10px] text-gray-500">Employees</div></div>
+            <div class="bg-white dark:bg-gray-800 rounded-lg p-2 text-center border border-gray-100 dark:border-gray-700"><span class="font-bold text-primary-600 text-lg" id="ndSub">—</span><div class="text-[10px] text-gray-500">Sub-depts</div></div>
+            <div class="bg-white dark:bg-gray-800 rounded-lg p-2 text-center border border-gray-100 dark:border-gray-700"><span class="code-tag" id="ndCode">—</span><div class="text-[10px] text-gray-500 mt-0.5">Code</div></div>
           </div>
         </div>
       </div>
+    </div>
 
+    <!-- Chart view -->
+    <div id="orgChartView" style="overflow-x:auto;overflow-y:visible;-webkit-overflow-scrolling:touch;">
+      <div id="orgTree" style="display:inline-flex;flex-direction:column;align-items:center;min-width:max-content;padding:24px 60px 32px;">
+        <div class="flex gap-4 mt-4">
+          <div class="skeleton w-40 h-28 rounded-xl"></div>
+          <div class="skeleton w-40 h-28 rounded-xl"></div>
+          <div class="skeleton w-40 h-28 rounded-xl"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- List view -->
+    <div id="orgListView" class="p-5 hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50 dark:bg-gray-750">
+        <tr class="text-left">
+          <th class="p-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Department</th>
+          <th class="p-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Code</th>
+          <th class="p-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Parent</th>
+          <th class="p-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
+          <th class="p-3"></th>
+        </tr>
+        </thead>
+        <tbody id="deptTableBody"></tbody>
+      </table>
     </div>
   </div>
 
-  <!-- Department Details Table -->
-  <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-    <div class="p-6 border-b border-gray-200 dark:border-gray-700">
-      <div class="flex items-center justify-between">
-        <h3 class="text-lg font-bold">Department Details</h3>
-        <div class="flex items-center space-x-3">
-          <button onclick="exportDepartments()" class="p-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
-            <span class="material-icons-round text-sm">download</span>
+  <!-- 4-column lower panels -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+
+    <!-- Company Structure -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-md overflow-hidden">
+      <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+        <div>
+          <h4 class="font-bold text-sm">Company Structure</h4>
+        </div>
+        <button onclick="openModal('companyModal')" class="px-2.5 py-1.5 bg-primary-600 text-white rounded-lg text-xs font-medium flex items-center gap-1 hover:bg-primary-700 transition"><span class="material-icons-round text-sm">add</span> Add</button>
+      </div>
+      <div class="p-4" id="companyTreePanel">
+        <div class="skeleton h-8 rounded mb-3 w-3/4"></div>
+        <div class="skeleton h-7 rounded mb-2 w-2/3 ml-6"></div>
+        <div class="skeleton h-7 rounded w-2/3 ml-6"></div>
+      </div>
+    </div>
+
+    <!-- Reporting Lines -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-md overflow-hidden">
+      <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+        <h4 class="font-bold text-sm">Reporting Lines</h4>
+      </div>
+      <div class="p-4 space-y-3">
+        <p class="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">Manage who reports to whom. Assign primary or matrix reporting lines, or end an existing one.</p>
+        <div class="space-y-2">
+          <button onclick="openModal('reportModal')" class="w-full flex items-center gap-3 px-3 py-2.5 bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 rounded-xl hover:bg-primary-100 transition group">
+            <span class="w-8 h-8 rounded-lg bg-primary-600 text-white flex items-center justify-center flex-shrink-0"><span class="material-icons-round text-[18px]">supervisor_account</span></span>
+            <div class="text-left">
+              <p class="text-sm font-semibold text-primary-700 dark:text-primary-300">Assign Manager</p>
+            </div>
+            <span class="material-icons-round text-primary-400 ml-auto text-[18px]">chevron_right</span>
+          </button>
+          <button onclick="openModal('removeModal')" class="w-full flex items-center gap-3 px-3 py-2.5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl hover:bg-red-100 transition">
+            <span class="w-8 h-8 rounded-lg bg-red-500 text-white flex items-center justify-center flex-shrink-0"><span class="material-icons-round text-[18px]">person_remove</span></span>
+            <div class="text-left">
+              <p class="text-sm font-semibold text-red-700 dark:text-red-300">Remove Manager</p>
+            </div>
+            <span class="material-icons-round text-red-300 ml-auto text-[18px]">chevron_right</span>
+          </button>
+          <button onclick="openReportingExplorer()" class="w-full flex items-center gap-3 px-3 py-2.5 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+            <span class="w-8 h-8 rounded-lg bg-gray-600 text-white flex items-center justify-center flex-shrink-0"><span class="material-icons-round text-[18px]">account_tree</span></span>
+            <div class="text-left">
+              <p class="text-sm font-semibold text-gray-700 dark:text-gray-200">View Reporting Tree</p>
+            </div>
+            <span class="material-icons-round text-gray-400 ml-auto text-[18px]">chevron_right</span>
           </button>
         </div>
       </div>
     </div>
 
-    <div class="overflow-x-auto custom-scrollbar">
-      <table class="w-full">
-        <thead class="bg-gray-50 dark:bg-gray-750">
-        <tr>
-          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Code</th>
-          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Department Name</th>
-          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total Employees</th>
-          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total Gross Salary</th>   <!-- replaced Vacancies -->
-          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Avg. KPI Score</th>
-          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
-        </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-        <!-- Empty state (shown when departments list is empty) -->
-        <tr th:if="${#lists.isEmpty(departments)}">
-          <td colspan="7" class="px-6 py-12 text-center">
-            <div class="flex flex-col items-center justify-center space-y-3">
-              <span class="material-icons-round text-gray-400 text-5xl">business</span>
-              <p class="text-gray-500 dark:text-gray-400">No departments to display</p>
-            </div>
-          </td>
-        </tr>
-
-        <!-- Data rows – populated from your departments model -->
-        <tr th:if="${not #lists.isEmpty(departments)}"
-            th:each="department : ${departments}"
-            class="hover:bg-gray-50 dark:hover:bg-gray-750 cursor-pointer"
-            th:onclick="'viewDepartmentDetails(\'' + ${department.departmentId} + '\')'">
-          <td class="px-6 py-4">
-            <div class="font-medium" th:text="${#strings.toUpperCase(
-                        #strings.substring(
-                            department.departmentName,
-                            0,
-                            department.departmentName.length() > 3 ? 3 : department.departmentName.length()
-                        )
-                    )}">ENG</div>
-          </td>
-          <td class="px-6 py-4">
-            <div class="font-medium" th:text="${department.departmentName}">Engineering</div>
-          </td>
-          <td class="px-6 py-4">
-            <span>Active</span>
-          </td>
-          <td class="px-6 py-4">
-            <div class="font-medium" th:text="${department.totalEmployees}">324</div>
-          </td>
-          <td class="px-6 py-4">
-            <!-- Total Gross Salary (replaced Vacancies) -->
-            <div class="font-medium" th:text="${'₦' + department.totalGrossSalary}">₦1,200,000</div>
-          </td>
-          <td class="px-6 py-4">
-            <div class="flex items-center">
-              <div class="w-16 bg-gray-200 rounded-full h-2 mr-2">
-                <div class="h-2 rounded-full"
-                     th:classappend="${department.averageKpiScore >= 90} ? 'bg-green-500' : (${department.averageKpiScore >= 80} ? 'bg-blue-500' : (${department.averageKpiScore >= 70} ? 'bg-yellow-500' : 'bg-red-500'))"
-                     th:style="'width: ' + ${department.averageKpiScore} + '%'"></div>
-              </div>
-              <span th:text="${department.averageKpiScore + '/100'}">84/100</span>
-            </div>
-          </td>
-          <td class="px-6 py-4">
-            <div class="flex space-x-2" onclick="event.stopPropagation()">
-              <button th:onclick="'editDepartment(\'' + ${department.departmentId} + '\')'" class="text-gray-500 hover:text-gray-700">
-                <span class="material-icons-round text-sm">edit</span>
-              </button>
-              <button th:onclick="'deleteDepartment(\'' + ${department.departmentId} + '\')'" class="text-red-500 hover:text-red-700">
-                <span class="material-icons-round text-sm">delete</span>
-              </button>
-            </div>
-          </td>
-        </tr>
-        </tbody>
-      </table>
+    <!-- Quick Actions -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-md overflow-hidden">
+      <div class="p-4 border-b border-gray-200 dark:border-gray-700"><h4 class="font-bold text-sm">Quick Actions</h4></div>
+      <div class="p-4 grid grid-cols-2 gap-2.5">
+        <button onclick="openModal('deptModal')" class="p-3 border border-gray-200 dark:border-gray-700 rounded-xl flex flex-col items-center gap-1.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-300 transition group">
+          <span class="material-icons-round text-primary-600 text-[22px]">add_circle</span>
+          <span class="text-xs font-medium text-gray-700 dark:text-gray-300">New Dept</span>
+        </button>
+        <button onclick="openModal('moveModal')" class="p-3 border border-gray-200 dark:border-gray-700 rounded-xl flex flex-col items-center gap-1.5 hover:bg-orange-50 dark:hover:bg-orange-900/20 hover:border-orange-300 transition">
+          <span class="material-icons-round text-orange-500 text-[22px]">swap_horiz</span>
+          <span class="text-xs font-medium text-gray-700 dark:text-gray-300">Move Dept</span>
+        </button>
+        <button onclick="openModal('reportModal')" class="p-3 border border-gray-200 dark:border-gray-700 rounded-xl flex flex-col items-center gap-1.5 hover:bg-green-50 dark:hover:bg-green-900/20 hover:border-green-300 transition">
+          <span class="material-icons-round text-green-600 text-[22px]">supervisor_account</span>
+          <span class="text-xs font-medium text-gray-700 dark:text-gray-300">Assign Mgr</span>
+        </button>
+        <button onclick="openModal('removeModal')" class="p-3 border border-gray-200 dark:border-gray-700 rounded-xl flex flex-col items-center gap-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-red-300 transition">
+          <span class="material-icons-round text-red-500 text-[22px]">person_remove</span>
+          <span class="text-xs font-medium text-gray-700 dark:text-gray-300">Remove Mgr</span>
+        </button>
+      </div>
     </div>
-  </div>
 
-  <!-- ADD Department Modal -->
-  <div id="addDepartmentModal" class="fixed inset-0 z-50 hidden">
-    <div class="modal-backdrop fixed inset-0"></div>
-    <div class="fixed inset-0 flex items-center justify-center p-4 custom-scrollbar">
-      <div class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-lg">
-        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
-          <div class="flex justify-between items-center">
-            <h3 class="text-xl font-bold">Add New Department</h3>
-            <button onclick="closeModal('addDepartmentModal')" class="text-gray-400 hover:text-gray-600">
-              <span class="material-icons-round">close</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Fixed th:action and method -->
-        <form th:action="@{/addDepartment}" method="post" id="addDepartmentForm" class="p-6">
-          <!-- Hidden field for status (will be set before submit) -->
-          <input type="hidden" id="addDepartmentStatus" value="ACTIVE">
-
-          <div class="space-y-4">
-            <div>
-              <label class="block text-sm font-medium mb-2">Department Name *</label>
-              <input type="text" name="departmentName" id="addDepartmentName" required
-                     class="form-input"
-                     placeholder="Enter department name">
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium mb-2">Status *</label>
-              <div class="space-y-2">
-                <!-- Radios have NO name attribute (as requested) -->
-                <label class="flex items-center">
-                  <input type="radio" value="ACTIVE" checked class="text-primary-600">
-                  <span class="ml-2">Active</span>
-                </label>
-                <label class="flex items-center">
-                  <input type="radio" value="INACTIVE" class="text-primary-600">
-                  <span class="ml-2">Inactive</span>
-                </label>
-              </div>
-            </div>
-          </div>
-
-          <div class="flex justify-end space-x-3 pt-6 mt-6 border-t border-gray-200 dark:border-gray-700">
-            <button type="button" onclick="closeModal('addDepartmentModal')" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
-              Cancel
-            </button>
-            <button type="submit" class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
-              Save Department
-            </button>
-          </div>
-        </form>
+    <!-- Department Summary -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-md overflow-hidden">
+      <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+        <h4 class="font-bold text-sm">Departments</h4>
+        <span class="badge badge-info" id="deptSummaryCount">—</span>
+      </div>
+      <div class="p-3 max-h-72 overflow-y-auto" id="deptSummaryList">
+        <div class="skeleton h-6 rounded mb-2"></div>
+        <div class="skeleton h-6 rounded mb-2 w-5/6"></div>
+        <div class="skeleton h-6 rounded mb-2 w-4/6"></div>
       </div>
     </div>
   </div>
 
-  <!-- EDIT Department Modal -->
-  <div id="editDepartmentModal" class="fixed inset-0 z-50 hidden">
-    <div class="modal-backdrop fixed inset-0"></div>
-    <div class="fixed inset-0 flex items-center justify-center p-4 custom-scrollbar">
-      <div class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-lg">
-        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
-          <div class="flex justify-between items-center">
-            <h3 class="text-xl font-bold">Edit Department</h3>
-            <button onclick="closeModal('editDepartmentModal')" class="text-gray-400 hover:text-gray-600">
-              <span class="material-icons-round">close</span>
-            </button>
-          </div>
-        </div>
-
-        <form id="editDepartmentForm" class="p-6" th:action="@{/updateDepartment}" method="post">
-          <input type="hidden" id="editDepartmentId" name="id">
-          <!-- Hidden field for status -->
-          <input type="hidden" name="status" id="editDepartmentStatus" value="ACTIVE">
-
-          <div class="space-y-4">
-            <div>
-              <label class="block text-sm font-medium mb-2">Department Code *</label>
-              <input type="text" id="editDepartmentCode" name="code" required
-                     class="form-input"
-                     placeholder="Enter unique department code (e.g., ENG, SAL)">
-              <p class="text-xs text-gray-500 mt-1">Unique identifier for the department</p>
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium mb-2">Department Name *</label>
-              <input type="text" id="editDepartmentName" name="name" required
-                     class="form-input"
-                     placeholder="Enter department name">
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium mb-2">Status *</label>
-              <div class="space-y-2">
-                <!-- Radios have NO name -->
-                <label class="flex items-center">
-                  <input type="radio" value="ACTIVE" checked class="text-primary-600">
-                  <span class="ml-2">Active</span>
-                </label>
-                <label class="flex items-center">
-                  <input type="radio" value="INACTIVE" class="text-primary-600">
-                  <span class="ml-2">Inactive</span>
-                </label>
-              </div>
-            </div>
-          </div>
-
-          <div class="flex justify-end space-x-3 pt-6 mt-6 border-t border-gray-200 dark:border-gray-700">
-            <button type="button" onclick="closeModal('editDepartmentModal')" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
-              Cancel
-            </button>
-            <button type="submit" class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
-              Update Department
-            </button>
-          </div>
-        </form>
+  <!-- Reporting Tree Explorer -->
+  <div id="reportingExplorer" class="mt-5 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-md hidden">
+    <div class="flex flex-wrap items-center justify-between gap-3 p-5 border-b border-gray-200 dark:border-gray-700">
+      <div>
+        <h3 class="font-bold text-base">Reporting Tree Explorer</h3>
+        <p class="text-xs text-gray-500 mt-0.5">View the reporting hierarchy for any employee</p>
       </div>
+      <button onclick="closeReportingExplorer()" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-gray-400"><span class="material-icons-round">close</span></button>
     </div>
-  </div>
-
-  <!-- Department Details Modal -->
-  <div id="departmentDetailModal" class="fixed inset-0 z-50 hidden">
-    <div class="modal-backdrop fixed inset-0"></div>
-    <div class="fixed inset-0 flex items-center justify-center p-4 custom-scrollbar">
-      <div class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
-          <div class="flex justify-between items-center">
+    <div class="grid grid-cols-1 lg:grid-cols-3 divide-y lg:divide-y-0 lg:divide-x divide-gray-200 dark:divide-gray-700">
+      <!-- Controls -->
+      <div class="p-6 space-y-4">
+        <div>
+          <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-3">Query Parameters</p>
+          <div class="space-y-3">
             <div>
-              <h3 class="text-xl font-bold" id="detailDepartmentName">Engineering Department</h3>
-              <p class="text-gray-600 dark:text-gray-400">Department Code: <span id="detailDepartmentCode">ENG</span></p>
+              <label class="form-label">Employee <span class="text-red-400">*</span></label>
+              <select id="repTreeEmpId" class="form-select">
+                <option value="">Select an employee</option>
+              </select>
             </div>
-            <div class="flex space-x-2">
-              <button onclick="editDepartmentFromDetails()" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
-                Edit
-              </button>
-              <button onclick="closeModal('departmentDetailModal')" class="text-gray-400 hover:text-gray-600">
-                <span class="material-icons-round">close</span>
-              </button>
+            <div>
+              <label class="form-label">Reporting Type</label>
+              <div class="flex gap-2 mt-1">
+                <button id="typePrimary" onclick="setRepType('PRIMARY')" class="flex-1 py-2 text-xs font-semibold rounded-lg border-2 border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-700 transition">PRIMARY</button>
+                <button id="typeMatrix"  onclick="setRepType('MATRIX')"  class="flex-1 py-2 text-xs font-semibold rounded-lg border-2 border-gray-200 dark:border-gray-600 text-gray-500 transition">MATRIX</button>
+              </div>
+              <input type="hidden" id="repTreeType" value="PRIMARY">
             </div>
+            <div>
+              <label class="form-label">As-of Date <span class="text-red-400">*</span></label>
+              <input type="date" id="repTreeDate" class="form-input">
+            </div>
+            <button onclick="fetchReportingTree()" id="fetchRepBtn" class="w-full py-2.5 bg-primary-600 text-white text-sm font-semibold rounded-xl hover:bg-primary-700 transition flex items-center justify-center gap-2">
+              <span class="material-icons-round text-[18px]">search</span> Fetch Reporting Tree
+            </button>
           </div>
         </div>
-
-        <div class="p-6">
-          <!-- Stats Cards -->
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div class="bg-gray-50 dark:bg-gray-750 rounded-xl p-6">
-              <div class="flex items-center justify-between mb-4">
-                <span class="text-sm font-medium text-gray-500">Total Employees</span>
-                <span class="material-icons-round text-blue-600">people</span>
-              </div>
-              <h4 class="text-3xl font-bold mb-2" id="detailTotalEmployees">324</h4>
-              <div class="flex items-center text-sm text-gray-500">
-                <span class="material-icons-round text-xs mr-1">trending_up</span>
-                <span>+12 this quarter</span>
-              </div>
-            </div>
-
-            <div class="bg-gray-50 dark:bg-gray-750 rounded-xl p-6">
-              <div class="flex items-center justify-between mb-4">
-                <span class="text-sm font-medium text-gray-500">Current Vacancies</span>
-                <span class="material-icons-round text-yellow-600">work</span>
-              </div>
-              <h4 class="text-3xl font-bold mb-2" id="detailVacancies">12</h4>
-              <div class="flex items-center text-sm text-gray-500">
-                <span class="material-icons-round text-xs mr-1">schedule</span>
-                <span>8 urgent positions</span>
-              </div>
-            </div>
-
-            <div class="bg-gray-50 dark:bg-gray-750 rounded-xl p-6">
-              <div class="flex items-center justify-between mb-4">
-                <span class="text-sm font-medium text-gray-500">Avg. KPI Score</span>
-                <span class="material-icons-round text-green-600">assessment</span>
-              </div>
-              <h4 class="text-3xl font-bold mb-2" id="detailAvgKPI">84/100</h4>
-              <div class="flex items-center text-sm text-gray-500">
-                <span class="material-icons-round text-xs mr-1">show_chart</span>
-                <span>+2.3 from last quarter</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Employee Distribution -->
-          <div class="mb-8">
-            <h4 class="font-bold mb-4">Employee Distribution by Grade</h4>
-            <div class="space-y-3">
-              <div>
-                <div class="flex justify-between text-sm mb-1">
-                  <span>Grade 1-3 (Junior)</span>
-                  <span class="font-bold">84 employees (26%)</span>
-                </div>
-                <div class="progress-bar">
-                  <div class="progress-fill bg-blue-500" style="width: 26%"></div>
-                </div>
-              </div>
-              <div>
-                <div class="flex justify-between text-sm mb-1">
-                  <span>Grade 4-6 (Mid)</span>
-                  <span class="font-bold">192 employees (59%)</span>
-                </div>
-                <div class="progress-bar">
-                  <div class="progress-fill bg-green-500" style="width: 59%"></div>
-                </div>
-              </div>
-              <div>
-                <div class="flex justify-between text-sm mb-1">
-                  <span>Grade 7+ (Senior)</span>
-                  <span class="font-bold">48 employees (15%)</span>
-                </div>
-                <div class="progress-bar">
-                  <div class="progress-fill bg-purple-500" style="width: 15%"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Department Information -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <h4 class="font-bold mb-4">Department Information</h4>
-              <div class="space-y-3">
-                <div>
-                  <label class="text-sm text-gray-500 dark:text-gray-400">Status</label>
-                  <p id="detailStatus" class="font-medium"></p>
-                </div>
-                <div>
-                  <label class="text-sm text-gray-500 dark:text-gray-400">Date Created</label>
-                  <p id="detailCreatedDate" class="font-medium">January 15, 2020</p>
-                </div>
-                <div>
-                  <label class="text-sm text-gray-500 dark:text-gray-400">Last Updated</label>
-                  <p id="detailUpdatedDate" class="font-medium">December 1, 2023</p>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <h4 class="font-bold mb-4">Performance Metrics</h4>
-              <div class="space-y-3">
-                <div>
-                  <label class="text-sm text-gray-500 dark:text-gray-400">On Leave Today</label>
-                  <p id="detailOnLeave" class="font-medium">12 employees</p>
-                </div>
-                <div>
-                  <label class="text-sm text-gray-500 dark:text-gray-400">Probation Period</label>
-                  <p id="detailProbation" class="font-medium">8 employees</p>
-                </div>
-                <div>
-                  <label class="text-sm text-gray-500 dark:text-gray-400">Monthly Turnover</label>
-                  <p id="detailTurnover" class="font-medium">1.2%</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Recent Activities -->
-          <div class="mt-8">
-            <h4 class="font-bold mb-4">Recent Department Activities</h4>
-            <div class="space-y-4">
-              <div class="flex items-start space-x-3">
-                <div class="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center">
-                  <span class="material-icons-round text-sm">person_add</span>
-                </div>
-                <div class="flex-1">
-                  <p class="text-sm font-medium">New hires this month</p>
-                  <p class="text-xs text-gray-500">5 new employees joined the department</p>
-                  <p class="text-xs text-gray-400 mt-1">December 15, 2023</p>
-                </div>
-              </div>
-              <div class="flex items-start space-x-3">
-                <div class="w-8 h-8 bg-green-100 text-green-600 rounded-full flex items-center justify-center">
-                  <span class="material-icons-round text-sm">trending_up</span>
-                </div>
-                <div class="flex-1">
-                  <p class="text-sm font-medium">Promotions processed</p>
-                  <p class="text-xs text-gray-500">3 employees promoted within the department</p>
-                  <p class="text-xs text-gray-400 mt-1">December 10, 2023</p>
-                </div>
-              </div>
-            </div>
-          </div>
+      </div>
+      <!-- Tree output -->
+      <div class="lg:col-span-2 p-6">
+        <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-4">Reporting Hierarchy</p>
+        <div id="repTreeResult" class="space-y-1">
+          <span class="text-xs text-gray-400">Select an employee and click Fetch.</span>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Delete Confirmation Modal -->
-  <div id="deleteConfirmationModal" class="fixed inset-0 z-50 hidden">
-    <div class="modal-backdrop fixed inset-0"></div>
-    <div class="fixed inset-0 flex items-center justify-center p-4">
-      <div class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md p-6">
-        <div class="text-center">
-          <div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
-            <span class="material-icons-round text-xl">warning</span>
-          </div>
-          <h3 class="text-lg font-bold mb-2">Delete Department</h3>
-          <p class="text-gray-600 dark:text-gray-400 mb-6" id="deleteMessage">
-            Are you sure you want to delete this department? This action cannot be undone.
-          </p>
-          <div class="flex justify-center space-x-3">
-            <button onclick="closeModal('deleteConfirmationModal')" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
-              Cancel
-            </button>
-            <button onclick="confirmDeleteDepartment()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
-              Delete Department
-            </button>
+  <!-- ── MODALS ── -->
+
+  <!-- 1. Add Company -->
+  <div id="companyModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+    <div class="modal-backdrop absolute inset-0" onclick="closeModal('companyModal')"></div>
+    <div class="modal-card relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md border border-gray-200 dark:border-gray-700">
+      <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+        <div class="flex justify-between items-center">
+          <h3 class="font-bold text-lg">Add Company</h3>
+          <button onclick="closeModal('companyModal')" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"><span class="material-icons-round text-gray-400">close</span></button>
+        </div>
+      </div>
+      <div class="p-6 space-y-4">
+        <div>
+          <label class="form-label">Company Type *</label>
+          <div class="flex gap-2 mt-1">
+            <button id="typeBtnParent" onclick="setCompanyType('parent')"     class="flex-1 py-2 text-sm font-medium rounded-lg border-2 border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-700 transition">Parent Company</button>
+            <button id="typeBtnSub"    onclick="setCompanyType('subsidiary')" class="flex-1 py-2 text-sm font-medium rounded-lg border-2 border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 transition">Subsidiary</button>
           </div>
         </div>
+        <div id="parentCompanyField" class="hidden">
+          <label class="form-label">Parent Company *</label>
+          <select id="compParentId" class="form-select">
+            <option value="">Select a parent company</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Company Name *</label>
+          <input type="text" id="compName" placeholder="e.g. JustJava Holdings" class="form-input">
+        </div>
+        <div>
+          <label class="form-label">Company Code *</label>
+          <input type="text" id="compCode" placeholder="e.g. JJH" class="form-input" maxlength="10" style="font-family:'DM Mono',monospace;">
+        </div>
+        <div id="companyError" class="api-error hidden"></div>
+      </div>
+      <div class="p-5 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
+        <button onclick="closeModal('companyModal')" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition">Cancel</button>
+        <button onclick="saveCompany()" id="saveCompanyBtn" class="px-5 py-2 bg-primary-600 text-white text-sm font-semibold rounded-lg hover:bg-primary-700 transition flex items-center gap-2">
+          <span class="material-icons-round text-sm">business</span> Create Company
+        </button>
       </div>
     </div>
   </div>
 
+  <!-- 2. Create Department -->
+  <div id="deptModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+    <div class="modal-backdrop absolute inset-0" onclick="closeModal('deptModal')"></div>
+    <div class="modal-card relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md border border-gray-200 dark:border-gray-700">
+      <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+        <div class="flex justify-between items-center">
+          <h3 class="font-bold text-lg">Create Department</h3>
+          <button onclick="closeModal('deptModal')" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"><span class="material-icons-round text-gray-400">close</span></button>
+        </div>
+      </div>
+      <div class="p-6 space-y-4">
+        <div>
+          <label class="form-label">Department Name *</label>
+          <input type="text" id="deptName" placeholder="e.g. Human Resources" class="form-input">
+        </div>
+        <div>
+          <label class="form-label">Department Code *</label>
+          <input type="text" id="deptCode" placeholder="e.g. 100001" class="form-input" style="font-family:'DM Mono',monospace;">
+        </div>
+        <div>
+          <label class="form-label">Company *</label>
+          <select id="deptCompanyId" class="form-select">
+            <option value="">Select a company</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Parent Department <span class="text-gray-400 font-normal">(optional)</span></label>
+          <select id="deptParentId" class="form-select">
+            <option value="">— None (top-level) —</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Effective From *</label>
+          <input type="date" id="deptEffectiveFrom" class="form-input">
+        </div>
+        <div id="deptError" class="api-error hidden"></div>
+      </div>
+      <div class="p-5 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
+        <button onclick="closeModal('deptModal')" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition">Cancel</button>
+        <button onclick="saveDept()" id="saveDeptBtn" class="px-5 py-2 bg-primary-600 text-white text-sm font-semibold rounded-lg hover:bg-primary-700 transition flex items-center gap-2">
+          <span class="material-icons-round text-sm">add_circle</span> Create Department
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Move Department -->
+  <div id="moveModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+    <div class="modal-backdrop absolute inset-0" onclick="closeModal('moveModal')"></div>
+    <div class="modal-card relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md border border-gray-200 dark:border-gray-700">
+      <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+        <div class="flex justify-between items-center">
+          <h3 class="font-bold text-lg">Move Department</h3>
+          <button onclick="closeModal('moveModal')" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"><span class="material-icons-round text-gray-400">close</span></button>
+        </div>
+      </div>
+      <div class="p-6 space-y-4">
+        <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 text-xs text-amber-700 dark:text-amber-400">
+          <span class="material-icons-round text-sm align-middle mr-1">info</span>
+          Moving a department will update its position in the hierarchy.
+        </div>
+        <div>
+          <label class="form-label">Department to Move *</label>
+          <select id="moveDeptId" class="form-select">
+            <option value="">Select a department</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">New Parent Department *</label>
+          <select id="moveNewParentId" class="form-select">
+            <option value="">Select a new parent</option>
+          </select>
+        </div>
+        <div id="moveError" class="api-error hidden"></div>
+      </div>
+      <div class="p-5 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
+        <button onclick="closeModal('moveModal')" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition">Cancel</button>
+        <button onclick="saveMove()" id="saveMoveBtn" class="px-5 py-2 bg-orange-500 text-white text-sm font-semibold rounded-lg hover:bg-orange-600 transition flex items-center gap-2">
+          <span class="material-icons-round text-sm">swap_horiz</span> Move Department
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Assign Reporting Line -->
+  <div id="reportModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+    <div class="modal-backdrop absolute inset-0" onclick="closeModal('reportModal')"></div>
+    <div class="modal-card relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md border border-gray-200 dark:border-gray-700">
+      <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+        <div class="flex justify-between items-center">
+          <h3 class="font-bold text-lg">Assign Reporting Line</h3>
+          <button onclick="closeModal('reportModal')" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"><span class="material-icons-round text-gray-400">close</span></button>
+        </div>
+      </div>
+      <div class="p-6 space-y-4">
+        <div>
+          <label class="form-label">Employee *</label>
+          <select id="reportEmpId" class="form-select">
+            <option value="">Select an employee</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Manager *</label>
+          <select id="reportMgrId" class="form-select">
+            <option value="">Select a manager</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Reporting Type *</label>
+          <select id="reportType" class="form-select">
+            <option value="PRIMARY">PRIMARY</option>
+            <option value="MATRIX">MATRIX</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Effective From *</label>
+          <input type="date" id="reportEffectiveFrom" class="form-input">
+        </div>
+        <div id="reportError" class="api-error hidden"></div>
+      </div>
+      <div class="p-5 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
+        <button onclick="closeModal('reportModal')" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition">Cancel</button>
+        <button onclick="saveReport()" id="saveReportBtn" class="px-5 py-2 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700 transition flex items-center gap-2">
+          <span class="material-icons-round text-sm">supervisor_account</span> Assign Manager
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. Remove Reporting Line -->
+  <div id="removeModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+    <div class="modal-backdrop absolute inset-0" onclick="closeModal('removeModal')"></div>
+    <div class="modal-card relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md border border-gray-200 dark:border-gray-700">
+      <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+        <div class="flex justify-between items-center">
+          <h3 class="font-bold text-lg">Remove Reporting Line</h3>
+          <button onclick="closeModal('removeModal')" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"><span class="material-icons-round text-gray-400">close</span></button>
+        </div>
+      </div>
+      <div class="p-6 space-y-4">
+        <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 text-xs text-red-700 dark:text-red-400">
+          <span class="material-icons-round text-sm align-middle mr-1">warning</span>
+          This will end the active reporting line — it is not permanently deleted.
+        </div>
+        <div>
+          <label class="form-label">Employee *</label>
+          <select id="removeEmpId" class="form-select">
+            <option value="">Select an employee</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Reporting Type *</label>
+          <select id="removeType" class="form-select">
+            <option value="PRIMARY">PRIMARY</option>
+            <option value="MATRIX">MATRIX</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Effective To (end date) *</label>
+          <input type="date" id="removeEffectiveTo" class="form-input">
+        </div>
+        <div id="removeError" class="api-error hidden"></div>
+      </div>
+      <div class="p-5 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
+        <button onclick="closeModal('removeModal')" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition">Cancel</button>
+        <button onclick="saveRemove()" id="saveRemoveBtn" class="px-5 py-2 bg-red-600 text-white text-sm font-semibold rounded-lg hover:bg-red-700 transition flex items-center gap-2">
+          <span class="material-icons-round text-sm">person_remove</span> Remove Manager
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="fixed bottom-5 right-5 flex items-center gap-3 px-5 py-3 rounded-xl shadow-2xl z-[100] hidden text-sm font-medium">
+    <span class="material-icons-round text-lg" id="toastIcon">check_circle</span>
+    <span id="toastMsg">Done</span>
+  </div>
+
+  <!-- ── JAVASCRIPT ── -->
   <script>
-    // Department Data matching your entity structure (used for client-side display)
-    let departments = [
-        {
-            id: 1,
-            code: 'ENG',
-            name: 'Engineering',
-            status: 'ACTIVE',
-            createdDate: '2020-01-15',
-            updatedDate: '2023-12-01',
-            totalEmployees: 324,
-            vacancies: 12,
-            avgKPI: 84
-        },
-        {
-            id: 2,
-            code: 'SAL',
-            name: 'Sales',
-            status: 'ACTIVE',
-            createdDate: '2020-01-15',
-            updatedDate: '2023-11-28',
-            totalEmployees: 156,
-            vacancies: 8,
-            avgKPI: 92
-        },
-        {
-            id: 3,
-            code: 'MRK',
-            name: 'Marketing',
-            status: 'ACTIVE',
-            createdDate: '2020-02-10',
-            updatedDate: '2023-11-30',
-            totalEmployees: 89,
-            vacancies: 5,
-            avgKPI: 76
-        },
-        {
-            id: 4,
-            code: 'HRD',
-            name: 'Human Resources',
-            status: 'ACTIVE',
-            createdDate: '2020-01-20',
-            updatedDate: '2023-12-05',
-            totalEmployees: 42,
-            vacancies: 3,
-            avgKPI: 88
-        },
-        {
-            id: 5,
-            code: 'FIN',
-            name: 'Finance',
-            status: 'INACTIVE',
-            createdDate: '2020-03-05',
-            updatedDate: '2023-11-15',
-            totalEmployees: 38,
-            vacancies: 2,
-            avgKPI: 85
-        },
-        {
-            id: 6,
-            code: 'OPS',
-            name: 'Operations',
-            status: 'ACTIVE',
-            createdDate: '2020-02-01',
-            updatedDate: '2023-11-25',
-            totalEmployees: 203,
-            vacancies: 17,
-            avgKPI: 88
+    (function () {
+
+      const API_BASE = '/api/organogram';
+
+      // ── State ──────────────────────────────────────────────────────────
+      let companyTree  = [];
+      let deptTree     = [];
+      let employees    = [];
+      let companyType  = 'parent';
+
+      // Lookup maps so we can safely bind click handlers without inline JSON
+      const deptNodeMap = {};
+
+      // ── Helpers: flatten trees ─────────────────────────────────────────
+      function flattenCompanies(nodes) {
+        const result = [];
+        function recurse(arr) {
+          arr.forEach(c => {
+            const id = c.id || c.companyId;
+            if (id) result.push({ id, name: c.name, code: c.code });
+            if (c.subsidiaries) recurse(c.subsidiaries);
+          });
         }
-    ];
+        recurse(nodes);
+        return result;
+      }
 
-    // Track department to delete
-    let departmentToDelete = null;
+      function flattenDepartments(nodes) {
+        const result = [];
+        function recurse(arr) {
+          arr.forEach(d => {
+            const id = d.id || d.departmentId;
+            if (id) result.push({ id, name: d.name, code: d.code });
+            const kids = d.children || d.subDepartments;
+            if (kids) recurse(kids);
+          });
+        }
+        recurse(nodes);
+        return result;
+      }
 
-    // Initialize the page
-    document.addEventListener('DOMContentLoaded', function() {
+      function flattenDepts(nodes, parent, acc) {
+        parent = parent || '—';
+        acc    = acc    || [];
+        nodes.forEach(n => {
+          acc.push(Object.assign({}, n, { _parent: parent }));
+          const kids = n.children || n.subDepartments || [];
+          if (kids.length) flattenDepts(kids, n.name, acc);
+        });
+        return acc;
+      }
 
-        updateStats();
+      // ── Populate dropdowns ────────────────────────────────────────────
+      function populateSelect(selectId, items, blankLabel) {
+        const select = document.getElementById(selectId);
+        if (!select) return;
+        select.innerHTML = '';
+        if (blankLabel) {
+          const blank = document.createElement('option');
+          blank.value = '';
+          blank.textContent = blankLabel;
+          select.appendChild(blank);
+        }
+        items.forEach(item => {
+          const opt = document.createElement('option');
+          opt.value = item.id;
+          opt.textContent = item.code ? item.name + ' (' + item.code + ')' : item.name;
+          select.appendChild(opt);
+        });
+      }
 
-        // Mobile Sidebar Toggle
-        const menuToggle = document.getElementById('menuToggle');
-        const mobileOverlay = document.getElementById('mobileOverlay');
-        const sidebar = document.querySelector('.sidebar-container');
+      function populateCompanyDropdown(selectId) {
+        populateSelect(selectId, flattenCompanies(companyTree), 'Select a company');
+      }
 
-        if (menuToggle) {
-            menuToggle.addEventListener('click', () => {
-                sidebar.classList.toggle('open');
-                mobileOverlay.classList.toggle('hidden');
-                document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : 'auto';
-            });
+      function populateDepartmentDropdown(selectId) {
+        const blank = selectId === 'deptParentId' ? '— None (top-level) —' : 'Select a department';
+        populateSelect(selectId, flattenDepartments(deptTree), blank);
+      }
+
+      function populateEmployeeDropdown(selectId) {
+        const items = employees.map(e => ({
+          id:   e.id,
+          name: e.firstName + ' ' + e.lastName
+        }));
+        populateSelect(selectId, items, 'Select an employee');
+      }
+
+      // ── API fetch ──────────────────────────────────────────────────────
+      async function apiFetch(path, options) {
+        options = options || {};
+        const res = await fetch(API_BASE + path, {
+          headers: Object.assign({ 'Content-Type': 'application/json' }, options.headers || {}),
+          method:  options.method || 'GET',
+          body:    options.body   || undefined
+        });
+        if (!res.ok) {
+          // Parse error body but never expose internal details to UI
+          let serverMsg = '';
+          try {
+            const err = await res.json();
+            serverMsg = err.message || err.error || err.detail || '';
+          } catch (_) {}
+          // Map status codes to user-friendly messages
+          const friendlyMsg = friendlyError(res.status, serverMsg);
+          throw new Error(friendlyMsg);
+        }
+        if (res.status === 204) return null;
+        const text = await res.text();
+        return text ? JSON.parse(text) : null;
+      }
+
+      function friendlyError(status, serverMsg) {
+        if (status === 400) return serverMsg || 'The request was invalid. Please check your inputs.';
+        if (status === 401) return 'You are not authorised to perform this action.';
+        if (status === 403) return 'You do not have permission to perform this action.';
+        if (status === 404) return 'The requested record could not be found.';
+        if (status === 409) return 'A conflict occurred — the record may already exist.';
+        if (status >= 500) return 'A server error occurred. Please try again later.';
+        return 'An unexpected error occurred. Please try again.';
+      }
+
+      // ── Toast ──────────────────────────────────────────────────────────
+      function showToast(msg, type) {
+        type = type || 'success';
+        const t    = document.getElementById('toast');
+        const icon = document.getElementById('toastIcon');
+        const text = document.getElementById('toastMsg');
+        // Strip old colour classes
+        t.className = t.className.replace(/bg-\S+/g, '').trim();
+        if (type === 'success') {
+          t.classList.add('bg-gray-900', 'text-white');
+          icon.textContent = 'check_circle';
+        } else if (type === 'error') {
+          t.classList.add('bg-red-600', 'text-white');
+          icon.textContent = 'error';
+        } else {
+          t.classList.add('bg-blue-600', 'text-white');
+          icon.textContent = 'info';
+        }
+        text.textContent = msg;
+        t.classList.remove('hidden');
+        setTimeout(function () { t.classList.add('hidden'); }, 3200);
+      }
+
+      function showError(elementId, msg) {
+        const el = document.getElementById(elementId);
+        if (!el) return;
+        el.textContent = msg;
+        el.classList.remove('hidden');
+      }
+
+      function hideError(elementId) {
+        const el = document.getElementById(elementId);
+        if (!el) return;
+        el.classList.add('hidden');
+        el.textContent = '';
+      }
+
+      function setLoading(btnId, loading) {
+        const btn = document.getElementById(btnId);
+        if (!btn) return;
+        btn.disabled    = loading;
+        btn.style.opacity = loading ? '0.7' : '1';
+      }
+
+      // ── Modal helpers ──────────────────────────────────────────────────
+      window.openModal = function (id) {
+        document.getElementById(id).classList.remove('hidden');
+        if (id === 'companyModal') {
+          populateCompanyDropdown('compParentId');
+        } else if (id === 'deptModal') {
+          populateCompanyDropdown('deptCompanyId');
+          populateDepartmentDropdown('deptParentId');
+        } else if (id === 'moveModal') {
+          populateDepartmentDropdown('moveDeptId');
+          populateDepartmentDropdown('moveNewParentId');
+        } else if (id === 'reportModal') {
+          populateEmployeeDropdown('reportEmpId');
+          populateEmployeeDropdown('reportMgrId');
+        } else if (id === 'removeModal') {
+          populateEmployeeDropdown('removeEmpId');
+        }
+      };
+
+      window.closeModal = function (id) {
+        document.getElementById(id).classList.add('hidden');
+      };
+
+      // ── View toggle ────────────────────────────────────────────────────
+      window.setView = function (v) {
+        ['chart', 'list'].forEach(function (mode) {
+          const btn      = document.getElementById(mode + 'ViewBtn');
+          const isActive = v === mode;
+          btn.classList.toggle('bg-white',         isActive);
+          btn.classList.toggle('dark:bg-gray-800', isActive);
+          btn.classList.toggle('shadow-sm',        isActive);
+          btn.classList.toggle('text-primary-600', isActive);
+          btn.classList.toggle('text-gray-600',    !isActive);
+        });
+        document.getElementById('orgChartView').classList.toggle('hidden', v !== 'chart');
+        document.getElementById('orgListView').classList.toggle('hidden',  v !== 'list');
+        if (v === 'chart') setTimeout(drawConnectors, 60);
+      };
+
+      // ── Node detail panel ──────────────────────────────────────────────
+      window.showDetail = function (node) {
+        const initials = (node.name || '??').split(' ').map(function (w) { return w[0]; }).join('').substring(0, 2).toUpperCase();
+        document.getElementById('ndAvatar').textContent = initials;
+        document.getElementById('ndName').textContent   = node.name || '—';
+        document.getElementById('ndMeta').textContent   = node.code || node.departmentId || '—';
+        document.getElementById('ndEmp').textContent    = node.employeeCount != null ? node.employeeCount : '—';
+        document.getElementById('ndSub').textContent    = (node.children || node.subDepartments || []).length;
+        document.getElementById('ndCode').textContent   = node.code || '—';
+        document.getElementById('nodeDetail').classList.remove('hidden');
+      };
+
+      window.closeDetail = function () {
+        document.getElementById('nodeDetail').classList.add('hidden');
+      };
+
+      // ── Org Chart Rendering ────────────────────────────────────────────
+      function renderNode(node, container) {
+        const isRoot   = !node.parentDepartmentId;
+        const children = node.children || node.subDepartments || [];
+        const wrap     = document.createElement('div');
+        wrap.className = 'org-node-wrap';
+
+        const nodeDiv   = document.createElement('div');
+        const initials  = (node.name || 'XX').split(' ').map(function (w) { return w[0]; }).join('').substring(0, 2).toUpperCase();
+        const nodeClass = isRoot
+          ? 'bg-primary-600 text-white border-primary-400'
+          : children.length > 0
+          ? 'bg-white dark:bg-gray-800 border-blue-300 dark:border-blue-700'
+          : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600';
+        nodeDiv.className = 'org-node rounded-xl border-2 p-4 shadow-md ' + nodeClass;
+
+        const avatarClass = isRoot
+          ? 'bg-white/20 text-white'
+          : children.length > 0
+          ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700'
+          : 'bg-gray-100 dark:bg-gray-700 text-gray-700';
+
+        const countBadge = node.employeeCount != null
+          ? '<div class="mt-2 text-xs px-2 py-1 rounded-full ' + (isRoot ? 'bg-white/20' : 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300') + '">' + node.employeeCount + ' emp</div>'
+          : '';
+
+        const codeBadge = node.code
+          ? '<div class="code-tag mt-1">' + escapeHtml(node.code) + '</div>'
+          : '';
+
+        nodeDiv.innerHTML =
+          '<div class="flex flex-col items-center">' +
+            '<div class="w-11 h-11 rounded-full flex items-center justify-center text-xs font-bold font-mono mb-2 ' + avatarClass + '">' + escapeHtml(initials) + '</div>' +
+            '<div class="font-semibold text-sm text-center leading-tight">' + escapeHtml(node.name || '—') + '</div>' +
+            codeBadge +
+            countBadge +
+          '</div>';
+
+        nodeDiv.addEventListener('click', function (e) {
+          e.stopPropagation();
+          showDetail(node);
+        });
+        wrap.appendChild(nodeDiv);
+
+        if (children.length > 0) {
+          const vLine = document.createElement('div');
+          vLine.className = 'connector-v';
+          wrap.appendChild(vLine);
+
+          const childContainer = document.createElement('div');
+          childContainer.className = 'flex flex-col items-center w-full';
+
+          const row   = document.createElement('div');
+          row.className = 'org-children-row';
+
+          const hLine = document.createElement('div');
+          hLine.className = 'connector-h-line';
+          row.appendChild(hLine);
+
+          children.forEach(function (child) {
+            const childWrap = document.createElement('div');
+            childWrap.className = 'flex flex-col items-center';
+            const vUp = document.createElement('div');
+            vUp.className = 'v-up';
+            childWrap.appendChild(vUp);
+            renderNode(child, childWrap);
+            row.appendChild(childWrap);
+          });
+
+          childContainer.appendChild(row);
+          wrap.appendChild(childContainer);
         }
 
-        if (mobileOverlay) {
-            mobileOverlay.addEventListener('click', () => {
-                sidebar.classList.remove('open');
-                mobileOverlay.classList.add('hidden');
-                document.body.style.overflow = 'auto';
-            });
+        container.appendChild(wrap);
+      }
+
+      function drawConnectors() {
+        document.querySelectorAll('.org-children-row').forEach(function (row) {
+          const hLine   = row.querySelector('.connector-h-line');
+          if (!hLine) return;
+          const children = Array.from(row.children).filter(function (el) { return !el.classList.contains('connector-h-line'); });
+          if (children.length < 2) { hLine.style.display = 'none'; return; }
+          hLine.style.display = 'block';
+          const rowRect   = row.getBoundingClientRect();
+          const firstRect = children[0].querySelector('.org-node') && children[0].querySelector('.org-node').getBoundingClientRect();
+          const lastRect  = children[children.length - 1].querySelector('.org-node') && children[children.length - 1].querySelector('.org-node').getBoundingClientRect();
+          if (!firstRect || !lastRect) return;
+          hLine.style.left  = (firstRect.left + firstRect.width / 2 - rowRect.left) + 'px';
+          hLine.style.right = (rowRect.right - (lastRect.left + lastRect.width / 2)) + 'px';
+        });
+      }
+
+      window.addEventListener('resize', function () { setTimeout(drawConnectors, 30); });
+
+      // ── Dept table (list view) ─────────────────────────────────────────
+      function buildDeptTable(nodes) {
+        const tbody = document.getElementById('deptTableBody');
+        tbody.innerHTML = '';
+        flattenDepts(nodes).forEach(function (n) {
+          // Store node in map keyed by its numeric ID so onclick can look it up safely
+          const nodeId = n.id || n.departmentId;
+          if (nodeId) deptNodeMap[nodeId] = n;
+
+          const tr = document.createElement('tr');
+          tr.className = 'border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750 cursor-pointer';
+          tr.addEventListener('click', function () { showDetail(n); });
+
+          const initials = (n.name || 'XX').split(' ').map(function (w) { return w[0]; }).join('').substring(0, 2).toUpperCase();
+
+          const tdName = document.createElement('td');
+          tdName.className = 'p-3';
+          tdName.innerHTML =
+            '<div class="flex items-center gap-2">' +
+              '<span class="w-7 h-7 rounded-lg bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-[10px] font-bold text-primary-700 font-mono">' + escapeHtml(initials) + '</span>' +
+              '<span class="font-medium text-sm">' + escapeHtml(n.name || '—') + '</span>' +
+            '</div>';
+
+          const tdCode = document.createElement('td');
+          tdCode.className = 'p-3';
+          tdCode.innerHTML = '<span class="code-tag">' + escapeHtml(n.code || '—') + '</span>';
+
+          const tdParent = document.createElement('td');
+          tdParent.className = 'p-3 text-sm text-gray-600 dark:text-gray-400';
+          tdParent.textContent = n._parent;
+
+          const tdStatus = document.createElement('td');
+          tdStatus.className = 'p-3';
+          tdStatus.innerHTML = '<span class="badge badge-success text-[10px]">Active</span>';
+
+          const tdAction = document.createElement('td');
+          tdAction.className = 'p-3';
+          const viewBtn = document.createElement('button');
+          viewBtn.className = 'text-primary-600 text-xs hover:underline';
+          viewBtn.textContent = 'View';
+          viewBtn.addEventListener('click', function (e) { e.stopPropagation(); showDetail(n); });
+          tdAction.appendChild(viewBtn);
+
+          tr.appendChild(tdName);
+          tr.appendChild(tdCode);
+          tr.appendChild(tdParent);
+          tr.appendChild(tdStatus);
+          tr.appendChild(tdAction);
+          tbody.appendChild(tr);
+        });
+      }
+
+      function buildDeptSummary(nodes) {
+        const cont   = document.getElementById('deptSummaryList');
+        cont.innerHTML = '';
+        const colors = ['#3b82f6','#0ea5e9','#16a34a','#7c3aed','#ea580c','#db2777','#0891b2','#d97706'];
+        flattenDepts(nodes).forEach(function (n, i) {
+          const item = document.createElement('div');
+          item.className = 'flex items-center gap-2.5 py-2 border-b border-gray-100 dark:border-gray-700 last:border-0 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-750 px-1 rounded transition';
+          item.addEventListener('click', function () { showDetail(n); });
+          item.innerHTML =
+            '<span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:' + colors[i % colors.length] + '"></span>' +
+            '<span class="flex-1 text-sm font-medium truncate">' + escapeHtml(n.name || '—') + '</span>' +
+            '<span class="code-tag flex-shrink-0">' + escapeHtml(n.code || '—') + '</span>';
+          cont.appendChild(item);
+        });
+      }
+
+      // ── Company tree panel ─────────────────────────────────────────────
+      function buildCompanyPanel(tree) {
+        const panel = document.getElementById('companyTreePanel');
+        panel.innerHTML = '';
+        if (!tree.length) {
+          panel.innerHTML = '<p class="text-xs text-gray-400 text-center py-4">No companies found. Add one above.</p>';
+          return;
+        }
+        function renderCompany(company, depth) {
+          depth = depth || 0;
+          const item = document.createElement('div');
+          item.className = depth > 0 ? 'ml-6 pl-4 border-l-2 border-gray-200 dark:border-gray-700 mt-2' : '';
+          const initials = (company.code || company.name || 'CO').substring(0, 3).toUpperCase();
+          const bgColors = [
+            'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300',
+            'bg-green-100 dark:bg-green-900/30 text-green-700',
+            'bg-orange-100 dark:bg-orange-900/30 text-orange-700'
+          ];
+          const color = bgColors[depth % bgColors.length];
+          const subsBadge = depth === 0
+            ? '<span class="badge badge-info text-[9px] ml-auto flex-shrink-0">' + (company.subsidiaries || []).length + ' subs</span>'
+            : '<span class="badge badge-success text-[9px] ml-auto flex-shrink-0">Active</span>';
+          item.innerHTML =
+            '<div class="flex items-center gap-2.5 py-1">' +
+              '<div class="w-8 h-8 rounded-lg ' + color + ' flex items-center justify-center text-[10px] font-bold font-mono flex-shrink-0">' + escapeHtml(initials) + '</div>' +
+              '<div class="min-w-0">' +
+                '<p class="font-semibold text-sm truncate">' + escapeHtml(company.name || '—') + '</p>' +
+                '<p class="text-[10px] text-gray-500">' + (depth === 0 ? 'Parent' : 'Subsidiary') + ' · <span class="font-mono">' + escapeHtml(company.code || '—') + '</span></p>' +
+              '</div>' +
+              subsBadge +
+            '</div>';
+          panel.appendChild(item);
+          (company.subsidiaries || []).forEach(function (sub) { renderCompany(sub, depth + 1); });
+        }
+        tree.forEach(function (c) { renderCompany(c, 0); });
+      }
+
+      // ── Reporting tree render ──────────────────────────────────────────
+      function renderRepTree(node, container, depth) {
+        depth = depth || 0;
+        const div = document.createElement('div');
+        div.className = depth === 0 ? 'rep-root' : 'rep-node mt-2';
+
+        const empId = node.employeeId || node.id;
+        const emp   = employees.find(function (e) { return String(e.id) === String(empId); });
+        let displayName = '';
+        if (emp) {
+          displayName = emp.firstName + ' ' + emp.lastName;
+        } else if (node.employeeName || node.name) {
+          displayName = node.employeeName || node.name;
+        } else {
+          displayName = 'Employee ' + (empId || '');
         }
 
-        // Theme Toggle
-        const themeToggle = document.getElementById('themeToggle');
-        const themeIcon = themeToggle?.querySelector('.material-icons-round');
+        const initials   = displayName.split(' ').map(function (w) { return w[0]; }).join('').substring(0, 2).toUpperCase();
+        const avatarClass = depth === 0 ? 'bg-primary-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300';
+        const typeTag    = node.reportingType
+          ? ' · <span class="badge badge-info text-[9px]">' + escapeHtml(node.reportingType) + '</span>'
+          : '';
 
-        if (themeToggle) {
-            themeToggle.addEventListener('click', () => {
-                const isDark = document.documentElement.classList.toggle('dark');
-                themeIcon.textContent = isDark ? 'light_mode' : 'dark_mode';
-                localStorage.setItem('theme', isDark ? 'dark' : 'light');
-            });
+        div.innerHTML =
+          '<div class="flex items-center gap-2 py-1">' +
+            '<div class="w-7 h-7 rounded-full ' + avatarClass + ' flex items-center justify-center text-[10px] font-bold">' + escapeHtml(initials) + '</div>' +
+            '<div>' +
+              '<p class="text-sm font-medium">' + escapeHtml(displayName) + '</p>' +
+              '<p class="text-[10px] text-gray-500">' + escapeHtml(node.role || node.designation || '') + typeTag + '</p>' +
+            '</div>' +
+          '</div>';
+
+        container.appendChild(div);
+        (node.directReports || node.children || []).forEach(function (child) {
+          renderRepTree(child, div, depth + 1);
+        });
+      }
+
+      // ── Reporting Explorer ─────────────────────────────────────────────
+      window.openReportingExplorer = function () {
+        const ex = document.getElementById('reportingExplorer');
+        ex.classList.remove('hidden');
+        ex.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        populateEmployeeDropdown('repTreeEmpId');
+      };
+
+      window.closeReportingExplorer = function () {
+        document.getElementById('reportingExplorer').classList.add('hidden');
+      };
+
+      window.setRepType = function (type) {
+        document.getElementById('repTreeType').value = type;
+        const activeClass   = 'flex-1 py-2 text-xs font-semibold rounded-lg border-2 transition border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-700';
+        const inactiveClass = 'flex-1 py-2 text-xs font-semibold rounded-lg border-2 transition border-gray-200 dark:border-gray-600 text-gray-500';
+        document.getElementById('typePrimary').className = type === 'PRIMARY' ? activeClass : inactiveClass;
+        document.getElementById('typeMatrix').className  = type === 'MATRIX'  ? activeClass : inactiveClass;
+      };
+
+      window.fetchReportingTree = async function () {
+        const empId  = document.getElementById('repTreeEmpId').value;
+        const type   = document.getElementById('repTreeType').value;
+        const date   = document.getElementById('repTreeDate').value;
+        const result = document.getElementById('repTreeResult');
+
+        if (!empId) { result.innerHTML = '<div class="api-error">Please select an employee.</div>'; return; }
+        if (!date)  { result.innerHTML = '<div class="api-error">An as-of date is required.</div>'; return; }
+
+        result.innerHTML = '<div class="flex items-center gap-2 text-gray-400 text-sm"><span class="material-icons-round animate-spin text-[18px]">refresh</span>Fetching tree…</div>';
+        setLoading('fetchRepBtn', true);
+        try {
+          const data = await apiFetch('/reporting/tree/' + empId + '?type=' + type + '&date=' + date);
+          if (!data || (Array.isArray(data) && !data.length)) {
+            result.innerHTML = '<span class="text-xs text-gray-400">No reporting data found for this employee.</span>';
+            return;
+          }
+          result.innerHTML = '';
+          const nodes = Array.isArray(data) ? data : [data];
+          nodes.forEach(function (node) { renderRepTree(node, result, 0); });
+        } catch (e) {
+          result.innerHTML = '<div class="api-error">' + escapeHtml(e.message) + '</div>';
+        } finally {
+          setLoading('fetchRepBtn', false);
+        }
+      };
+
+      // ── Fetch: Company tree ────────────────────────────────────────────
+      async function fetchCompanyTree() {
+        try {
+          const data = await apiFetch('/companies/tree');
+          companyTree = Array.isArray(data) ? data : (data ? [data] : []);
+          buildCompanyPanel(companyTree);
+          let total = 0;
+          function countCompanies(arr) { arr.forEach(function (c) { total++; countCompanies(c.subsidiaries || []); }); }
+          countCompanies(companyTree);
+          document.getElementById('statCompanies').textContent = total || '0';
+          const roots = companyTree.length;
+          document.getElementById('statCompanySub').textContent = total === 0
+            ? 'No companies'
+            : roots + ' Parent · ' + (total - roots) + ' Subsidiaries';
+        } catch (e) {
+          document.getElementById('companyTreePanel').innerHTML = '<div class="api-error">Could not load company data.</div>';
+          document.getElementById('statCompanies').textContent = '—';
+          document.getElementById('statCompanySub').textContent = 'Unavailable';
+        }
+      }
+
+      // ── Fetch: Department tree ─────────────────────────────────────────
+      async function fetchDeptTree() {
+        const badge = document.getElementById('chartLiveBadge');
+        badge.innerHTML  = '<span class="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse"></span>Loading';
+        badge.className  = 'badge badge-orange text-[10px] flex items-center gap-1';
+        try {
+          const data = await apiFetch('/departments/tree');
+          deptTree = Array.isArray(data) ? data : (data ? [data] : []);
+
+          const orgTreeEl = document.getElementById('orgTree');
+
+          if (deptTree.length === 0) {
+            orgTreeEl.classList.add('org-tree-empty');
+            orgTreeEl.innerHTML =
+              '<div class="flex flex-col items-center justify-center text-gray-400">' +
+                '<span class="material-icons-round text-4xl mb-2">account_tree</span>' +
+                '<p class="text-sm">No departments found. Create one using the "New Dept" action.</p>' +
+              '</div>';
+            document.getElementById('deptTableBody').innerHTML =
+              '<tr><td colspan="5" class="text-center py-8 text-gray-400">No departments available</td></tr>';
+            document.getElementById('deptSummaryList').innerHTML =
+              '<div class="text-center py-4 text-gray-400 text-sm">No departments</div>';
+            document.getElementById('statDepts').textContent       = '0';
+            document.getElementById('deptSummaryCount').textContent = '0 total';
+            document.getElementById('statDeptSub').textContent     = '0 active departments';
+            document.getElementById('statEmps').textContent        = '0';
+          } else {
+            orgTreeEl.classList.remove('org-tree-empty');
+            orgTreeEl.style.display       = 'inline-flex';
+            orgTreeEl.style.flexDirection = 'column';
+            orgTreeEl.style.alignItems    = 'center';
+            orgTreeEl.style.minWidth      = 'max-content';
+            orgTreeEl.style.padding       = '24px 60px 32px';
+            orgTreeEl.innerHTML           = '';
+
+            const rootWrap = document.createElement('div');
+            rootWrap.className = 'flex flex-col items-center';
+            deptTree.forEach(function (root) { renderNode(root, rootWrap); });
+            orgTreeEl.appendChild(rootWrap);
+            setTimeout(drawConnectors, 100);
+
+            buildDeptTable(deptTree);
+            buildDeptSummary(deptTree);
+
+            const flat     = flattenDepts(deptTree);
+            const empTotal = flat.reduce(function (s, n) { return s + (n.employeeCount || 0); }, 0);
+            document.getElementById('statDepts').textContent        = flat.length;
+            document.getElementById('deptSummaryCount').textContent  = flat.length + ' total';
+            document.getElementById('statDeptSub').textContent       = flat.length + ' active departments';
+            document.getElementById('statEmps').textContent          = empTotal;
+          }
+
+          badge.innerHTML = '<span class="w-1.5 h-1.5 bg-green-500 rounded-full"></span>Live';
+          badge.className = 'badge badge-success text-[10px] flex items-center gap-1';
+        } catch (e) {
+          document.getElementById('orgTree').innerHTML = '<div class="api-error m-4">Could not load department data.</div>';
+          badge.innerHTML = '<span class="w-1.5 h-1.5 bg-red-500 rounded-full"></span>Error';
+          badge.className = 'badge badge-red text-[10px] flex items-center gap-1';
+          document.getElementById('statDepts').textContent = '—';
+          document.getElementById('statDeptSub').textContent = 'Unavailable';
+        }
+      }
+
+      // ── Fetch: Employees ───────────────────────────────────────────────
+      async function fetchEmployees() {
+        try {
+          employees = await apiFetch('/employees/list') || [];
+        } catch (e) {
+          employees = [];
+        }
+      }
+
+      // ── Fetch: Reporting lines count ───────────────────────────────────
+      async function fetchReportingLinesCount() {
+        try {
+          const data = await apiFetch('/reporting/lines');
+          if (Array.isArray(data)) {
+            document.getElementById('statLines').textContent = data.length;
+          } else if (data && typeof data === 'object' && data.count !== undefined) {
+            document.getElementById('statLines').textContent = data.count;
+          } else {
+            document.getElementById('statLines').textContent = '—';
+          }
+        } catch (e) {
+          document.getElementById('statLines').textContent = '—';
+        }
+      }
+
+      // ── Company type toggle ────────────────────────────────────────────
+      window.setCompanyType = function (type) {
+        companyType   = type;
+        const isParent = type === 'parent';
+        const active   = 'flex-1 py-2 text-sm font-medium rounded-lg border-2 transition border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-700';
+        const inactive = 'flex-1 py-2 text-sm font-medium rounded-lg border-2 transition border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400';
+        document.getElementById('typeBtnParent').className = isParent  ? active : inactive;
+        document.getElementById('typeBtnSub').className    = !isParent ? active : inactive;
+        document.getElementById('parentCompanyField').classList.toggle('hidden', isParent);
+      };
+
+      // ── Save: Company ──────────────────────────────────────────────────
+      window.saveCompany = async function () {
+        hideError('companyError');
+        const name = document.getElementById('compName').value.trim();
+        const code = document.getElementById('compCode').value.trim();
+        if (!name || !code) { showError('companyError', 'Company name and code are required.'); return; }
+
+        let path;
+        if (companyType === 'parent') {
+          path = '/companies';
+        } else {
+          const parentId = document.getElementById('compParentId').value;
+          if (!parentId || isNaN(parseInt(parentId, 10))) {
+            showError('companyError', 'Please select a valid parent company.');
+            return;
+          }
+          path = '/companies/' + parentId + '/subsidiaries';
         }
 
-        // Initialize theme
-        if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-            document.documentElement.classList.add('dark');
-            if (themeIcon) themeIcon.textContent = 'light_mode';
+        setLoading('saveCompanyBtn', true);
+        try {
+          await apiFetch(path, { method: 'POST', body: JSON.stringify({ name: name, code: code }) });
+          closeModal('companyModal');
+          showToast('Company "' + name + '" created successfully');
+          document.getElementById('compName').value = '';
+          document.getElementById('compCode').value = '';
+          fetchCompanyTree();
+        } catch (e) {
+          showError('companyError', e.message);
+        } finally {
+          setLoading('saveCompanyBtn', false);
         }
+      };
 
-        // Sidebar navigation active state
-        document.querySelectorAll('.sidebar-item').forEach(item => {
-            item.addEventListener('click', function(e) {
-                if (this.getAttribute('href') === '#') {
-                    e.preventDefault();
-                }
+      // ── Save: Department ───────────────────────────────────────────────
+      window.saveDept = async function () {
+        hideError('deptError');
+        const name          = document.getElementById('deptName').value.trim();
+        const code          = document.getElementById('deptCode').value.trim();
+        const companyId     = document.getElementById('deptCompanyId').value;
+        const parentDeptId  = document.getElementById('deptParentId').value;
+        const effectiveFrom = document.getElementById('deptEffectiveFrom').value;
+        if (!name || !code || !companyId || !effectiveFrom) {
+          showError('deptError', 'Name, code, company, and effective-from date are all required.');
+          return;
+        }
+        const body = {
+          name:               name,
+          code:               code,
+          companyId:          parseInt(companyId, 10),
+          parentDepartmentId: parentDeptId ? parseInt(parentDeptId, 10) : null,
+          effectiveFrom:      effectiveFrom
+        };
+        setLoading('saveDeptBtn', true);
+        try {
+          await apiFetch('/departments', { method: 'POST', body: JSON.stringify(body) });
+          closeModal('deptModal');
+          showToast('Department "' + name + '" created');
+          document.getElementById('deptName').value = '';
+          document.getElementById('deptCode').value = '';
+          fetchDeptTree();
+        } catch (e) {
+          showError('deptError', e.message);
+        } finally {
+          setLoading('saveDeptBtn', false);
+        }
+      };
 
-                document.querySelectorAll('.sidebar-item').forEach(nav => {
-                    nav.classList.remove('active');
-                });
+      // ── Save: Move Department ──────────────────────────────────────────
+      window.saveMove = async function () {
+        hideError('moveError');
+        const deptId      = document.getElementById('moveDeptId').value;
+        const newParentId = document.getElementById('moveNewParentId').value;
+        if (!deptId || !newParentId) {
+          showError('moveError', 'Please select both a department and a new parent.');
+          return;
+        }
+        if (deptId === newParentId) {
+          showError('moveError', 'A department cannot be moved to itself.');
+          return;
+        }
+        setLoading('saveMoveBtn', true);
+        try {
+          await apiFetch('/departments/' + deptId + '/move/' + newParentId, { method: 'PUT' });
+          closeModal('moveModal');
+          showToast('Department moved successfully');
+          document.getElementById('moveDeptId').value      = '';
+          document.getElementById('moveNewParentId').value = '';
+          fetchDeptTree();
+        } catch (e) {
+          showError('moveError', e.message);
+        } finally {
+          setLoading('saveMoveBtn', false);
+        }
+      };
 
-                this.classList.add('active');
+      // ── Save: Assign Reporting Line ────────────────────────────────────
+      window.saveReport = async function () {
+        hideError('reportError');
+        const employeeId    = document.getElementById('reportEmpId').value;
+        const managerId     = document.getElementById('reportMgrId').value;
+        const reportingType = document.getElementById('reportType').value;
+        const effectiveFrom = document.getElementById('reportEffectiveFrom').value;
+        if (!employeeId || !managerId || !effectiveFrom) {
+          showError('reportError', 'Please select an employee, a manager, and an effective-from date.');
+          return;
+        }
+        if (employeeId === managerId) {
+          showError('reportError', 'An employee cannot report to themselves.');
+          return;
+        }
+        const body = {
+          employeeId:    parseInt(employeeId, 10),
+          managerId:     parseInt(managerId, 10),
+          reportingType: reportingType,
+          effectiveFrom: effectiveFrom
+        };
+        setLoading('saveReportBtn', true);
+        try {
+          await apiFetch('/reporting/assign', { method: 'POST', body: JSON.stringify(body) });
+          closeModal('reportModal');
+          showToast('Manager assigned successfully');
+          document.getElementById('reportEmpId').value         = '';
+          document.getElementById('reportMgrId').value         = '';
+          document.getElementById('reportEffectiveFrom').value = todayStr;
+        } catch (e) {
+          showError('reportError', e.message);
+        } finally {
+          setLoading('saveReportBtn', false);
+        }
+      };
 
-                if (window.innerWidth < 1024) {
-                    sidebar?.classList.remove('open');
-                    mobileOverlay?.classList.add('hidden');
-                    document.body.style.overflow = 'auto';
-                }
-            });
-        });
+      // ── Save: Remove Reporting Line ────────────────────────────────────
+      window.saveRemove = async function () {
+        hideError('removeError');
+        const employeeId    = document.getElementById('removeEmpId').value;
+        const reportingType = document.getElementById('removeType').value;
+        const effectiveTo   = document.getElementById('removeEffectiveTo').value;
+        if (!employeeId || !effectiveTo) {
+          showError('removeError', 'Please select an employee and an end date.');
+          return;
+        }
+        const body = {
+          employeeId:    parseInt(employeeId, 10),
+          reportingType: reportingType,
+          effectiveTo:   effectiveTo
+        };
+        setLoading('saveRemoveBtn', true);
+        try {
+          await apiFetch('/reporting/remove', { method: 'PUT', body: JSON.stringify(body) });
+          closeModal('removeModal');
+          showToast('Reporting line removed', 'info');
+          document.getElementById('removeEmpId').value        = '';
+          document.getElementById('removeEffectiveTo').value  = eoyStr;
+        } catch (e) {
+          showError('removeError', e.message);
+        } finally {
+          setLoading('saveRemoveBtn', false);
+        }
+      };
 
-        // Close sidebar on window resize
-        window.addEventListener('resize', () => {
-            if (window.innerWidth >= 1024) {
-                sidebar?.classList.remove('open');
-                mobileOverlay?.classList.add('hidden');
-                document.body.style.overflow = 'auto';
-            }
-        });
+      // ── XSS protection ─────────────────────────────────────────────────
+      function escapeHtml(str) {
+        if (str == null) return '';
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
 
-        // Search functionality
-        document.getElementById('searchInput')?.addEventListener('input', function(e) {
-            const searchTerm = e.target.value.toLowerCase();
-            filterDepartments(searchTerm);
-        });
+      // ── Date defaults ──────────────────────────────────────────────────
+      const todayStr = new Date().toISOString().split('T')[0];
+      const eoyDate  = new Date(); eoyDate.setMonth(11); eoyDate.setDate(31);
+      const eoyStr   = eoyDate.toISOString().split('T')[0];
 
-        // Add form submission – now with validation, button disable, and actual POST
-        document.getElementById('addDepartmentForm')?.addEventListener('submit', function(e) {
-            const submitBtn = this.querySelector('button[type="submit"]');
-            const name = document.getElementById('addDepartmentName').value.trim();
+      ['deptEffectiveFrom', 'reportEffectiveFrom', 'repTreeDate'].forEach(function (id) {
+        const el = document.getElementById(id);
+        if (el) el.value = todayStr;
+      });
+      const removeEl = document.getElementById('removeEffectiveTo');
+      if (removeEl) removeEl.value = eoyStr;
 
-            // Validate
-            if (!name) {
-                alert('Please fill in all required fields');
-                e.preventDefault(); // stop submission
-                return;
-            }
+      // ── Boot ────────────────────────────────────────────────────────────
+      fetchCompanyTree();
+      fetchDeptTree();
+      fetchEmployees();
+      fetchReportingLinesCount();
 
-            // Set the hidden status field based on selected radio
-            const selectedRadio = document.querySelector('#addDepartmentModal input[type="radio"]:checked');
-            if (selectedRadio) {
-                document.getElementById('addDepartmentStatus').value = selectedRadio.value;
-            }
-
-            // Disable button to prevent double submission
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<span class="material-icons-round text-sm animate-spin">sync</span> Saving...';
-
-            // Allow form to submit normally (no preventDefault)
-        });
-
-        // Edit form submission – similar handling
-        document.getElementById('editDepartmentForm')?.addEventListener('submit', function(e) {
-            const submitBtn = this.querySelector('button[type="submit"]');
-            const code = document.getElementById('editDepartmentCode').value.trim();
-            const name = document.getElementById('editDepartmentName').value.trim();
-
-            if (!code || !name) {
-                alert('Please fill in all required fields');
-                e.preventDefault();
-                return;
-            }
-
-            const selectedRadio = document.querySelector('#editDepartmentModal input[type="radio"]:checked');
-            if (selectedRadio) {
-                document.getElementById('editDepartmentStatus').value = selectedRadio.value;
-            }
-
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<span class="material-icons-round text-sm animate-spin">sync</span> Updating...';
-
-            // Allow form to submit
-        });
-    });
-    // Update statistics
-    function updateStats() {
-        const totalDepartments = departments.length;
-        const activeDepartments = departments.filter(d => d.status === 'ACTIVE').length;
-
-        document.getElementById('totalDepartments').textContent = totalDepartments;
-        document.getElementById('activeDepartments').textContent = activeDepartments;
-    }
-
-    // Filter departments
-    function filterDepartments(searchTerm) {
-        const rows = document.querySelectorAll('#departmentsTable tr');
-
-        rows.forEach(row => {
-            const text = row.textContent.toLowerCase();
-            if (text.includes(searchTerm)) {
-                row.style.display = '';
-            } else {
-                row.style.display = 'none';
-            }
-        });
-    }
-
-    // Modal functions
-    function openModal(modalId) {
-        document.getElementById(modalId).classList.remove('hidden');
-        document.body.style.overflow = 'hidden';
-    }
-
-    function closeModal(modalId) {
-        document.getElementById(modalId).classList.add('hidden');
-        document.body.style.overflow = 'auto';
-    }
-
-    // Close modal on backdrop click
-    document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
-        backdrop.addEventListener('click', function() {
-            this.parentElement.classList.add('hidden');
-            document.body.style.overflow = 'auto';
-        });
-    });
-
-    // Open add department modal – reset button state
-    function openAddDepartmentModal() {
-        document.getElementById('addDepartmentForm').reset();
-        // Reset hidden status to default ACTIVE
-        document.getElementById('addDepartmentStatus').value = 'ACTIVE';
-        const btn = document.querySelector('#addDepartmentForm button[type="submit"]');
-        btn.disabled = false;
-        btn.innerHTML = 'Save Department';
-        openModal('addDepartmentModal');
-    }
-
-    // Edit department – populate edit modal and reset button
-    function editDepartment(code) {
-        const dept = departments.find(d => d.code === code);
-        if (!dept) return;
-
-        document.getElementById('editDepartmentId').value = dept.id;
-        document.getElementById('editDepartmentCode').value = dept.code;
-        document.getElementById('editDepartmentName').value = dept.name;
-
-        // Set status radio button
-        const statusRadios = document.querySelectorAll('#editDepartmentModal input[type="radio"]');
-        statusRadios.forEach(radio => {
-            radio.checked = (radio.value === dept.status);
-        });
-        // Update hidden status field
-        document.getElementById('editDepartmentStatus').value = dept.status;
-
-        // Reset submit button
-        const btn = document.querySelector('#editDepartmentForm button[type="submit"]');
-        btn.disabled = false;
-        btn.innerHTML = 'Update Department';
-
-        openModal('editDepartmentModal');
-    }
-
-    // Edit from details modal
-    function editDepartmentFromDetails() {
-        const code = document.getElementById('detailDepartmentCode').textContent;
-        closeModal('departmentDetailModal');
-        editDepartment(code);
-    }
-
-    // View department details
-    function viewDepartmentDetails(code) {
-        const dept = departments.find(d => d.code === code);
-        if (!dept) return;
-
-        document.getElementById('detailDepartmentName').textContent = dept.name;
-        document.getElementById('detailDepartmentCode').textContent = dept.code;
-        document.getElementById('detailTotalEmployees').textContent = dept.totalEmployees;
-        document.getElementById('detailVacancies').textContent = dept.vacancies;
-        document.getElementById('detailAvgKPI').textContent = `${dept.avgKPI}/100`;
-
-        const statusElement = document.getElementById('detailStatus');
-        statusElement.textContent = dept.status === 'ACTIVE' ? 'Active' : 'Inactive';
-        statusElement.className = dept.status === 'ACTIVE' ? 'status-active department-badge inline-block' : 'status-inactive department-badge inline-block';
-
-        document.getElementById('detailCreatedDate').textContent = formatDate(dept.createdDate);
-        document.getElementById('detailUpdatedDate').textContent = formatDate(dept.updatedDate);
-
-        document.getElementById('detailOnLeave').textContent = `${Math.floor(dept.totalEmployees * 0.04)} employees`;
-        document.getElementById('detailProbation').textContent = `${Math.floor(dept.totalEmployees * 0.03)} employees`;
-        document.getElementById('detailTurnover').textContent = '1.2%';
-
-        openModal('departmentDetailModal');
-    }
-
-    // Delete department
-    function deleteDepartment(code) {
-        const dept = departments.find(d => d.code === code);
-        if (!dept) return;
-
-        departmentToDelete = code;
-        document.getElementById('deleteMessage').textContent = `Are you sure you want to delete the "${dept.name}" department? This action cannot be undone.`;
-        openModal('deleteConfirmationModal');
-    }
-
-    // Confirm delete (client-side only)
-    function confirmDeleteDepartment() {
-        if (!departmentToDelete) return;
-
-        departments = departments.filter(d => d.code !== departmentToDelete);
-
-        updateStats();
-        closeModal('deleteConfirmationModal');
-        showNotification('Department deleted successfully!', 'success');
-        departmentToDelete = null;
-    }
-
-    // Export departments
-    function exportDepartments() {
-        const data = JSON.stringify(departments, null, 2);
-        const blob = new Blob([data], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'departments-export.json';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-
-        showNotification('Departments exported successfully!', 'success');
-    }
-
-    // Utility functions
-    function getKPIColor(score) {
-        if (score >= 90) return 'bg-green-500';
-        if (score >= 80) return 'bg-blue-500';
-        if (score >= 70) return 'bg-yellow-500';
-        return 'bg-red-500';
-    }
-
-    function formatDate(dateString) {
-        if (!dateString) return 'N/A';
-        const date = new Date(dateString);
-        return date.toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        });
-    }
-
-    function showNotification(message, type) {
-        const notification = document.createElement('div');
-        notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
-            type === 'success' ? 'bg-green-100 text-green-800 border border-green-200' :
-            'bg-red-100 text-red-800 border border-red-200'
-        }`;
-        notification.innerHTML = `
-            <div class="flex items-center space-x-3">
-                <span class="material-icons-round">${type === 'success' ? 'check_circle' : 'error'}</span>
-                <span>${message}</span>
-            </div>
-        `;
-
-        document.body.appendChild(notification);
-        setTimeout(() => {
-            notification.remove();
-        }, 3000);
-    }
-
-    // Update window object for onclick handlers
-    window.openModal = openModal;
-    window.closeModal = closeModal;
-    window.viewDepartmentDetails = viewDepartmentDetails;
-    window.editDepartment = editDepartment;
-    window.deleteDepartment = deleteDepartment;
-    window.editDepartmentFromDetails = editDepartmentFromDetails;
-    window.confirmDeleteDepartment = confirmDeleteDepartment;
-    window.exportDepartments = exportDepartments;
-    window.openAddDepartmentModal = openAddDepartmentModal;
+    })();
   </script>
 </main>
 </body>

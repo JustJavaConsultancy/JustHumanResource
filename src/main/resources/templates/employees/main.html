@@ -459,16 +459,40 @@
 
     <script th:inline="javascript">
         /*<![CDATA[*/
-        // Receive server-side data safely
-        const jobGrades = [[${jobGrades}]] || [];
-        const departments = [[${departments}]] || [];
-        const payGroups = [[${payGroups}]] || [];
+        // ---------- Manually constructed data (no lazy-loading issues) ----------
+        const jobGrades = [
+            /*[# th:each="grade : ${jobGrades}"]*/
+            {
+                id: /*[[${grade.id}]]*/,
+                name: /*[[${grade.name}]]*/,
+                steps: [
+                    /*[# th:each="step : ${grade.steps ?: grade.jobSteps}"]*/
+                    {
+                        id: /*[[${step.id}]]*/,
+                        name: /*[[${step.name}]]*/
+                    }[# th:if="${!stepStat.last}"],[/]
+                    /*[/]*/
+                ]
+            }[# th:if="${!gradeStat.last}"],[/]
+            /*[/]*/
+        ];
 
-        // Build jobSteps array from jobGrades (handle both 'steps' and 'jobSteps' property names)
+        const departments = [
+            /*[# th:each="dept : ${departments}"]*/
+            { id: /*[[${dept.id}]]*/, name: /*[[${dept.name}]]*/ }[# th:if="${!deptStat.last}"],[/]
+            /*[/]*/
+        ];
+
+        const payGroups = [
+            /*[# th:each="pg : ${payGroups}"]*/
+            { id: /*[[${pg.id}]]*/, name: /*[[${pg.name}]]*/ }[# th:if="${!pgStat.last}"],[/]
+            /*[/]*/
+        ];
+
+        // Build jobSteps array from jobGrades (same logic as before)
         let jobSteps = [];
         if (Array.isArray(jobGrades) && jobGrades.length > 0) {
             jobGrades.forEach(grade => {
-                // Determine which property holds the steps list (common names: steps, jobSteps)
                 const stepsList = grade.steps || grade.jobSteps || [];
                 if (Array.isArray(stepsList) && stepsList.length > 0) {
                     stepsList.forEach(step => {
@@ -506,20 +530,16 @@
 
             if (gradeSelect && stepSelect) {
                 gradeSelect.addEventListener('change', function() {
-                    // Get selected grade id as string (to avoid type mismatches)
-                    const selectedGradeId = this.value; // keep as string, IDs may be numeric strings
+                    const selectedGradeId = this.value;
 
-                    // Clear and disable step select initially
                     stepSelect.innerHTML = '<option value="">Select Job Step</option>';
                     stepSelect.disabled = true;
 
-                    if (!selectedGradeId) return; // No grade selected
+                    if (!selectedGradeId) return;
 
-                    // Filter steps that belong to this grade (compare as strings)
                     const filteredSteps = jobSteps.filter(step => String(step.gradeId) === String(selectedGradeId));
 
                     if (filteredSteps.length === 0) {
-                        // Optionally show a "No steps available" option
                         const option = document.createElement('option');
                         option.value = '';
                         option.textContent = 'No steps available for this grade';
@@ -532,22 +552,16 @@
                             option.textContent = step.display;
                             stepSelect.appendChild(option);
                         });
-                        stepSelect.disabled = false; // Enable only if there are steps
+                        stepSelect.disabled = false;
                     }
                 });
 
-                // If a grade is pre-selected (e.g., in edit mode), trigger change manually
-                // Not needed for add modal, but good for completeness
                 if (gradeSelect.value) {
                     gradeSelect.dispatchEvent(new Event('change'));
                 }
             } else {
                 console.warn('Job grade or step select elements not found');
             }
-
-            // Other initializations (table, stats) can be added here if needed
-            // loadEmployeeTable();  // Not implemented in original
-            // updateStats();        // Not implemented in original
         });
 
         // Disable submit button on form submit to prevent double posting
@@ -578,12 +592,10 @@
 
         // Dummy viewEmployee function (if needed)
         window.viewEmployee = function(id) {
-            // Implement if needed
             console.log('View employee', id);
         };
 
         window.editEmployee = function(id) {
-            // Implement if needed
             console.log('Edit employee', id);
         };
         /*]]>*/

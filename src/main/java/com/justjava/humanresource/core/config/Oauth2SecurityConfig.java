@@ -9,6 +9,7 @@ import org.springframework.security.config.annotation.web.configurers.AnonymousC
 import org.springframework.security.config.annotation.web.configurers.CsrfConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.web.servlet.handler.HandlerMappingIntrospector;
 
@@ -32,7 +33,7 @@ public class Oauth2SecurityConfig {
                         .authorizationEndpoint(Customizer.withDefaults())
                         .tokenEndpoint(Customizer.withDefaults())
                         .userInfoEndpoint(Customizer.withDefaults())
-//                        .successHandler(authenticationSuccessHandler())
+                        .successHandler(authenticationSuccessHandler())
                         )
                 .authorizeHttpRequests(
                         authorize -> {
@@ -44,5 +45,15 @@ public class Oauth2SecurityConfig {
                         .invalidateHttpSession(false)
                         .logoutUrl("/users/logout"));
         return http.build();
+    }
+
+    private AuthenticationSuccessHandler authenticationSuccessHandler(){
+        return  (request, response, authentication) -> {
+            if (request.getRequestURI().contains("keycloak-mobile")){
+                response.sendRedirect("/mobile/employee/dashboard");
+            }else {
+                response.sendRedirect("/");
+            }
+        };
     }
 }
