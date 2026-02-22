@@ -31,21 +31,22 @@ public class BatchStartAppraisalDelegate implements JavaDelegate {
     @Override
     public void execute(DelegateExecution execution) {
 
-        YearMonth period =
-                (YearMonth) execution.getVariable("appraisalPeriod");
-
-        Long cycleId =
-                (Long) execution.getVariable("cycleId");
+        Long cycleId = Long.valueOf(
+                execution.getVariable("cycleId").toString()
+        );
 
         AppraisalCycle cycle =
-                cycleRepository.findById(cycleId).orElseThrow();
+                cycleRepository.findById(cycleId)
+                        .orElseThrow();
 
         int page = 0;
         Page<Employee> result;
 
         do {
+
             result = employeeRepository.findAll(
-                    PageRequest.of(page, BATCH_SIZE));
+                    PageRequest.of(page, BATCH_SIZE)
+            );
 
             for (Employee employee : result.getContent()) {
 
@@ -53,7 +54,9 @@ public class BatchStartAppraisalDelegate implements JavaDelegate {
                     continue;
 
                 String businessKey =
-                        "APPRAISAL_" + employee.getId() + "_" + period;
+                        "APPRAISAL_" + employee.getId()
+                                + "_Y" + cycle.getYear()
+                                + "Q" + cycle.getQuarter();
 
                 boolean exists =
                         runtimeService.createProcessInstanceQuery()
@@ -69,7 +72,6 @@ public class BatchStartAppraisalDelegate implements JavaDelegate {
                             businessKey,
                             Map.of(
                                     "employeeId", employee.getId(),
-                                    "period", period,
                                     "cycleId", cycleId
                             )
                     );
@@ -86,6 +88,7 @@ public class BatchStartAppraisalDelegate implements JavaDelegate {
 
         cycle.setCompleted(true);
         cycle.setCompletedAt(LocalDateTime.now());
+
         cycleRepository.save(cycle);
     }
 }

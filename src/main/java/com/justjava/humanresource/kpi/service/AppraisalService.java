@@ -9,6 +9,8 @@ import com.justjava.humanresource.kpi.repositories.AppraisalCycleRepository;
 import com.justjava.humanresource.kpi.repositories.EmployeeAppraisalRepository;
 import com.justjava.humanresource.kpi.repositories.KpiAssignmentRepository;
 import com.justjava.humanresource.kpi.repositories.KpiMeasurementRepository;
+import com.justjava.humanresource.workflow.dto.FlowableTaskDTO;
+import com.justjava.humanresource.workflow.service.FlowableTaskService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -35,7 +37,7 @@ public class AppraisalService {
     private final KpiMeasurementRepository measurementRepository;
     private final EmployeeAppraisalRepository appraisalRepository;
     private final AppraisalCycleRepository cycleRepository;
-
+    private final FlowableTaskService flowableTaskService;
     /* =========================================================
        STEP 1 — CREATE DRAFT APPRAISAL (KPI SCORE ONLY)
        ========================================================= */
@@ -131,7 +133,23 @@ public class AppraisalService {
                 )
                 .toList();
     }
+    @Transactional(readOnly = true)
+    public List<FlowableTaskDTO> getManagerTasks(String managerUsername) {
 
+        return flowableTaskService.getTasksForAssignee(
+                managerUsername,
+                "employeeAppraisalProcess"
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public List<FlowableTaskDTO> getSelfAppraisalTasks(String employeeId) {
+
+        return flowableTaskService.getTasksForAssignee(
+                employeeId,
+                "employeeAppraisalProcess"
+        );
+    }
     /* =========================================================
        CORE KPI CALCULATION (Single Source of Truth)
        ========================================================= */
@@ -167,8 +185,7 @@ public class AppraisalService {
 
         return totalScore
                 .divide(BigDecimal.valueOf(measurements.size()),
-                        2,
-                        RoundingMode.HALF_UP);
+                        2,RoundingMode.HALF_UP);
     }
 
     /* =========================================================

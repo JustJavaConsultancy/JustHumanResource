@@ -47,7 +47,6 @@ public class OrganogramController {
             @RequestParam
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
             LocalDate effectiveTo) {
-
         organogramService.deactivateDepartment(departmentId, effectiveTo);
     }
 
@@ -62,7 +61,6 @@ public class OrganogramController {
 
     @PostMapping("/reporting/assign")
     public void assignManager(@RequestBody AssignManagerRequest request) {
-
         organogramService.assignManager(
                 request.getEmployeeId(),
                 request.getManagerId(),
@@ -99,7 +97,6 @@ public class OrganogramController {
     public CompanyDTO addSubsidiary(
             @PathVariable Long parentId,
             @RequestBody CompanyDTO dto) {
-
         return organogramService.addSubsidiary(parentId, dto);
     }
     @GetMapping("/companies/tree")

@@ -34,6 +34,9 @@ public class BatchStartEvaluationDelegate implements JavaDelegate {
         YearMonth period =
                 (YearMonth) execution.getVariable("evaluationPeriod");
 
+        if(period==null)
+            period = YearMonth.now().minusMonths(1);
+
         Long cycleId =
                 (Long) execution.getVariable("cycleId");
 

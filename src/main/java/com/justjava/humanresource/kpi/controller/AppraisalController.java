@@ -5,6 +5,9 @@ import com.justjava.humanresource.kpi.entity.AppraisalCycle;
 import com.justjava.humanresource.kpi.entity.EmployeeAppraisal;
 import com.justjava.humanresource.kpi.repositories.AppraisalCycleRepository;
 import com.justjava.humanresource.kpi.service.AppraisalService;
+import com.justjava.humanresource.workflow.dto.CompleteTaskRequest;
+import com.justjava.humanresource.workflow.dto.FlowableTaskDTO;
+import com.justjava.humanresource.workflow.service.FlowableTaskService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,6 +21,7 @@ public class AppraisalController {
 
     private final AppraisalService appraisalService;
     private final AppraisalCycleRepository cycleRepository;
+    private final FlowableTaskService flowableTaskService;
 
     /* ============================================================
        1️⃣ CREATE APPRAISAL CYCLE
@@ -88,6 +92,48 @@ public class AppraisalController {
         return appraisalService.getAllActiveAppraisals();
     }
 
+        /* =====================================================
+       WORKFLOW - GET MANAGER TASKS
+       ===================================================== */
+
+    @GetMapping("/tasks/manager/{username}")
+    public List<FlowableTaskDTO> getManagerTasks(
+            @PathVariable String username
+    ) {
+
+        return flowableTaskService.getTasksForAssignee(
+                username,
+                "employeeAppraisalProcess"
+        );
+    }
+
+    /* =====================================================
+       WORKFLOW - GET SELF TASKS
+       ===================================================== */
+
+    @GetMapping("/tasks/self/{username}")
+    public List<FlowableTaskDTO> getSelfTasks(
+            @PathVariable String username
+    ) {
+
+        return flowableTaskService.getTasksForAssignee(
+                username,
+                "employeeAppraisalProcess"
+        );
+    }
+    /* =====================================================
+       WORKFLOW - COMPLETE TASK (SELF OR MANAGER)
+       ===================================================== */
+
+    @PostMapping("/tasks/complete")
+    public void completeTask(
+            @RequestBody CompleteTaskRequest request
+    ) {
+        flowableTaskService.completeTask(
+                request.getTaskId(),
+                request.getVariables()
+        );
+    }
     /* ============================================================
        REQUEST DTOs
        ============================================================ */

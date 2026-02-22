@@ -4,18 +4,13 @@ package com.justjava.humanresource.hr.entity;
 import com.justjava.humanresource.core.entity.BaseEntity;
 import com.justjava.humanresource.core.enums.EmploymentStatus;
 import com.justjava.humanresource.core.enums.RecordStatus;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @Setter
@@ -62,6 +57,9 @@ public class Employee extends BaseEntity {
     @ManyToOne(optional = false)
     @JoinColumn(name = "pay_group_id")
     private PayGroup payGroup;
+
+    @OneToMany(mappedBy = "employee", fetch = FetchType.LAZY)
+    private List<EmployeeBankDetail> bankDetails;
 
     /** Payroll still independent */
     private boolean payrollEnabled;
