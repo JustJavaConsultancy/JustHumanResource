@@ -21,7 +21,7 @@ public class InitializeKpiCycleDelegate implements JavaDelegate {
     @Override
     public void execute(DelegateExecution execution) {
 
-        YearMonth period = YearMonth.now();//.minusMonths(1);
+        YearMonth period = YearMonth.now().minusMonths(1);
 
         System.out.println("Checking for existing KPI cycle for period: " + period);
         repository.findByPeriod(period)

@@ -9,7 +9,6 @@ import org.springframework.stereotype.Component;
 import java.math.RoundingMode;
 import java.time.YearMonth;
 
-
 @Component
 @RequiredArgsConstructor
 public class EvaluateKpiDelegate implements JavaDelegate {
@@ -24,8 +23,8 @@ public class EvaluateKpiDelegate implements JavaDelegate {
         );
 
         System.out.println(" The Evaluation Period is : " + execution.getVariable("evaluationPeriod"));
-        YearMonth period = YearMonth.now();
-                //(YearMonth) execution.getVariable("evaluationPeriod");
+        YearMonth period = (YearMonth) execution.getVariable("evaluationPeriod");
+
         System.out.println("Evaluating KPIs for employee " + employeeId + " for period " + period);
         boolean hasMeasurements =
                 !measurementRepository

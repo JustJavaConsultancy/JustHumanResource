@@ -50,7 +50,26 @@ public class FlowableTaskService {
             String taskId,
             Map<String, Object> variables
     ) {
-        taskService.complete(taskId, variables);
+
+        Task task = taskService.createTaskQuery()
+                .taskId(taskId)
+                .singleResult();
+
+        if (task == null) {
+            throw new IllegalStateException("Task not found: " + taskId);
+        }
+
+        if (variables != null && !variables.isEmpty()) {
+
+            // Set variables at PROCESS INSTANCE level
+            runtimeService.setVariables(
+                    task.getProcessInstanceId(),
+                    variables
+            );
+        }
+
+        // Complete task without passing variables again
+        taskService.complete(taskId);
     }
 
     /* =====================================================

@@ -11,4 +11,6 @@ public interface PayrollJournalEntryRepository
     List<PayrollJournalEntry> findByPayrollPeriodId(Long periodId);
 
     List<PayrollJournalEntry> findByPayrollPeriodIdAndExportedFalse(Long periodId);
+
+    List<PayrollJournalEntry> findByCompanyIdAndPayrollPeriodId(Long companyId, Long periodId);
 }

@@ -7,5 +7,5 @@ import java.util.List;
 
 public interface PayrollSetupValidationService {
 
-    PayrollReadinessResult validateOrganizationReadiness(YearMonth period);
+    //PayrollReadinessResult validateOrganizationReadiness(YearMonth period);
 }

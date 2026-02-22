@@ -2,7 +2,10 @@ package com.justjava.humanresource.payroll.service;
 
 import com.justjava.humanresource.core.enums.PayrollRunStatus;
 import com.justjava.humanresource.payroll.entity.PayrollJournalEntry;
+import com.justjava.humanresource.payroll.entity.PayrollPeriod;
+import com.justjava.humanresource.payroll.enums.PayrollPeriodStatus;
 import com.justjava.humanresource.payroll.repositories.PayrollJournalEntryRepository;
+import com.justjava.humanresource.payroll.repositories.PayrollPeriodRepository;
 import com.justjava.humanresource.payroll.repositories.PayrollRunRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -19,105 +22,134 @@ public class PayrollJournalService {
     private final PayrollRunRepository payrollRunRepository;
     private final PayrollJournalEntryRepository journalRepository;
 
+    private final PayrollPeriodRepository payrollPeriodRepository;
     @Transactional
-    public void generateJournalEntries(Long periodId,
-                                       LocalDate start,
-                                       LocalDate end) {
+    public void generateJournalEntries(
+            Long companyId,
+            Long periodId,
+            LocalDate start,
+            LocalDate end) {
 
-        /* ============================================================
-           1️⃣ IDEMPOTENCY CHECK
-           Prevent duplicate journal generation
-           ============================================================ */
+    /* ============================================================
+       1️⃣ VALIDATE PERIOD OWNERSHIP & STATUS
+       ============================================================ */
+
+        PayrollPeriod period = payrollPeriodRepository.findById(periodId)
+                .orElseThrow(() ->
+                        new IllegalStateException("Payroll period not found."));
+
+        if (!period.getCompanyId().equals(companyId)) {
+            throw new IllegalStateException(
+                    "Period does not belong to provided company."
+            );
+        }
+
+        if (period.getStatus() != PayrollPeriodStatus.LOCKED) {
+            throw new IllegalStateException(
+                    "Journal can only be generated for LOCKED period."
+            );
+        }
+
+    /* ============================================================
+       2️⃣ IDEMPOTENCY CHECK (COMPANY + PERIOD)
+       ============================================================ */
 
         List<PayrollJournalEntry> existing =
-                journalRepository.findByPayrollPeriodId(periodId);
+                journalRepository
+                        .findByCompanyIdAndPayrollPeriodId(companyId, periodId);
 
         if (!existing.isEmpty()) {
             throw new IllegalStateException(
                     "Journal entries already exist for this period.");
         }
 
-        /* ============================================================
-           2️⃣ ENSURE THERE ARE POSTED RUNS
-           ============================================================ */
+    /* ============================================================
+       3️⃣ ENSURE POSTED RUNS EXIST (COMPANY SCOPED)
+       ============================================================ */
 
         long employeeCount =
-                payrollRunRepository.countByPayrollDateBetweenAndStatus(
-                        start,
-                        end,
-                        PayrollRunStatus.POSTED
-                );
+                payrollRunRepository
+                        .countByEmployee_Department_Company_IdAndPayrollDateBetweenAndStatus(
+                                companyId,
+                                period.getPeriodStart(),
+                                period.getPeriodEnd(),
+                                PayrollRunStatus.POSTED
+                        );
 
         if (employeeCount == 0) {
             throw new IllegalStateException(
                     "No POSTED payroll runs found for period.");
         }
 
-        /* ============================================================
-           3️⃣ DATABASE-LEVEL AGGREGATION (OPTIMIZED)
-           ============================================================ */
+    /* ============================================================
+       4️⃣ COMPANY-SCOPED AGGREGATION
+       ============================================================ */
 
         BigDecimal totalGross =
-                payrollRunRepository.sumGrossByPeriodAndStatus(
-                        start,
-                        end,
-                        PayrollRunStatus.POSTED
-                );
+                payrollRunRepository
+                        .sumGrossByCompanyAndPeriodAndStatus(
+                                companyId,
+                                period.getPeriodStart(),
+                                period.getPeriodEnd(),
+                                PayrollRunStatus.POSTED
+                        );
 
         BigDecimal totalDeductions =
-                payrollRunRepository.sumDeductionsByPeriodAndStatus(
-                        start,
-                        end,
-                        PayrollRunStatus.POSTED
-                );
+                payrollRunRepository
+                        .sumDeductionsByCompanyAndPeriodAndStatus(
+                                companyId,
+                                period.getPeriodStart(),
+                                period.getPeriodEnd(),
+                                PayrollRunStatus.POSTED
+                        );
 
         BigDecimal totalNet =
-                payrollRunRepository.sumNetByPeriodAndStatus(
-                        start,
-                        end,
-                        PayrollRunStatus.POSTED
-                );
+                payrollRunRepository
+                        .sumNetByCompanyAndPeriodAndStatus(
+                                companyId,
+                                period.getPeriodStart(),
+                                period.getPeriodEnd(),
+                                PayrollRunStatus.POSTED
+                        );
 
         totalGross = safe(totalGross);
         totalDeductions = safe(totalDeductions);
         totalNet = safe(totalNet);
 
-        /* ============================================================
-           4️⃣ FINANCIAL BALANCE VALIDATION
-           Gross = Deductions + Net
-           ============================================================ */
+    /* ============================================================
+       5️⃣ FINANCIAL BALANCE VALIDATION
+       ============================================================ */
 
         if (totalGross.compareTo(totalDeductions.add(totalNet)) != 0) {
             throw new IllegalStateException(
                     "Journal imbalance detected. Payroll snapshot corrupted.");
         }
 
-        /* ============================================================
-           5️⃣ CREATE BALANCED ACCOUNTING ENTRIES
-           ============================================================ */
+    /* ============================================================
+       6️⃣ CREATE BALANCED JOURNAL ENTRIES
+       ============================================================ */
 
-        saveEntry(periodId,
+        saveEntry(companyId, periodId,
                 "5000",
                 "Salary Expense",
                 totalGross,
                 BigDecimal.ZERO,
                 "Payroll salary expense");
 
-        saveEntry(periodId,
+        saveEntry(companyId, periodId,
                 "2100",
                 "Payroll Deductions Payable",
                 BigDecimal.ZERO,
                 totalDeductions,
                 "Payroll deductions liability");
 
-        saveEntry(periodId,
+        saveEntry(companyId, periodId,
                 "2000",
                 "Salary Payable",
                 BigDecimal.ZERO,
                 totalNet,
                 "Net salary payable");
     }
-
     /* ============================================================
        SAFE NULL HANDLER
        ============================================================ */
@@ -130,7 +162,7 @@ public class PayrollJournalService {
        ENTRY CREATION
        ============================================================ */
 
-    private void saveEntry(Long periodId,
+    private void saveEntry(Long comppanyId,Long periodId,
                            String accountCode,
                            String accountName,
                            BigDecimal debit,

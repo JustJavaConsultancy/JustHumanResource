@@ -203,7 +203,8 @@ public class PayrollTestController {
 
     @PostMapping("/open_period")
     public PayrollPeriod openPeriod() {
-        return payrollPeriodService.openPeriod(YearMonth.now());
+        return payrollPeriodService.openInitialPeriod(1L,
+                LocalDate.now(),LocalDate.now().plusMonths(1));
     }
 
 

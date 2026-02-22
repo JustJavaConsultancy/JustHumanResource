@@ -2,7 +2,7 @@ package com.justjava.humanresource.payroll.service.impl;
 
 import com.justjava.humanresource.core.enums.PayrollRunStatus;
 import com.justjava.humanresource.payroll.entity.PayrollPeriod;
-import com.justjava.humanresource.payroll.entity.PayrollPeriodStatus;
+import com.justjava.humanresource.payroll.enums.PayrollPeriodStatus;
 import com.justjava.humanresource.payroll.repositories.PayrollPeriodRepository;
 import com.justjava.humanresource.payroll.repositories.PayrollRunRepository;
 import com.justjava.humanresource.payroll.service.PayrollPeriodService;
@@ -12,7 +12,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.time.YearMonth;
 import java.util.Map;
 
 @Service
@@ -20,211 +19,199 @@ import java.util.Map;
 public class PayrollPeriodServiceImpl implements PayrollPeriodService {
 
     private final PayrollPeriodRepository repository;
-    private final PayrollRunRepository  payrollRunRepository;
+    private final PayrollRunRepository payrollRunRepository;
     private final RuntimeService runtimeService;
 
     /* ============================================================
-       OPEN PERIOD
+       INITIAL SETUP (FIRST PERIOD ONLY)
        ============================================================ */
 
     @Override
     @Transactional
-    public PayrollPeriod openPeriod(YearMonth yearMonth) {
-        System.out.println(" The YearMonth==>"+yearMonth);
+    public PayrollPeriod openInitialPeriod(
+            Long companyId,
+            LocalDate periodStart,
+            LocalDate periodEnd
+    ) {
 
-        repository.findByStatus(PayrollPeriodStatus.OPEN)
-                .ifPresent(p ->
-                { throw new IllegalStateException(
-                        "Another period is already OPEN."); });
+        if (repository.existsByCompanyIdAndStatus(
+                companyId,
+                PayrollPeriodStatus.OPEN)) {
 
-        repository.findByYearAndMonthAndStatus(
-                yearMonth.getYear(),
-                yearMonth.getMonthValue(),
-                PayrollPeriodStatus.OPEN
-        ).ifPresent(p ->
-        { throw new IllegalStateException(
-                "Period already exists."); });
-
-        //PayrollPeriod currentOpen = getCurrentOpenPeriod();
-        YearMonth next =
-                YearMonth.of(yearMonth.getYear(), yearMonth.getMonth())
-                        .plusMonths(1);
-
-        if(isNewSetup()){
-            next =YearMonth.of(yearMonth.getYear(), yearMonth.getMonth());
+            throw new IllegalStateException(
+                    "Company already has an OPEN payroll period."
+            );
         }
 
-        PayrollPeriod nextPeriod = new PayrollPeriod();
-        nextPeriod.setYear(next.getYear());
-        nextPeriod.setMonth(next.getMonthValue());
-        nextPeriod.setStartDate(next.atDay(1));
-        nextPeriod.setEndDate(next.atEndOfMonth());
-        nextPeriod.setStatus(PayrollPeriodStatus.OPEN);
-        return repository.save(nextPeriod);
+        if (repository.existsByCompanyIdAndPeriodStartAndPeriodEnd(
+                companyId,
+                periodStart,
+                periodEnd)) {
+
+            throw new IllegalStateException(
+                    "Payroll period already exists for this range."
+            );
+        }
+
+        PayrollPeriod period = new PayrollPeriod();
+        period.setCompanyId(companyId);
+        period.setPeriodStart(periodStart);
+        period.setPeriodEnd(periodEnd);
+        period.setStatus(PayrollPeriodStatus.OPEN);
+
+        return repository.save(period);
     }
 
-    public boolean isNewSetup() {
-        return repository.count() == 0;
-    }
     /* ============================================================
-       CLOSE PERIOD
+       LOCK PERIOD (NO MORE RECALCULATION)
        ============================================================ */
 
     @Override
     @Transactional
-    public void closeCurrentPeriod() {
+    public void lockPeriod(Long companyId) {
 
-        PayrollPeriod period = repository
-                .findByStatus(PayrollPeriodStatus.OPEN)
-                .orElseThrow(() ->
-                        new IllegalStateException("No OPEN period found."));
+        PayrollPeriod open = getOpenPeriod(companyId);
+        open.setStatus(PayrollPeriodStatus.LOCKED);
+        repository.save(open);
+    }
+
+    /* ============================================================
+       CLOSE & OPEN NEXT (MANUAL CONTROL)
+       ============================================================ */
+
+    @Override
+    @Transactional
+    public void closeAndOpenNext(Long companyId) {
+
+        PayrollPeriod current = getOpenPeriod(companyId);
 
         long incomplete =
-                payrollRunRepository.countByPayrollDateBetweenAndStatusNot(
-                        period.getStartDate(),
-                        period.getEndDate(),
+                payrollRunRepository.countByEmployee_Department_Company_IdAndPayrollDateBetweenAndStatus(
+                        companyId,
+                        current.getPeriodStart(),
+                        current.getPeriodEnd(),
                         PayrollRunStatus.POSTED
                 );
 
         if (incomplete > 0) {
             throw new IllegalStateException(
-                    "Cannot close period. Some payroll runs are not POSTED.");
+                    "Cannot close period. Some payroll runs are not POSTED."
+            );
         }
-        period.setStatus(PayrollPeriodStatus.CLOSED);
-        repository.save(period);
+
+        current.setStatus(PayrollPeriodStatus.CLOSED);
+        repository.save(current);
+
+        /* --------------------------------------------------------
+           DEFAULT NEXT PERIOD STRATEGY
+           (Same cycle length as previous)
+           -------------------------------------------------------- */
+
+        long cycleDays =
+                current.getPeriodEnd()
+                        .toEpochDay()
+                        - current.getPeriodStart().toEpochDay()
+                        + 1;
+
+        LocalDate nextStart = current.getPeriodEnd().plusDays(1);
+        LocalDate nextEnd = nextStart.plusDays(cycleDays - 1);
+
+        PayrollPeriod next = new PayrollPeriod();
+        next.setCompanyId(companyId);
+        next.setPeriodStart(nextStart);
+        next.setPeriodEnd(nextEnd);
+        next.setStatus(PayrollPeriodStatus.OPEN);
+
+        repository.save(next);
     }
 
     /* ============================================================
-       GET OPEN PERIOD
+       GET OPEN PERIOD (COMPANY SCOPED)
        ============================================================ */
 
     @Override
-    public PayrollPeriod getCurrentOpenPeriod() {
+    public PayrollPeriod getOpenPeriod(Long companyId) {
 
         return repository
-                .findByStatus(PayrollPeriodStatus.OPEN)
-                .orElse(null);
+                .findByCompanyIdAndStatus(
+                        companyId,
+                        PayrollPeriodStatus.OPEN
+                )
+                .orElseThrow(() ->
+                        new IllegalStateException(
+                                "No OPEN payroll period found for company."
+                        ));
     }
 
-    @Override
-    public PayrollPeriodStatus getPeriodStatusForDate(LocalDate date) {
-
-
-        PayrollPeriod period = getCurrentOpenPeriod();
-        if(period==null)
-            return null;
-        return period.getStatus();
-
-//        return repository
-//                .findByStartDateLessThanEqualAndEndDateGreaterThanEqual(
-//                        date,
-//                        date
-//                )
-//                .map(PayrollPeriod::getStatus)
-//                .orElse(null);
-   }
     /* ============================================================
        VALIDATE PAYROLL DATE
        ============================================================ */
 
     @Override
-    public void validatePayrollDate(LocalDate payrollDate) {
+    public void validatePayrollDate(
+            Long companyId,
+            LocalDate payrollDate
+    ) {
 
-        PayrollPeriod open = getCurrentOpenPeriod();
+        PayrollPeriod open = getOpenPeriod(companyId);
 
-        if (payrollDate.isBefore(open.getStartDate())
-                || payrollDate.isAfter(open.getEndDate())) {
+        if (payrollDate.isBefore(open.getPeriodStart())
+                || payrollDate.isAfter(open.getPeriodEnd())) {
 
             throw new IllegalStateException(
                     "Payroll date " + payrollDate +
-                            " is outside the OPEN payroll period.");
+                            " is outside the OPEN payroll period."
+            );
         }
     }
+
     @Override
-    @Transactional
-    public void closeCurrentPeriodAndOpenNext() {
-
-        PayrollPeriod current = repository
-                .findByStatus(PayrollPeriodStatus.OPEN)
-                .orElseThrow(() ->
-                        new IllegalStateException("No OPEN payroll period."));
-
-    /* ============================================================
-       1️⃣ Ensure All Runs Are POSTED
-       ============================================================ */
-
-        long incomplete =
-                payrollRunRepository.countByPayrollDateBetweenAndStatusNot(
-                        current.getStartDate(),
-                        current.getEndDate(),
-                        PayrollRunStatus.POSTED
-                );
-
-        if (incomplete > 0) {
-            throw new IllegalStateException(
-                    "Cannot close period. Some payroll runs are not POSTED.");
-        }
-
-    /* ============================================================
-       2️⃣ Close Current
-       ============================================================ */
-
-        current.setStatus(PayrollPeriodStatus.CLOSED);
-        repository.save(current);
-
-    /* ============================================================
-       3️⃣ Determine Next Period
-       ============================================================ */
-
-        YearMonth next =
-                YearMonth.of(current.getYear(), current.getMonth())
-                        .plusMonths(1);
-
-        repository.findByYearAndMonth(
-                next.getYear(),
-                next.getMonthValue()
-        ).ifPresent(p -> {
-            throw new IllegalStateException(
-                    "Next period already exists.");
-        });
-
-    /* ============================================================
-       4️⃣ Open Next Period
-       ============================================================ */
-
-        PayrollPeriod nextPeriod = new PayrollPeriod();
-        nextPeriod.setYear(next.getYear());
-        nextPeriod.setMonth(next.getMonthValue());
-        nextPeriod.setStartDate(next.atDay(1));
-        nextPeriod.setEndDate(next.atEndOfMonth());
-        nextPeriod.setStatus(PayrollPeriodStatus.OPEN);
-
-        repository.save(nextPeriod);
-    }
-
-    public void initiatePeriodCloseApproval(Long periodId) {
-
-        runtimeService.startProcessInstanceByKey(
-                "payrollPeriodCloseProcess",
-                Map.of("periodId", periodId)
-        );
-    }
-    public void initiateClosePeriod() {
-        runtimeService.startProcessInstanceByKey(
-                "payrollPeriodCloseProcess",
-                Map.of("periodId", getCurrentOpenPeriod().getId())
-        );
-    }
-    @Override
-    public boolean isPayrollDateInOpenPeriod(LocalDate payrollDate) {
+    public boolean isPayrollDateInOpenPeriod(
+            Long companyId,
+            LocalDate payrollDate
+    ) {
 
         return repository
-                .findByStartDateLessThanEqualAndEndDateGreaterThanEqual(
+                .findByCompanyIdAndPeriodStartLessThanEqualAndPeriodEndGreaterThanEqual(
+                        companyId,
                         payrollDate,
                         payrollDate
                 )
-                .map(period -> period.getStatus() == PayrollPeriodStatus.OPEN)
+                .map(p -> p.getStatus() == PayrollPeriodStatus.OPEN)
                 .orElse(false);
     }
 
+    @Override
+    public PayrollPeriodStatus getPeriodStatusForDate(
+            Long companyId,
+            LocalDate payrollDate
+    ) {
+
+        return repository
+                .findByCompanyIdAndPeriodStartLessThanEqualAndPeriodEndGreaterThanEqual(
+                        companyId,
+                        payrollDate,
+                        payrollDate
+                )
+                .map(PayrollPeriod::getStatus)
+                .orElse(null);
+    }
+
+    /* ============================================================
+       FLOWABLE APPROVAL
+       ============================================================ */
+
+    @Override
+    public void initiatePeriodCloseApproval(Long companyId) {
+
+        PayrollPeriod open = getOpenPeriod(companyId);
+
+        runtimeService.startProcessInstanceByKey(
+                "payrollPeriodCloseProcess",
+                Map.of(
+                        "companyId", companyId,
+                        "periodId", open.getId()
+                )
+        );
+    }
 }

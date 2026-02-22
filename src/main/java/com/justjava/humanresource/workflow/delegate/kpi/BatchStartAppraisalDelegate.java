@@ -33,22 +33,19 @@ public class BatchStartAppraisalDelegate implements JavaDelegate {
         Long cycleId = Long.valueOf(
                 execution.getVariable("cycleId").toString()
         );
-
         AppraisalCycle cycle =
                 cycleRepository.findById(cycleId)
                         .orElseThrow();
-
-        System.out.println("Starting batch process for period: " + cycle.getYear() + " Q" + cycle.getQuarter());
         System.out.println("Circle ID: ============================" + cycleId);
+
         int page = 0;
         Page<Employee> result;
 
         do {
 
-            result = employeeRepository.findAll(
+            result = employeeRepository.findEmployeesWithAnyKpiMeasurement(
                     PageRequest.of(page, BATCH_SIZE)
             );
-
             for (Employee employee : result.getContent()) {
 
                 if (!employee.isKpiEnabled())
@@ -74,8 +71,8 @@ public class BatchStartAppraisalDelegate implements JavaDelegate {
                             Map.of(
                                     "employeeId", employee.getId(),
                                     "cycleId", cycleId,
-                                    "managerComplete",true,
-                                    "selfComplete",true
+                                    "managerComplete",false,
+                                    "selfComplete",false
                             )
                     );
                 }

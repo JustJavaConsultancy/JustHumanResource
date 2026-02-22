@@ -181,7 +181,7 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
 
 
         LocalDate affectedDate = determineAffectedPayrollDate(requests);
-        if (payrollPeriodService.isPayrollDateInOpenPeriod(affectedDate)) {
+        if (payrollPeriodService.isPayrollDateInOpenPeriod(1L,affectedDate)) {
             payrollChangeOrchestrator.recalculateForPayGroup(payGroupId, affectedDate);
         }
         return response;
@@ -209,7 +209,7 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
         }
         LocalDate affectedDate = determineAffectedPayrollDate(requests);
 
-        if (payrollPeriodService.isPayrollDateInOpenPeriod(affectedDate)) {
+        if (payrollPeriodService.isPayrollDateInOpenPeriod(1L,affectedDate)) {
             payrollChangeOrchestrator.recalculateForPayGroup(payGroupId, affectedDate);
         };
         return response;
@@ -236,7 +236,7 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
             ));
         }
         LocalDate affectedDate = determineAffectedPayrollDate(requests);
-        if (payrollPeriodService.isPayrollDateInOpenPeriod(affectedDate)) {
+        if (payrollPeriodService.isPayrollDateInOpenPeriod(1L,affectedDate)) {
             payrollChangeOrchestrator.recalculateForEmployee(employeeId, affectedDate);
         }
 
@@ -265,7 +265,7 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
         }
         LocalDate affectedDate = determineAffectedPayrollDate(requests);
 
-        if (payrollPeriodService.isPayrollDateInOpenPeriod(affectedDate)) {
+        if (payrollPeriodService.isPayrollDateInOpenPeriod(1L,affectedDate)) {
             payrollChangeOrchestrator.recalculateForEmployee(employeeId, affectedDate);
         }
 

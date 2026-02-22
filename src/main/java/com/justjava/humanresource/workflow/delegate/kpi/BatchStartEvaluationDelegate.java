@@ -72,7 +72,7 @@ public class BatchStartEvaluationDelegate implements JavaDelegate {
                             businessKey,
                             Map.of(
                                     "employeeId", employee.getId(),
-                                    "period", period,
+                                    "evaluationPeriod", period,
                                     "cycleId", cycleId
                             )
                     );

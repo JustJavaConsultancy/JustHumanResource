@@ -1,6 +1,5 @@
 package com.justjava.humanresource.payroll.repositories;
 
-
 import com.justjava.humanresource.core.enums.PayrollRunStatus;
 import com.justjava.humanresource.payroll.entity.PayrollRun;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -12,58 +11,69 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
-public interface PayrollRunRepository extends JpaRepository<PayrollRun, Long> {
+public interface PayrollRunRepository
+        extends JpaRepository<PayrollRun, Long> {
 
     /* ============================================================
        DUPLICATE PREVENTION
        ============================================================ */
 
-    Optional<PayrollRun> findByEmployeeIdAndPayrollDate(
+    Optional<PayrollRun>
+    findTopByEmployeeIdAndPayrollDateOrderByVersionNumberDesc(
             Long employeeId,
             LocalDate payrollDate
     );
 
     /* ============================================================
-       PERIOD VALIDATION (CLOSE CHECK)
+       COMPANY-SCOPED PERIOD VALIDATION
        ============================================================ */
 
-    long countByPayrollDateBetweenAndStatusNot(
+    long countByEmployee_Department_Company_IdAndPayrollDateBetweenAndStatus(
+            Long companyId,
+            LocalDate start,
+            LocalDate end,
+            PayrollRunStatus status
+    );
+
+    long countByEmployee_Department_Company_IdAndPayrollDateBetweenAndStatusNot(
+            Long companyId,
             LocalDate start,
             LocalDate end,
             PayrollRunStatus status
     );
 
     /* ============================================================
-       JOURNAL GENERATION SUPPORT
+       COMPANY-SCOPED FETCH
        ============================================================ */
 
-    List<PayrollRun> findByPayrollDateBetweenAndStatus(
+    List<PayrollRun>
+    findByEmployee_Department_Company_IdAndPayrollDateBetweenAndStatus(
+            Long companyId,
             LocalDate start,
             LocalDate end,
             PayrollRunStatus status
     );
 
-    /* ============================================================
-       RECONCILIATION SUPPORT
-       ============================================================ */
-
-    List<PayrollRun> findByPayrollDateBetween(
+    List<PayrollRun>
+    findByEmployee_Department_Company_IdAndPayrollDateBetween(
+            Long companyId,
             LocalDate start,
             LocalDate end
     );
 
     /* ============================================================
-       FINANCIAL AGGREGATION (ENTERPRISE OPTIMIZED)
-       Avoids loading full entity list for large payrolls
+       FINANCIAL AGGREGATION (COMPANY SAFE)
        ============================================================ */
 
     @Query("""
         SELECT COALESCE(SUM(p.grossPay), 0)
         FROM PayrollRun p
-        WHERE p.payrollDate BETWEEN :start AND :end
+        WHERE p.employee.department.company.id = :companyId
+          AND p.payrollDate BETWEEN :start AND :end
           AND p.status = :status
     """)
-    BigDecimal sumGrossByPeriodAndStatus(
+    BigDecimal sumGrossByCompanyAndPeriodAndStatus(
+            @Param("companyId") Long companyId,
             @Param("start") LocalDate start,
             @Param("end") LocalDate end,
             @Param("status") PayrollRunStatus status
@@ -72,10 +82,12 @@ public interface PayrollRunRepository extends JpaRepository<PayrollRun, Long> {
     @Query("""
         SELECT COALESCE(SUM(p.totalDeductions), 0)
         FROM PayrollRun p
-        WHERE p.payrollDate BETWEEN :start AND :end
+        WHERE p.employee.department.company.id = :companyId
+          AND p.payrollDate BETWEEN :start AND :end
           AND p.status = :status
     """)
-    BigDecimal sumDeductionsByPeriodAndStatus(
+    BigDecimal sumDeductionsByCompanyAndPeriodAndStatus(
+            @Param("companyId") Long companyId,
             @Param("start") LocalDate start,
             @Param("end") LocalDate end,
             @Param("status") PayrollRunStatus status
@@ -84,26 +96,19 @@ public interface PayrollRunRepository extends JpaRepository<PayrollRun, Long> {
     @Query("""
         SELECT COALESCE(SUM(p.netPay), 0)
         FROM PayrollRun p
-        WHERE p.payrollDate BETWEEN :start AND :end
+        WHERE p.employee.department.company.id = :companyId
+          AND p.payrollDate BETWEEN :start AND :end
           AND p.status = :status
     """)
-    BigDecimal sumNetByPeriodAndStatus(
+    BigDecimal sumNetByCompanyAndPeriodAndStatus(
+            @Param("companyId") Long companyId,
             @Param("start") LocalDate start,
             @Param("end") LocalDate end,
             @Param("status") PayrollRunStatus status
     );
 
-    /* ============================================================
-       EMPLOYEE COUNT (RECONCILIATION GATE)
-       ============================================================ */
 
-    long countByPayrollDateBetweenAndStatus(
-            LocalDate start,
-            LocalDate end,
-            PayrollRunStatus status
-    );
-    Optional<PayrollRun> findTopByEmployeeIdAndPayrollDateOrderByVersionNumberDesc(
-            Long employeeId,
-            LocalDate payrollDate
-    );
+
+
+
 }

@@ -50,8 +50,8 @@ public class PayrollController {
                 .stream()
                 .filter(Deduction:: isStatutory)
                 .toList();
-        System.out.println("The payroll is " + payrollPeriodService.getPeriodStatusForDate(LocalDate.now()));
-        model.addAttribute("payrollStatus", payrollPeriodService.getPeriodStatusForDate(LocalDate.now()));
+        System.out.println("The payroll is " + payrollPeriodService.getPeriodStatusForDate(1L,LocalDate.now()));
+        model.addAttribute("payrollStatus", payrollPeriodService.getPeriodStatusForDate(1L,LocalDate.now()));
         model.addAttribute("allowances", allowances.size());
         model.addAttribute("taxableAllowances", taxableAllowances.size());
         model.addAttribute("saturatoryDeductions", saturatoryDeductions.size());
@@ -218,12 +218,12 @@ public class PayrollController {
     @PostMapping("/setup/payroll/open")
     public String openPayroll() {
         YearMonth yearMonth = YearMonth.now();
-        payrollPeriodService.openPeriod(yearMonth);
+        payrollPeriodService.openInitialPeriod(1L, yearMonth.atDay(1), yearMonth.atEndOfMonth());
         return "redirect:/payroll";
     }
     @PostMapping("/setup/payroll/close")
     public String closePayroll() {
-        payrollPeriodService.initiateClosePeriod();
+        payrollPeriodService.closeAndOpenNext(1L);
         return "redirect:/payroll";
     }
 }

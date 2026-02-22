@@ -1,38 +1,53 @@
 package com.justjava.humanresource.payroll.entity;
 
 import com.justjava.humanresource.core.entity.BaseEntity;
+import com.justjava.humanresource.payroll.enums.PayrollPeriodStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
-
 import java.time.LocalDate;
-import java.time.YearMonth;
-
 @Getter
 @Setter
 @Entity
-@Table(
-        name = "payroll_periods",
-        uniqueConstraints = @UniqueConstraint(
-                name = "uk_payroll_period",
-                columnNames = {"period_year", "period_month"}
-        )
-)
+@Table(name = "payroll_periods",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_company_period_range",
+                        columnNames = {"company_id", "period_start", "period_end"}
+                )
+        })
 public class PayrollPeriod extends BaseEntity {
 
-    @Column(name = "period_year", nullable = false)
-    private int year;
+    /* =========================
+     * COMPANY (Multi-Company Support)
+     * ========================= */
 
-    @Column(name = "period_month", nullable = false)
-    private int month;
+    @Column(name = "company_id", nullable = false)
+    private Long companyId;
 
-    @Column(nullable = false)
-    private LocalDate startDate;
+    /* =========================
+     * PERIOD RANGE
+     * ========================= */
 
-    @Column(nullable = false)
-    private LocalDate endDate;
+    @Column(name = "period_start", nullable = false)
+    private LocalDate periodStart;
+
+    @Column(name = "period_end", nullable = false)
+    private LocalDate periodEnd;
+
+    /* =========================
+     * STATUS
+     * ========================= */
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private PayrollPeriodStatus status;
+
+    /* =========================
+     * CYCLE CONFIG SNAPSHOT
+     * ========================= */
+
+    @Column(name = "cycle_length_days")
+    private Integer cycleLengthDays;
 }
+

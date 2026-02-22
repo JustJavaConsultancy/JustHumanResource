@@ -13,6 +13,10 @@ import java.math.BigDecimal;
 @Table(name = "payroll_journal_entries")
 public class PayrollJournalEntry extends BaseEntity {
 
+
+    @Column(nullable = false)
+    private Long companyId;
+
     @Column(nullable = false)
     private Long payrollPeriodId;
 
