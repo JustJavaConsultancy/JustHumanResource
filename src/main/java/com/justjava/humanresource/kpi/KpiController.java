@@ -6,6 +6,7 @@ import com.justjava.humanresource.hr.dto.KpiBulkAssignmentRequestDTO;
 import com.justjava.humanresource.hr.entity.Employee;
 import com.justjava.humanresource.hr.entity.JobStep;
 import com.justjava.humanresource.hr.service.SetupService;
+import com.justjava.humanresource.kpi.controller.AppraisalController;
 import com.justjava.humanresource.kpi.dto.EmployeeAppraisalDTO;
 import com.justjava.humanresource.kpi.entity.*;
 import com.justjava.humanresource.kpi.service.AppraisalService;
@@ -342,4 +343,16 @@ public class KpiController {
         model.addAttribute("appraisals", appraisals);
         return "kpi/fragment/appraisal-fragment :: appraisal-content";
     }
+    @PostMapping("/finalize-appraisal")
+    public String finalizeAppraisal(AppraisalController.FinalizeAppraisalRequest request,
+                                    Model model) {
+        appraisalService.finalizeAppraisal(
+                request.getAppraisalId(),
+                request.getManagerScore(),
+                request.getManagerComment()
+        );
+        List<EmployeeAppraisalDTO> appraisals = appraisalService.getAllActiveAppraisals();
+        model.addAttribute("appraisals", appraisals);
+        return "kpi/fragment/appraisal-fragment :: appraisal-content";
+        }
 }

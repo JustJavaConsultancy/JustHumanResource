@@ -38,6 +38,8 @@ public class BatchStartAppraisalDelegate implements JavaDelegate {
                 cycleRepository.findById(cycleId)
                         .orElseThrow();
 
+        System.out.println("Starting batch process for period: " + period);
+        System.out.println("Circle ID: ============================" + cycleId);
         int page = 0;
         Page<Employee> result;
 
