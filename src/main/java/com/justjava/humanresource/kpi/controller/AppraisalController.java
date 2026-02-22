@@ -102,7 +102,7 @@ public class AppraisalController {
     ) {
 
         return flowableTaskService.getTasksForAssignee(
-                username,
+                "mgr",
                 "employeeAppraisalProcess"
         );
     }
