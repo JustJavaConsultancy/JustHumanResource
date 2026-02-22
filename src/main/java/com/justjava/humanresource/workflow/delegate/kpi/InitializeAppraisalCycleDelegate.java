@@ -33,32 +33,36 @@ public class InitializeAppraisalCycleDelegate implements JavaDelegate {
 
         String name = year + " Q" + quarter;
 
-        repository.findByYearAndQuarter(year, quarter)
-                .ifPresentOrElse(
-                        existing -> execution.setVariable("cycleId", existing.getId()),
-                        () -> {
+        AppraisalCycle cycle = repository
+                .findByYearAndQuarter(year, quarter)
+                .map(existing -> {
 
-                            AppraisalCycle cycle =
-                                    repository.save(
-                                            AppraisalCycle.builder()
-                                                    .name(name)
-                                                    .year(year)
-                                                    .quarter(quarter)
-                                                    .startPeriod(startPeriod)
-                                                    .endPeriod(endPeriod)
-                                                    .active(true)
-                                                    .completed(false)
-                                                    .startedAt(LocalDateTime.now())
-                                                    .totalEmployees(0)
-                                                    .processedEmployees(0)
-                                                    .build()
-                                    );
+                    if (!existing.isActive()) {
+                        existing.setActive(true);
+                        existing.setCompleted(false);
+                        existing.setStartedAt(LocalDateTime.now());
+                        repository.save(existing);
+                    }
 
-                            execution.setVariable("cycleId", cycle.getId());
-                        }
+                    return existing;
+                })
+                .orElseGet(() ->
+                        repository.save(
+                                AppraisalCycle.builder()
+                                        .name(name)
+                                        .year(year)
+                                        .quarter(quarter)
+                                        .startPeriod(startPeriod)
+                                        .endPeriod(endPeriod)
+                                        .active(true)
+                                        .completed(false)
+                                        .startedAt(LocalDateTime.now())
+                                        .totalEmployees(0)
+                                        .processedEmployees(0)
+                                        .build()
+                        )
                 );
 
-        execution.setVariable("appraisalYear", year);
-        execution.setVariable("appraisalQuarter", quarter);
+        execution.setVariable("cycleId", cycle.getId());
     }
 }
