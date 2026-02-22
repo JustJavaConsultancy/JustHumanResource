@@ -40,6 +40,8 @@ public class BatchStartAppraisalDelegate implements JavaDelegate {
         AppraisalCycle cycle =
                 cycleRepository.findById(cycleId).orElseThrow();
 
+        System.out.println("Starting batch process for period: " + period);
+        System.out.println("Circle ID: ============================" + cycleId);
         int page = 0;
         Page<Employee> result;
 
@@ -69,7 +71,6 @@ public class BatchStartAppraisalDelegate implements JavaDelegate {
                             businessKey,
                             Map.of(
                                     "employeeId", employee.getId(),
-                                    "period", period,
                                     "cycleId", cycleId
                             )
                     );
