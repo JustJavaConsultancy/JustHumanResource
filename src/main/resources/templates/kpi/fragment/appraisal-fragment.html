@@ -5,7 +5,13 @@
   <title>Appraisal Fragment</title>
 </head>
 <body>
-<div th:fragment="appraisal-content">
+
+<!--
+  Requires in base layout (if not already present):
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+-->
+
+<div th:fragment="appraisal-content" id="appraisal-content">
 
   <!-- ==================== STYLES ==================== -->
   <style>
@@ -66,6 +72,7 @@
       font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;
     }
     .step-manager { background: #dbeafe; color: #1d4ed8; }
+    .step-view    { background: #f3f4f6; color: #6b7280; }
 
     .ap-progress-bar { height: 5px; border-radius: 3px; background: #e5e7eb; overflow: hidden; }
     .dark .ap-progress-bar { background: #4b5563; }
@@ -79,6 +86,26 @@
     .av-blue  { background: linear-gradient(135deg, #60a5fa, #2563eb); }
     .av-amber { background: linear-gradient(135deg, #fbbf24, #f97316); }
     .av-green { background: linear-gradient(135deg, #34d399, #059669); }
+
+    /* Read-only inputs — applied in view mode */
+    input.ap-readonly, textarea.ap-readonly {
+      background: #f9fafb !important;
+      color: #6b7280 !important;
+      cursor: not-allowed !important;
+      border-color: #f3f4f6 !important;
+      pointer-events: none;
+    }
+    .dark input.ap-readonly, .dark textarea.ap-readonly {
+      background: #374151 !important;
+      color: #9ca3af !important;
+      border-color: #4b5563 !important;
+    }
+
+    /* HTMX in-flight spinner */
+    .htmx-request #slideSubmitBtn .btn-label   { display: none; }
+    .htmx-request #slideSubmitBtn .btn-spinner { display: inline-flex !important; }
+    #slideSubmitBtn .btn-spinner { display: none; }
+    #slideSubmitBtn:disabled { opacity: 0.65; cursor: not-allowed; }
   </style>
 
   <!-- ==================== SLIDE-OVER BACKDROP ==================== -->
@@ -87,152 +114,205 @@
   <!-- ==================== SLIDE-OVER PANEL ==================== -->
   <div id="appraisalSlideOver" class="slide-over">
 
-    <!-- Header -->
-    <div class="p-5 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-white dark:bg-gray-800">
+    <!-- Header (outside the form — always visible, never submitted) -->
+    <div class="p-5 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-white dark:bg-gray-800 flex-shrink-0">
       <div>
         <div class="flex items-center gap-2 mb-1">
-          <span class="step-badge step-manager">
+          <span id="slidePanelBadge" class="step-badge step-manager">
             <span class="material-icons-round" style="font-size:11px;">manage_accounts</span>
-            Manager Review
+            <span id="slidePanelBadgeLabel">Manager Review</span>
           </span>
         </div>
         <h3 class="font-bold text-gray-900 dark:text-white" id="slideTitle">Submit Review</h3>
         <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5" id="slideSubtitle"></p>
       </div>
-      <button onclick="closeAppraisalSlideOver()"
+      <button type="button" onclick="closeAppraisalSlideOver()"
               class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
         <span class="material-icons-round">close</span>
       </button>
     </div>
 
-    <!-- Body -->
-    <div class="flex-1 overflow-y-auto p-5 space-y-5">
+    <!--
+      FORM — wraps scrollable body + footer.
+      hx-post        → Spring endpoint that handles the manager review submission
+      hx-target      → replaces the entire #appraisal-content fragment on success
+      hx-swap        → outerHTML so the fragment re-renders with updated data
+      hx-disabled-elt→ disables the submit button for the duration of the request
 
-      <!-- Review Details (read-only) -->
-      <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
-        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Review Details</p>
-        <div class="grid grid-cols-3 gap-4">
-          <div>
-            <p class="text-xs text-gray-400 mb-0.5">Employee</p>
-            <p class="font-semibold text-sm" id="slideEmployee"></p>
-          </div>
-          <div>
-            <p class="text-xs text-gray-400 mb-0.5">Department</p>
-            <p class="font-semibold text-sm" id="slideDept"></p>
-          </div>
-          <div>
-            <p class="text-xs text-gray-400 mb-0.5">Cycle</p>
-            <p class="font-semibold text-sm" id="slideCycle"></p>
-          </div>
-        </div>
-        <div class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600 flex items-center justify-between">
-          <div>
-            <p class="text-xs text-gray-400 mb-0.5">KPI Score (System)</p>
-            <p class="font-bold text-lg" id="slideKpiScore"
-               style="font-family:'DM Mono','Courier New',monospace;">—</p>
-          </div>
-          <div class="text-right">
-            <p class="text-xs text-gray-400 mb-1">KPI Progress</p>
-            <div class="ap-progress-bar w-24">
-              <div class="ap-progress-fill bg-blue-500" id="slideKpiBar" style="width:0%"></div>
+      The form only ever fires when openSlideOver is called from a pending-table row
+      (data-mode="edit"). The awaiting-table rows open the panel in view mode where
+      the submit button is hidden and inputs are readonly — so submitting is impossible.
+    -->
+    <form id="managerReviewForm"
+          hx-post="/finalize-appraisal"
+          hx-target="#appraisal-content"
+          hx-swap="outerHTML"
+          hx-disabled-elt="#slideSubmitBtn"
+          class="flex flex-col flex-1 overflow-hidden">
+
+      <!-- Hidden identifiers — populated by JS when slide-over opens from a pending row -->
+      <input type="hidden" id="slideAppraisalId">
+      <input type="hidden" id="slideTaskId"       name="taskId">
+
+      <!-- Scrollable Body -->
+      <div class="flex-1 overflow-y-auto p-5 space-y-5">
+
+        <!-- Review Details (always read-only display) -->
+        <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
+          <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Review Details</p>
+          <div class="grid grid-cols-3 gap-4">
+            <div>
+              <p class="text-xs text-gray-400 mb-0.5">Employee</p>
+              <p class="font-semibold text-sm" id="slideEmployee"></p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-400 mb-0.5">Department</p>
+              <p class="font-semibold text-sm" id="slideDept"></p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-400 mb-0.5">Cycle</p>
+              <p class="font-semibold text-sm" id="slideCycle"></p>
             </div>
           </div>
-        </div>
-      </div>
-
-      <!-- Manager Review (editable) -->
-      <div class="rounded-xl p-5 border-2 border-blue-200 dark:border-blue-800/60 bg-blue-50/30 dark:bg-blue-900/10">
-        <div class="flex items-center gap-2 mb-4">
-          <div class="w-7 h-7 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
-            <span class="material-icons-round text-blue-600 dark:text-blue-400" style="font-size:16px;">manage_accounts</span>
-          </div>
-          <p class="font-semibold text-sm text-blue-800 dark:text-blue-300">Your Review (Manager)</p>
-        </div>
-        <div class="space-y-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-              Score <span class="text-gray-400 font-normal">(0–100)</span>
-            </label>
-            <div class="flex items-center gap-3">
-              <input type="number" step="0.1" min="0" max="100"
-                     id="slideManagerScore"
-                     oninput="slideCalcFinal()"
-                     placeholder="0.0"
-                     class="w-28 px-3 py-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm font-bold"
-                     style="font-family:'DM Mono','Courier New',monospace;">
-              <div class="flex-1 ap-progress-bar">
-                <div class="ap-progress-fill bg-blue-500" id="slideManagerBar" style="width:0%"></div>
+          <div class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600 flex items-center justify-between">
+            <div>
+              <p class="text-xs text-gray-400 mb-0.5">KPI Score (System)</p>
+              <p class="font-bold text-lg" id="slideKpiScore"
+                 style="font-family:'DM Mono','Courier New',monospace;">—</p>
+            </div>
+            <div class="text-right">
+              <p class="text-xs text-gray-400 mb-1">KPI Progress</p>
+              <div class="ap-progress-bar w-24">
+                <div class="ap-progress-fill bg-blue-500" id="slideKpiBar" style="width:0%"></div>
               </div>
             </div>
           </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Comment</label>
-            <textarea id="slideManagerComment" rows="4"
-                      placeholder="Add your performance observations, feedback and recommendations…"
-                      class="w-full px-3 py-2.5 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm resize-none"></textarea>
-          </div>
         </div>
-      </div>
 
-      <!-- Self Review (read-only — employee-filled, visible to manager) -->
-      <div class="rounded-xl p-5 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/60">
-        <div class="flex items-center justify-between mb-4">
-          <div class="flex items-center gap-2">
-            <div class="w-7 h-7 rounded-full bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center">
-              <span class="material-icons-round text-purple-600 dark:text-purple-400" style="font-size:16px;">person</span>
+        <!-- Manager Review — editable in edit mode, locked in view mode -->
+        <div id="managerReviewSection"
+             class="rounded-xl p-5 border-2 border-blue-200 dark:border-blue-800/60 bg-blue-50/30 dark:bg-blue-900/10">
+          <div class="flex items-center gap-2 mb-4">
+            <div class="w-7 h-7 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
+              <span class="material-icons-round text-blue-600 dark:text-blue-400" style="font-size:16px;">manage_accounts</span>
             </div>
-            <p class="font-semibold text-sm text-purple-800 dark:text-purple-300">Employee Self-Review</p>
+            <p class="font-semibold text-sm text-blue-800 dark:text-blue-300">Your Review (Manager)</p>
+            <span id="managerReadOnlyTag"
+                  class="hidden ml-auto text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400">
+              Read-only
+            </span>
           </div>
-          <span id="selfStatusBadge"
-                class="text-xs font-semibold px-2.5 py-1 rounded-full bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400">
-            Not Yet Submitted
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Score <span class="text-gray-400 font-normal">(0–100)</span>
+              </label>
+              <div class="flex items-center gap-3">
+                <input type="number" step="0.1" min="0" max="100"
+                       id="slideManagerScore"
+                       name="managerScore"
+                       oninput="slideCalcFinal()"
+                       placeholder="0.0"
+                       class="w-28 px-3 py-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm font-bold"
+                       style="font-family:'DM Mono','Courier New',monospace;">
+                <div class="flex-1 ap-progress-bar">
+                  <div class="ap-progress-fill bg-blue-500" id="slideManagerBar" style="width:0%"></div>
+                </div>
+              </div>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Comment</label>
+              <textarea id="slideManagerComment"
+                        name="managerComment"
+                        rows="4"
+                        placeholder="Add your performance observations, feedback and recommendations…"
+                        class="w-full px-3 py-2.5 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm resize-none"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Self Review (always read-only — employee-filled, visible to manager) -->
+        <div class="rounded-xl p-5 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/60">
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+              <div class="w-7 h-7 rounded-full bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center">
+                <span class="material-icons-round text-purple-600 dark:text-purple-400" style="font-size:16px;">person</span>
+              </div>
+              <p class="font-semibold text-sm text-purple-800 dark:text-purple-300">Employee Self-Review</p>
+            </div>
+            <span id="selfStatusBadge"
+                  class="text-xs font-semibold px-2.5 py-1 rounded-full bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400">
+              Not Yet Submitted
+            </span>
+          </div>
+          <div class="space-y-3">
+            <div>
+              <p class="text-xs text-gray-400 mb-0.5">Self Score</p>
+              <p class="font-bold text-lg" id="slideSelfScore"
+                 style="font-family:'DM Mono','Courier New',monospace;">—</p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-400 mb-1">Self Comment</p>
+              <p class="text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 min-h-12"
+                 id="slideSelfComment">—</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Projected / Final Score -->
+        <div class="rounded-xl p-4 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-700">
+          <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3"
+             id="finalScoreLabel">Projected Final Score</p>
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-3xl font-bold" id="slideFinalScore"
+                 style="font-family:'DM Mono','Courier New',monospace;">—</p>
+              <p class="text-xs text-gray-400 mt-0.5" id="finalScoreSub">Average of KPI + Manager scores</p>
+            </div>
+            <div class="text-right">
+              <span class="px-3 py-1.5 rounded-lg text-sm font-semibold bg-gray-100 text-gray-500"
+                    id="slideOutcome">—</span>
+              <p class="text-xs text-gray-400 mt-1">Outcome</p>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /scrollable body -->
+
+      <!-- Footer -->
+      <div class="p-5 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center bg-white dark:bg-gray-800 flex-shrink-0">
+        <button type="button" onclick="closeAppraisalSlideOver()"
+                class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-sm font-medium">
+          <span id="slideCancelLabel">Cancel</span>
+        </button>
+
+        <!--
+          Submit button — only visible when slide-over is opened in edit mode
+          (i.e. from the "Pending Your Review" table).
+          Hidden entirely for view-mode (awaiting table) rows.
+          hx-disabled-elt on the parent <form> handles disabling during request.
+        -->
+        <button type="submit"
+                id="slideSubmitBtn"
+                class="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-semibold flex items-center gap-2">
+          <!-- Spinner shown while HTMX request is in-flight -->
+          <span class="btn-spinner items-center gap-2">
+            <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+            </svg>
+            Submitting…
           </span>
-        </div>
-        <div class="space-y-3">
-          <div>
-            <p class="text-xs text-gray-400 mb-0.5">Self Score</p>
-            <p class="font-bold text-lg" id="slideSelfScore"
-               style="font-family:'DM Mono','Courier New',monospace;">—</p>
-          </div>
-          <div>
-            <p class="text-xs text-gray-400 mb-1">Self Comment</p>
-            <p class="text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 min-h-12"
-               id="slideSelfComment">—</p>
-          </div>
-        </div>
+          <!-- Normal label -->
+          <span class="btn-label flex items-center gap-2">
+            <span class="material-icons-round" style="font-size:16px;">send</span>
+            Submit Review
+          </span>
+        </button>
       </div>
 
-      <!-- Projected Final Score -->
-      <div class="rounded-xl p-4 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-700">
-        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Projected Final Score</p>
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-3xl font-bold" id="slideFinalScore"
-               style="font-family:'DM Mono','Courier New',monospace;">—</p>
-            <p class="text-xs text-gray-400 mt-0.5">Average of KPI + Manager scores</p>
-          </div>
-          <div class="text-right">
-            <span class="px-3 py-1.5 rounded-lg text-sm font-semibold bg-gray-100 text-gray-500"
-                  id="slideOutcome">—</span>
-            <p class="text-xs text-gray-400 mt-1">Outcome</p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Footer -->
-    <div class="p-5 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center bg-white dark:bg-gray-800">
-      <button onclick="closeAppraisalSlideOver()"
-              class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-sm font-medium">
-        Cancel
-      </button>
-      <button onclick="saveManagerReview()"
-              class="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-semibold flex items-center gap-2">
-        <span class="material-icons-round" style="font-size:16px;">send</span>
-        <span id="slideSaveLabel">Submit Review</span>
-      </button>
-    </div>
-  </div>
+    </form><!-- /managerReviewForm -->
+  </div><!-- /appraisalSlideOver -->
 
   <!-- ==================== DETAIL MODAL (Completed appraisals) ==================== -->
   <div id="appraisalDetailModal"
@@ -307,7 +387,8 @@
           <p class="text-xs text-gray-500 dark:text-gray-400">Submit your manager score &amp; comment to proceed</p>
         </div>
       </div>
-      <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">2</span>
+      <span th:text="${#lists.size(managerPendingAppraisals)}"
+            class="text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">2</span>
     </div>
     <div class="overflow-x-auto">
       <table class="w-full">
@@ -322,68 +403,49 @@
         </thead>
         <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
 
-        <!-- Row: Mike Johnson — Feb 2024 -->
-        <tr class="ap-row"
-            data-employee="mike-johnson"
-            data-cycle="feb-2024"
-            data-employee-name="Mike Johnson"
-            data-employee-dept="Marketing"
-            data-cycle-name="February 2024"
-            data-kpi-score="78.5"
-            data-manager-score=""
-            data-manager-comment=""
-            data-self-score=""
-            data-self-comment=""
-            data-self-submitted="false"
-            data-manager-submitted="false">
+        <tr th:each="appraisal : ${managerPendingAppraisals}"
+            class="ap-row"
+            data-mode="edit"
+            th:data-appraisal-id="${appraisal.appraisal.id}"
+            th:data-task-id="${appraisal.task.taskId}"
+            th:data-employee="${appraisal.appraisal.employee.fullName ?: ''}"
+            th:data-cycle="${appraisal.appraisal.cycle.name ?: ''}"
+            th:data-employee-name="${appraisal.appraisal.employee.fullName ?: ''}"
+            th:data-employee-dept="${appraisal.appraisal.employee.department.name ?: ''}"
+            th:data-cycle-name="${appraisal.appraisal.cycle.name ?: ''}"
+            th:data-kpi-score="${appraisal.appraisal.kpiScore ?: ''}"
+            th:data-manager-score="${appraisal.appraisal.managerScore ?: ''}"
+            th:data-manager-comment="${appraisal.appraisal.managerComment ?: ''}"
+            th:data-self-score="${appraisal.appraisal.selfScore ?: ''}"
+            th:data-self-comment="${appraisal.appraisal.selfComment ?: ''}"
+            th:data-self-submitted="${appraisal.task.variables['selfComplete'] ?: 'false'}"
+            th:data-manager-submitted="${appraisal.task.variables['managerComplete'] ?: 'false'}">
           <td class="px-5 py-3.5">
             <div class="flex items-center gap-3">
-              <div class="emp-avatar av-blue">MJ</div>
+              <div th:text="${#strings.substring(#strings.arraySplit(appraisal.appraisal.employee.fullName,' ')[0],0,1)
+                               + (#strings.arraySplit(appraisal.appraisal.employee.fullName,' ').length > 1
+                                   ? #strings.substring(#strings.arraySplit(appraisal.appraisal.employee.fullName,' ')[1],0,1)
+                                   : '')}"
+                   class="emp-avatar av-blue">MJ</div>
               <div>
-                <p class="font-medium text-sm">Mike Johnson</p>
-                <p class="text-xs text-gray-400">Marketing</p>
+                <p th:text="${appraisal.appraisal.employee.fullName}" class="font-medium text-sm">Mike Johnson</p>
+                <p th:text="${appraisal.appraisal.employee.department.name}" class="text-xs text-gray-400">Marketing</p>
               </div>
             </div>
           </td>
-          <td class="px-5 py-3.5 text-sm text-gray-600 dark:text-gray-400">February 2024</td>
-          <td class="px-5 py-3.5"><span class="score-chip score-good">78.5</span></td>
-          <td class="px-5 py-3.5"><span class="score-chip score-empty">Not submitted</span></td>
+          <td th:text="${appraisal.appraisal.cycle.name}" class="px-5 py-3.5 text-sm text-gray-600 dark:text-gray-400">February 2024</td>
           <td class="px-5 py-3.5">
-            <button onclick="openSlideOver(this.closest('tr'))"
-                    class="bg-blue-600 text-white text-xs font-semibold px-4 py-1.5 rounded-lg hover:bg-blue-700 flex items-center gap-1.5">
-              <span class="material-icons-round" style="font-size:14px;">rate_review</span> Review
-            </button>
+            <span th:text="${appraisal.appraisal.kpiScore}" class="score-chip score-good">78.5</span>
           </td>
-        </tr>
-
-        <!-- Row: Sarah Williams — Mar 2024 -->
-        <tr class="ap-row"
-            data-employee="sarah-williams"
-            data-cycle="mar-2024"
-            data-employee-name="Sarah Williams"
-            data-employee-dept="HR"
-            data-cycle-name="March 2024"
-            data-kpi-score="91.0"
-            data-manager-score=""
-            data-manager-comment=""
-            data-self-score=""
-            data-self-comment=""
-            data-self-submitted="false"
-            data-manager-submitted="false">
           <td class="px-5 py-3.5">
-            <div class="flex items-center gap-3">
-              <div class="emp-avatar av-blue">SW</div>
-              <div>
-                <p class="font-medium text-sm">Sarah Williams</p>
-                <p class="text-xs text-gray-400">HR</p>
-              </div>
-            </div>
+            <span class="score-chip score-empty">Not submitted</span>
           </td>
-          <td class="px-5 py-3.5 text-sm text-gray-600 dark:text-gray-400">March 2024</td>
-          <td class="px-5 py-3.5"><span class="score-chip score-excellent">91.0</span></td>
-          <td class="px-5 py-3.5"><span class="score-chip score-empty">Not submitted</span></td>
           <td class="px-5 py-3.5">
-            <button onclick="openSlideOver(this.closest('tr'))"
+            <!--
+              data-mode="edit" on the <tr> tells openSlideOver to open in editable mode:
+              inputs are editable, submit button is shown.
+            -->
+            <button type="button" onclick="openSlideOver(this.closest('tr'))"
                     class="bg-blue-600 text-white text-xs font-semibold px-4 py-1.5 rounded-lg hover:bg-blue-700 flex items-center gap-1.5">
               <span class="material-icons-round" style="font-size:14px;">rate_review</span> Review
             </button>
@@ -407,7 +469,8 @@
           <p class="text-xs text-gray-500 dark:text-gray-400">Your review is submitted — waiting for the employee</p>
         </div>
       </div>
-      <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">1</span>
+      <span th:text="${#lists.size(selfPendingAppraisals)}"
+            class="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">1</span>
     </div>
     <div class="overflow-x-auto">
       <table class="w-full">
@@ -423,32 +486,43 @@
         </thead>
         <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
 
-        <!-- Row: John Doe — Jan 2024 -->
-        <tr class="ap-row"
-            data-employee="john-doe"
-            data-cycle="jan-2024"
-            data-employee-name="John Doe"
-            data-employee-dept="Sales"
-            data-cycle-name="January 2024"
-            data-kpi-score="85.3"
-            data-manager-score="88.0"
-            data-manager-comment="John demonstrated strong performance this month. His sales target achievement was notable and customer satisfaction scores are trending upward."
-            data-self-score=""
-            data-self-comment=""
-            data-self-submitted="false"
-            data-manager-submitted="true">
+        <tr th:each="appraisal : ${selfPendingAppraisals}"
+            class="ap-row"
+            data-mode="view"
+            th:data-appraisal-id="${appraisal.appraisal.id}"
+            th:data-task-id="${appraisal.task.taskId}"
+            th:data-employee="${appraisal.appraisal.employee.fullName ?: ''}"
+            th:data-cycle="${appraisal.appraisal.cycle.name ?: ''}"
+            th:data-employee-name="${appraisal.appraisal.employee.fullName ?: ''}"
+            th:data-employee-dept="${appraisal.appraisal.employee.department.name ?: ''}"
+            th:data-cycle-name="${appraisal.appraisal.cycle.name ?: ''}"
+            th:data-kpi-score="${appraisal.appraisal.kpiScore ?: ''}"
+            th:data-manager-score="${appraisal.appraisal.managerScore ?: ''}"
+            th:data-manager-comment="${appraisal.appraisal.managerComment ?: ''}"
+            th:data-self-score="${appraisal.appraisal.selfScore ?: ''}"
+            th:data-self-comment="${appraisal.appraisal.selfComment ?: ''}"
+            th:data-self-submitted="${appraisal.task.variables['selfComplete'] ?: 'false'}"
+            th:data-manager-submitted="${appraisal.task.variables['managerComplete'] ?: 'false'}">
           <td class="px-5 py-3.5">
             <div class="flex items-center gap-3">
-              <div class="emp-avatar av-amber">JD</div>
+              <div th:text="${#strings.substring(#strings.arraySplit(appraisal.appraisal.employee.fullName,' ')[0],0,1)
+                               + (#strings.arraySplit(appraisal.appraisal.employee.fullName,' ').length > 1
+                                   ? #strings.substring(#strings.arraySplit(appraisal.appraisal.employee.fullName,' ')[1],0,1)
+                                   : '')}"
+                   class="emp-avatar av-amber">JD</div>
               <div>
-                <p class="font-medium text-sm">John Doe</p>
-                <p class="text-xs text-gray-400">Sales</p>
+                <p th:text="${appraisal.appraisal.employee.fullName}" class="font-medium text-sm">John Doe</p>
+                <p th:text="${appraisal.appraisal.employee.department.name}" class="text-xs text-gray-400">Sales</p>
               </div>
             </div>
           </td>
-          <td class="px-5 py-3.5 text-sm text-gray-600 dark:text-gray-400">January 2024</td>
-          <td class="px-5 py-3.5"><span class="score-chip score-excellent">85.3</span></td>
-          <td class="px-5 py-3.5"><span class="score-chip score-excellent">88.0</span></td>
+          <td th:text="${appraisal.appraisal.cycle.name}" class="px-5 py-3.5 text-sm text-gray-600 dark:text-gray-400">January 2024</td>
+          <td class="px-5 py-3.5">
+            <span th:text="${appraisal.appraisal.kpiScore}" class="score-chip score-excellent">85.3</span>
+          </td>
+          <td class="px-5 py-3.5">
+            <span th:text="${appraisal.appraisal.managerScore ?: '-'}" class="score-chip score-excellent">88.0</span>
+          </td>
           <td class="px-5 py-3.5">
             <div class="flex items-center gap-1.5 text-amber-600 dark:text-amber-400">
               <span class="material-icons-round" style="font-size:16px;">schedule</span>
@@ -456,9 +530,13 @@
             </div>
           </td>
           <td class="px-5 py-3.5">
-            <button onclick="openSlideOver(this.closest('tr'))"
+            <!--
+              data-mode="view" on the <tr> tells openSlideOver to lock all inputs
+              and hide the submit button — this row is purely for viewing.
+            -->
+            <button type="button" onclick="openSlideOver(this.closest('tr'))"
                     class="text-gray-400 hover:text-blue-600 p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-                    title="View / Edit your review">
+                    title="View submitted review">
               <span class="material-icons-round" style="font-size:18px;">visibility</span>
             </button>
           </td>
@@ -538,7 +616,7 @@
           </td>
           <td class="px-5 py-3.5 text-xs text-gray-400">2024-02-05</td>
           <td class="px-5 py-3.5">
-            <button onclick="openDetailModal(this.closest('tr'))"
+            <button type="button" onclick="openDetailModal(this.closest('tr'))"
                     class="text-gray-400 hover:text-blue-600 p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
                     title="View full detail">
               <span class="material-icons-round" style="font-size:18px;">open_in_new</span>
@@ -584,7 +662,7 @@
           </td>
           <td class="px-5 py-3.5 text-xs text-gray-400">2024-03-03</td>
           <td class="px-5 py-3.5">
-            <button onclick="openDetailModal(this.closest('tr'))"
+            <button type="button" onclick="openDetailModal(this.closest('tr'))"
                     class="text-gray-400 hover:text-blue-600 p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
                     title="View full detail">
               <span class="material-icons-round" style="font-size:18px;">open_in_new</span>
@@ -601,29 +679,69 @@
   <script>
     (function () {
 
-      // ---- Open slide-over — reads data-* from the clicked <tr> ------------------
+      // -------------------------------------------------------------------------
+      // openSlideOver(row)
+      //
+      // Reads data-* from the clicked <tr>.
+      //
+      //   data-mode="edit"  → pending table   → inputs editable, submit shown
+      //   data-mode="view"  → awaiting table  → ALL inputs readonly, submit hidden
+      //
+      // -------------------------------------------------------------------------
       window.openSlideOver = function (row) {
-        const d = row.dataset;
+        const d               = row.dataset;
+        const isViewMode      = d.mode === 'view';
         const managerSubmitted = d.managerSubmitted === 'true';
         const selfSubmitted    = d.selfSubmitted    === 'true';
 
-        // Header
-        document.getElementById('slideTitle').textContent     = managerSubmitted ? 'Edit Your Review' : 'Submit Your Review';
-        document.getElementById('slideSubtitle').textContent  = (d.employeeName || '') + ' — ' + (d.cycleName || '');
-        document.getElementById('slideSaveLabel').textContent = managerSubmitted ? 'Update Review' : 'Submit Review';
+        // ---- Hidden form identifiers (only used during edit-mode submission) ---
+        document.getElementById('slideAppraisalId').value = d.appraisalId || '';
+        document.getElementById('slideTaskId').value       = d.taskId      || '';
 
-        // Review details (read-only)
-        document.getElementById('slideEmployee').textContent  = d.employeeName || '—';
-        document.getElementById('slideDept').textContent      = d.employeeDept || '—';
-        document.getElementById('slideCycle').textContent     = d.cycleName    || '—';
-        document.getElementById('slideKpiScore').textContent  = d.kpiScore ? parseFloat(d.kpiScore).toFixed(1) : '—';
-        document.getElementById('slideKpiBar').style.width    = (d.kpiScore ? Math.min(parseFloat(d.kpiScore), 100) : 0) + '%';
+        // ---- Header ------------------------------------------------------------
+        document.getElementById('slidePanelBadge').className =
+          'step-badge ' + (isViewMode ? 'step-view' : 'step-manager');
+        document.getElementById('slidePanelBadgeLabel').textContent =
+          isViewMode ? 'View Only' : 'Manager Review';
+        document.getElementById('slideTitle').textContent =
+          isViewMode ? 'Submitted Review' : 'Submit Your Review';
+        document.getElementById('slideSubtitle').textContent =
+          (d.employeeName || '') + ' — ' + (d.cycleName || '');
 
-        // Manager inputs (editable)
-        document.getElementById('slideManagerScore').value    = d.managerScore   || '';
-        document.getElementById('slideManagerComment').value  = d.managerComment || '';
+        // ---- Review Details (always read-only display text) --------------------
+        document.getElementById('slideEmployee').textContent = d.employeeName || '—';
+        document.getElementById('slideDept').textContent     = d.employeeDept || '—';
+        document.getElementById('slideCycle').textContent    = d.cycleName    || '—';
+        document.getElementById('slideKpiScore').textContent =
+          d.kpiScore ? parseFloat(d.kpiScore).toFixed(1) : '—';
+        document.getElementById('slideKpiBar').style.width =
+          (d.kpiScore ? Math.min(parseFloat(d.kpiScore), 100) : 0) + '%';
 
-        // Self-review section (read-only display)
+        // ---- Manager score & comment ------------------------------------------
+        const scoreInput   = document.getElementById('slideManagerScore');
+        const commentInput = document.getElementById('slideManagerComment');
+
+        scoreInput.value   = d.managerScore   || '';
+        commentInput.value = d.managerComment || '';
+
+        if (isViewMode) {
+          // Lock both inputs — cannot be changed from the awaiting panel
+          scoreInput.classList.add('ap-readonly');
+          commentInput.classList.add('ap-readonly');
+          // Show "Read-only" tag in the manager section header
+          document.getElementById('managerReadOnlyTag').classList.remove('hidden');
+          // Visually mute the manager section border
+          document.getElementById('managerReviewSection').style.cssText =
+            'border-color:#e5e7eb; background:transparent;';
+        } else {
+          // Restore editable styling (in case panel was previously opened in view mode)
+          scoreInput.classList.remove('ap-readonly');
+          commentInput.classList.remove('ap-readonly');
+          document.getElementById('managerReadOnlyTag').classList.add('hidden');
+          document.getElementById('managerReviewSection').style.cssText = '';
+        }
+
+        // ---- Self-review (always read-only display) ----------------------------
         const selfBadge     = document.getElementById('selfStatusBadge');
         const selfScoreEl   = document.getElementById('slideSelfScore');
         const selfCommentEl = document.getElementById('slideSelfComment');
@@ -645,35 +763,55 @@
           selfCommentEl.textContent = 'Will be visible after you submit your review.';
         }
 
-        // Keep reference to source row for save
-        window._appraisalCurrentRow = row;
+        // ---- Projected / Final score label ------------------------------------
+        document.getElementById('finalScoreLabel').textContent =
+          isViewMode ? 'Score at Submission' : 'Projected Final Score';
+        document.getElementById('finalScoreSub').textContent =
+          isViewMode
+            ? 'Score recorded when your manager review was submitted'
+            : 'Average of KPI + Manager scores';
 
+        // ---- Footer: submit button visible only in edit mode ------------------
+        const submitBtn = document.getElementById('slideSubmitBtn');
+        const cancelLbl = document.getElementById('slideCancelLabel');
+
+        submitBtn.style.display = isViewMode ? 'none' : '';
+        cancelLbl.textContent   = isViewMode ? 'Close' : 'Cancel';
+
+        // ---- Calculate projected score ----------------------------------------
         slideCalcFinal();
 
+        // ---- Open the panel ---------------------------------------------------
         document.getElementById('appraisalSlideOver').classList.add('open');
         document.getElementById('appraisalSlideOverBackdrop').classList.add('open');
         document.body.style.overflow = 'hidden';
       };
 
-      // ---- Close slide-over -------------------------------------------------------
+      // -------------------------------------------------------------------------
+      // closeAppraisalSlideOver — always cleans up readonly state for next open
+      // -------------------------------------------------------------------------
       window.closeAppraisalSlideOver = function () {
         document.getElementById('appraisalSlideOver').classList.remove('open');
         document.getElementById('appraisalSlideOverBackdrop').classList.remove('open');
         document.body.style.overflow = 'auto';
-        window._appraisalCurrentRow = null;
+        // Reset so the next open always starts from a clean slate
+        document.getElementById('slideManagerScore').classList.remove('ap-readonly');
+        document.getElementById('slideManagerComment').classList.remove('ap-readonly');
       };
 
-      // ---- Live projected final score --------------------------------------------
+      // -------------------------------------------------------------------------
+      // Live projected final score (meaningful only in edit mode)
+      // -------------------------------------------------------------------------
       window.slideCalcFinal = function () {
         const kpi = parseFloat(document.getElementById('slideKpiScore').textContent) || 0;
-        const mgr = parseFloat(document.getElementById('slideManagerScore').value)  || 0;
+        const mgr = parseFloat(document.getElementById('slideManagerScore').value)   || 0;
 
         document.getElementById('slideManagerBar').style.width = Math.min(mgr, 100) + '%';
 
         const final = mgr > 0 ? (kpi + mgr) / 2 : kpi;
         document.getElementById('slideFinalScore').textContent = final > 0 ? final.toFixed(1) : '—';
 
-        const outcome = scoreToOutcome(final > 0 ? final : null);
+        const outcome  = scoreToOutcome(final > 0 ? final : null);
         const outcomeEl = document.getElementById('slideOutcome');
         outcomeEl.textContent = outcome.replace(/_/g, ' ');
         const palette = {
@@ -694,51 +832,42 @@
         return 'UNSATISFACTORY';
       }
 
-      // ---- Save (POST to backend) ------------------------------------------------
-      window.saveManagerReview = function () {
-        const mgr  = document.getElementById('slideManagerScore').value;
-        const note = document.getElementById('slideManagerComment').value;
-
-        if (!mgr || isNaN(parseFloat(mgr))) {
-          appraisalNotif('Please enter a valid manager score (0–100).', 'error');
-          return;
+      // -------------------------------------------------------------------------
+      // HTMX lifecycle hooks
+      //
+      // After a successful submission the fragment is replaced via outerHTML swap
+      // so the slide-over is gone anyway, but we close it here for the transition.
+      // On failure we restore the submit button (hx-disabled-elt handles it, but
+      // this is a safety net).
+      // -------------------------------------------------------------------------
+      document.body.addEventListener('htmx:afterRequest', function (evt) {
+        if (evt.detail.elt && evt.detail.elt.id === 'managerReviewForm') {
+          if (evt.detail.successful) {
+            closeAppraisalSlideOver();
+            appraisalNotif('Manager review submitted successfully!', 'success');
+          } else {
+            appraisalNotif('Submission failed — please try again.', 'error');
+          }
         }
-        if (parseFloat(mgr) < 0 || parseFloat(mgr) > 100) {
-          appraisalNotif('Score must be between 0 and 100.', 'error');
-          return;
-        }
+      });
 
-        // POST to your Spring controller — adjust URL and add appraisalId as needed
-        const payload = new URLSearchParams({ managerScore: mgr, managerComment: note });
-
-        fetch('/appraisals/manager-review', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: payload
-        })
-        .then(res => { if (!res.ok) throw new Error(); return res.json().catch(() => ({})); })
-        .then(() => { onSaveSuccess(mgr, note); })
-        .catch(()  => { onSaveSuccess(mgr, note); }); // local fallback while wiring backend
-      };
-
-      function onSaveSuccess(mgr, note) {
-        if (window._appraisalCurrentRow) {
-          window._appraisalCurrentRow.dataset.managerScore     = mgr;
-          window._appraisalCurrentRow.dataset.managerComment   = note;
-          window._appraisalCurrentRow.dataset.managerSubmitted = 'true';
-        }
-        closeAppraisalSlideOver();
-        appraisalNotif('Manager review submitted successfully!', 'success');
-      }
-
-      // ---- Open detail modal — reads data-* from the completed <tr> --------------
+      // -------------------------------------------------------------------------
+      // Detail modal — reads data-* from a completed history <tr>
+      // -------------------------------------------------------------------------
       window.openDetailModal = function (row) {
         const d = row.dataset;
 
         function outcomeBadge(outcome) {
-          if (!outcome || outcome === 'PENDING') return '<span class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-gray-100 text-gray-500">Pending</span>';
-          const map = { EXCEEDS:'outcome-exceeds', MEETS:'outcome-meets', NEEDS_IMPROVEMENT:'outcome-needs', UNSATISFACTORY:'outcome-unsatisf' };
-          return `<span class="text-xs font-semibold px-3 py-1.5 rounded-lg ${map[outcome] || ''}">${outcome.replace(/_/g,' ')}</span>`;
+          if (!outcome || outcome === 'PENDING') {
+            return '<span class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-gray-100 text-gray-500">Pending</span>';
+          }
+          const map = {
+            EXCEEDS:           'outcome-exceeds',
+            MEETS:             'outcome-meets',
+            NEEDS_IMPROVEMENT: 'outcome-needs',
+            UNSATISFACTORY:    'outcome-unsatisf'
+          };
+          return `<span class="text-xs font-semibold px-3 py-1.5 rounded-lg ${map[outcome] || ''}">${outcome.replace(/_/g, ' ')}</span>`;
         }
 
         document.getElementById('detailModalContent').innerHTML = `
@@ -748,7 +877,6 @@
             <div><p class="text-xs text-gray-400 mb-0.5">Cycle</p><p class="font-semibold">${d.cycleName || '—'}</p></div>
             <div><p class="text-xs text-gray-400 mb-0.5">Completed</p><p class="font-semibold">${d.completedAt || '—'}</p></div>
           </div>
-
           <div class="grid grid-cols-3 gap-4 py-4 border-b border-gray-100 dark:border-gray-700">
             <div class="text-center p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
               <p class="text-xs text-gray-400 mb-1">KPI Score</p>
@@ -763,7 +891,6 @@
               <p class="text-2xl font-bold text-purple-700 dark:text-purple-300" style="font-family:'DM Mono','Courier New',monospace;">${d.selfScore ? parseFloat(d.selfScore).toFixed(1) : '—'}</p>
             </div>
           </div>
-
           <div class="flex items-center justify-between py-4 border-b border-gray-100 dark:border-gray-700">
             <div>
               <p class="text-xs text-gray-400 mb-1">Final Score</p>
@@ -771,7 +898,6 @@
             </div>
             ${outcomeBadge(d.outcome)}
           </div>
-
           <div class="space-y-4 pt-2">
             <div>
               <div class="flex items-center gap-2 mb-2">
@@ -803,7 +929,9 @@
         document.body.style.overflow = 'auto';
       };
 
-      // ---- Filter: show/hide rows by data-employee and data-cycle attrs ----------
+      // -------------------------------------------------------------------------
+      // Filter — show/hide rows using data-employee and data-cycle attributes
+      // -------------------------------------------------------------------------
       window.applyFilters = function () {
         const cycleVal = document.getElementById('appraisalFilterCycle').value;
         const empVal   = document.getElementById('appraisalFilterEmployee').value;
@@ -815,7 +943,9 @@
         });
       };
 
-      // ---- Toast notification ----------------------------------------------------
+      // -------------------------------------------------------------------------
+      // Toast notification
+      // -------------------------------------------------------------------------
       function appraisalNotif(msg, type) {
         var n = document.createElement('div');
         n.style.cssText = 'position:fixed;top:20px;right:20px;z-index:9999;';

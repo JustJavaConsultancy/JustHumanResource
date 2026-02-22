@@ -7,6 +7,7 @@ import com.justjava.humanresource.hr.entity.Employee;
 import com.justjava.humanresource.hr.entity.JobStep;
 import com.justjava.humanresource.hr.service.SetupService;
 import com.justjava.humanresource.kpi.controller.AppraisalController;
+import com.justjava.humanresource.kpi.dto.AppraisalTaskViewDTO;
 import com.justjava.humanresource.kpi.dto.EmployeeAppraisalDTO;
 import com.justjava.humanresource.kpi.entity.*;
 import com.justjava.humanresource.kpi.service.AppraisalService;
@@ -14,20 +15,20 @@ import com.justjava.humanresource.kpi.service.KpiAssignmentService;
 import com.justjava.humanresource.kpi.service.KpiDefinitionService;
 import com.justjava.humanresource.kpi.service.KpiMeasurementService;
 import com.justjava.humanresource.onboarding.service.EmployeeOnboardingService;
+import com.justjava.humanresource.workflow.dto.FlowableTaskDTO;
+import com.justjava.humanresource.workflow.service.FlowableTaskService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.math.BigDecimal;
 import java.time.YearMonth;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Controller
@@ -46,8 +47,13 @@ public class KpiController {
 
     @Autowired
     private EmployeeOnboardingService employeeOnboardingService;
+
     @Autowired
     private SetupService setupService;
+
+    @Autowired
+    private FlowableTaskService flowableTaskService;
+
     @GetMapping("/kpi")
     public String attendancePage(Model model) {
         List<KpiDefinition> kpiDefinitions = kpiDefinitionService.getAll();
@@ -331,28 +337,112 @@ public class KpiController {
     }
     @GetMapping("/fragments/kpi-appraisal")
     public String getAppraisalFragment(Model model) {
-        List<EmployeeAppraisalDTO> appraisals = appraisalService.getAllActiveAppraisals();
-        appraisals.forEach(
-                appraisal-> System.out.println("Appraisal for Employee: " + appraisal.getEmployeeName() +
-                        ", KPI: " + appraisal.getKpiScore()+
-                        ", Score: " + appraisal.getFinalScore() +
-                        ", Status: " + appraisal.getOutcome()+
-                        "Cycle" + appraisal.getCycleName()+
-                        "manager" + appraisal.getManagerScore())
+
+        List<FlowableTaskDTO> tasks =
+                flowableTaskService.getTasksForAssignee(
+                        "mgr",
+                        "employeeAppraisalProcess"
+                );
+
+        List<AppraisalTaskViewDTO> managerPending = new ArrayList<>();
+        List<AppraisalTaskViewDTO> selfPending = new ArrayList<>();
+
+        for (FlowableTaskDTO task : tasks) {
+
+            Map<String, Object> variables = task.getVariables();
+
+            if (!variables.containsKey("appraisalId")) continue;
+
+            Long appraisalId =
+                    Long.valueOf(variables.get("appraisalId").toString());
+
+            EmployeeAppraisal appraisal =
+                    appraisalService.findAppraisalById(appraisalId);
+
+            Boolean managerComplete =
+                    Boolean.valueOf(variables.get("managerComplete").toString());
+
+            Boolean selfComplete =
+                    Boolean.valueOf(variables.get("selfComplete").toString());
+
+            AppraisalTaskViewDTO dto =
+                    new AppraisalTaskViewDTO(task, appraisal);
+
+            // 🔹 Manager Pending
+            if (!managerComplete) {
+                managerPending.add(dto);
+            }
+
+            // 🔹 Self Pending
+            if (!selfComplete) {
+                selfPending.add(dto);
+            }
+        }
+        managerPending.forEach(
+                manger-> manger.getTask().getTaskId()
         );
-        model.addAttribute("appraisals", appraisals);
+
+        model.addAttribute("managerPendingAppraisals", managerPending);
+        model.addAttribute("selfPendingAppraisals", selfPending);
+
         return "kpi/fragment/appraisal-fragment :: appraisal-content";
     }
     @PostMapping("/finalize-appraisal")
-    public String finalizeAppraisal(AppraisalController.FinalizeAppraisalRequest request,
+    public String finalizeAppraisal(@RequestParam String taskId,
+            @RequestParam Map<String, Object> formParams,
                                     Model model) {
-        appraisalService.finalizeAppraisal(
-                request.getAppraisalId(),
-                request.getManagerScore(),
-                request.getManagerComment()
+        System.out.println("Finalizing appraisal with ID: " + taskId + " and form parameters: " + formParams);
+        formParams.put("managerComplete", true);
+
+        flowableTaskService.completeTask(taskId,formParams);
+
+        List<FlowableTaskDTO> tasks =
+                flowableTaskService.getTasksForAssignee(
+                        "mgr",
+                        "employeeAppraisalProcess"
+                );
+
+        List<AppraisalTaskViewDTO> managerPending = new ArrayList<>();
+        List<AppraisalTaskViewDTO> selfPending = new ArrayList<>();
+
+        for (FlowableTaskDTO task : tasks) {
+
+            Map<String, Object> variables = task.getVariables();
+
+            if (!variables.containsKey("appraisalId")) continue;
+
+            Long appraisalId =
+                    Long.valueOf(variables.get("appraisalId").toString());
+
+            EmployeeAppraisal appraisal =
+                    appraisalService.findAppraisalById(appraisalId);
+
+            Boolean managerComplete =
+                    Boolean.valueOf(variables.get("managerComplete").toString());
+
+            Boolean selfComplete =
+                    Boolean.valueOf(variables.get("selfComplete").toString());
+
+            AppraisalTaskViewDTO dto =
+                    new AppraisalTaskViewDTO(task, appraisal);
+
+            // 🔹 Manager Pending
+            if (!managerComplete) {
+                managerPending.add(dto);
+            }
+
+            // 🔹 Self Pending
+            if (!selfComplete) {
+                selfPending.add(dto);
+            }
+        }
+        managerPending.forEach(
+                manger-> manger.getTask().getVariables()
         );
-        List<EmployeeAppraisalDTO> appraisals = appraisalService.getAllActiveAppraisals();
-        model.addAttribute("appraisals", appraisals);
+
+        model.addAttribute("managerPendingAppraisals", managerPending);
+        model.addAttribute("selfPendingAppraisals", selfPending);
+
         return "kpi/fragment/appraisal-fragment :: appraisal-content";
         }
 }

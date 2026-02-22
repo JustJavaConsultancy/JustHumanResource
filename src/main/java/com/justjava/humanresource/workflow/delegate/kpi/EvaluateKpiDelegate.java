@@ -23,6 +23,7 @@ public class EvaluateKpiDelegate implements JavaDelegate {
                 execution.getVariable("employeeId").toString()
         );
 
+        System.out.println(" The Evaluation Period is : " + execution.getVariable("evaluationPeriod"));
         YearMonth period = YearMonth.now();
                 //(YearMonth) execution.getVariable("evaluationPeriod");
         System.out.println("Evaluating KPIs for employee " + employeeId + " for period " + period);

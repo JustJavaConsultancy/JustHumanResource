@@ -38,6 +38,14 @@ public class AppraisalService {
     private final EmployeeAppraisalRepository appraisalRepository;
     private final AppraisalCycleRepository cycleRepository;
     private final FlowableTaskService flowableTaskService;
+
+
+    public EmployeeAppraisal findAppraisalById(Long appraisalId) {
+        return appraisalRepository.findById(appraisalId)
+                .orElseThrow(() ->
+                        new IllegalStateException("Appraisal not found: " + appraisalId)
+                );
+    }
     /* =========================================================
        STEP 1 — CREATE DRAFT APPRAISAL (KPI SCORE ONLY)
        ========================================================= */

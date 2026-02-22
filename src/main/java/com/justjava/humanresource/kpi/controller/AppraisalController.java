@@ -45,6 +45,11 @@ public class AppraisalController {
     public List<AppraisalCycle> getAllCycles() {
         return cycleRepository.findAll();
     }
+    @GetMapping("cycle/{id}")
+    public AppraisalCycle getCycleById(@PathVariable Long id) {
+        return cycleRepository.findById(id)
+                .orElseThrow(() -> new IllegalStateException("Cycle not found"));
+    }
 
     /* ============================================================
        3️⃣ CREATE DRAFT APPRAISAL
