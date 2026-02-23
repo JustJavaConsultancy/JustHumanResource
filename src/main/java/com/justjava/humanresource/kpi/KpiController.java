@@ -17,6 +17,7 @@ import com.justjava.humanresource.kpi.service.KpiMeasurementService;
 import com.justjava.humanresource.onboarding.service.EmployeeOnboardingService;
 import com.justjava.humanresource.workflow.dto.FlowableTaskDTO;
 import com.justjava.humanresource.workflow.service.FlowableTaskService;
+import org.flowable.engine.history.HistoricProcessInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -338,6 +339,13 @@ public class KpiController {
     @GetMapping("/fragments/kpi-appraisal")
     public String getAppraisalFragment(Model model) {
 
+        // 🔹 COMPLETED PROCESSES
+        List<HistoricProcessInstance> completedProcesses =
+                flowableTaskService.getCompletedProcessInstancesForAssignee(
+                        "employeeAppraisalProcess"
+                );
+
+        // 🔹 ACTIVE TASKS
         List<FlowableTaskDTO> tasks =
                 flowableTaskService.getTasksForAssignee(
                         "mgr",
@@ -346,11 +354,14 @@ public class KpiController {
 
         List<AppraisalTaskViewDTO> managerPending = new ArrayList<>();
         List<AppraisalTaskViewDTO> selfPending = new ArrayList<>();
+        List<AppraisalTaskViewDTO> completedAppraisals = new ArrayList<>();
 
+        // =========================
+        // ACTIVE TASK PROCESSING
+        // =========================
         for (FlowableTaskDTO task : tasks) {
 
             Map<String, Object> variables = task.getVariables();
-
             if (!variables.containsKey("appraisalId")) continue;
 
             Long appraisalId =
@@ -360,30 +371,52 @@ public class KpiController {
                     appraisalService.findAppraisalById(appraisalId);
 
             Boolean managerComplete =
-                    Boolean.valueOf(variables.get("managerComplete").toString());
+                    Boolean.parseBoolean(
+                            String.valueOf(variables.get("managerComplete"))
+                    );
 
             Boolean selfComplete =
-                    Boolean.valueOf(variables.get("selfComplete").toString());
+                    Boolean.parseBoolean(
+                            String.valueOf(variables.get("selfComplete"))
+                    );
 
             AppraisalTaskViewDTO dto =
                     new AppraisalTaskViewDTO(task, appraisal);
 
-            // 🔹 Manager Pending
             if (!managerComplete) {
                 managerPending.add(dto);
             }
 
-            // 🔹 Self Pending
             if (!selfComplete) {
                 selfPending.add(dto);
             }
         }
-        managerPending.forEach(
-                manger-> manger.getTask().getTaskId()
-        );
+
+        // =========================
+        // COMPLETED PROCESS HANDLING
+        // =========================
+        for (HistoricProcessInstance process : completedProcesses) {
+
+            Map<String, Object> variables = process.getProcessVariables();
+
+            if (variables == null || !variables.containsKey("appraisalId"))
+                continue;
+
+            Long appraisalId =
+                    Long.valueOf(variables.get("appraisalId").toString());
+
+            EmployeeAppraisal appraisal =
+                    appraisalService.findAppraisalById(appraisalId);
+
+            // For completed, task can be null or create another DTO if needed
+            completedAppraisals.add(
+                    new AppraisalTaskViewDTO(null, appraisal)
+            );
+        }
 
         model.addAttribute("managerPendingAppraisals", managerPending);
         model.addAttribute("selfPendingAppraisals", selfPending);
+        model.addAttribute("completedAppraisals", completedAppraisals);
 
         return "kpi/fragment/appraisal-fragment :: appraisal-content";
     }
@@ -396,6 +429,13 @@ public class KpiController {
 
         flowableTaskService.completeTask(taskId,formParams);
 
+        // 🔹 COMPLETED PROCESSES
+        List<HistoricProcessInstance> completedProcesses =
+                flowableTaskService.getCompletedProcessInstancesForAssignee(
+                        "employeeAppraisalProcess"
+                );
+
+        // 🔹 ACTIVE TASKS
         List<FlowableTaskDTO> tasks =
                 flowableTaskService.getTasksForAssignee(
                         "mgr",
@@ -404,11 +444,14 @@ public class KpiController {
 
         List<AppraisalTaskViewDTO> managerPending = new ArrayList<>();
         List<AppraisalTaskViewDTO> selfPending = new ArrayList<>();
+        List<AppraisalTaskViewDTO> completedAppraisals = new ArrayList<>();
 
+        // =========================
+        // ACTIVE TASK PROCESSING
+        // =========================
         for (FlowableTaskDTO task : tasks) {
 
             Map<String, Object> variables = task.getVariables();
-
             if (!variables.containsKey("appraisalId")) continue;
 
             Long appraisalId =
@@ -418,30 +461,52 @@ public class KpiController {
                     appraisalService.findAppraisalById(appraisalId);
 
             Boolean managerComplete =
-                    Boolean.valueOf(variables.get("managerComplete").toString());
+                    Boolean.parseBoolean(
+                            String.valueOf(variables.get("managerComplete"))
+                    );
 
             Boolean selfComplete =
-                    Boolean.valueOf(variables.get("selfComplete").toString());
+                    Boolean.parseBoolean(
+                            String.valueOf(variables.get("selfComplete"))
+                    );
 
             AppraisalTaskViewDTO dto =
                     new AppraisalTaskViewDTO(task, appraisal);
 
-            // 🔹 Manager Pending
             if (!managerComplete) {
                 managerPending.add(dto);
             }
 
-            // 🔹 Self Pending
             if (!selfComplete) {
                 selfPending.add(dto);
             }
         }
-        managerPending.forEach(
-                manger-> manger.getTask().getVariables()
-        );
+
+        // =========================
+        // COMPLETED PROCESS HANDLING
+        // =========================
+        for (HistoricProcessInstance process : completedProcesses) {
+
+            Map<String, Object> variables = process.getProcessVariables();
+
+            if (variables == null || !variables.containsKey("appraisalId"))
+                continue;
+
+            Long appraisalId =
+                    Long.valueOf(variables.get("appraisalId").toString());
+
+            EmployeeAppraisal appraisal =
+                    appraisalService.findAppraisalById(appraisalId);
+
+            // For completed, task can be null or create another DTO if needed
+            completedAppraisals.add(
+                    new AppraisalTaskViewDTO(null, appraisal)
+            );
+        }
 
         model.addAttribute("managerPendingAppraisals", managerPending);
         model.addAttribute("selfPendingAppraisals", selfPending);
+        model.addAttribute("completedAppraisals", completedAppraisals);
 
         return "kpi/fragment/appraisal-fragment :: appraisal-content";
         }

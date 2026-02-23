@@ -144,14 +144,14 @@
       the submit button is hidden and inputs are readonly — so submitting is impossible.
     -->
     <form id="managerReviewForm"
-          hx-post="/finalize-appraisal"
+          hx-post="/appraisals/manager-review"
           hx-target="#appraisal-content"
           hx-swap="outerHTML"
           hx-disabled-elt="#slideSubmitBtn"
           class="flex flex-col flex-1 overflow-hidden">
 
       <!-- Hidden identifiers — populated by JS when slide-over opens from a pending row -->
-      <input type="hidden" id="slideAppraisalId">
+      <input type="hidden" id="slideAppraisalId" name="appraisalId">
       <input type="hidden" id="slideTaskId"       name="taskId">
 
       <!-- Scrollable Body -->
@@ -363,13 +363,13 @@
       <!-- Stage summary pills -->
       <div class="flex items-center gap-2 pb-0.5">
         <span class="flex items-center gap-1.5 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-900/40 text-xs font-semibold text-blue-700 dark:text-blue-300">
-          <span class="material-icons-round" style="font-size:13px;">rate_review</span> 2 Pending
+          <span class="material-icons-round"  style="font-size:13px;">rate_review</span><span th:text="${#lists.size(managerPendingAppraisals) + ' Pending'}"> 2 Pending</span>
         </span>
         <span class="flex items-center gap-1.5 px-3 py-2 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-100 dark:border-amber-900/40 text-xs font-semibold text-amber-700 dark:text-amber-300">
-          <span class="material-icons-round" style="font-size:13px;">hourglass_top</span> 1 Awaiting
+          <span class="material-icons-round" style="font-size:13px;">hourglass_top</span><span th:text="${#lists.size(selfPendingAppraisals) + ' Awaiting'}"> 1 Awaiting </span>
         </span>
         <span class="flex items-center gap-1.5 px-3 py-2 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-100 dark:border-green-900/40 text-xs font-semibold text-green-700 dark:text-green-300">
-          <span class="material-icons-round" style="font-size:13px;">task_alt</span> 2 Done
+          <span class="material-icons-round" style="font-size:13px;">task_alt</span> <span th:text="${#lists.size(completedAppraisals) + ' Done'}"> 2 Done </span>
         </span>
       </div>
     </div>
@@ -449,6 +449,20 @@
                     class="bg-blue-600 text-white text-xs font-semibold px-4 py-1.5 rounded-lg hover:bg-blue-700 flex items-center gap-1.5">
               <span class="material-icons-round" style="font-size:14px;">rate_review</span> Review
             </button>
+          </td>
+        </tr>
+
+        <tr th:if="${#lists.isEmpty(managerPendingAppraisals)}">
+          <td colspan="5" class="px-5 py-14 text-center">
+            <div class="flex flex-col items-center gap-3">
+              <div class="w-14 h-14 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
+                <span class="material-icons-round text-blue-300 dark:text-blue-600" style="font-size:28px;">rate_review</span>
+              </div>
+              <div>
+                <p class="font-semibold text-sm text-gray-700 dark:text-gray-300">All reviews submitted</p>
+                <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">No appraisals are currently pending your review.</p>
+              </div>
+            </div>
           </td>
         </tr>
 
@@ -542,6 +556,20 @@
           </td>
         </tr>
 
+        <tr th:if="${#lists.isEmpty(selfPendingAppraisals)}">
+          <td colspan="6" class="px-5 py-14 text-center">
+            <div class="flex flex-col items-center gap-3">
+              <div class="w-14 h-14 rounded-full bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center">
+                <span class="material-icons-round text-amber-300 dark:text-amber-600" style="font-size:28px;">hourglass_empty</span>
+              </div>
+              <div>
+                <p class="font-semibold text-sm text-gray-700 dark:text-gray-300">No pending employee responses</p>
+                <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Employees have completed all self-reviews, or none are awaiting a response yet.</p>
+              </div>
+            </div>
+          </td>
+        </tr>
+
         </tbody>
       </table>
     </div>
@@ -559,7 +587,7 @@
           <p class="text-xs text-gray-500 dark:text-gray-400">Full history with final scores and outcomes</p>
         </div>
       </div>
-      <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">2</span>
+      <span th:text="${#lists.size(completedAppraisals)}" class="text-xs font-semibold px-2.5 py-1 rounded-full bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">2</span>
     </div>
     <div class="overflow-x-auto">
       <table class="w-full">
@@ -578,43 +606,48 @@
         </thead>
         <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
 
-        <!-- Row: Jane Smith — Jan 2024 -->
-        <tr class="ap-row"
-            data-employee="jane-smith"
-            data-cycle="jan-2024"
-            data-employee-name="Jane Smith"
-            data-employee-dept="Engineering"
-            data-cycle-name="January 2024"
-            data-kpi-score="92.75"
-            data-manager-score="90.0"
-            data-manager-comment="Excellent attendance and strong training commitment. Jane continues to be a reliable and high-performing member of the engineering team."
-            data-self-score="85.0"
-            data-self-comment="I felt I performed well this quarter. I completed all training hours and maintained perfect attendance. I would like more challenging projects going forward."
-            data-self-submitted="true"
-            data-manager-submitted="true"
-            data-final-score="89.3"
-            data-outcome="EXCEEDS"
-            data-completed-at="2024-02-05">
+        <tr th:each="appraisal : ${completedAppraisals}" class="ap-row"
+            th:data-employee="${appraisal.appraisal.employee.fullName ?: ''}"
+            th:data-cycle="${appraisal.appraisal.cycle.name ?: ''}"
+            th:data-employee-name="${appraisal.appraisal.employee.fullName ?: ''}"
+            th:data-employee-dept="${appraisal.appraisal.employee.department.name ?: ''}"
+            th:data-cycle-name="${appraisal.appraisal.cycle.name ?: ''}"
+            th:data-kpi-score="${appraisal.appraisal.kpiScore ?: ''}"
+            th:data-manager-score="${appraisal.appraisal.managerScore ?: ''}"
+            th:data-manager-comment="${appraisal.appraisal.managerComment ?: ''}"
+            th:data-self-score="${appraisal.appraisal.selfScore ?: ''}"
+            th:data-self-comment="${appraisal.appraisal.selfComment ?: ''}"
+            th:data-self-submitted="${appraisal.task.variables['selfComplete'] ?: ''}"
+            th:data-manager-submitted="${appraisal.task.variables['managerComplete'] ?: ''}"
+            th:data-final-score="${appraisal.appraisal.finalScore ?: ''}"
+            th:data-outcome="${appraisal.appraisal.outcome ?: ''}"
+            th:data-completed-at="${appraisal.appraisal.completedAt ?: ''}">
           <td class="px-5 py-3.5">
             <div class="flex items-center gap-3">
-              <div class="emp-avatar av-green">JS</div>
+              <div th:text="${#strings.substring(#strings.arraySplit(appraisal.appraisal.employee.fullName,' ')[0],0,1)
+                             + (#strings.arraySplit(appraisal.appraisal.employee.fullName,' ').length > 1
+                                 ? #strings.substring(#strings.arraySplit(appraisal.appraisal.employee.fullName,' ')[1],0,1)
+                                 : '')}"
+                   class="emp-avatar av-green">JS</div>
               <div>
-                <p class="font-medium text-sm">Jane Smith</p>
-                <p class="text-xs text-gray-400">Engineering</p>
+                <p th:text="${appraisal.appraisal.employee.fullName}" class="font-medium text-sm">Jane Smith</p>
+                <p th:text="${appraisal.appraisal.employee.department.name}" class="text-xs text-gray-400">Engineering</p>
               </div>
             </div>
           </td>
-          <td class="px-5 py-3.5 text-sm text-gray-600 dark:text-gray-400">January 2024</td>
-          <td class="px-5 py-3.5"><span class="score-chip score-excellent">92.8</span></td>
-          <td class="px-5 py-3.5"><span class="score-chip score-excellent">90.0</span></td>
-          <td class="px-5 py-3.5"><span class="score-chip score-excellent">85.0</span></td>
+          <td th:text="${appraisal.appraisal.cycle.name}" class="px-5 py-3.5 text-sm text-gray-600 dark:text-gray-400">January 2024</td>
+          <td class="px-5 py-3.5"><span th:text="${appraisal.appraisal.kpiScore}" class="score-chip score-excellent">92.8</span></td>
+          <td class="px-5 py-3.5"><span th:text="${appraisal.appraisal.managerScore}" class="score-chip score-excellent">90.0</span></td>
+          <td class="px-5 py-3.5"><span th:text="${appraisal.appraisal.selfScore}" class="score-chip score-excellent">85.0</span></td>
           <td class="px-5 py-3.5">
-            <span style="font-family:'DM Mono','Courier New',monospace; font-size:1rem; font-weight:700; color:#065f46;">89.3</span>
+            <span th:text="${appraisal.appraisal.finalScore}"
+                  style="font-family:'DM Mono','Courier New',monospace; font-size:1rem; font-weight:700; color:#065f46;">89.3</span>
           </td>
           <td class="px-5 py-3.5">
-            <span class="text-xs font-semibold px-2.5 py-1 rounded-lg outcome-exceeds">EXCEEDS</span>
+            <span th:text="${appraisal.appraisal.outcome}"
+                  class="text-xs font-semibold px-2.5 py-1 rounded-lg outcome-exceeds">EXCEEDS</span>
           </td>
-          <td class="px-5 py-3.5 text-xs text-gray-400">2024-02-05</td>
+          <td th:text="${appraisal.appraisal.completedAt}" class="px-5 py-3.5 text-xs text-gray-400">2024-02-05</td>
           <td class="px-5 py-3.5">
             <button type="button" onclick="openDetailModal(this.closest('tr'))"
                     class="text-gray-400 hover:text-blue-600 p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -624,49 +657,17 @@
           </td>
         </tr>
 
-        <!-- Row: John Doe — Feb 2024 -->
-        <tr class="ap-row"
-            data-employee="john-doe"
-            data-cycle="feb-2024"
-            data-employee-name="John Doe"
-            data-employee-dept="Sales"
-            data-cycle-name="February 2024"
-            data-kpi-score="91.5"
-            data-manager-score="92.0"
-            data-manager-comment="Outstanding performance. John exceeded all targets and showed great leadership in team initiatives this cycle."
-            data-self-score="89.0"
-            data-self-comment="Strong month overall. I achieved 90% of my sales target and maintained excellent customer relationships. Looking to improve project delivery speed next quarter."
-            data-self-submitted="true"
-            data-manager-submitted="true"
-            data-final-score="90.8"
-            data-outcome="EXCEEDS"
-            data-completed-at="2024-03-03">
-          <td class="px-5 py-3.5">
-            <div class="flex items-center gap-3">
-              <div class="emp-avatar av-green">JD</div>
+        <tr th:if="${#lists.isEmpty(completedAppraisals)}">
+          <td colspan="9" class="px-5 py-14 text-center">
+            <div class="flex flex-col items-center gap-3">
+              <div class="w-14 h-14 rounded-full bg-green-50 dark:bg-green-900/20 flex items-center justify-center">
+                <span class="material-icons-round text-green-300 dark:text-green-600" style="font-size:28px;">history</span>
+              </div>
               <div>
-                <p class="font-medium text-sm">John Doe</p>
-                <p class="text-xs text-gray-400">Sales</p>
+                <p class="font-semibold text-sm text-gray-700 dark:text-gray-300">No completed appraisals yet</p>
+                <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Appraisals will appear here once both the manager and employee have submitted their reviews.</p>
               </div>
             </div>
-          </td>
-          <td class="px-5 py-3.5 text-sm text-gray-600 dark:text-gray-400">February 2024</td>
-          <td class="px-5 py-3.5"><span class="score-chip score-excellent">91.5</span></td>
-          <td class="px-5 py-3.5"><span class="score-chip score-excellent">92.0</span></td>
-          <td class="px-5 py-3.5"><span class="score-chip score-excellent">89.0</span></td>
-          <td class="px-5 py-3.5">
-            <span style="font-family:'DM Mono','Courier New',monospace; font-size:1rem; font-weight:700; color:#065f46;">90.8</span>
-          </td>
-          <td class="px-5 py-3.5">
-            <span class="text-xs font-semibold px-2.5 py-1 rounded-lg outcome-exceeds">EXCEEDS</span>
-          </td>
-          <td class="px-5 py-3.5 text-xs text-gray-400">2024-03-03</td>
-          <td class="px-5 py-3.5">
-            <button type="button" onclick="openDetailModal(this.closest('tr'))"
-                    class="text-gray-400 hover:text-blue-600 p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-                    title="View full detail">
-              <span class="material-icons-round" style="font-size:18px;">open_in_new</span>
-            </button>
           </td>
         </tr>
 

@@ -2,9 +2,12 @@ package com.justjava.humanresource.workflow.service;
 
 import com.justjava.humanresource.workflow.dto.FlowableTaskDTO;
 import lombok.RequiredArgsConstructor;
+import org.flowable.engine.HistoryService;
 import org.flowable.engine.RuntimeService;
 import org.flowable.engine.TaskService;
+import org.flowable.engine.history.HistoricProcessInstance;
 import org.flowable.task.api.Task;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.ZoneId;
@@ -18,6 +21,8 @@ public class FlowableTaskService {
 
     private final TaskService taskService;
     private final RuntimeService runtimeService;
+    @Autowired
+    private HistoryService historyService;
 
     /* =====================================================
        GET TASKS BY ASSIGNEE
@@ -39,6 +44,19 @@ public class FlowableTaskService {
         return tasks.stream()
                 .map(this::mapToDto)
                 .toList();
+    }
+
+//    GET COMPLETED PROCESS INSTANCES
+    public List<HistoricProcessInstance> getCompletedProcessInstancesForAssignee(
+            String processDefinitionKey
+    ) {
+        return historyService.createHistoricProcessInstanceQuery()
+                .processDefinitionKey(processDefinitionKey)
+                .includeProcessVariables()
+                .finished()
+                .orderByProcessInstanceEndTime()
+                .desc()
+                .list();
     }
 
     /* =====================================================
