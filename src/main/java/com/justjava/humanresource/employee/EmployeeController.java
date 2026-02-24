@@ -94,6 +94,7 @@ public class EmployeeController {
     }
     @GetMapping("employee/leave")
     public String getLeave(Model model){
+
         model.addAttribute("title", "Leave Management");
         model.addAttribute("subTitle", "View your leave balance, request time off, and track your leave history");
         return "employees/leave";
