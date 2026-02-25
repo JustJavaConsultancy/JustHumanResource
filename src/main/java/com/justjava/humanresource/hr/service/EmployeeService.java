@@ -18,6 +18,8 @@ public interface EmployeeService {
     EmployeeDTO createAndActivateEmployee(EmployeeDTO dto);
     List<EmployeeDTO> getAllEmployees();
     Employee getByEmployeeNumber(String employeeNumber);
+    Employee getByEmail(String email);
+
 
     /* =========================
      * REFINED, EXPLICIT INTENT

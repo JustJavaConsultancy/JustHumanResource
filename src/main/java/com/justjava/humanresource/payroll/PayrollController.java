@@ -2,10 +2,13 @@ package com.justjava.humanresource.payroll;
 
 import com.justjava.humanresource.core.enums.PayFrequency;
 import com.justjava.humanresource.hr.dto.CreatePayGroupCommand;
+import com.justjava.humanresource.hr.entity.Employee;
 import com.justjava.humanresource.hr.entity.PayGroup;
+import com.justjava.humanresource.hr.service.EmployeeService;
 import com.justjava.humanresource.hr.service.SetupService;
 import com.justjava.humanresource.payroll.entity.*;
 import com.justjava.humanresource.payroll.service.PayGroupService;
+import com.justjava.humanresource.payroll.service.PaySlipService;
 import com.justjava.humanresource.payroll.service.PayrollSetupService;
 import com.justjava.humanresource.payroll.service.impl.PaySlipServiceImpl;
 import com.justjava.humanresource.payroll.service.impl.PayrollPeriodServiceImpl;
@@ -34,9 +37,11 @@ public class PayrollController {
     private PayrollSetupService payrollSetupService;
 
     @Autowired
-    private PaySlipServiceImpl paySlipService;
+    private PaySlipService paySlipService;
 
 
+    @Autowired
+    private EmployeeService employeeService;
     @GetMapping("/payroll")
     public String getPayroll(Model model) {
         List<Allowance> allowances = payrollSetupService.getActiveAllowances();
@@ -217,8 +222,10 @@ public class PayrollController {
     }
     @PostMapping("/setup/payroll/open")
     public String openPayroll() {
+        Employee loginEmployee = employeeService.getByEmail("email");
         YearMonth yearMonth = YearMonth.now();
-        payrollPeriodService.openInitialPeriod(1L, yearMonth.atDay(1), yearMonth.atEndOfMonth());
+        payrollPeriodService
+                .openInitialPeriod(1L, yearMonth.atDay(1), yearMonth.atEndOfMonth());
         return "redirect:/payroll";
     }
     @PostMapping("/setup/payroll/close")

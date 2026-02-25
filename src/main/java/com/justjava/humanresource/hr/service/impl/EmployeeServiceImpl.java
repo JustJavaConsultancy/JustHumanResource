@@ -70,7 +70,12 @@ public class EmployeeServiceImpl implements EmployeeService {
                 .orElseThrow(() ->
                         new ResourceNotFoundException("Employee", employeeNumber));
     }
-
+    @Override
+    public Employee getByEmail(String email) {
+        return employeeRepository.findByEmail(email)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Employee", email));
+    }
     /* =========================
      * REFINED, INTENT-BASED METHODS
      * ========================= */
