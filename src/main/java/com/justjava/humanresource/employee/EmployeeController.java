@@ -1,6 +1,8 @@
 package com.justjava.humanresource.employee;
 
+import com.justjava.humanresource.core.config.AuthenticationManager;
 import com.justjava.humanresource.core.enums.EmploymentStatus;
+import com.justjava.humanresource.hr.dto.EmployeeDTO;
 import com.justjava.humanresource.hr.dto.EmployeeOnboardingResponseDTO;
 import com.justjava.humanresource.hr.dto.JobGradeResponseDTO;
 import com.justjava.humanresource.hr.entity.Department;
@@ -14,16 +16,16 @@ import com.justjava.humanresource.payroll.service.PayrollSetupService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
 
 @Controller
 public class EmployeeController {
+    @Autowired
+    AuthenticationManager authenticationManager;
+
     @Autowired
     private SetupService setupService;
 
@@ -76,7 +78,13 @@ public class EmployeeController {
         return "employees/dashboard";
     }
     @GetMapping("employee/profile")
-    public String getEmployeeProfile(Model model) { model.addAttribute("title", "Employee Profile"); model.addAttribute("subTitle", "View and update your personal information, job details, and performance data");
+    public String getEmployeeProfile(Model model) {
+        String email = (String) authenticationManager.get("email");
+        Employee loginEmployee = employeeService.getByEmail(email);
+        System.out.println("Logged in employee: " + loginEmployee);
+        model.addAttribute("employee", loginEmployee);
+        model.addAttribute("title", "Employee Profile");
+        model.addAttribute("subTitle", "View and update your personal information, job details, and performance data");
         return "employees/profile";
     }
     @GetMapping("employee/promotions")
@@ -110,5 +118,15 @@ public class EmployeeController {
         model.addAttribute("title", "Document Management");
         model.addAttribute("subTitle", "View and manage your important documents such as contracts, certifications, and performance reviews");
         return "employees/documents";
+    }
+    @PostMapping("/add-emergency-contact")
+    public String saveEmployee(EmployeeDTO dto) {
+        employeeService.updateEmployee(dto.getId(), dto);
+        return "redirect:/employee/profile";
+    }
+    @PostMapping("/update-personal-info")
+    public String updatePersonalInfo(@ModelAttribute EmployeeDTO dto) {
+        employeeService.updatePersonalInfo(dto.getId(), dto);
+        return "redirect:/employee/profile";
     }
 }

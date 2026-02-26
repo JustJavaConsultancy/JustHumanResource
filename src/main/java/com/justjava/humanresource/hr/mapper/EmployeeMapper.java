@@ -24,56 +24,56 @@ public abstract class EmployeeMapper {
     @Autowired
     PayGroupRepository payGroupRepository;
 
-    /* Spring will inject these */
-    public EmployeeMapper() {
-    }
-
     /* ============================================================
-       DTO → ENTITY
+       DTO → ENTITY (including personal fields)
        ============================================================ */
-
     @Mapping(target = "department", expression = "java(resolveDepartment(dto.getDepartmentId()))")
     @Mapping(target = "jobStep", expression = "java(resolveJobStep(dto.getJobStepId()))")
     @Mapping(target = "payGroup", expression = "java(resolvePayGroup(dto.getPayGroupId()))")
+    // emergencyContact is intentionally NOT mapped – handled in service
+    // personal fields are mapped directly
     public abstract Employee toEntity(EmployeeDTO dto);
 
     /* ============================================================
-       ENTITY → DTO
+       ENTITY → DTO (including all fields)
        ============================================================ */
-
     @Mapping(source = "department.id", target = "departmentId")
     @Mapping(source = "jobStep.id", target = "jobStepId")
     @Mapping(source = "payGroup.id", target = "payGroupId")
+    @Mapping(source = "emergencyContact.contactName", target = "emergencyContactName")
+    @Mapping(source = "emergencyContact.relationship", target = "emergencyRelationship")
+    @Mapping(source = "emergencyContact.phoneNumber", target = "emergencyPhoneNumber")
+    @Mapping(source = "emergencyContact.alternativePhoneNumber", target = "emergencyAlternativePhoneNumber")
+    // personal fields
+    @Mapping(source = "dateOfBirth", target = "dateOfBirth")
+    @Mapping(source = "gender", target = "gender")
+    @Mapping(source = "maritalStatus", target = "maritalStatus")
+    @Mapping(source = "residentialAddress", target = "residentialAddress")
+    @Mapping(source = "mission", target = "mission")
     public abstract EmployeeDTO toDto(Employee employee);
 
     /* ============================================================
        INTERNAL RESOLUTION
        ============================================================ */
-
     protected Department resolveDepartment(Long id) {
         if (id == null) return null;
         return departmentRepository.findById(id)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("Department", id));
+                .orElseThrow(() -> new ResourceNotFoundException("Department", id));
     }
 
     protected JobStep resolveJobStep(Long id) {
         if (id == null) return null;
         return jobStepRepository.findById(id)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("JobStep", id));
+                .orElseThrow(() -> new ResourceNotFoundException("JobStep", id));
     }
 
     protected PayGroup resolvePayGroup(Long id) {
         if (id == null) return null;
         return payGroupRepository.findById(id)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("PayGroup", id));
+                .orElseThrow(() -> new ResourceNotFoundException("PayGroup", id));
     }
 
     public List<EmployeeDTO> toDtoList(List<Employee> employees) {
-        return employees.stream()
-                .map(this::toDto)
-                .toList();
+        return employees.stream().map(this::toDto).toList();
     }
 }
