@@ -20,6 +20,8 @@ public interface EmployeeService {
     Employee getByEmployeeNumber(String employeeNumber);
     Employee getByEmail(String email);
 
+    Employee getById(Long id);
+
 
     /* =========================
      * REFINED, EXPLICIT INTENT
@@ -55,4 +57,7 @@ public interface EmployeeService {
             EmploymentStatus newStatus,
             LocalDate effectiveDate
     );
+
+    Employee save(Employee employee);
+    String generateInitialPassword(Employee employee);
 }

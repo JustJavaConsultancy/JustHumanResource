@@ -31,11 +31,11 @@ public class ClosePeriodDelegate implements JavaDelegate {
                 .orElseThrow(() ->
                         new IllegalStateException("Payroll period not found."));
 
-        if (!period.getCompanyId().equals(companyId)) {
+/*        if (!period.getCompanyId().equals(companyId)) {
             throw new IllegalStateException(
                     "Period does not belong to provided company."
             );
-        }
+        }*/
 
         if (period.getStatus() != PayrollPeriodStatus.OPEN
                 && period.getStatus() != PayrollPeriodStatus.LOCKED) {

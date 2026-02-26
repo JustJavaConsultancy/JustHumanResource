@@ -6,6 +6,8 @@ import org.flowable.engine.RuntimeService;
 import org.flowable.engine.runtime.ProcessInstance;
 import org.springframework.stereotype.Service;
 
+import java.util.Map;
+
 @Service
 @RequiredArgsConstructor
 public class EmployeePayrollProcessManagerImpl
@@ -29,7 +31,7 @@ public class EmployeePayrollProcessManagerImpl
         if (existing == null) {
             runtimeService.startProcessInstanceByKey(
                     "employeePayrollSupervisor",
-                    businessKey
+                    businessKey//, Map.of("employeeId",employeeId)
             );
         }
     }

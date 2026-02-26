@@ -72,7 +72,7 @@ public class Employee extends BaseEntity {
     private LocalDateTime createdAt;
 
     private LocalDateTime activatedAt;
-
+    private String keycloakUserId;
     public String getFullName() {
         return firstName + " " + lastName;
     }

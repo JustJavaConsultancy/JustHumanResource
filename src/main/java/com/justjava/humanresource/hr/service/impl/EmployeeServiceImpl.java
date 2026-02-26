@@ -76,6 +76,7 @@ public class EmployeeServiceImpl implements EmployeeService {
                 .orElseThrow(() ->
                         new ResourceNotFoundException("Employee", email));
     }
+
     /* =========================
      * REFINED, INTENT-BASED METHODS
      * ========================= */
@@ -209,13 +210,25 @@ public class EmployeeServiceImpl implements EmployeeService {
         return employeeMapper.toDto(saved);
     }
 
+    @Override
+    public String generateInitialPassword(Employee employee) {
+        return "password!";
+    }
+
     /* =========================
      * INTERNAL HELPER
      * ========================= */
 
-    private Employee getById(Long employeeId) {
+
+    @Override
+    public Employee getById(Long employeeId) {
         return employeeRepository.findById(employeeId)
                 .orElseThrow(() ->
                         new ResourceNotFoundException("Employee", employeeId));
+    }
+
+    @Override
+    public Employee save(Employee employee) {
+        return employeeRepository.save(employee);
     }
 }

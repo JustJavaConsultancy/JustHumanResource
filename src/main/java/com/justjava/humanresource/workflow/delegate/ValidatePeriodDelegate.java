@@ -25,17 +25,19 @@ public class ValidatePeriodDelegate implements JavaDelegate {
     public void execute(DelegateExecution execution) {
 
         Long periodId = getRequiredLong(execution, "periodId");
-        Long companyId = getRequiredLong(execution, "companyId");
+
 
         PayrollPeriod period = periodRepository.findById(periodId)
                 .orElseThrow(() ->
                         new IllegalStateException("Payroll period not found."));
 
+/*
         if (!period.getCompanyId().equals(companyId)) {
             throw new IllegalStateException(
                     "Payroll period does not belong to company."
             );
         }
+*/
 
         if (period.getStatus() != PayrollPeriodStatus.OPEN
                 && period.getStatus() != PayrollPeriodStatus.LOCKED) {
@@ -44,7 +46,7 @@ public class ValidatePeriodDelegate implements JavaDelegate {
                     "Only OPEN or LOCKED period can be validated."
             );
         }
-
+        Long companyId = period.getCompanyId();//getRequiredLong(execution, "companyId");
         log.info("Validating payroll period {} for company {}",
                 periodId, companyId);
 

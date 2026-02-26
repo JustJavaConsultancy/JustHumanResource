@@ -1,5 +1,6 @@
 package com.justjava.humanresource.payroll;
 
+import com.justjava.humanresource.core.config.AuthenticationManager;
 import com.justjava.humanresource.core.enums.PayFrequency;
 import com.justjava.humanresource.hr.dto.CreatePayGroupCommand;
 import com.justjava.humanresource.hr.entity.Employee;
@@ -38,6 +39,10 @@ public class PayrollController {
 
     @Autowired
     private PaySlipService paySlipService;
+
+    @Autowired
+    private AuthenticationManager authenticationManager;
+
 
 
     @Autowired
@@ -222,10 +227,12 @@ public class PayrollController {
     }
     @PostMapping("/setup/payroll/open")
     public String openPayroll() {
-        Employee loginEmployee = employeeService.getByEmail("email");
+/*        String loginUserEmail = authenticationManager.get("email").toString();
+        Employee loginEmployee = employeeService.getByEmail(loginUserEmail);*/
         YearMonth yearMonth = YearMonth.now();
         payrollPeriodService
-                .openInitialPeriod(1L, yearMonth.atDay(1), yearMonth.atEndOfMonth());
+                .openInitialPeriod(1L,
+                        yearMonth.atDay(1), yearMonth.atEndOfMonth());
         return "redirect:/payroll";
     }
     @PostMapping("/setup/payroll/close")
