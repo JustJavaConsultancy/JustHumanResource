@@ -222,7 +222,6 @@ public class PayrollController {
     }
     @PostMapping("/setup/payroll/open")
     public String openPayroll() {
-        Employee loginEmployee = employeeService.getByEmail("email");
         YearMonth yearMonth = YearMonth.now();
         payrollPeriodService
                 .openInitialPeriod(1L, yearMonth.atDay(1), yearMonth.atEndOfMonth());

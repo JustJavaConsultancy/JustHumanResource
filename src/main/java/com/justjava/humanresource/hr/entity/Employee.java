@@ -1,6 +1,5 @@
 package com.justjava.humanresource.hr.entity;
 
-
 import com.justjava.humanresource.core.entity.BaseEntity;
 import com.justjava.humanresource.core.enums.EmploymentStatus;
 import com.justjava.humanresource.core.enums.RecordStatus;
@@ -18,7 +17,6 @@ import java.util.List;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-@ToString
 @Table(name = "employees")
 public class Employee extends BaseEntity {
 
@@ -61,20 +59,39 @@ public class Employee extends BaseEntity {
     @OneToMany(mappedBy = "employee", fetch = FetchType.LAZY)
     private List<EmployeeBankDetail> bankDetails;
 
-    /** Payroll still independent */
     private boolean payrollEnabled;
-
-    /** KPI readiness flag */
     private boolean kpiEnabled;
-    @Column(updatable = false)
 
+    @Column(updatable = false)
     @CreatedDate
     private LocalDateTime createdAt;
 
     private LocalDateTime activatedAt;
 
+    // ---------- Emergency contact ----------
+    @OneToOne(mappedBy = "employee", cascade = CascadeType.ALL, orphanRemoval = true)
+    private EmergencyContact emergencyContact;
+
+    public void setEmergencyContact(EmergencyContact contact) {
+        this.emergencyContact = contact;
+        if (contact != null) {
+            contact.setEmployee(this);
+        }
+    }
+
+    // ---------- Personal information (employee-editable) ----------
+    private LocalDate dateOfBirth;
+    private String gender;
+    private String maritalStatus;
+    private String residentialAddress;
+
+    // New mission field
+    @Column(columnDefinition = "TEXT")
+    private String mission;
+
+    // -------------------------------------------------------------
+
     public String getFullName() {
         return firstName + " " + lastName;
     }
-
 }

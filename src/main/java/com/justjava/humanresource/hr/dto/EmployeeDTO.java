@@ -1,33 +1,35 @@
 package com.justjava.humanresource.hr.dto;
 
-import com.justjava.humanresource.core.enums.EmploymentStatus;
-import com.justjava.humanresource.core.enums.RecordStatus;
-import lombok.AccessLevel;
 import lombok.Data;
-import lombok.experimental.FieldDefaults;
-
 import java.time.LocalDate;
 
 @Data
-@FieldDefaults(level = AccessLevel.PRIVATE)
 public class EmployeeDTO {
+    private Long id;
+    private String employeeNumber;
+    private String firstName;
+    private String lastName;
+    private String email;
+    private String phoneNumber;
+    private LocalDate dateOfHire;
+    private String employmentStatus;   // or EmploymentStatus enum
+    private String status;              // RecordStatus
+    private Long departmentId;
+    private Long jobStepId;
+    private Long payGroupId;
+    private boolean payrollEnabled;
+    private boolean kpiEnabled;
 
-    Long id;
-    String employeeNumber;
+    // Emergency contact fields
+    private String emergencyContactName;
+    private String emergencyRelationship;
+    private String emergencyPhoneNumber;
+    private String emergencyAlternativePhoneNumber;
 
-    String firstName;
-    String lastName;
-    String email;
-    String phoneNumber;
-
-    LocalDate dateOfHire;
-
-    EmploymentStatus employmentStatus;
-    RecordStatus status;
-
-    Long departmentId;   // ✅ instead of Department
-    Long jobStepId;      // ✅ instead of JobStep
-    Long payGroupId;     // ✅ instead of PayGroup
-
-    boolean payrollEnabled;
+    // Personal information fields
+    private LocalDate dateOfBirth;
+    private String gender;
+    private String maritalStatus;
+    private String residentialAddress;
+    private String mission;   // new
 }

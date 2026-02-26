@@ -19,6 +19,8 @@ public interface EmployeeService {
     List<EmployeeDTO> getAllEmployees();
     Employee getByEmployeeNumber(String employeeNumber);
     Employee getByEmail(String email);
+    EmployeeDTO updateEmployee(Long employeeId, EmployeeDTO employee);
+    EmployeeDTO updatePersonalInfo(Long employeeId, EmployeeDTO dto);
 
 
     /* =========================

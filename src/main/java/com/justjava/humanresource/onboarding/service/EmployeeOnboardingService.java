@@ -44,10 +44,10 @@ public class EmployeeOnboardingService {
         dto.setLastName(command.getLastName());
         dto.setEmail(command.getEmail());
         dto.setPhoneNumber(command.getPhoneNumber());
-        dto.setEmploymentStatus(EmploymentStatus.ONBOARDING);
+        dto.setEmploymentStatus(String.valueOf(EmploymentStatus.ONBOARDING));
         dto.setJobStepId(command.getJobStepId());
         dto.setPayGroupId(command.getPayGroupId());
-        dto.setStatus(RecordStatus.INACTIVE);
+        dto.setStatus(String.valueOf(RecordStatus.INACTIVE));
 
         Employee employee = employeeService.createEmployee(dto);
 
