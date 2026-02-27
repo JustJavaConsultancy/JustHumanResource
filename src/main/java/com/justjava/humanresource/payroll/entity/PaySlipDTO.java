@@ -24,4 +24,5 @@ public class PaySlipDTO {
 
     BigDecimal netPay;
     String employeeName;
+    Integer versionNumber;
 }

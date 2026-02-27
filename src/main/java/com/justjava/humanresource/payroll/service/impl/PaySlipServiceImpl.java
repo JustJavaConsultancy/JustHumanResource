@@ -1,18 +1,21 @@
 package com.justjava.humanresource.payroll.service.impl;
 
 
+import com.justjava.humanresource.core.enums.PayrollRunStatus;
+import com.justjava.humanresource.hr.entity.Employee;
 import com.justjava.humanresource.payroll.entity.PaySlip;
 import com.justjava.humanresource.payroll.entity.PaySlipDTO;
+import com.justjava.humanresource.payroll.entity.PayrollPeriod;
 import com.justjava.humanresource.payroll.entity.PayrollRun;
+import com.justjava.humanresource.payroll.enums.PayrollPeriodStatus;
 import com.justjava.humanresource.payroll.repositories.PaySlipRepository;
+import com.justjava.humanresource.payroll.repositories.PayrollPeriodRepository;
 import com.justjava.humanresource.payroll.repositories.PayrollRunRepository;
 import com.justjava.humanresource.payroll.service.PaySlipService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.YearMonth;
 import java.util.List;
 
 @Service
@@ -21,79 +24,174 @@ public class PaySlipServiceImpl implements PaySlipService {
 
     private final PayrollRunRepository payrollRunRepository;
     private final PaySlipRepository paySlipRepository;
+    private final PayrollPeriodRepository payrollPeriodRepository;
+
+    /* ============================================================
+       GENERATE PAYSLIP (IDEMPOTENT + POSTED ONLY)
+       ============================================================ */
 
     @Override
+    @Transactional
     public void generatePaySlip(Long payrollRunId) {
 
         PayrollRun run = payrollRunRepository
                 .findById(payrollRunId)
-                .orElseThrow();
+                .orElseThrow(() ->
+                        new IllegalStateException("PayrollRun not found."));
 
-        // In real impl, aggregate PayrollLineItem
-        BigDecimal gross = BigDecimal.ZERO;
-        BigDecimal deductions = BigDecimal.ZERO;
+        if (run.getStatus() != PayrollRunStatus.POSTED) {
+            throw new IllegalStateException(
+                    "Payslip can only be generated for POSTED payroll run.");
+        }
+
+        // Prevent duplicate payslip for same run version
+        boolean exists =
+                paySlipRepository.existsByPayrollRunIdAndVersionNumber(
+                        payrollRunId,
+                        run.getVersionNumber()
+                );
+
+        if (exists) {
+            return; // idempotent behavior
+        }
 
         PaySlip slip = new PaySlip();
         slip.setPayrollRun(run);
+        slip.setEmployee(run.getEmployee());
         slip.setPayDate(run.getPayrollDate());
         slip.setGrossPay(run.getGrossPay());
-        slip.setTotalDeductions(deductions);
-        slip.setVersionNumber(run.getVersionNumber());
-        //slip.setNetPay(gross.subtract(deductions));
+        slip.setTotalDeductions(run.getTotalDeductions());
         slip.setNetPay(run.getNetPay());
-        slip.setEmployee(run.getEmployee());
+        slip.setVersionNumber(run.getVersionNumber());
 
         paySlipRepository.save(slip);
     }
+
     /* ============================================================
-       GET ALL FOR EMPLOYEE
+       GET CURRENT PERIOD PAYSLIPS (OPEN OR LOCKED)
+       ============================================================ */
+
+    @Override
+    public List<PaySlipDTO> getCurrentPeriodPaySlips(Long companyId) {
+
+        PayrollPeriod current =
+                payrollPeriodRepository
+                        .findByCompanyIdAndStatusIn(
+                                companyId,
+                                List.of(
+                                        PayrollPeriodStatus.OPEN,
+                                        PayrollPeriodStatus.LOCKED
+                                )
+                        )
+                        .orElseThrow(() ->
+                                new IllegalStateException(
+                                        "No active payroll period found."));
+
+        return paySlipRepository
+                .findLatestForCompanyAndPeriod(
+                        companyId,
+                        current.getPeriodStart(),
+                        current.getPeriodEnd()
+                )
+                .stream()
+                .map(this::mapToDto)
+                .toList();
+    }
+
+    /* ============================================================
+       GET ALL PAYSLIPS FOR CLOSED PERIODS
+       ============================================================ */
+
+    @Override
+    public List<PaySlipDTO> getAllClosedPeriodPaySlips(Long companyId) {
+
+        return paySlipRepository
+                .findLatestForCompanyByPeriodStatus(companyId,PayrollPeriodStatus.CLOSED)
+                .stream()
+                .map(this::mapToDto)
+                .toList();
+    }
+
+    /* ============================================================
+       GET EMPLOYEE PAYSLIPS (ALL CLOSED + CURRENT)
        ============================================================ */
 
     @Override
     public List<PaySlipDTO> getPaySlipsByEmployee(Long employeeId) {
 
         return paySlipRepository
-                .findByEmployee_Id(employeeId)
+                .findLatestByEmployee(employeeId)
                 .stream()
                 .map(this::mapToDto)
                 .toList();
     }
-
-    /* ============================================================
-       GET ALL FOR PERIOD
-       ============================================================ */
-
     @Override
-    public List<PaySlipDTO> getPaySlipsForPeriod(YearMonth period) {
-
-        LocalDate start = period.atDay(1);
-        LocalDate end = period.atEndOfMonth();
-
-        return paySlipRepository
-                .findByPayDateBetween(start, end)
-                .stream()
-                .map(this::mapToDto)
-                .toList();
-    }
-
-    /* ============================================================
-       GET EMPLOYEE FOR PERIOD
-       ============================================================ */
-
-    @Override
-    public List<PaySlipDTO> getEmployeePaySlipsForPeriod(
-            Long employeeId,
-            YearMonth period
+    public List<PaySlipDTO> getPaySlipsForPeriod(
+            Long companyId,
+            Long periodId
     ) {
 
-        LocalDate start = period.atDay(1);
-        LocalDate end = period.atEndOfMonth();
+        PayrollPeriod period = payrollPeriodRepository
+                .findById(periodId)
+                .orElseThrow(() ->
+                        new IllegalStateException("Payroll period not found."));
+
+        // 🔐 Safety: Ensure period belongs to company
+        if (!period.getCompanyId().equals(companyId)) {
+            throw new IllegalStateException(
+                    "Period does not belong to specified company.");
+        }
 
         return paySlipRepository
-                .findByEmployee_IdAndPayDateBetween(
+                .findLatestForCompanyAndPeriod(
+                        companyId,
+                        period.getPeriodStart(),
+                        period.getPeriodEnd()
+                )
+                .stream()
+                .map(this::mapToDto)
+                .toList();
+    }
+    @Override
+    public List<PaySlipDTO> getEmployeePaySlipsForPeriod(
+            Long companyId,
+            Long employeeId,
+            Long periodId
+    ) {
+
+        PayrollPeriod period = payrollPeriodRepository
+                .findById(periodId)
+                .orElseThrow(() ->
+                        new IllegalStateException("Payroll period not found."));
+
+        if (!period.getCompanyId().equals(companyId)) {
+            throw new IllegalStateException(
+                    "Period does not belong to specified company.");
+        }
+
+        Employee employee = payrollRunRepository
+                .findTopByEmployeeIdAndPayrollDateOrderByVersionNumberDesc(
                         employeeId,
-                        start,
-                        end
+                        period.getPeriodStart()
+                )
+                .map(PayrollRun::getEmployee)
+                .orElseThrow(() ->
+                        new IllegalStateException("Employee not found."));
+
+        if (!employee.getDepartment()
+                .getCompany()
+                .getId()
+                .equals(companyId)) {
+
+            throw new IllegalStateException(
+                    "Employee does not belong to specified company.");
+        }
+
+        return paySlipRepository
+                .findLatestByEmployeeAndPeriod(
+                        employeeId,
+                        period.getPeriodStart(),
+                        period.getPeriodEnd()
                 )
                 .stream()
                 .map(this::mapToDto)
@@ -101,54 +199,89 @@ public class PaySlipServiceImpl implements PaySlipService {
     }
     @Override
     public PaySlipDTO getLatestPaySlipForEmployeeForPeriod(
+            Long companyId,
             Long employeeId,
-            YearMonth period
+            Long periodId
     ) {
 
-        LocalDate start = period.atDay(1);
-        LocalDate end = period.atEndOfMonth();
+        PayrollPeriod period = payrollPeriodRepository
+                .findById(periodId)
+                .orElseThrow(() ->
+                        new IllegalStateException("Payroll period not found."));
+
+        if (!period.getCompanyId().equals(companyId)) {
+            throw new IllegalStateException(
+                    "Period does not belong to specified company.");
+        }
 
         PaySlip slip = paySlipRepository
-                .findLatestByEmployeeAndPeriod(employeeId, start, end)
+                .findLatestByEmployeeAndPeriod(
+                        employeeId,
+                        period.getPeriodStart(),
+                        period.getPeriodEnd()
+                )
                 .orElseThrow(() ->
                         new IllegalStateException(
-                                "No payslip found for employee "
-                                        + employeeId + " for period " + period
-                        )
+                                "No payslip found for employee in this period.")
                 );
+
+        // 🔐 Company safety check
+        if (!slip.getEmployee()
+                .getDepartment()
+                .getCompany()
+                .getId()
+                .equals(companyId)) {
+
+            throw new IllegalStateException(
+                    "Employee does not belong to specified company.");
+        }
 
         return mapToDto(slip);
     }
     @Override
     public List<PaySlipDTO> getLatestPaySlipsForPeriod(
-            YearMonth period
+            Long companyId,
+            Long periodId
     ) {
 
-        LocalDate start = period.atDay(1);
-        LocalDate end = period.atEndOfMonth();
+        PayrollPeriod period = payrollPeriodRepository
+                .findById(periodId)
+                .orElseThrow(() ->
+                        new IllegalStateException("Payroll period not found."));
+
+        if (!period.getCompanyId().equals(companyId)) {
+            throw new IllegalStateException(
+                    "Period does not belong to specified company.");
+        }
 
         return paySlipRepository
-                .findLatestForAllEmployeesForPeriod(start, end)
+                .findLatestForCompanyAndPeriod(
+                        companyId,
+                        period.getPeriodStart(),
+                        period.getPeriodEnd()
+                )
                 .stream()
                 .map(this::mapToDto)
                 .toList();
     }
-
     /* ============================================================
-       INTERNAL MAPPER
+       INTERNAL DTO MAPPER
        ============================================================ */
 
     private PaySlipDTO mapToDto(PaySlip paySlip) {
 
+        Employee employee = paySlip.getEmployee();
+
         return PaySlipDTO.builder()
                 .id(paySlip.getId())
-                .employeeId(paySlip.getEmployee().getId())
+                .employeeId(employee.getId())
+                .employeeName(employee.getFullName())
                 .payrollRunId(paySlip.getPayrollRun().getId())
                 .payDate(paySlip.getPayDate())
                 .grossPay(paySlip.getGrossPay())
                 .totalDeductions(paySlip.getTotalDeductions())
                 .netPay(paySlip.getNetPay())
-                .employeeName(paySlip.getEmployee().getFullName())
+                .versionNumber(paySlip.getVersionNumber())
                 .build();
     }
 }

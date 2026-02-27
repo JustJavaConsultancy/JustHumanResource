@@ -49,4 +49,8 @@ public interface PayrollPeriodRepository
             LocalDate periodStart,
             LocalDate periodEnd
     );
+    Optional<PayrollPeriod> findByCompanyIdAndStatusIn(
+            Long companyId,
+            List<PayrollPeriodStatus> statuses
+    );
 }

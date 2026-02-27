@@ -197,7 +197,7 @@ public class PayrollController {
 
     @GetMapping("/payroll/employee-payroll")
     public String getEmployeePayroll(Model model) {
-        List<PaySlipDTO> paySlips = paySlipService.getPaySlipsForPeriod(YearMonth.now());
+        List<PaySlipDTO> paySlips = paySlipService.getCurrentPeriodPaySlips(1L);
         paySlips.forEach(
                 paySlip -> System.out.println(" Pay Slip for Employee ==="+paySlip.getEmployeeName()
                         +" the Pay Period ==="+paySlip.getPayDate()

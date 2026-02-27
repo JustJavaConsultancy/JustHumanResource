@@ -10,9 +10,23 @@ public interface PaySlipService {
     void generatePaySlip(Long payrollRunId);
     List<PaySlipDTO> getPaySlipsByEmployee(Long employeeId);
 
-    List<PaySlipDTO> getPaySlipsForPeriod(YearMonth period);
+    List<PaySlipDTO> getPaySlipsForPeriod(Long companyId, Long periodId);
 
-    List<PaySlipDTO> getEmployeePaySlipsForPeriod(Long employeeId,YearMonth period);
-    public PaySlipDTO getLatestPaySlipForEmployeeForPeriod(Long employeeId,YearMonth period);
-    public List<PaySlipDTO> getLatestPaySlipsForPeriod(YearMonth period);
+    List<PaySlipDTO> getEmployeePaySlipsForPeriod(
+            Long companyId,
+            Long employeeId,
+            Long periodId
+    );
+    PaySlipDTO getLatestPaySlipForEmployeeForPeriod(
+            Long companyId,
+            Long employeeId,
+            Long periodId
+    );
+    List<PaySlipDTO> getLatestPaySlipsForPeriod(
+            Long companyId,
+            Long periodId
+    );
+    public List<PaySlipDTO> getCurrentPeriodPaySlips(Long companyId);
+    List<PaySlipDTO> getAllClosedPeriodPaySlips(Long companyId);
+    //public List<PaySlipDTO> getEmployeePaySlips(Long employeeId);
 }
