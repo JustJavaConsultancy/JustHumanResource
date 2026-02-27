@@ -28,11 +28,13 @@ public class GenerateJournalDelegate implements JavaDelegate {
                 .orElseThrow(() ->
                         new IllegalStateException("Payroll period not found."));
 
+/*
         if (!period.getCompanyId().equals(companyId)) {
             throw new IllegalStateException(
                     "Period does not belong to provided company."
             );
         }
+*/
 
         if (period.getStatus() != PayrollPeriodStatus.LOCKED) {
             throw new IllegalStateException(
