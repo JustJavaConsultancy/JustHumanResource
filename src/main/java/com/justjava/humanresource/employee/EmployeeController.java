@@ -12,6 +12,8 @@ import com.justjava.humanresource.hr.service.EmployeeService;
 import com.justjava.humanresource.hr.service.SetupService;
 import com.justjava.humanresource.onboarding.dto.StartEmployeeOnboardingCommand;
 import com.justjava.humanresource.onboarding.service.EmployeeOnboardingService;
+import com.justjava.humanresource.payroll.entity.PaySlipDTO;
+import com.justjava.humanresource.payroll.service.PaySlipService;
 import com.justjava.humanresource.payroll.service.PayrollSetupService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -34,8 +36,12 @@ public class EmployeeController {
 
     @Autowired
     private EmployeeService employeeService;
+
     @Autowired
     private PayrollSetupService payrollSetupService;
+
+    @Autowired
+    PaySlipService paySlipService;
 
     @GetMapping("/employees")
     public String getEmployees(Model model) {
@@ -80,9 +86,16 @@ public class EmployeeController {
     @GetMapping("employee/profile")
     public String getEmployeeProfile(Model model) {
         String email = (String) authenticationManager.get("email");
+        // implement your own logic
+
+
         Employee loginEmployee = employeeService.getByEmail(email);
+        Employee employee = employeeService.getEmployeeWithBankDetails(loginEmployee.getId());
+        PaySlipDTO latestPaySlip = paySlipService.getCurrentPeriodPaySlipForEmployee(1l,loginEmployee.getId());
+        System.out.println("Latest Pay Slip: " + latestPaySlip);
         System.out.println("Logged in employee: " + loginEmployee);
-        model.addAttribute("employee", loginEmployee);
+        model.addAttribute("employee", employee);
+        model.addAttribute("latestPaySlip", latestPaySlip);
         model.addAttribute("title", "Employee Profile");
         model.addAttribute("subTitle", "View and update your personal information, job details, and performance data");
         return "employees/profile";
@@ -127,6 +140,11 @@ public class EmployeeController {
     @PostMapping("/update-personal-info")
     public String updatePersonalInfo(@ModelAttribute EmployeeDTO dto) {
         employeeService.updatePersonalInfo(dto.getId(), dto);
+        return "redirect:/employee/profile";
+    }
+    @PostMapping("/update/bank-info")
+    public String updateBankInfo(@ModelAttribute EmployeeDTO dto) {
+        employeeService.updateBankDetails(dto.getId(), dto);
         return "redirect:/employee/profile";
     }
 }

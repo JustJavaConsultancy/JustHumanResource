@@ -97,6 +97,45 @@ public class PaySlipServiceImpl implements PaySlipService {
                 .map(this::mapToDto)
                 .toList();
     }
+    @Override
+    public PaySlipDTO getCurrentPeriodPaySlipForEmployee(Long companyId, Long employeeId) {
+
+        PayrollPeriod current =
+                payrollPeriodRepository
+                        .findByCompanyIdAndStatusIn(
+                                companyId,
+                                List.of(
+                                        PayrollPeriodStatus.OPEN,
+                                        PayrollPeriodStatus.LOCKED
+                                )
+                        )
+                        .orElseThrow(() ->
+                                new IllegalStateException(
+                                        "No active payroll period found."));
+
+        PaySlip slip = paySlipRepository
+                .findLatestByEmployeeAndPeriod(
+                        employeeId,
+                        current.getPeriodStart(),
+                        current.getPeriodEnd()
+                )
+                .orElseThrow(() ->
+                        new IllegalStateException(
+                                "No payslip found for employee in current period.")
+                );
+
+        if (!slip.getEmployee()
+                .getDepartment()
+                .getCompany()
+                .getId()
+                .equals(companyId)) {
+
+            throw new IllegalStateException(
+                    "Employee does not belong to specified company.");
+        }
+
+        return mapToDto(slip);
+    }
 
     /* ============================================================
        GET ALL PAYSLIPS FOR CLOSED PERIODS

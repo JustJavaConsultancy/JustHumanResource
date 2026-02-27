@@ -7,6 +7,7 @@ import com.justjava.humanresource.dispatcher.PayrollMessageDispatcher;
 import com.justjava.humanresource.hr.dto.EmployeeDTO;
 import com.justjava.humanresource.hr.entity.*;
 import com.justjava.humanresource.hr.mapper.EmployeeMapper;
+import com.justjava.humanresource.hr.repository.EmployeeBankDetailRepository;
 import com.justjava.humanresource.hr.repository.EmployeePositionHistoryRepository;
 import com.justjava.humanresource.hr.repository.EmployeeRepository;
 import com.justjava.humanresource.hr.repository.JobStepRepository;
@@ -30,6 +31,7 @@ public class EmployeeServiceImpl implements EmployeeService {
     private final EmployeeMapper employeeMapper;
     private final PayGroupRepository payGroupRepository;
     private final EmployeePositionHistoryRepository employeePositionHistoryRepository;
+    private final EmployeeBankDetailRepository bankDetailRepository;
 
     /* =========================
      * EXISTING METHODS (unchanged)
@@ -176,7 +178,36 @@ public class EmployeeServiceImpl implements EmployeeService {
         Employee saved = employeeRepository.save(existing);
         return employeeMapper.toDto(saved);
     }
+    @Transactional
+    @Override
+    public EmployeeDTO updateBankDetails(Long employeeId, EmployeeDTO dto) {
+        Employee employee = getById(employeeId);
 
+        // If the DTO contains bank data, proceed
+        if (hasBankData(dto)) {
+            // Deactivate all currently active bank details for this employee
+            bankDetailRepository.deactivateAllByEmployeeId(employeeId);
+
+            // Create a new bank detail record
+            EmployeeBankDetail newBank = EmployeeBankDetail.builder()
+                    .employee(employee)
+                    .bankName(dto.getBankName())
+                    .accountName(dto.getAccountName())
+                    .accountNumber(dto.getAccountNumber())
+                    .effectiveFrom(LocalDate.now())
+                    .status(RecordStatus.ACTIVE)
+                    .primaryAccount(true) // assume this is the primary account
+                    .build();
+            bankDetailRepository.save(newBank);
+        } else {
+            // If no bank data provided, you could optionally delete all bank details
+            // ,but we'll leave as is (no change) – or you could deactivate all if you want to clear
+            // bankDetailRepository.deactivateAllByEmployeeId(employeeId);
+        }
+
+        // Return updated DTO (the mapper will pick up the new active bank)
+        return employeeMapper.toDto(employee);
+    }
     @Override
     public String generateInitialPassword(Employee employee) {
         return "password!";
@@ -198,6 +229,16 @@ public class EmployeeServiceImpl implements EmployeeService {
                 || dto.getEmergencyRelationship() != null && !dto.getEmergencyRelationship().trim().isEmpty()
                 || dto.getEmergencyPhoneNumber() != null && !dto.getEmergencyPhoneNumber().trim().isEmpty()
                 || dto.getEmergencyAlternativePhoneNumber() != null && !dto.getEmergencyAlternativePhoneNumber().trim().isEmpty();
+    }
+    private boolean hasBankData(EmployeeDTO dto) {
+        return dto.getBankName() != null && !dto.getBankName().trim().isEmpty()
+                || dto.getAccountName() != null && !dto.getAccountName().trim().isEmpty()
+                || dto.getAccountNumber() != null && !dto.getAccountNumber().trim().isEmpty();
+    }
+    @Override
+    public Employee getEmployeeWithBankDetails(Long id) {
+        return employeeRepository.findByIdWithBankDetails(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Employee", id));
     }
 
     @Override

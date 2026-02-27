@@ -20,7 +20,7 @@ public class EmployeeDTO {
     private boolean payrollEnabled;
     private boolean kpiEnabled;
 
-    // Emergency contact fields
+    // Emergency contact fields (flat)
     private String emergencyContactName;
     private String emergencyRelationship;
     private String emergencyPhoneNumber;
@@ -31,5 +31,13 @@ public class EmployeeDTO {
     private String gender;
     private String maritalStatus;
     private String residentialAddress;
-    private String mission;   // new
+    private String mission;
+
+    // Bank details fields (flat – current active bank)
+    private String bankName;
+    private String accountName;
+    private String accountNumber;
+
+    // We might also need an id to identify the bank detail record when updating (optional)
+    private Long bankDetailId;
 }

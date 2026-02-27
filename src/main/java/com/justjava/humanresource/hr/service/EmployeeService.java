@@ -21,9 +21,9 @@ public interface EmployeeService {
     Employee getByEmail(String email);
     EmployeeDTO updateEmployee(Long employeeId, EmployeeDTO employee);
     EmployeeDTO updatePersonalInfo(Long employeeId, EmployeeDTO dto);
-
+    EmployeeDTO updateBankDetails(Long employeeId, EmployeeDTO dto);
     Employee getById(Long id);
-
+    Employee getEmployeeWithBankDetails(Long id);
 
     /* =========================
      * REFINED, EXPLICIT INTENT
