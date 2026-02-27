@@ -240,7 +240,7 @@ public class PayrollController {
     }
     @PostMapping("/setup/payroll/close")
     public String closePayroll() {
-        payrollPeriodService.closeAndOpenNext(1L);
-        return "redirect:/payroll";
+        payrollPeriodService.initiatePeriodCloseApproval(1L);
+        return "redirect:/payroll/employee-payroll";
     }
 }
