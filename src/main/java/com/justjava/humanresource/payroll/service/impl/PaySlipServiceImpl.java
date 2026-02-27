@@ -152,6 +152,20 @@ public class PaySlipServiceImpl implements PaySlipService {
                 .map(this::mapToDto)
                 .toList();
     }
+    @Override
+    public PaySlipDTO getLatestClosedPeriodPaySlipForEmployee(Long companyId, Long employeeId) {
+
+        PaySlip slip = paySlipRepository
+                .findLatestForCompanyByPeriodStatus(companyId,PayrollPeriodStatus.CLOSED)
+                .stream()
+                .filter(s -> s.getEmployee().getId().equals(employeeId))
+                .findFirst()
+                .orElseThrow(() ->
+                        new IllegalStateException(
+                                "No payslip found for employee in closed periods.")
+                );
+        return mapToDto(slip);
+    }
 
     /* ============================================================
        GET EMPLOYEE PAYSLIPS (ALL CLOSED + CURRENT)
