@@ -29,7 +29,7 @@ public interface PayrollPeriodService {
      * Moves OPEN → LOCKED.
      * No recalculation allowed after this.
      */
-    void lockPeriod(Long companyId);
+    //void lockPeriod(Long companyId);
 
     /**
      * Moves OPEN → CLOSED

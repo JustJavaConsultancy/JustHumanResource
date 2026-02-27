@@ -66,9 +66,9 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
        LOCK PERIOD (NO MORE RECALCULATION)
        ============================================================ */
 
-    @Override
-    @Transactional
-    public void lockPeriod(Long companyId) {
+    //@Override
+    //@Transactional
+    private void lockPeriod(Long companyId) {
 
         PayrollPeriod open = getOpenPeriod(companyId);
         open.setStatus(PayrollPeriodStatus.LOCKED);
@@ -201,10 +201,46 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
        FLOWABLE APPROVAL
        ============================================================ */
 
-    @Override
+    @Transactional
     public void initiatePeriodCloseApproval(Long companyId) {
 
         PayrollPeriod open = getOpenPeriod(companyId);
+
+        if (open.getStatus() != PayrollPeriodStatus.OPEN) {
+            throw new IllegalStateException(
+                    "Only OPEN period can be submitted for approval."
+            );
+        }
+
+    /* ============================================================
+       1️⃣ Ensure all payroll runs are POSTED (company scoped)
+       ============================================================ */
+
+        long incomplete =
+                payrollRunRepository
+                        .countByEmployee_Department_Company_IdAndPayrollDateBetweenAndStatusNot(
+                                companyId,
+                                open.getPeriodStart(),
+                                open.getPeriodEnd(),
+                                PayrollRunStatus.POSTED
+                        );
+
+        if (incomplete > 0) {
+            throw new IllegalStateException(
+                    "Cannot submit period for approval. Some payroll runs are not POSTED."
+            );
+        }
+
+    /* ============================================================
+       2️⃣ Lock period BEFORE starting workflow
+       ============================================================ */
+
+        open.setStatus(PayrollPeriodStatus.LOCKED);
+        repository.save(open);
+
+    /* ============================================================
+       3️⃣ Start approval workflow
+       ============================================================ */
 
         runtimeService.startProcessInstanceByKey(
                 "payrollPeriodCloseProcess",

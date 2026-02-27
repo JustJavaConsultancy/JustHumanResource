@@ -185,7 +185,6 @@ public class EmployeeServiceImpl implements EmployeeService {
     /* =========================
      * INTERNAL HELPERS
      * ========================= */
-    private Employee getById(Long employeeId) {
 
 
     @Override

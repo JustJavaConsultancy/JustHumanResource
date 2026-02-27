@@ -91,7 +91,6 @@ public class Employee extends BaseEntity {
     private String mission;
 
     // -------------------------------------------------------------
-
     public String getFullName() {
         return firstName + " " + lastName;
     }
