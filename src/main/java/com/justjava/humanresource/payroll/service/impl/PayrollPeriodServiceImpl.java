@@ -202,7 +202,7 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
         runtimeService.startProcessInstanceByKey(
                 "payrollPeriodCloseProcess",
                 Map.of(
-                        "companyId", companyId,
+                        "companyId", open.getCompanyId(),
                         "periodId", open.getId(),
                         "periodStart", open.getPeriodStart(),
                         "periodEnd", open.getPeriodEnd()
