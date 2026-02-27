@@ -11,27 +11,21 @@ import java.util.List;
 @Value
 @Builder
 public class PaySlipDTO {
-
     Long id;
     Long employeeId;
+    String employeeName;
     Long payrollRunId;
     LocalDate payDate;
-
-    String employeeName;
-
     Integer versionNumber;
 
     /* ======================
-       SUMMARY
+       SUMMARY SNAPSHOT
        ====================== */
 
     BigDecimal basicSalary;
     BigDecimal grossPay;
     BigDecimal totalDeductions;
     BigDecimal netPay;
-
-
-    PayrollRunStatus status;
 
     /* ======================
        BREAKDOWN
@@ -41,12 +35,11 @@ public class PaySlipDTO {
     List<PaySlipLineDTO> deductions;
 
     /* ======================
-       STATUTORY DETAILS
+       STATUTORY SNAPSHOT
        ====================== */
 
-    BigDecimal payeAmount;
-    String taxBandSummary;
-
+    String appliedTaxBandSummary;
+    String appliedPensionSchemeName;
     BigDecimal pensionAmount;
-    String pensionSchemeName;
+    PayrollRunStatus status;
 }

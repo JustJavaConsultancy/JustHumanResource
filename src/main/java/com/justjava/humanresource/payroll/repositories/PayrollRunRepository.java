@@ -107,7 +107,32 @@ public interface PayrollRunRepository
             @Param("status") PayrollRunStatus status
     );
 
-
+    @Query("""
+    SELECT COUNT(p)
+    FROM PayrollRun p
+    WHERE p.employee.department.company.id = :companyId
+      AND p.payrollDate BETWEEN :start AND :end
+      AND p.status <> :status
+""")
+    long countByCompanyIdAndPayrollDateBetweenAndStatusNot(
+            @Param("companyId") Long companyId,
+            @Param("start") LocalDate start,
+            @Param("end") LocalDate end,
+            @Param("status") PayrollRunStatus status
+    );
+    @Query("""
+    SELECT COUNT(p)
+    FROM PayrollRun p
+    WHERE p.employee.department.company.id = :companyId
+      AND p.payrollDate BETWEEN :start AND :end
+      AND p.status = :status
+""")
+    long countByCompanyIdAndPayrollDateBetweenAndStatus(
+            @Param("companyId") Long companyId,
+            @Param("start") LocalDate start,
+            @Param("end") LocalDate end,
+            @Param("status") PayrollRunStatus status
+    );
 
 
 

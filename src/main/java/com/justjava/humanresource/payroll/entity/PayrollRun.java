@@ -92,5 +92,6 @@ public class PayrollRun extends BaseEntity {
 
     @Column(nullable = false)
     private Integer versionNumber = 1;
-
+    private String appliedTaxBandSummary;
+    private String appliedPensionSchemeName;
 }
