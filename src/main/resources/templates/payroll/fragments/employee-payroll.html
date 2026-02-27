@@ -4,311 +4,725 @@
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layout}">
 <head>
-  <!-- Google Fonts for Inter (added for consistent typography) -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
-  <script>
-    tailwind.config = {
-        darkMode: "class",
-        theme: {
-            extend: {
-                colors: {
-                    primary: { 50: '#eff6ff', 100: '#dbeafe', 200: '#bfdbfe', 300: '#93c5fd', 400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8', 800: '#1e40af', 900: '#1e3a8a' },
-                    secondary: { 50: '#f8fafc', 100: '#f1f5f9', 200: '#e2e8f0', 300: '#cbd5e1', 400: '#94a3b8', 500: '#64748b', 600: '#475569', 700: '#334155', 800: '#1e293b', 900: '#0f172a' }
-                },
-                fontFamily: { 'sans': ['Inter', 'system-ui', '-apple-system', 'sans-serif'] },
-                borderRadius: { 'xl': '1rem', '2xl': '1.5rem' }
-            }
-        }
-    };
-  </script>
+
   <style>
-    * { font-family: 'Inter', sans-serif; }
-    body { overflow-x: hidden; }
-    .sidebar-item { transition: all 0.2s ease; position: relative; }
-    .sidebar-item.active { background-color: rgba(59, 130, 246, 0.1); color: #3b82f6; border-left: 3px solid #3b82f6; }
-    .sidebar-item.active .material-icons-round { color: #3b82f6; }
-    .sidebar-item:hover:not(.active) { background-color: rgba(59, 130, 246, 0.05); }
-    .dark .sidebar-item.active { background-color: rgba(59, 130, 246, 0.2); }
-    .badge { padding: 2px 8px; font-size: 0.75rem; font-weight: 500; border-radius: 9999px; }
-    .badge-success { background-color: #dcfce7; color: #16a34a; }
-    .badge-warning { background-color: #fef3c7; color: #d97706; }
-    .badge-error { background-color: #fee2e2; color: #dc2626; }
-    .badge-info { background-color: #dbeafe; color: #2563eb; }
-    .badge-purple { background-color: #f3e8ff; color: #9333ea; }
-    .badge-yellow { background-color: #fef3c7; color: #d97706; }
-    .badge-gray { background-color: #f1f5f9; color: #64748b; }
-    .form-input { border: 1px solid #e2e8f0; border-radius: 0.5rem; padding: 0.75rem; width: 100%; transition: border-color 0.2s; }
-    .form-input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
-    .modal-backdrop { background-color: rgba(0, 0, 0, 0.5); backdrop-filter: blur(4px); }
-    .sidebar-container { position: fixed; top: 0; left: 0; height: 100vh; width: 16rem; z-index: 40; overflow-y: auto; }
-    .main-content { margin-left: 16rem; width: calc(100% - 16rem); min-height: 100vh; }
-    @media (max-width: 1023px) {
-        .sidebar-container { transform: translateX(-100%); }
-        .sidebar-container.open { transform: translateX(0); }
-        .main-content { margin-left: 0; width: 100%; }
+    /* ---- breadcrumb ---- */
+    .breadcrumb-link {
+      display: inline-flex; align-items: center; gap: 5px;
+      color: #64748b; font-size: 0.8125rem; font-weight: 500;
+      transition: color 0.15s;
     }
-    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+    .breadcrumb-link:hover { color: #2563eb; }
+
+    /* ---- section labels ---- */
+    .period-label {
+      font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.12em;
+      text-transform: uppercase; color: #94a3b8;
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 1rem;
+    }
+    .period-label::after {
+      content: ''; flex: 1; height: 1px; background: #e2e8f0;
+    }
+
+    /* ---- current period card ---- */
+    .current-period-card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 1px 4px rgba(15,23,42,0.04), 0 4px 20px rgba(15,23,42,0.04);
+    }
+    .current-period-header {
+      background: linear-gradient(135deg, #1e40af 0%, #2563eb 60%, #3b82f6 100%);
+      padding: 1.5rem 2rem;
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;
+    }
+    .period-meta-pill {
+      background: rgba(255,255,255,0.15);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,0.25);
+      border-radius: 999px;
+      padding: 4px 14px;
+      font-size: 0.78rem; font-weight: 500; color: #fff;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .live-dot { width: 7px; height: 7px; border-radius: 50%; background: #4ade80; animation: pulse-green 1.6s infinite; }
+    @keyframes pulse-green {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(1.3); }
+    }
+
+    /* ---- stat chips in header ---- */
+    .header-stat {
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 10px;
+      padding: 0.6rem 1.1rem;
+      color: #fff;
+    }
+    .header-stat .stat-val { font-size: 1.15rem; font-weight: 700; line-height: 1.2; }
+    .header-stat .stat-lbl { font-size: 0.7rem; opacity: 0.75; font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; }
+
+    /* ---- filter bar ---- */
+    .filter-bar {
+      padding: 1rem 2rem;
+      background: #f8fafc;
+      border-bottom: 1px solid #e2e8f0;
+      display: flex; align-items: center; flex-wrap: wrap; gap: 0.75rem;
+    }
+    .filter-select {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 0.45rem 0.85rem;
+      font-size: 0.8125rem;
+      color: #334155;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      cursor: pointer;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394a3b8' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      padding-right: 2rem;
+    }
+    .filter-select:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.12); }
+
+    /* ---- main table ---- */
+    .payroll-table { width: 100%; border-collapse: collapse; }
+    .payroll-table thead tr {
+      background: #f8fafc;
+      border-top: 1px solid #e2e8f0;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .payroll-table th {
+      padding: 0.65rem 1.5rem;
+      text-align: left;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #94a3b8;
+      white-space: nowrap;
+    }
+    .payroll-table tbody tr {
+      border-bottom: 1px solid #f1f5f9;
+      transition: background 0.15s;
+    }
+    .payroll-table tbody tr:hover { background: #f8fafc; }
+    .payroll-table td {
+      padding: 1rem 1.5rem;
+      font-size: 0.875rem;
+      color: #334155;
+      white-space: nowrap;
+    }
+    .payroll-table td.mono { font-family: ui-monospace, 'Cascadia Code', Consolas, monospace; font-size: 0.8125rem; }
+
+    /* ---- avatar ---- */
+    .emp-avatar {
+      width: 34px; height: 34px; border-radius: 50%;
+      background: linear-gradient(135deg, #2563eb, #7c3aed);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.8rem; font-weight: 700; color: #fff;
+      flex-shrink: 0;
+    }
+
+    /* ---- status badges ---- */
+    .status-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 10px; border-radius: 999px;
+      font-size: 0.72rem; font-weight: 600;
+    }
+    .status-badge .dot { width: 6px; height: 6px; border-radius: 50%; }
+    .status-processed { background: #dcfce7; color: #15803d; }
+    .status-processed .dot { background: #16a34a; }
+    .status-pending { background: #fef3c7; color: #b45309; }
+    .status-pending .dot { background: #d97706; }
+    .status-failed { background: #fee2e2; color: #dc2626; }
+    .status-failed .dot { background: #dc2626; }
+    .status-draft { background: #f1f5f9; color: #64748b; }
+    .status-draft .dot { background: #94a3b8; }
+
+    /* ---- amount ---- */
+    .amount-positive { color: #1e293b; font-weight: 600; }
+    .amount-deduct { color: #dc2626; font-weight: 500; }
+
+    /* ---- download btn ---- */
+    .dl-btn {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 5px 12px; border-radius: 7px;
+      font-size: 0.78rem; font-weight: 600;
+      color: #2563eb;
+      border: 1px solid #bfdbfe;
+      background: #eff6ff;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .dl-btn:hover { background: #2563eb; color: #fff; border-color: #2563eb; }
+
+    /* ---- past periods accordion ---- */
+    .past-period-card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      overflow: hidden;
+      margin-bottom: 0.875rem;
+      box-shadow: 0 1px 3px rgba(15,23,42,0.04);
+    }
+    .past-period-header-btn {
+      width: 100%; padding: 1rem 1.5rem;
+      display: flex; align-items: center; justify-content: space-between;
+      background: none; border: none; cursor: pointer;
+      transition: background 0.15s;
+    }
+    .past-period-header-btn:hover { background: #f8fafc; }
+    .past-period-body { display: none; }
+    .past-period-body.open { display: block; }
+    .chevron { transition: transform 0.25s; color: #94a3b8; }
+    .chevron.open { transform: rotate(180deg); }
+
+    /* ---- period date range ---- */
+    .date-range-tag {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 0.78rem; color: #64748b; font-family: ui-monospace, Consolas, monospace;
+    }
+    .date-sep { color: #cbd5e1; }
+
+    /* ---- totals row ---- */
+    .totals-row { background: #f8fafc !important; }
+    .totals-row td { font-weight: 700; color: #1e293b; border-top: 2px solid #e2e8f0; }
+
+    /* ---- scrollbar ---- */
+    .custom-scrollbar::-webkit-scrollbar { height: 5px; width: 5px; }
     .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 3px; }
-    .dark .custom-scrollbar::-webkit-scrollbar-track { background: #1e293b; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-    .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; }
-    .allowance-badge { background-color: #dcfce7; color: #16a34a; border: 1px solid #86efac; }
-    .deduction-badge { background-color: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; }
-    .payroll-card { transition: all 0.2s ease; border: 1px solid #e5e7eb; }
-    .payroll-card:hover { transform: translateY(-2px); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); }
-    .dark .payroll-card { border-color: #374151; }
-    .dark .payroll-card:hover { box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3); }
-    .taxable-badge { background-color: #fef3c7; color: #d97706; font-size: 0.7rem; padding: 1px 6px; border-radius: 4px; }
-    .statutory-badge { background-color: #dbeafe; color: #2563eb; font-size: 0.7rem; padding: 1px 6px; border-radius: 4px; }
-    .grade-badge { padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 500; }
-    .grade-1 { background-color: #dbeafe; color: #1e40af; }
-    .grade-2 { background-color: #dcfce7; color: #166534; }
-    .grade-3 { background-color: #f0f9ff; color: #0c4a6e; }
-    .grade-4 { background-color: #fef3c7; color: #92400e; }
-    .grade-5 { background-color: #f3e8ff; color: #5b21b6; }
-    .grade-6 { background-color: #fce7f3; color: #9d174d; }
-    .grade-7 { background-color: #fef3c7; color: #92400e; }
-    /* Back button styling */
-    .back-link {
-        display: inline-flex;
-        align-items: center;
-        color: #4b5563;
-        font-size: 0.875rem;
-        font-weight: 500;
-        padding: 0.375rem 0.75rem;
-        border-radius: 0.375rem;
-        transition: all 0.15s ease;
-        margin-bottom: 1rem;
-    }
-    .back-link:hover {
-        background-color: #f3f4f6;
-        color: #1f2937;
-    }
-    .dark .back-link {
-        color: #9ca3af;
-    }
-    .dark .back-link:hover {
-        background-color: #374151;
-        color: #e5e7eb;
-    }
-    .back-link .material-icons-round {
-        font-size: 1.25rem;
-        margin-right: 0.25rem;
+
+    /* ---- empty ---- */
+    .empty-state { padding: 3rem; text-align: center; color: #94a3b8; }
+    .empty-state i { font-size: 2.5rem; margin-bottom: 0.75rem; display: block; }
+
+    /* ---- responsive ---- */
+    @media (max-width: 768px) {
+      .current-period-header { padding: 1.25rem; }
+      .filter-bar { padding: 0.75rem 1rem; }
+      .payroll-table th, .payroll-table td { padding: 0.75rem 1rem; }
     }
   </style>
 </head>
 <body>
 <main layout:fragment="content">
-  <div class="mb-4 flex items-center gap-2 text-sm text-slate-500">
-    <a th:href="@{/payroll}" class="hover:text-primary transition-colors flex items-center gap-1">
-      <span class="material-icons-round">arrow_back</span>
-      Back to Dashboard
-    </a>
-    <span class="mx-2">/</span>
-    <span class="font-medium text-slate-900 dark:text-white">Employee Payroll</span>
+
+  <!-- ── Breadcrumb ── -->
+  <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-2 text-sm text-slate-500">
+      <a th:href="@{/payroll}" class="hover:text-primary transition-colors flex items-center gap-1">
+        <span class="material-icons-round">arrow_back</span>
+        Back to Dashboard
+      </a>
+      <span class="mx-2">/</span>
+      <span class="font-medium text-slate-900 dark:text-white">Employee Payroll</span>
+    </div>
   </div>
-  <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 mb-6">
-    <div class="p-4 md:p-6 border-b border-gray-200 dark:border-gray-700">
-      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h3 class="text-lg font-bold">Employee Payroll</h3>
-          <p class="text-sm text-gray-500">View and edit employee payroll information</p>
+
+  <!-- ════════════════════════════════════════
+       CURRENT PAYROLL PERIOD
+  ════════════════════════════════════════ -->
+  <div class="period-label">Current Payroll Period</div>
+
+  <div class="current-period-card mb-8">
+
+    <!-- Header -->
+    <div class="current-period-header">
+      <div>
+        <div class="flex items-center gap-3 mb-1">
+          <h2 class="text-white font-bold text-xl">June 2025 Payroll</h2>
+          <span class="period-meta-pill"><span class="live-dot"></span> Active</span>
         </div>
-        <div class="flex flex-wrap gap-3">
-          <select id="employeeFilter" class="form-input py-2 w-full md:w-40" onchange="filterEmployeePayroll()">
-            <option value="">All Employees</option>
-            <option value="engineering">Engineering</option>
-            <option value="sales">Sales</option>
-            <option value="marketing">Marketing</option>
-          </select>
-          <select id="paygroupFilter" class="form-input py-2 w-full md:w-40" onchange="filterEmployeePayroll()">
-            <option value="">All Paygroups</option>
-            <option value="executive">Executive Level</option>
-            <option value="mid">Mid Level</option>
-            <option value="junior">Junior Level</option>
-          </select>
-          <select id="gradeFilter" class="form-input py-2 w-full md:w-40" onchange="filterEmployeePayroll()">
-            <option value="">All Grades</option>
-            <option value="1">Grade 1</option>
-            <option value="2">Grade 2</option>
-            <option value="3">Grade 3</option>
-            <option value="4">Grade 4</option>
-            <option value="5">Grade 5</option>
-            <option value="6">Grade 6</option>
-            <option value="7">Grade 7</option>
-          </select>
+        <div class="date-range-tag mt-1" style="color:rgba(255,255,255,0.75);">
+          <i class="bi bi-calendar3"></i>
+          <span>01 Jun 2025</span>
+          <span class="date-sep">→</span>
+          <span>30 Jun 2025</span>
+        </div>
+      </div>
+      <div class="flex items-center gap-3 flex-wrap">
+        <div class="header-stat">
+          <div class="stat-val">1</div>
+          <div class="stat-lbl">Employees</div>
+        </div>
+        <div class="header-stat">
+          <div class="stat-val">₦5,000</div>
+          <div class="stat-lbl">Gross Total</div>
+        </div>
+        <div class="header-stat">
+          <div class="stat-val">₦4,750</div>
+          <div class="stat-lbl">Net Total</div>
         </div>
       </div>
     </div>
 
+    <!-- Filters -->
+    <div class="filter-bar">
+      <span class="text-xs font-semibold text-slate-400 uppercase tracking-wide mr-1">Filter:</span>
+      <select class="filter-select" id="employeeFilter" onchange="filterEmployeePayroll()">
+        <option value="">All Departments</option>
+        <option value="engineering">Engineering</option>
+        <option value="sales">Sales</option>
+        <option value="marketing">Marketing</option>
+      </select>
+      <select class="filter-select" id="paygroupFilter" onchange="filterEmployeePayroll()">
+        <option value="">All Paygroups</option>
+        <option value="executive">Executive Level</option>
+        <option value="mid">Mid Level</option>
+        <option value="junior">Junior Level</option>
+      </select>
+      <select class="filter-select" id="gradeFilter" onchange="filterEmployeePayroll()">
+        <option value="">All Grades</option>
+        <option value="1">Grade 1</option>
+        <option value="2">Grade 2</option>
+        <option value="3">Grade 3</option>
+        <option value="4">Grade 4</option>
+        <option value="5">Grade 5</option>
+        <option value="6">Grade 6</option>
+        <option value="7">Grade 7</option>
+      </select>
+      <select class="filter-select" id="statusFilter" onchange="filterEmployeePayroll()">
+        <option value="">All Statuses</option>
+        <option value="processed">Processed</option>
+        <option value="pending">Pending</option>
+        <option value="draft">Draft</option>
+        <option value="failed">Failed</option>
+      </select>
+    </div>
+
+    <!-- Table -->
     <div class="overflow-x-auto custom-scrollbar">
-      <table class="w-full">
-        <thead class="bg-gray-50 dark:bg-gray-750">
+      <table class="payroll-table">
+        <thead>
         <tr>
-          <th class="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Employee</th>
-          <th class="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Pay Day</th>
-          <th class="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Basic Salary</th>
-          <th class="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Deductions</th>
-          <th class="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Net Salary</th>
-          <th class="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+          <th>Employee</th>
+          <th>Period Start</th>
+          <th>Period End</th>
+          <th>Pay Day</th>
+          <th>Basic Salary</th>
+          <th>Deductions</th>
+          <th>Net Salary</th>
+          <th>Status</th>
+          <th>Actions</th>
         </tr>
         </thead>
-        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-        <!-- Data rows -->
-        <tr th:each="payroll : ${paySlips}" class="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200">
-          <td th:text="${payroll.employeeName}" class="px-4 md:px-6 py-4 whitespace-nowrap flex items-center gap-3">
-            Akinrinde Akinkunmi
-          </td>
-          <td th:text="${payroll.payDate}" class="px-4 md:px-6 py-4 whitespace-nowrap">
-            2024-06-30
-          </td>
-          <td th:text="${'₦' + payroll.grossPay}" class="px-4 md:px-6 py-4 whitespace-nowrap">
-            ₦5,000
-          </td>
-          <td th:text="${payroll.totalDeductions}" class="px-4 md:px-6 py-4 whitespace-nowrap">
-            5
-          </td>
-          <td th:text="${'₦' + payroll.netPay}" class="px-4 md:px-6 py-4 whitespace-nowrap">
-            ₦4,750
-          </td>
-          <td class="px-4 md:px-6 py-4 whitespace-nowrap">
-            <!-- Updated download link to call JavaScript function -->
-            <a href="javascript:void(0);"
-               onclick="downloadPayslip(this)"
-               class="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors duration-200">
-              <i class="bi bi-download text-xs"></i>
-              <span>Download payslip</span>
-            </a>
-          </td>
-        </tr>
-
-        <!-- Empty state row (shown when no payslips exist) -->
-        <tr th:if="${#lists.isEmpty(paySlips)}">
-          <td colspan="6" class="px-4 md:px-6 py-12 text-center">
-            <div class="flex flex-col items-center justify-center">
-              <i class="bi bi-inbox text-5xl text-gray-300 dark:text-gray-600 mb-4"></i>
-              <p class="text-base font-medium text-gray-500 dark:text-gray-400">No payslips found</p>
-              <p class="text-sm text-gray-400 dark:text-gray-500 mt-1">There are no payslips to display for the selected period.</p>
+        <tbody id="currentPayrollBody">
+        <tr>
+          <td>
+            <div class="flex items-center gap-3">
+              <div class="emp-avatar">AA</div>
+              <div>
+                <div class="font-semibold text-slate-800 text-sm">Akinrinde Akinkunmi</div>
+                <div class="text-xs text-slate-400">Engineering · Grade 3</div>
+              </div>
             </div>
+          </td>
+          <td class="mono">2025-06-01</td>
+          <td class="mono">2025-06-30</td>
+          <td class="mono">2025-06-30</td>
+          <td class="mono amount-positive">₦5,000</td>
+          <td>
+            <span class="text-sm font-medium text-slate-500">5 <span class="text-xs text-slate-400 font-normal">(items)</span></span>
+          </td>
+          <td class="mono amount-positive">₦4,750</td>
+          <td>
+              <span class="status-badge status-pending">
+                <span class="dot"></span> Pending
+              </span>
+          </td>
+          <td>
+            <button class="dl-btn" onclick="downloadPayslip(this)">
+              <i class="bi bi-download"></i> Payslip
+            </button>
           </td>
         </tr>
         </tbody>
+        <tfoot>
+        <tr class="totals-row">
+          <td colspan="4" class="text-xs uppercase tracking-widest text-slate-400 font-semibold">Period Totals</td>
+          <td class="mono">₦5,000</td>
+          <td class="text-sm">—</td>
+          <td class="mono">₦4,750</td>
+          <td></td>
+          <td></td>
+        </tr>
+        </tfoot>
       </table>
     </div>
   </div>
 
-  <!-- Hidden Payslip Template (will be used for PDF generation) -->
-  <div id="payslip-template" style="display: none;">
-    <div id="payslip-content" class="bg-white p-8 max-w-3xl mx-auto border border-gray-200 rounded-xl shadow-lg" style="font-family: 'Inter', sans-serif;">
-      <!-- Header -->
-      <div class="flex justify-between items-center border-b border-gray-200 pb-4 mb-6">
-        <div>
-          <h1 class="text-2xl font-bold text-primary-600">PAYSLIP</h1>
-          <p class="text-sm text-gray-500">Generated on <span id="payslip-generated-date">2025-03-15</span></p>
+
+  <!-- ════════════════════════════════════════
+       PAST PAYROLL PERIODS
+  ════════════════════════════════════════ -->
+  <div class="period-label" style="margin-top:2.5rem;">Past Payroll Periods</div>
+
+  <!-- Past Period 1 ── May 2025 -->
+  <div class="past-period-card">
+    <button class="past-period-header-btn" onclick="togglePeriod(this)">
+      <div class="flex items-center gap-4">
+        <div class="text-left">
+          <p class="font-bold text-slate-800 text-sm">May 2025 Payroll</p>
+          <div class="date-range-tag mt-0.5">
+            <i class="bi bi-calendar3"></i>
+            01 May 2025 <span class="date-sep">→</span> 31 May 2025
+          </div>
         </div>
-        <div class="text-right">
-          <p class="font-semibold text-gray-800">Your Company Name</p>
-          <p class="text-sm text-gray-500">123 Business St., City</p>
+      </div>
+      <div class="flex items-center gap-4">
+        <div class="text-right hidden sm:block">
+          <p class="text-xs text-slate-400 font-medium uppercase tracking-wide">Net Payroll</p>
+          <p class="font-bold text-slate-800 font-mono text-sm">₦4,750</p>
+        </div>
+        <span class="status-badge status-processed">
+          <span class="dot"></span> Processed
+        </span>
+        <i class="bi bi-chevron-down chevron text-lg"></i>
+      </div>
+    </button>
+    <div class="past-period-body">
+      <div class="overflow-x-auto custom-scrollbar">
+        <table class="payroll-table">
+          <thead>
+          <tr>
+            <th>Employee</th>
+            <th>Period Start</th>
+            <th>Period End</th>
+            <th>Pay Day</th>
+            <th>Basic Salary</th>
+            <th>Deductions</th>
+            <th>Net Salary</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr>
+            <td>
+              <div class="flex items-center gap-3">
+                <div class="emp-avatar">AA</div>
+                <div>
+                  <div class="font-semibold text-slate-800 text-sm">Akinrinde Akinkunmi</div>
+                  <div class="text-xs text-slate-400">Engineering · Grade 3</div>
+                </div>
+              </div>
+            </td>
+            <td class="mono">2025-05-01</td>
+            <td class="mono">2025-05-31</td>
+            <td class="mono">2025-05-30</td>
+            <td class="mono amount-positive">₦5,000</td>
+            <td class="text-sm font-medium text-slate-500">5 <span class="text-xs text-slate-400 font-normal">(items)</span></td>
+            <td class="mono amount-positive">₦4,750</td>
+            <td>
+                <span class="status-badge status-processed">
+                  <span class="dot"></span> Processed
+                </span>
+            </td>
+            <td>
+              <button class="dl-btn" onclick="downloadPayslip(this)">
+                <i class="bi bi-download"></i> Payslip
+              </button>
+            </td>
+          </tr>
+          </tbody>
+          <tfoot>
+          <tr class="totals-row">
+            <td colspan="4" class="text-xs uppercase tracking-widest text-slate-400 font-semibold">Period Totals</td>
+            <td class="mono">₦5,000</td>
+            <td class="text-sm">—</td>
+            <td class="mono">₦4,750</td>
+            <td></td>
+            <td></td>
+          </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Past Period 2 ── April 2025 -->
+  <div class="past-period-card">
+    <button class="past-period-header-btn" onclick="togglePeriod(this)">
+      <div class="flex items-center gap-4">
+        <div class="text-left">
+          <p class="font-bold text-slate-800 text-sm">April 2025 Payroll</p>
+          <div class="date-range-tag mt-0.5">
+            <i class="bi bi-calendar3"></i>
+            01 Apr 2025 <span class="date-sep">→</span> 30 Apr 2025
+          </div>
+        </div>
+      </div>
+      <div class="flex items-center gap-4">
+        <div class="text-right hidden sm:block">
+          <p class="text-xs text-slate-400 font-medium uppercase tracking-wide">Net Payroll</p>
+          <p class="font-bold text-slate-800 font-mono text-sm">₦4,750</p>
+        </div>
+        <span class="status-badge status-processed">
+          <span class="dot"></span> Processed
+        </span>
+        <i class="bi bi-chevron-down chevron text-lg"></i>
+      </div>
+    </button>
+    <div class="past-period-body">
+      <div class="overflow-x-auto custom-scrollbar">
+        <table class="payroll-table">
+          <thead>
+          <tr>
+            <th>Employee</th>
+            <th>Period Start</th>
+            <th>Period End</th>
+            <th>Pay Day</th>
+            <th>Basic Salary</th>
+            <th>Deductions</th>
+            <th>Net Salary</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr>
+            <td>
+              <div class="flex items-center gap-3">
+                <div class="emp-avatar">AA</div>
+                <div>
+                  <div class="font-semibold text-slate-800 text-sm">Akinrinde Akinkunmi</div>
+                  <div class="text-xs text-slate-400">Engineering · Grade 3</div>
+                </div>
+              </div>
+            </td>
+            <td class="mono">2025-04-01</td>
+            <td class="mono">2025-04-30</td>
+            <td class="mono">2025-04-30</td>
+            <td class="mono amount-positive">₦5,000</td>
+            <td class="text-sm font-medium text-slate-500">5 <span class="text-xs text-slate-400 font-normal">(items)</span></td>
+            <td class="mono amount-positive">₦4,750</td>
+            <td>
+                <span class="status-badge status-processed">
+                  <span class="dot"></span> Processed
+                </span>
+            </td>
+            <td>
+              <button class="dl-btn" onclick="downloadPayslip(this)">
+                <i class="bi bi-download"></i> Payslip
+              </button>
+            </td>
+          </tr>
+          </tbody>
+          <tfoot>
+          <tr class="totals-row">
+            <td colspan="4" class="text-xs uppercase tracking-widest text-slate-400 font-semibold">Period Totals</td>
+            <td class="mono">₦5,000</td>
+            <td class="text-sm">—</td>
+            <td class="mono">₦4,750</td>
+            <td></td>
+            <td></td>
+          </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Past Period 3 ── March 2025 (Failed status demo) -->
+  <div class="past-period-card">
+    <button class="past-period-header-btn" onclick="togglePeriod(this)">
+      <div class="flex items-center gap-4">
+        <div class="text-left">
+          <p class="font-bold text-slate-800 text-sm">March 2025 Payroll</p>
+          <div class="date-range-tag mt-0.5">
+            <i class="bi bi-calendar3"></i>
+            01 Mar 2025 <span class="date-sep">→</span> 31 Mar 2025
+          </div>
+        </div>
+      </div>
+      <div class="flex items-center gap-4">
+        <div class="text-right hidden sm:block">
+          <p class="text-xs text-slate-400 font-medium uppercase tracking-wide">Net Payroll</p>
+          <p class="font-bold text-slate-800 font-mono text-sm">₦4,750</p>
+        </div>
+        <span class="status-badge status-failed">
+          <span class="dot"></span> Failed
+        </span>
+        <i class="bi bi-chevron-down chevron text-lg"></i>
+      </div>
+    </button>
+    <div class="past-period-body">
+      <div class="overflow-x-auto custom-scrollbar">
+        <table class="payroll-table">
+          <thead>
+          <tr>
+            <th>Employee</th>
+            <th>Period Start</th>
+            <th>Period End</th>
+            <th>Pay Day</th>
+            <th>Basic Salary</th>
+            <th>Deductions</th>
+            <th>Net Salary</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr>
+            <td>
+              <div class="flex items-center gap-3">
+                <div class="emp-avatar">AA</div>
+                <div>
+                  <div class="font-semibold text-slate-800 text-sm">Akinrinde Akinkunmi</div>
+                  <div class="text-xs text-slate-400">Engineering · Grade 3</div>
+                </div>
+              </div>
+            </td>
+            <td class="mono">2025-03-01</td>
+            <td class="mono">2025-03-31</td>
+            <td class="mono">2025-03-31</td>
+            <td class="mono amount-positive">₦5,000</td>
+            <td class="text-sm font-medium text-slate-500">5 <span class="text-xs text-slate-400 font-normal">(items)</span></td>
+            <td class="mono amount-positive">₦4,750</td>
+            <td>
+                <span class="status-badge status-failed">
+                  <span class="dot"></span> Failed
+                </span>
+            </td>
+            <td>
+              <button class="dl-btn" onclick="downloadPayslip(this)">
+                <i class="bi bi-download"></i> Payslip
+              </button>
+            </td>
+          </tr>
+          </tbody>
+          <tfoot>
+          <tr class="totals-row">
+            <td colspan="4" class="text-xs uppercase tracking-widest text-slate-400 font-semibold">Period Totals</td>
+            <td class="mono">₦5,000</td>
+            <td class="text-sm">—</td>
+            <td class="mono">₦4,750</td>
+            <td></td>
+            <td></td>
+          </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ── Hidden Payslip Template ── -->
+  <div id="payslip-template" style="display:none;">
+    <div id="payslip-content" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background:#fff; padding:2.5rem; max-width:680px; margin:0 auto; border:1px solid #e2e8f0; border-radius:12px;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:2px solid #e2e8f0; padding-bottom:1.25rem; margin-bottom:1.5rem;">
+        <div>
+          <div style="font-size:1.5rem; font-weight:800; color:#1e40af; letter-spacing:-0.03em;">PAYSLIP</div>
+          <div style="font-size:0.8rem; color:#94a3b8; margin-top:4px;">Generated on <span id="payslip-generated-date"></span></div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-weight:700; color:#1e293b;">Your Company Name</div>
+          <div style="font-size:0.8rem; color:#94a3b8;">123 Business St., City</div>
         </div>
       </div>
 
-      <!-- Employee & Period Details -->
-      <div class="grid grid-cols-2 gap-6 mb-6">
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:1rem; margin-bottom:1.5rem;">
         <div>
-          <p class="text-xs text-gray-500 uppercase tracking-wide">Employee</p>
-          <p class="font-medium text-gray-800" id="payslip-employee-name">John Doe</p>
+          <div style="font-size:0.65rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:#94a3b8; margin-bottom:4px;">Employee</div>
+          <div style="font-weight:600; color:#1e293b;" id="payslip-employee-name"></div>
         </div>
         <div>
-          <p class="text-xs text-gray-500 uppercase tracking-wide">Pay Period</p>
-          <p class="font-medium text-gray-800" id="payslip-pay-date">2024-06-30</p>
+          <div style="font-size:0.65rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:#94a3b8; margin-bottom:4px;">Pay Period</div>
+          <div style="font-weight:600; color:#1e293b;" id="payslip-pay-date"></div>
+        </div>
+        <div>
+          <div style="font-size:0.65rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:#94a3b8; margin-bottom:4px;">Pay Day</div>
+          <div style="font-weight:600; color:#1e293b;" id="payslip-pay-day"></div>
         </div>
       </div>
 
-      <!-- Earnings Table (only Basic Salary, no deductions) -->
-      <table class="w-full mb-6">
-        <thead class="bg-gray-50 border-y border-gray-200">
-        <tr>
-          <th class="py-2 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
-          <th class="py-2 text-right text-xs font-medium text-gray-500 uppercase">Amount</th>
+      <table style="width:100%; border-collapse:collapse; margin-bottom:1.5rem;">
+        <thead>
+        <tr style="background:#f8fafc; border-top:1px solid #e2e8f0; border-bottom:1px solid #e2e8f0;">
+          <th style="padding:0.6rem 1rem; text-align:left; font-size:0.7rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:#94a3b8;">Description</th>
+          <th style="padding:0.6rem 1rem; text-align:right; font-size:0.7rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:#94a3b8;">Amount</th>
         </tr>
         </thead>
         <tbody>
-        <tr>
-          <td class="py-3 text-gray-700">Basic Salary</td>
-          <td class="py-3 text-right font-medium text-gray-900" id="payslip-basic-salary">₦5,000</td>
+        <tr style="border-bottom:1px solid #f1f5f9;">
+          <td style="padding:0.85rem 1rem; color:#334155;">Basic Salary</td>
+          <td style="padding:0.85rem 1rem; text-align:right; font-weight:700; font-family:ui-monospace,Consolas,monospace; color:#1e293b;" id="payslip-basic-salary"></td>
         </tr>
-        <!-- No deduction rows -->
         </tbody>
       </table>
 
-      <!-- Net Pay -->
-      <div class="flex justify-end border-t border-gray-200 pt-4">
-        <div class="w-64">
-          <div class="flex justify-between items-center">
-            <span class="text-base font-semibold text-gray-700">Net Pay</span>
-            <span class="text-xl font-bold text-primary-600" id="payslip-net-pay">₦4,750</span>
+      <div style="display:flex; justify-content:flex-end; border-top:2px solid #e2e8f0; padding-top:1rem;">
+        <div style="min-width:220px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-weight:600; color:#64748b;">Net Pay</span>
+            <span style="font-size:1.35rem; font-weight:800; color:#1e40af; font-family:ui-monospace,Consolas,monospace;" id="payslip-net-pay"></span>
           </div>
-          <p class="text-xs text-gray-500 text-right mt-1">After all deductions</p>
+          <div style="font-size:0.72rem; color:#94a3b8; text-align:right; margin-top:4px;">After all deductions</div>
         </div>
       </div>
 
-      <!-- Footer Note -->
-      <div class="mt-8 text-xs text-center text-gray-400 border-t border-gray-100 pt-4">
-        This is a computer‑generated payslip. No signature required.
+      <div style="margin-top:2rem; text-align:center; font-size:0.72rem; color:#cbd5e1; border-top:1px solid #f1f5f9; padding-top:1rem;">
+        This is a computer-generated payslip. No signature required.
       </div>
     </div>
   </div>
 
-  <!-- html2pdf library (added for PDF generation) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-
-  <!-- Download function -->
   <script>
+    /* ── Accordion toggle ── */
+    function togglePeriod(btn) {
+      const body = btn.nextElementSibling;
+      const chevron = btn.querySelector('.chevron');
+      const isOpen = body.classList.contains('open');
+      body.classList.toggle('open', !isOpen);
+      chevron.classList.toggle('open', !isOpen);
+    }
+
+    /* ── Download payslip ── */
     function downloadPayslip(button) {
-      // Find the parent row
       const row = button.closest('tr');
       if (!row) return;
-
-      // Extract cell data (indices: 0=Employee, 1=Pay Day, 2=Basic Salary, 4=Net Salary)
       const cells = row.cells;
-      const employeeName = cells[0]?.textContent.trim() || 'N/A';
-      const payDate = cells[1]?.textContent.trim() || 'N/A';
-      const basicSalary = cells[2]?.textContent.trim() || '₦0';
-      const netPay = cells[4]?.textContent.trim() || '₦0';
+      const employeeName = cells[0]?.querySelector('.font-semibold')?.textContent.trim() || 'N/A';
+      const periodStart  = cells[1]?.textContent.trim() || 'N/A';
+      const periodEnd    = cells[2]?.textContent.trim() || 'N/A';
+      const payDay       = cells[3]?.textContent.trim() || 'N/A';
+      const basicSalary  = cells[4]?.textContent.trim() || '₦0';
+      const netPay       = cells[6]?.textContent.trim() || '₦0';
 
-      // Populate template fields
       document.getElementById('payslip-employee-name').textContent = employeeName;
-      document.getElementById('payslip-pay-date').textContent = payDate;
-      document.getElementById('payslip-basic-salary').textContent = basicSalary;
-      document.getElementById('payslip-net-pay').textContent = netPay;
+      document.getElementById('payslip-pay-date').textContent       = `${periodStart} → ${periodEnd}`;
+      document.getElementById('payslip-pay-day').textContent        = payDay;
+      document.getElementById('payslip-basic-salary').textContent   = basicSalary;
+      document.getElementById('payslip-net-pay').textContent        = netPay;
       document.getElementById('payslip-generated-date').textContent = new Date().toISOString().split('T')[0];
 
-      // Get the template element
       const element = document.getElementById('payslip-content');
-
-      // Configure PDF options
       const opt = {
-        margin:        [0.5, 0.5, 0.5, 0.5], // top, right, bottom, left (inches)
-        filename:     `payslip-${employeeName.replace(/\s+/g, '_')}.pdf`,
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, letterRendering: true },
-        jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+        margin: [0.5, 0.5, 0.5, 0.5],
+        filename: `payslip-${employeeName.replace(/\s+/g,'_')}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, letterRendering: true },
+        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
       };
-
-      // Generate and download PDF
       html2pdf().set(opt).from(element).save();
     }
 
-    // Optional: define filter functions (if not defined elsewhere)
+    /* ── Filter (placeholder) ── */
     function filterEmployeePayroll() {
-      // Placeholder – implement your filtering logic
       console.log('Filter changed');
     }
   </script>
-</main>
 
+</main>
 </body>
 </html>
