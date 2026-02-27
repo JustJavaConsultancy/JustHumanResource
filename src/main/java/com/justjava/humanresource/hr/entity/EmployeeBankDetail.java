@@ -34,11 +34,6 @@ public class EmployeeBankDetail extends BaseEntity {
     @Column(nullable = false, length = 20)
     private String accountNumber;
 
-    @Column(length = 15)
-    private String sortCode;
-
-    @Column(length = 15)
-    private String branchCode;
 
     @Column(nullable = false)
     private LocalDate effectiveFrom;

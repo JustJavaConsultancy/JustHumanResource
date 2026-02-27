@@ -942,7 +942,7 @@
 
         </div><!-- end left col -->
 
-        <!-- RIGHT COLUMN (unchanged) -->
+        <!-- RIGHT COLUMN -->
         <div class="space-y-6 animate-fadeup delay-4">
 
             <!-- Compensation (HR-managed) -->
@@ -960,16 +960,12 @@
                 </div>
                 <div class="space-y-2">
                     <div class="pay-row">
-                        <span class="pay-label">Basic Salary</span>
-                        <span class="pay-amount" style="color:var(--text-primary)">₦450,000</span>
-                    </div>
-                    <div class="pay-row">
                         <span class="pay-label">Gross Pay</span>
-                        <span class="pay-amount pay-gross">₦620,000</span>
+                        <span th:text="${'₦' + latestPaySlip.grossPay}" class="pay-amount pay-gross">₦620,000</span>
                     </div>
                     <div class="pay-row">
                         <span class="pay-label">Net Pay</span>
-                        <span class="pay-amount pay-net">₦540,000</span>
+                        <span th:text="${'₦' + latestPaySlip.netPay}" class="pay-amount pay-net">₦540,000</span>
                     </div>
                 </div>
                 <div class="mt-4 pt-3" style="border-top: 1px solid var(--card-border)">
@@ -980,7 +976,7 @@
                 </div>
             </div>
 
-            <!-- Bank Details (unchanged) -->
+            <!-- ========== UPDATED BANK DETAILS CARD ========== -->
             <div class="card overflow-hidden">
                 <div class="bank-card-header">
                     <div class="flex items-center justify-between">
@@ -998,19 +994,42 @@
                 </div>
                 <div class="p-5">
                     <div id="bankStatus" class="flex items-center justify-between mb-4">
-                        <span class="completion-chip chip-incomplete">
-                            <span class="material-icons-round" style="font-size:0.75rem">warning_amber</span>
-                            Not set up yet
+                        <!-- Determine if bank details exist (using first active bank) -->
+                        <span th:if="${not #lists.isEmpty(employee.bankDetails)}" class="completion-chip chip-complete">
+                            <span class="material-icons-round" style="font-size:0.75rem">check_circle</span> Set up
                         </span>
-                        <button id="editBankBtn" class="edit-btn edit-btn-fill">
-                            <span class="material-icons-round" style="font-size:0.85rem">add</span> Add Bank Details
+                        <span th:unless="${not #lists.isEmpty(employee.bankDetails)}" class="completion-chip chip-incomplete">
+                            <span class="material-icons-round" style="font-size:0.75rem">warning_amber</span> Not set up yet
+                        </span>
+                        <button id="editBankBtn" class="edit-btn"
+                                th:classappend="${not #lists.isEmpty(employee.bankDetails)} ? 'edit-btn-ghost' : 'edit-btn-fill'">
+                            <span class="material-icons-round" style="font-size:0.85rem"
+                                  th:text="${not #lists.isEmpty(employee.bankDetails)} ? 'edit' : 'add'">add</span>
+                            <span th:text="${not #lists.isEmpty(employee.bankDetails)} ? 'Edit' : 'Add Bank Details'">Add Bank Details</span>
                         </button>
                     </div>
 
-                    <div class="space-y-4" id="bankContent">
+                    <!-- Display the first active bank detail (assuming only one primary/active) -->
+                    <div th:if="${not #lists.isEmpty(employee.bankDetails)}" class="space-y-4" id="bankContent">
                         <div class="info-item">
-                            <p class="info-label">Account Holder</p>
-                            <!-- th:text="${employee.bankDetails.accountHolder}" -->
+                            <p class="info-label">Account Name</p>
+                            <p class="info-value" th:text="${employee.bankDetails[0].accountName}">John Doe</p>
+                        </div>
+                        <div class="info-item">
+                            <p class="info-label">Bank Name</p>
+                            <p class="info-value" th:text="${employee.bankDetails[0].bankName}">First Bank</p>
+                        </div>
+                        <div class="info-item">
+                            <p class="info-label">Account Number</p>
+                            <p class="info-value" style="font-family:'DM Mono',monospace"
+                               th:text="'**** **** ' + ${#strings.substring(employee.bankDetails[0].accountNumber, employee.bankDetails[0].accountNumber.length()-4)}">**** **** 1234</p>
+                            <p class="text-xs mt-0.5" style="color:var(--text-muted)">(last 4 digits shown for security)</p>
+                        </div>
+                        <!-- No account type, sort code, or branch code displayed -->
+                    </div>
+                    <div th:unless="${not #lists.isEmpty(employee.bankDetails)}" class="space-y-4" id="bankContent">
+                        <div class="info-item">
+                            <p class="info-label">Account Name</p>
                             <p class="info-value empty field-empty-indicator"><span class="material-icons-round">warning_amber</span>Not provided</p>
                         </div>
                         <div class="info-item">
@@ -1019,10 +1038,6 @@
                         </div>
                         <div class="info-item">
                             <p class="info-label">Account Number</p>
-                            <p class="info-value empty field-empty-indicator"><span class="material-icons-round">warning_amber</span>Not provided</p>
-                        </div>
-                        <div class="info-item">
-                            <p class="info-label">Account Type</p>
                             <p class="info-value empty field-empty-indicator"><span class="material-icons-round">warning_amber</span>Not provided</p>
                         </div>
                     </div>
@@ -1358,7 +1373,7 @@
         </div>
     </div>
 
-    <!-- Modal: Edit Bank Details (unchanged) -->
+    <!-- ========== UPDATED BANK DETAILS MODAL ========== -->
     <div id="editBankModal" class="modal-overlay">
         <div class="modal-container">
             <div class="modal-header">
@@ -1368,61 +1383,66 @@
                 </div>
                 <button class="close-btn close-modal"><span class="material-icons-round" style="font-size:1rem">close</span></button>
             </div>
-            <div class="modal-body space-y-4">
-                <div class="notice notice-warn">
-                    <span class="material-icons-round" style="font-size:1rem;flex-shrink:0">account_balance</span>
-                    <span>Your salary will be paid to this account. Ensure all details are accurate before saving.</span>
+
+            <!-- Form now submits to /update/bank-info -->
+            <form th:action="@{/update/bank-info}" method="post">
+                <div class="modal-body space-y-4">
+                    <div class="notice notice-warn">
+                        <span class="material-icons-round" style="font-size:1rem;flex-shrink:0">account_balance</span>
+                        <span>Your salary will be paid to this account. Ensure all details are accurate before saving.</span>
+                    </div>
+
+                    <!-- Employee ID (hidden) -->
+                    <input type="hidden" name="id" th:value="${employee.id}" />
+
+                    <!-- Account Name (formerly Account Holder) -->
+                    <div class="form-group">
+                        <label class="form-label">Account Name *</label>
+                        <input type="text"
+                               name="accountName"
+                               th:value="${not #lists.isEmpty(employee.bankDetails) ? employee.bankDetails[0].accountName : ''}"
+                               class="form-input"
+                               placeholder="Full name as on bank account"
+                               required>
+                    </div>
+
+                    <!-- Bank Name -->
+                    <div class="form-group">
+                        <label class="form-label">Bank Name *</label>
+                        <input type="text"
+                               name="bankName"
+                               th:value="${not #lists.isEmpty(employee.bankDetails) ? employee.bankDetails[0].bankName : ''}"
+                               class="form-input"
+                               placeholder="e.g. First Bank"
+                               required>
+                    </div>
+
+                    <!-- Account Number -->
+                    <div class="form-group">
+                        <label class="form-label">Account Number *</label>
+                        <input type="text"
+                               name="accountNumber"
+                               th:value="${not #lists.isEmpty(employee.bankDetails) ? employee.bankDetails[0].accountNumber : ''}"
+                               maxlength="10"
+                               class="form-input"
+                               placeholder="10-digit NUBAN account number"
+                               style="font-family:'DM Mono',monospace;letter-spacing:0.05em"
+                               required>
+                    </div>
+
+                    <!-- Account Type, Sort Code, Branch Code are removed -->
+
+                    <div class="notice notice-info" style="margin-top:8px">
+                        <span class="material-icons-round" style="font-size:1rem;flex-shrink:0">security</span>
+                        <span>Your bank details are encrypted and used only for salary payments. Only the last 4 digits will be displayed publicly.</span>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label class="form-label">Account Holder Name *</label>
-                    <!-- th:value="${employee.bankDetails.accountHolder}" -->
-                    <input type="text" name="accountHolder" class="form-input" placeholder="Full name as on bank account">
+
+                <div class="modal-footer">
+                    <button type="button" class="edit-btn edit-btn-ghost close-modal">Cancel</button>
+                    <button type="submit" class="edit-btn edit-btn-primary">Save Bank Details</button>
                 </div>
-                <div class="form-group">
-                    <label class="form-label">Bank Name *</label>
-                    <!-- th:value="${employee.bankDetails.bankName}" -->
-                    <select name="bankName" class="form-input">
-                        <option value="">Select your bank</option>
-                        <option>Access Bank</option>
-                        <option>First Bank of Nigeria</option>
-                        <option>Guaranty Trust Bank (GTBank)</option>
-                        <option>United Bank for Africa (UBA)</option>
-                        <option>Zenith Bank</option>
-                        <option>Stanbic IBTC Bank</option>
-                        <option>Fidelity Bank</option>
-                        <option>Union Bank</option>
-                        <option>Sterling Bank</option>
-                        <option>Wema Bank</option>
-                        <option>Ecobank Nigeria</option>
-                        <option>Opay</option>
-                        <option>Kuda Bank</option>
-                        <option>Other</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Account Number *</label>
-                    <!-- th:value="${employee.bankDetails.accountNumber}" -->
-                    <input type="text" name="accountNumber" maxlength="10" class="form-input" placeholder="10-digit NUBAN account number" style="font-family:'DM Mono',monospace;letter-spacing:0.05em">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Account Type *</label>
-                    <!-- th:value="${employee.bankDetails.accountType}" -->
-                    <select name="accountType" class="form-input">
-                        <option value="">Select account type</option>
-                        <option>Savings</option>
-                        <option>Current</option>
-                        <option>Domiciliary</option>
-                    </select>
-                </div>
-                <div class="notice notice-info" style="margin-top:8px">
-                    <span class="material-icons-round" style="font-size:1rem;flex-shrink:0">security</span>
-                    <span>Your bank details are encrypted and used only for salary payments. Only the last 4 digits will be displayed publicly.</span>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="edit-btn edit-btn-ghost close-modal">Cancel</button>
-                <button class="edit-btn edit-btn-primary" onclick="saveBank()">Save Bank Details</button>
-            </div>
+            </form>
         </div>
     </div>
 
@@ -1559,60 +1579,6 @@
 
         if (avatarPlaceholder) {
             avatarPlaceholder.addEventListener('click', () => openModal(modals.editPhoto));
-        }
-
-        // ── SAVE BANK DETAILS (demo) ─────────────────────────────
-        function saveBank() {
-            const holder = document.querySelector('[name="accountHolder"]').value;
-            const bank = document.querySelector('[name="bankName"]').value;
-            const account = document.querySelector('[name="accountNumber"]').value;
-            const type = document.querySelector('[name="accountType"]').value;
-
-            if (!holder || !bank || !account || !type) {
-                alert('Please fill in all required bank details.');
-                return;
-            }
-
-            if (account.length !== 10) {
-                alert('Account number must be 10 digits.');
-                return;
-            }
-
-            const maskedAccount = '**** **** ' + account.slice(-4);
-            const bankContent = document.getElementById('bankContent');
-            bankContent.innerHTML = `
-                <div class="info-item">
-                    <p class="info-label">Account Holder</p>
-                    <p class="info-value">${holder}</p>
-                </div>
-                <div class="info-item">
-                    <p class="info-label">Bank Name</p>
-                    <p class="info-value">${bank}</p>
-                </div>
-                <div class="info-item">
-                    <p class="info-label">Account Number</p>
-                    <p class="info-value" style="font-family:'DM Mono',monospace">${maskedAccount}</p>
-                    <p class="text-xs mt-0.5" style="color:var(--text-muted)">(last 4 digits shown for security)</p>
-                </div>
-                <div class="info-item">
-                    <p class="info-label">Account Type</p>
-                    <p class="info-value">${type}</p>
-                </div>
-            `;
-
-            const bankStatus = document.getElementById('bankStatus');
-            bankStatus.innerHTML = `
-                <span class="completion-chip chip-complete">
-                    <span class="material-icons-round" style="font-size:0.75rem">check_circle</span> Set up
-                </span>
-                <button onclick="document.getElementById('editBankModal').classList.add('active');document.body.style.overflow='hidden'"
-                        class="edit-btn edit-btn-ghost">
-                    <span class="material-icons-round" style="font-size:0.85rem">edit</span> Edit
-                </button>
-            `;
-
-            closeModal(modals.editBank);
-            updateCompletion();
         }
 
         // ── THEME TOGGLE ─────────────────────────────────────────
