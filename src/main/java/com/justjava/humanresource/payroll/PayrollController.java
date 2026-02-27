@@ -198,14 +198,17 @@ public class PayrollController {
     @GetMapping("/payroll/employee-payroll")
     public String getEmployeePayroll(Model model) {
         List<PaySlipDTO> paySlips = paySlipService.getCurrentPeriodPaySlips(1L);
+        List<PaySlipDTO> previousPaySlips = paySlipService.getAllClosedPeriodPaySlips(1L);
         paySlips.forEach(
                 paySlip -> System.out.println(" Pay Slip for Employee ==="+paySlip.getEmployeeName()
                         +" the Pay Period ==="+paySlip.getPayDate()
                         +" the Gross Pay ==="+paySlip.getGrossPay()
+                        +" the Basic Salary ==="+paySlip.getGrossPay()
                         +" the Total Deductions ==="+paySlip.getTotalDeductions()
-                        +" the Net Pay ==="+paySlip.getNetPay())
+                        +" the Net Pay ==="+paySlip.getStatus())
         );
         model.addAttribute("paySlips", paySlips);
+        model.addAttribute("previousPeriods",previousPaySlips);
         model.addAttribute("title", "Payroll Management");
         model.addAttribute("subTitle", "Manage employee payroll, salary details, and payment history");
         return "payroll/fragments/employee-payroll";

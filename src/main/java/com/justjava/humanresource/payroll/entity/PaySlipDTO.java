@@ -1,5 +1,6 @@
 package com.justjava.humanresource.payroll.entity;
 
+import com.justjava.humanresource.core.enums.PayrollRunStatus;
 import lombok.Builder;
 import lombok.Value;
 
@@ -25,4 +26,5 @@ public class PaySlipDTO {
     BigDecimal netPay;
     String employeeName;
     Integer versionNumber;
+    PayrollRunStatus status;
 }
