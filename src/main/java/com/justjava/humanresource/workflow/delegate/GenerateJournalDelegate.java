@@ -41,7 +41,7 @@ public class GenerateJournalDelegate implements JavaDelegate {
         }
 
         log.info("Generating journal entries for company {} period {}",
-                companyId, periodId);
+                period.getCompanyId(), periodId);
 
         /* ========================================================
            Idempotency Guard (Optional but Recommended)
@@ -54,7 +54,7 @@ public class GenerateJournalDelegate implements JavaDelegate {
         }
 
         journalService.generateJournalEntries(
-                companyId,
+                period.getCompanyId(),
                 periodId,
                 period.getPeriodStart(),
                 period.getPeriodEnd()

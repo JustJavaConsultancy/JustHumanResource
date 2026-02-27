@@ -386,7 +386,6 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
 
         long totalDays =
                 ChronoUnit.DAYS.between(periodStart, periodEnd) + 1;
-
         if (totalDays <= 0) return amount;
 
         return amount
