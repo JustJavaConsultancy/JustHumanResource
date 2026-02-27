@@ -3,12 +3,11 @@ package com.justjava.humanresource.payroll.service.impl;
 
 import com.justjava.humanresource.core.enums.PayrollRunStatus;
 import com.justjava.humanresource.hr.entity.Employee;
-import com.justjava.humanresource.payroll.entity.PaySlip;
-import com.justjava.humanresource.payroll.entity.PaySlipDTO;
-import com.justjava.humanresource.payroll.entity.PayrollPeriod;
-import com.justjava.humanresource.payroll.entity.PayrollRun;
+import com.justjava.humanresource.payroll.entity.*;
+import com.justjava.humanresource.payroll.enums.PayComponentType;
 import com.justjava.humanresource.payroll.enums.PayrollPeriodStatus;
 import com.justjava.humanresource.payroll.repositories.PaySlipRepository;
+import com.justjava.humanresource.payroll.repositories.PayrollLineItemRepository;
 import com.justjava.humanresource.payroll.repositories.PayrollPeriodRepository;
 import com.justjava.humanresource.payroll.repositories.PayrollRunRepository;
 import com.justjava.humanresource.payroll.service.PaySlipService;
@@ -16,6 +15,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -25,6 +26,7 @@ public class PaySlipServiceImpl implements PaySlipService {
     private final PayrollRunRepository payrollRunRepository;
     private final PaySlipRepository paySlipRepository;
     private final PayrollPeriodRepository payrollPeriodRepository;
+    private final PayrollLineItemRepository payrollLineItemRepository;
 
     /* ============================================================
        GENERATE PAYSLIP (IDEMPOTENT + POSTED ONLY)
@@ -309,18 +311,68 @@ public class PaySlipServiceImpl implements PaySlipService {
 
     private PaySlipDTO mapToDto(PaySlip paySlip) {
 
-        Employee employee = paySlip.getEmployee();
+        List<PayrollLineItem> lines =
+                payrollLineItemRepository
+                        .findByPayrollRunId(paySlip.getPayrollRun().getId());
+
+        BigDecimal basicSalary = BigDecimal.ZERO;
+        BigDecimal paye = BigDecimal.ZERO;
+        BigDecimal pension = BigDecimal.ZERO;
+
+        List<PaySlipLineDTO> allowances = new ArrayList<>();
+        List<PaySlipLineDTO> deductions = new ArrayList<>();
+
+        for (PayrollLineItem line : lines) {
+
+            if ("BASIC".equals(line.getComponentCode())) {
+                basicSalary = line.getAmount();
+                continue;
+            }
+
+            if ("PAYE".equals(line.getComponentCode())) {
+                paye = line.getAmount();
+            }
+
+            if ("PENSION".equals(line.getComponentCode())) {
+                pension = line.getAmount();
+            }
+
+            PaySlipLineDTO dto = PaySlipLineDTO.builder()
+                    .code(line.getComponentCode())
+                    .description(line.getDescription())
+                    .amount(line.getAmount())
+                    .taxable(line.isTaxable())
+                    .build();
+
+            if (line.getComponentType() == PayComponentType.EARNING) {
+                allowances.add(dto);
+            } else {
+                deductions.add(dto);
+            }
+        }
 
         return PaySlipDTO.builder()
                 .id(paySlip.getId())
-                .employeeId(employee.getId())
-                .employeeName(employee.getFullName())
+                .employeeId(paySlip.getEmployee().getId())
+                .employeeName(paySlip.getEmployee().getFullName())
                 .payrollRunId(paySlip.getPayrollRun().getId())
                 .payDate(paySlip.getPayDate())
+                .versionNumber(paySlip.getVersionNumber())
+
+                .basicSalary(basicSalary)
                 .grossPay(paySlip.getGrossPay())
                 .totalDeductions(paySlip.getTotalDeductions())
                 .netPay(paySlip.getNetPay())
-                .versionNumber(paySlip.getVersionNumber())
+
+                .allowances(allowances)
+                .deductions(deductions)
+
+                .payeAmount(paye)
+                .pensionAmount(pension)
+
+                .taxBandSummary("Calculated via PAYE configuration")
+                .pensionSchemeName("Active scheme during run")
+
                 .build();
     }
 }
