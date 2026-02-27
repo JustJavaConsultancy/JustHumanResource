@@ -30,4 +30,5 @@ public interface PaySlipService {
     List<PaySlipDTO> getAllClosedPeriodPaySlips(Long companyId);
     //public List<PaySlipDTO> getEmployeePaySlips(Long employeeId);
     PaySlipDTO getCurrentPeriodPaySlipForEmployee(Long companyId, Long employeeId);
+    PaySlipDTO getLatestClosedPeriodPaySlipForEmployee(Long companyId, Long employeeId);
 }

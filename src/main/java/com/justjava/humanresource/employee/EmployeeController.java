@@ -87,8 +87,6 @@ public class EmployeeController {
     public String getEmployeeProfile(Model model) {
         String email = (String) authenticationManager.get("email");
         // implement your own logic
-
-
         Employee loginEmployee = employeeService.getByEmail(email);
         Employee employee = employeeService.getEmployeeWithBankDetails(loginEmployee.getId());
         PaySlipDTO latestPaySlip = paySlipService.getCurrentPeriodPaySlipForEmployee(1l,loginEmployee.getId());
@@ -108,6 +106,16 @@ public class EmployeeController {
     }
     @GetMapping("employee/payroll")
     public String getPayroll(Model model){
+        String email = (String) authenticationManager.get("email");
+        // implement your own logic
+        Employee loginEmployee = employeeService.getByEmail(email);
+        PaySlipDTO latestPaySlip = paySlipService.getCurrentPeriodPaySlipForEmployee(1l,loginEmployee.getId());
+
+        Employee employee = employeeService.getEmployeeWithBankDetails(loginEmployee.getId());
+        System.out.println("Latest Pay Slip: " + latestPaySlip);
+        model.addAttribute("previousPaySlip", null);
+        model.addAttribute("latestPaySlip", latestPaySlip);
+        model.addAttribute("employee", employee);
         model.addAttribute("title", "Payroll");
         model.addAttribute("subTitle", "View your pay stubs, tax information, and benefits");
 
