@@ -1,5 +1,6 @@
 package com.justjava.humanresource.payroll.service.impl;
 
+
 import com.justjava.humanresource.core.enums.PayrollRunStatus;
 import com.justjava.humanresource.payroll.entity.PayrollPeriod;
 import com.justjava.humanresource.payroll.enums.PayrollPeriodStatus;
@@ -23,7 +24,7 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
     private final RuntimeService runtimeService;
 
     /* ============================================================
-       INITIAL SETUP (FIRST PERIOD ONLY)
+       INITIALIZATION
        ============================================================ */
 
     @Override
@@ -34,23 +35,20 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
             LocalDate periodEnd
     ) {
 
+        if (periodStart == null || periodEnd == null) {
+            throw new IllegalArgumentException("Period start/end cannot be null.");
+        }
+
+        if (periodEnd.isBefore(periodStart)) {
+            throw new IllegalArgumentException("Period end cannot be before start.");
+        }
+
         if (repository.existsByCompanyIdAndStatus(
                 companyId,
                 PayrollPeriodStatus.OPEN)) {
 
             throw new IllegalStateException(
-                    "Company already has an OPEN payroll period."
-            );
-        }
-
-        if (repository.existsByCompanyIdAndPeriodStartAndPeriodEnd(
-                companyId,
-                periodStart,
-                periodEnd)) {
-
-            throw new IllegalStateException(
-                    "Payroll period already exists for this range."
-            );
+                    "Company already has an OPEN payroll period.");
         }
 
         PayrollPeriod period = new PayrollPeriod();
@@ -63,20 +61,7 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
     }
 
     /* ============================================================
-       LOCK PERIOD (NO MORE RECALCULATION)
-       ============================================================ */
-
-    //@Override
-    //@Transactional
-    private void lockPeriod(Long companyId) {
-
-        PayrollPeriod open = getOpenPeriod(companyId);
-        open.setStatus(PayrollPeriodStatus.LOCKED);
-        repository.save(open);
-    }
-
-    /* ============================================================
-       CLOSE & OPEN NEXT (MANUAL CONTROL)
+       CLOSE & OPEN NEXT
        ============================================================ */
 
     @Override
@@ -85,13 +70,18 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
 
         PayrollPeriod current = getOpenPeriod(companyId);
 
+        /* --------------------------------------------------------
+           Ensure All Runs Are POSTED
+           -------------------------------------------------------- */
+
         long incomplete =
-                payrollRunRepository.countByEmployee_Department_Company_IdAndPayrollDateBetweenAndStatus(
-                        companyId,
-                        current.getPeriodStart(),
-                        current.getPeriodEnd(),
-                        PayrollRunStatus.POSTED
-                );
+                payrollRunRepository
+                        .countByCompanyIdAndPayrollDateBetweenAndStatusNot(
+                                companyId,
+                                current.getPeriodStart(),
+                                current.getPeriodEnd(),
+                                PayrollRunStatus.POSTED
+                        );
 
         if (incomplete > 0) {
             throw new IllegalStateException(
@@ -99,17 +89,20 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
             );
         }
 
+        /* --------------------------------------------------------
+           Close Current Period
+           -------------------------------------------------------- */
+
         current.setStatus(PayrollPeriodStatus.CLOSED);
         repository.save(current);
 
         /* --------------------------------------------------------
-           DEFAULT NEXT PERIOD STRATEGY
-           (Same cycle length as previous)
+           Create Next Period (Cycle-Based)
+           Uses same cycle length as previous period
            -------------------------------------------------------- */
 
         long cycleDays =
-                current.getPeriodEnd()
-                        .toEpochDay()
+                current.getPeriodEnd().toEpochDay()
                         - current.getPeriodStart().toEpochDay()
                         + 1;
 
@@ -126,7 +119,7 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
     }
 
     /* ============================================================
-       GET OPEN PERIOD (COMPANY SCOPED)
+       GET OPEN PERIOD
        ============================================================ */
 
     @Override
@@ -144,7 +137,7 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
     }
 
     /* ============================================================
-       VALIDATE PAYROLL DATE
+       VALIDATION
        ============================================================ */
 
     @Override
@@ -177,7 +170,7 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
                         payrollDate,
                         payrollDate
                 )
-                .map(p -> p.getStatus() == PayrollPeriodStatus.OPEN)
+                .map(period -> period.getStatus() == PayrollPeriodStatus.OPEN)
                 .orElse(false);
     }
 
@@ -201,52 +194,18 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
        FLOWABLE APPROVAL
        ============================================================ */
 
-    @Transactional
+    @Override
     public void initiatePeriodCloseApproval(Long companyId) {
 
         PayrollPeriod open = getOpenPeriod(companyId);
-
-        if (open.getStatus() != PayrollPeriodStatus.OPEN) {
-            throw new IllegalStateException(
-                    "Only OPEN period can be submitted for approval."
-            );
-        }
-
-    /* ============================================================
-       1️⃣ Ensure all payroll runs are POSTED (company scoped)
-       ============================================================ */
-
-        long incomplete =
-                payrollRunRepository
-                        .countByEmployee_Department_Company_IdAndPayrollDateBetweenAndStatusNot(
-                                companyId,
-                                open.getPeriodStart(),
-                                open.getPeriodEnd(),
-                                PayrollRunStatus.POSTED
-                        );
-
-        if (incomplete > 0) {
-            throw new IllegalStateException(
-                    "Cannot submit period for approval. Some payroll runs are not POSTED."
-            );
-        }
-
-    /* ============================================================
-       2️⃣ Lock period BEFORE starting workflow
-       ============================================================ */
-
-        open.setStatus(PayrollPeriodStatus.LOCKED);
-        repository.save(open);
-
-    /* ============================================================
-       3️⃣ Start approval workflow
-       ============================================================ */
 
         runtimeService.startProcessInstanceByKey(
                 "payrollPeriodCloseProcess",
                 Map.of(
                         "companyId", companyId,
-                        "periodId", open.getId()
+                        "periodId", open.getId(),
+                        "periodStart", open.getPeriodStart(),
+                        "periodEnd", open.getPeriodEnd()
                 )
         );
     }

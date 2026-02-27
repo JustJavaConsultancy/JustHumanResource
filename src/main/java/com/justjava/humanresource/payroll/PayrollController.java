@@ -10,9 +10,9 @@ import com.justjava.humanresource.hr.service.SetupService;
 import com.justjava.humanresource.payroll.entity.*;
 import com.justjava.humanresource.payroll.service.PayGroupService;
 import com.justjava.humanresource.payroll.service.PaySlipService;
+import com.justjava.humanresource.payroll.service.PayrollPeriodService;
 import com.justjava.humanresource.payroll.service.PayrollSetupService;
-import com.justjava.humanresource.payroll.service.impl.PaySlipServiceImpl;
-import com.justjava.humanresource.payroll.service.impl.PayrollPeriodServiceImpl;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -29,7 +29,7 @@ public class PayrollController {
     PayGroupService payGroupService;
 
     @Autowired
-    private PayrollPeriodServiceImpl payrollPeriodService;
+    private PayrollPeriodService payrollPeriodService;
 
     @Autowired
     private SetupService setupService;
@@ -205,8 +205,8 @@ public class PayrollController {
                         +" the Gross Pay ==="+paySlip.getGrossPay()
                         +" the Basic Salary ==="+paySlip.getGrossPay()
                         +" the Total Deductions ==="+paySlip.getTotalDeductions()
-                        +" the Net Pay ==="+paySlip.getStatus())
-        );
+                        //+" the Net Pay ==="+paySlip.getStatus())
+        ));
         model.addAttribute("paySlips", paySlips);
         model.addAttribute("previousPeriods",previousPaySlips);
         model.addAttribute("title", "Payroll Management");

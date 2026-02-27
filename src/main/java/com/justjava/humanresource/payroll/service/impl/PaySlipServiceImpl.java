@@ -46,7 +46,6 @@ public class PaySlipServiceImpl implements PaySlipService {
                     "Payslip can only be generated for POSTED payroll run.");
         }
 
-        // Prevent duplicate payslip for same run version
         boolean exists =
                 paySlipRepository.existsByPayrollRunIdAndVersionNumber(
                         payrollRunId,
@@ -54,7 +53,7 @@ public class PaySlipServiceImpl implements PaySlipService {
                 );
 
         if (exists) {
-            return; // idempotent behavior
+            return; // idempotent
         }
 
         PaySlip slip = new PaySlip();
@@ -68,7 +67,6 @@ public class PaySlipServiceImpl implements PaySlipService {
 
         paySlipRepository.save(slip);
     }
-
     /* ============================================================
        GET CURRENT PERIOD PAYSLIPS (OPEN OR LOCKED)
        ============================================================ */
@@ -322,16 +320,15 @@ public class PaySlipServiceImpl implements PaySlipService {
     /* ============================================================
        INTERNAL DTO MAPPER
        ============================================================ */
-
     private PaySlipDTO mapToDto(PaySlip paySlip) {
+
+        PayrollRun run = paySlip.getPayrollRun();
 
         List<PayrollLineItem> lines =
                 payrollLineItemRepository
-                        .findByPayrollRunId(paySlip.getPayrollRun().getId());
+                        .findByPayrollRunId(run.getId());
 
         BigDecimal basicSalary = BigDecimal.ZERO;
-        BigDecimal paye = BigDecimal.ZERO;
-        BigDecimal pension = BigDecimal.ZERO;
 
         List<PaySlipLineDTO> allowances = new ArrayList<>();
         List<PaySlipLineDTO> deductions = new ArrayList<>();
@@ -341,14 +338,6 @@ public class PaySlipServiceImpl implements PaySlipService {
             if ("BASIC".equals(line.getComponentCode())) {
                 basicSalary = line.getAmount();
                 continue;
-            }
-
-            if ("PAYE".equals(line.getComponentCode())) {
-                paye = line.getAmount();
-            }
-
-            if ("PENSION".equals(line.getComponentCode())) {
-                pension = line.getAmount();
             }
 
             PaySlipLineDTO dto = PaySlipLineDTO.builder()
@@ -369,7 +358,7 @@ public class PaySlipServiceImpl implements PaySlipService {
                 .id(paySlip.getId())
                 .employeeId(paySlip.getEmployee().getId())
                 .employeeName(paySlip.getEmployee().getFullName())
-                .payrollRunId(paySlip.getPayrollRun().getId())
+                .payrollRunId(run.getId())
                 .payDate(paySlip.getPayDate())
                 .versionNumber(paySlip.getVersionNumber())
 
@@ -381,11 +370,8 @@ public class PaySlipServiceImpl implements PaySlipService {
                 .allowances(allowances)
                 .deductions(deductions)
 
-                .payeAmount(paye)
-                .pensionAmount(pension)
-
-                .taxBandSummary("Calculated via PAYE configuration")
-                .pensionSchemeName("Active scheme during run")
+                .appliedTaxBandSummary(run.getAppliedTaxBandSummary())
+                .appliedPensionSchemeName(run.getAppliedPensionSchemeName())
 
                 .build();
     }
