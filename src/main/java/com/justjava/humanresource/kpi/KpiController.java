@@ -259,7 +259,8 @@ public class KpiController {
     }
     @GetMapping("/fragments/kpi-measurements-table")
     public String getKpiMeasurementsTable(Model model) {
-        List<KpiMeasurementResponseDTO> measurements = kpiMeasurementService.getAllEffectiveMeasurements(YearMonth.now());
+        List<KpiMeasurementResponseDTO> measurements = kpiMeasurementService.getAllEffectiveMeasurements(YearMonth.now().minusMonths(1));
+
         model.addAttribute("measurements", measurements);
         return "kpi/fragment/kpi-measurements-table";
     }
