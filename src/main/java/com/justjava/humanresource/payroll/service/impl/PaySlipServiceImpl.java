@@ -124,7 +124,7 @@ public class PaySlipServiceImpl implements PaySlipService {
                                 "No payslip found for employee in current period.")
                 );
 
-        if (!slip.getEmployee()
+/*        if (!slip.getEmployee()
                 .getDepartment()
                 .getCompany()
                 .getId()
@@ -132,7 +132,7 @@ public class PaySlipServiceImpl implements PaySlipService {
 
             throw new IllegalStateException(
                     "Employee does not belong to specified company.");
-        }
+        }*/
 
         return mapToDto(slip);
     }

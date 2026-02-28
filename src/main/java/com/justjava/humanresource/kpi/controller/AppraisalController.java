@@ -84,7 +84,9 @@ public class AppraisalController {
         return appraisalService.finalizeAppraisal(
                 request.getAppraisalId(),
                 request.getManagerScore(),
-                request.getManagerComment()
+                request.getManagerComment(),
+                request.getSelfScore(),
+                request.getSelfComment()
         );
     }
 
@@ -169,7 +171,8 @@ public class AppraisalController {
         private Long appraisalId;
         private BigDecimal managerScore;
         private String managerComment;
-
+        private BigDecimal selfScore;
+        private String selfComment;
         public Long getAppraisalId() { return appraisalId; }
         public BigDecimal getManagerScore() { return managerScore; }
         public String getManagerComment() { return managerComment; }
@@ -177,5 +180,21 @@ public class AppraisalController {
         public void setAppraisalId(Long appraisalId) { this.appraisalId = appraisalId; }
         public void setManagerScore(BigDecimal managerScore) { this.managerScore = managerScore; }
         public void setManagerComment(String managerComment) { this.managerComment = managerComment; }
+
+        public BigDecimal getSelfScore() {
+            return selfScore;
+        }
+
+        public void setSelfScore(BigDecimal selfScore) {
+            this.selfScore = selfScore;
+        }
+
+        public String getSelfComment() {
+            return selfComment;
+        }
+
+        public void setSelfComment(String selfComment) {
+            this.selfComment = selfComment;
+        }
     }
 }
