@@ -46,7 +46,23 @@ public class FlowableTaskService {
                 .map(this::mapToDto)
                 .toList();
     }
+    public List<FlowableTaskDTO> getTasksByTaskDefinition(
+            String taskDefinitionKey,
+            String processDefinitionKey
+    ) {
 
+        List<Task> tasks = taskService.createTaskQuery()
+                .taskDefinitionId(taskDefinitionKey)
+                .processDefinitionKey(processDefinitionKey)
+                .active()
+                .orderByTaskCreateTime()
+                .desc()
+                .list();
+
+        return tasks.stream()
+                .map(this::mapToDto)
+                .toList();
+    }
 //    GET COMPLETED PROCESS INSTANCES
     public List<HistoricProcessInstance> getCompletedProcessInstancesForAssignee(
             String processDefinitionKey
