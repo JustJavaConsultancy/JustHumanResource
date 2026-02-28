@@ -87,7 +87,9 @@ public class AppraisalService {
     public EmployeeAppraisal finalizeAppraisal(
             Long appraisalId,
             BigDecimal managerScore,
-            String managerComment
+            String managerComment,
+            BigDecimal selfScore,
+            String selfComment
     ) {
 
         EmployeeAppraisal appraisal =
@@ -110,6 +112,9 @@ public class AppraisalService {
         appraisal.setOutcome(determineOutcome(finalScore));
         appraisal.setManagerComment(managerComment);
         appraisal.setCompletedAt(LocalDateTime.now());
+        appraisal.setSelfScore(selfScore);
+        appraisal.setSelfComment(selfComment);
+        appraisal.setSelfCompletedAt(LocalDateTime.now());
 
         log.info("Appraisal finalized for employee {} with finalScore={}",
                 appraisal.getEmployee().getId(), finalScore);

@@ -22,12 +22,15 @@ public class FinalizeAppraisalDelegate implements JavaDelegate {
         Long appraisalId = getLongVariable(execution, "appraisalId");
         BigDecimal managerScore = getBigDecimalVariable(execution, "managerScore");
         String managerComment = (String) execution.getVariable("managerComment");
-
+        BigDecimal selfScore = getBigDecimalVariable(execution, "selfScore");
+        String selfComment = (String) execution.getVariable("selfComment");
         EmployeeAppraisal appraisal =
                 appraisalService.finalizeAppraisal(
                         appraisalId,
                         managerScore,
-                        managerComment
+                        managerComment,
+                        selfScore,
+                        selfComment
                 );
 
         execution.setVariable("finalScore", appraisal.getFinalScore());
