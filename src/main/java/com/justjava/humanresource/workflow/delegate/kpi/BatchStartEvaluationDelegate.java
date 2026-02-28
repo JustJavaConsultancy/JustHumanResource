@@ -34,6 +34,7 @@ public class BatchStartEvaluationDelegate implements JavaDelegate {
         YearMonth period =
                 (YearMonth) execution.getVariable("evaluationPeriod");
 
+        System.out.println(" The Evaluation Period Here===="+period);
         if(period==null)
             period = YearMonth.now().minusMonths(1);
 
@@ -47,8 +48,11 @@ public class BatchStartEvaluationDelegate implements JavaDelegate {
         Page<Employee> result;
 
         do {
-            result = employeeRepository.findAll(
+            result = employeeRepository.findEmployeesWithKpiMeasurementForPeriod(period,
                     PageRequest.of(page, BATCH_SIZE));
+
+            System.out.println(" The Size of the Employees with KPI Measurement for this period "+period
+            +" is "+result.getContent().size());
 
             for (Employee employee : result.getContent()) {
 

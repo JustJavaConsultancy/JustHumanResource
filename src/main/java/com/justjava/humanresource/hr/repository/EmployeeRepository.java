@@ -55,8 +55,8 @@ public interface EmployeeRepository extends JpaRepository<Employee,Long> {
             AND m.period = :period
        )
        """)
-    List<Employee> findEmployeesWithKpiMeasurementForPeriod(
-            @Param("period") java.time.YearMonth period
+    Page<Employee> findEmployeesWithKpiMeasurementForPeriod(
+            @Param("period") java.time.YearMonth period,Pageable pageable
     );
 
     Optional<Employee> findByEmail(String email);

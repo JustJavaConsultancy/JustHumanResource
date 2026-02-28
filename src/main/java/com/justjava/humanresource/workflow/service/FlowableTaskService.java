@@ -7,6 +7,7 @@ import org.flowable.engine.RuntimeService;
 import org.flowable.engine.TaskService;
 import org.flowable.engine.history.HistoricProcessInstance;
 import org.flowable.task.api.Task;
+import org.flowable.task.api.history.HistoricTaskInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -58,7 +59,18 @@ public class FlowableTaskService {
                 .desc()
                 .list();
     }
-
+    //    GET COMPLETED PROCESS INSTANCES
+    public List<HistoricTaskInstance> getCompletedTasksForAssignee(
+            String taskDefinitionKey, String assignee
+    ) {
+        return historyService.createHistoricTaskInstanceQuery()
+                .taskDefinitionKey(taskDefinitionKey)
+                .taskAssignee(assignee)
+                .finished()
+                .orderByHistoricTaskInstanceEndTime()
+                .desc()
+                .list();
+    }
     /* =====================================================
        COMPLETE TASK
        ===================================================== */
