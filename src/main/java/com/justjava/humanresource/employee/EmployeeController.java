@@ -139,9 +139,10 @@ public class EmployeeController {
         Employee loginEmployee = employeeService.getByEmail(email);
         PaySlipDTO latestPaySlip = paySlipService.getCurrentPeriodPaySlipForEmployee(1l,loginEmployee.getId());
 
+        List<PaySlipDTO> previousPaySlip = paySlipService.getPaySlipsByEmployee(loginEmployee.getId());
         Employee employee = employeeService.getEmployeeWithBankDetails(loginEmployee.getId());
         System.out.println("Latest Pay Slip: " );
-        model.addAttribute("previousPaySlip", null);
+        model.addAttribute("previousPaySlip", previousPaySlip);
         model.addAttribute("latestPaySlip", latestPaySlip);
         model.addAttribute("employee", employee);
         model.addAttribute("title", "Payroll");
