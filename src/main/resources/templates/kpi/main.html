@@ -5,10 +5,11 @@
       layout:decorate="~{layout}">
 <head>
     <meta charset="UTF-8">
-    <title>My KPIs - Employee Dashboard</title>
+    <title>Title</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
     <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <!-- HTMX -->
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <script>
         tailwind.config = {
@@ -16,163 +17,427 @@
             theme: {
                 extend: {
                     colors: {
-                        primary: { 50: '#eff6ff', 100: '#dbeafe', 200: '#bfdbfe', 300: '#93c5fd', 400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8', 800: '#1e40af', 900: '#1e3a8a' },
-                        secondary: { 50: '#f8fafc', 100: '#f1f5f9', 200: '#e2e8f0', 300: '#cbd5e1', 400: '#94a3b8', 500: '#64748b', 600: '#475569', 700: '#334155', 800: '#1e293b', 900: '#0f172a' }
+                        primary: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            200: '#bfdbfe',
+                            300: '#93c5fd',
+                            400: '#60a5fa',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            800: '#1e40af',
+                            900: '#1e3a8a',
+                        },
+                        secondary: {
+                            50: '#f8fafc',
+                            100: '#f1f5f9',
+                            200: '#e2e8f0',
+                            300: '#cbd5e1',
+                            400: '#94a3b8',
+                            500: '#64748b',
+                            600: '#475569',
+                            700: '#334155',
+                            800: '#1e293b',
+                            900: '#0f172a',
+                        }
                     },
-                    fontFamily: { 'sans': ['Inter', 'system-ui', '-apple-system', 'sans-serif'] },
-                    borderRadius: { 'xl': '1rem', '2xl': '1.5rem' }
-                }
-            }
+                    fontFamily: {
+                        'sans': ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                    },
+                    borderRadius: {
+                        'xl': '1rem',
+                        '2xl': '1.5rem',
+                    }
+                },
+            },
         };
     </script>
     <style>
-        * { font-family: 'Inter', sans-serif; }
-        body { overflow-x: hidden; }
-        .sidebar-item { transition: all 0.2s ease; position: relative; }
-        .sidebar-item.active { background-color: rgba(59, 130, 246, 0.1); color: #3b82f6; border-left: 3px solid #3b82f6; }
-        .sidebar-item.active .material-icons-round { color: #3b82f6; }
-        .sidebar-item:hover:not(.active) { background-color: rgba(59, 130, 246, 0.05); }
-        .dark .sidebar-item.active { background-color: rgba(59, 130, 246, 0.2); }
-        .stat-card { transition: transform 0.2s ease, box-shadow 0.2s ease; height: 100%; display: flex; flex-direction: column; }
-        .stat-card:hover { transform: translateY(-2px); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); }
-        .badge { padding: 2px 8px; font-size: 0.75rem; font-weight: 500; border-radius: 9999px; }
-        .badge-success { background-color: #dcfce7; color: #16a34a; }
-        .badge-warning { background-color: #fef3c7; color: #d97706; }
-        .badge-error { background-color: #fee2e2; color: #dc2626; }
-        .badge-info { background-color: #dbeafe; color: #2563eb; }
-        .progress-bar { height: 8px; border-radius: 4px; overflow: hidden; background-color: #e5e7eb; }
-        .dark .progress-bar { background-color: #374151; }
-        .progress-fill { height: 100%; border-radius: 4px; }
-        .sidebar-scroll::-webkit-scrollbar { width: 4px; }
-        .sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
-        .sidebar-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-        .dark .sidebar-scroll::-webkit-scrollbar-thumb { background: #4b5563; }
-        .transition-all { transition-property: all; transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); transition-duration: 200ms; }
-        .sidebar-container { position: fixed; top: 0; left: 0; height: 100vh; width: 16rem; z-index: 40; overflow-y: auto; }
-        .main-content { margin-left: 16rem; width: calc(100% - 16rem); min-height: 100vh; display: flex; flex-direction: column; }
-        @media (max-width: 1023px) {
-            .sidebar-container { transform: translateX(-100%); }
-            .sidebar-container.open { transform: translateX(0); }
-            .main-content { margin-left: 0; width: 100%; }
+        * {
+            font-family: 'Inter', sans-serif;
         }
-        .kpi-tab { padding: 12px 20px; font-weight: 500; color: #6b7280; border-bottom: 3px solid transparent; transition: all 0.2s; }
-        .kpi-tab:hover { color: #4b5563; }
-        .kpi-tab.active { color: #3b82f6; border-bottom-color: #3b82f6; }
-        .dark .kpi-tab { color: #9ca3af; }
-        .dark .kpi-tab:hover { color: #d1d5db; }
-        .dark .kpi-tab.active { color: #3b82f6; }
+
+        body {
+            overflow-x: hidden;
+        }
+
+        .sidebar-item {
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .sidebar-item.active {
+            background-color: rgba(59, 130, 246, 0.1);
+            color: #3b82f6;
+            border-left: 3px solid #3b82f6;
+        }
+
+        .sidebar-item.active .material-icons-round {
+            color: #3b82f6;
+        }
+
+        .sidebar-item:hover:not(.active) {
+            background-color: rgba(59, 130, 246, 0.05);
+        }
+
+        .dark .sidebar-item.active {
+            background-color: rgba(59, 130, 246, 0.2);
+        }
+
+        .stat-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        .badge {
+            padding: 2px 8px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            border-radius: 9999px;
+        }
+
+        .badge-success {
+            background-color: #dcfce7;
+            color: #16a34a;
+        }
+
+        .badge-warning {
+            background-color: #fef3c7;
+            color: #d97706;
+        }
+
+        .badge-error {
+            background-color: #fee2e2;
+            color: #dc2626;
+        }
+
+        .badge-info {
+            background-color: #dbeafe;
+            color: #2563eb;
+        }
+
+        .progress-bar {
+            height: 8px;
+            border-radius: 4px;
+            overflow: hidden;
+            background-color: #e5e7eb;
+        }
+
+        .dark .progress-bar {
+            background-color: #374151;
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 4px;
+        }
+
+        .sidebar-scroll::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .sidebar-scroll::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .sidebar-scroll::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+
+        .dark .sidebar-scroll::-webkit-scrollbar-thumb {
+            background: #4b5563;
+        }
+
+        .transition-all {
+            transition-property: all;
+            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+            transition-duration: 200ms;
+        }
+
+        .sidebar-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            width: 16rem;
+            z-index: 40;
+            overflow-y: auto;
+        }
+
+        .main-content {
+            margin-left: 16rem;
+            width: calc(100% - 16rem);
+            min-height: 100vh;
+        }
+
+        @media (max-width: 1023px) {
+            .sidebar-container {
+                transform: translateX(-100%);
+            }
+
+            .sidebar-container.open {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                margin-left: 0;
+                width: 100%;
+            }
+        }
+
+        /* KPI Specific Styles */
+        .kpi-tab {
+            padding: 12px 20px;
+            font-weight: 500;
+            color: #6b7280;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .kpi-tab:hover {
+            color: #4b5563;
+        }
+
+        .kpi-tab.active {
+            color: #3b82f6;
+            border-bottom-color: #3b82f6;
+        }
+
+        .dark .kpi-tab {
+            color: #9ca3af;
+        }
+
+        .dark .kpi-tab:hover {
+            color: #d1d5db;
+        }
+
+        .dark .kpi-tab.active {
+            color: #3b82f6;
+        }
+
         .kpi-score-excellent { background-color: #10b981; }
         .kpi-score-good { background-color: #3b82f6; }
         .kpi-score-average { background-color: #f59e0b; }
         .kpi-score-poor { background-color: #ef4444; }
+
+        /* Appraisal specific */
         .appraisal-outcome-exceeds { background-color: #10b981; color: white; }
         .appraisal-outcome-meets { background-color: #3b82f6; color: white; }
         .appraisal-outcome-needs { background-color: #f59e0b; color: white; }
         .appraisal-outcome-unsatisfactory { background-color: #ef4444; color: white; }
-        .htmx-indicator { display: none; }
-        .htmx-request .htmx-indicator, .htmx-request.htmx-indicator { display: inline-block; }
-        /* Ensure tab content fills remaining vertical space */
-        .tab-content { flex: 1; display: flex; flex-direction: column; }
-        .tab-content > div { flex: 1; display: flex; flex-direction: column; }
-        .tab-content .overflow-x-auto { flex: 1; overflow: auto; }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 0;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .dark .modal-content {
+            background-color: #1f2937;
+        }
+
+        .kpi-item {
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 8px;
+            background: #f9fafb;
+        }
+
+        .dark .kpi-item {
+            border-color: #374151;
+            background: #1f2937;
+        }
+
+        .kpi-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            padding: 8px 0;
+        }
+
+        .kpi-item-content {
+            padding-top: 12px;
+            border-top: 1px solid #e5e7eb;
+            margin-top: 8px;
+        }
+
+        .dark .kpi-item-content {
+            border-top-color: #374151;
+        }
+
+        .weight-input {
+            width: 100px;
+        }
+
+        .total-weight {
+            font-weight: 600;
+            color: #3b82f6;
+        }
+
+        .weight-error {
+            color: #ef4444;
+            font-size: 0.875rem;
+        }
+        .htmx-indicator {
+    display: none;
+}
+.htmx-request .htmx-indicator,
+.htmx-request.htmx-indicator {
+    display: inline-block;
+}
     </style>
 </head>
 <body>
-<main layout:fragment="content" class="flex-1 flex flex-col">
+<main layout:fragment="content">
 
     <!-- Tabs -->
     <div class="border-b border-gray-200 dark:border-gray-700 mb-6">
         <nav class="flex space-x-6">
-            <button id="tab-definitions" class="kpi-tab active" onclick="switchTab('definitions')">KPI Definitions</button>
-            <button id="tab-assignments" class="kpi-tab" onclick="switchTab('assignments')">My KPI Assignments</button>
-            <button id="tab-measurements" class="kpi-tab" onclick="switchTab('measurements')">My Measurements</button>
-            <button id="tab-appraisal" class="kpi-tab" onclick="switchTab('appraisal')">My Appraisal</button>
+            <button id="tab-definitions" class="kpi-tab active" onclick="switchTab('definitions')">
+                KPI Definitions
+            </button>
+            <button id="tab-assignments" class="kpi-tab" onclick="switchTab('assignments')">
+                KPI Assignments
+            </button>
+            <button id="tab-measurements" class="kpi-tab" onclick="switchTab('measurements')">
+                KPI Measurements
+            </button>
+            <button id="tab-appraisal" class="kpi-tab" onclick="switchTab('appraisal')">
+                Appraisal
+            </button>
         </nav>
     </div>
 
-    <!-- Stats Cards (all equal height) -->
+    <!-- Stats Cards (wrapped in a container with id="stats-cards") -->
     <div id="stats-cards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
-        <!-- Assigned KPIs to me -->
+        <!-- Total KPI Definitions -->
         <div class="stat-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6">
             <div class="flex items-center justify-between mb-4">
                 <div class="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                    <span class="material-icons-round text-blue-600 dark:text-blue-400">assignment_ind</span>
+                    <span class="material-icons-round text-blue-600 dark:text-blue-400">checklist</span>
                 </div>
-                <span class="badge badge-info">Active</span>
+                <span class="text-sm font-medium text-green-600 flex items-center">
+                            <span class="material-icons-round text-sm mr-1">trending_up</span>
+                            +12%
+                        </span>
             </div>
-            <h3 th:text="${assignedKpisCount}" class="text-2xl font-bold mb-1" id="assignedKpis">8</h3>
-            <p class="text-gray-600 dark:text-gray-400 text-sm">KPIs Assigned to Me</p>
+            <h3 th:text="${definitionSize}" class="text-2xl font-bold mb-1" id="totalKpis">24</h3>
+            <p class="text-gray-600 dark:text-gray-400 text-sm">KPI Definitions</p>
+            <div class="mt-3 flex items-center text-xs text-gray-500">
+                <span class="material-icons-round text-xs mr-1">check_circle</span>
+                <span th:text="${definitionSize + ' active • 0 inactive'}">18 active • 6 inactive</span>
+            </div>
         </div>
 
-        <!-- My Average Performance Score -->
+        <!-- Assigned KPIs -->
+        <div class="stat-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6">
+            <div class="flex items-center justify-between mb-4">
+                <div class="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                    <span class="material-icons-round text-green-600 dark:text-green-400">assignment_turned_in</span>
+                </div>
+                <span class="badge badge-info">Tracking</span>
+            </div>
+            <h3 th:text="${totalAssignments}" class="text-2xl font-bold mb-1" id="assignedKpis">186</h3>
+            <p class="text-gray-600 dark:text-gray-400 text-sm">Active Assignments</p>
+            <div class="mt-3">
+                <div class="flex justify-between text-xs mb-1">
+                    <span class="text-gray-500">Individual</span>
+                    <span th:text="${assignmentsByEmployee}" class="font-medium">142</span>
+                </div>
+                <div class="flex justify-between text-xs">
+                    <span class="text-gray-500">Step-based</span>
+                    <span th:text="${assignmentsByJobStep}"  class="font-medium">44</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Avg Performance Score -->
         <div class="stat-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6">
             <div class="flex items-center justify-between mb-4">
                 <div class="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
                     <span class="material-icons-round text-purple-600 dark:text-purple-400">trending_up</span>
                 </div>
-                <span class="text-sm text-gray-500">Last 3 months</span>
+                <span class="text-sm text-gray-500">This Month</span>
             </div>
-            <h3 class="text-2xl font-bold mb-1" th:text="${avgPerformanceScore}">84.5</h3>
-            <p class="text-gray-600 dark:text-gray-400 text-sm">My Avg Performance Score</p>
+            <h3 class="text-2xl font-bold mb-1">84.5</h3>
+            <p class="text-gray-600 dark:text-gray-400 text-sm">Avg Performance Score</p>
             <div class="mt-3">
                 <div class="progress-bar">
-                    <div class="progress-fill bg-purple-500" th:style="'width: ' + ${avgPerformanceScore} + '%'"></div>
+                    <div class="progress-fill bg-purple-500" style="width: 84.5%"></div>
                 </div>
-                <p class="text-xs text-gray-500 mt-1" th:text="${performanceTrend}">+2.3% from last month</p>
+                <p class="text-xs text-gray-500 mt-1">+2.3% from last month</p>
             </div>
         </div>
 
-        <!-- Recent Measurements -->
-        <div class="stat-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6">
-            <div class="flex items-center justify-between mb-4">
-                <div class="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
-                    <span class="material-icons-round text-green-600 dark:text-green-400">rule</span>
-                </div>
-                <span class="badge badge-success">Latest</span>
-            </div>
-            <h3 class="text-2xl font-bold mb-1" th:text="${recentMeasurementsCount}">12</h3>
-            <p class="text-gray-600 dark:text-gray-400 text-sm">Measurements this year</p>
-            <div class="mt-3 flex items-center text-xs text-gray-500">
-                <span class="material-icons-round text-xs mr-1">update</span>
-                <span th:text="${lastMeasurementDate}">Last entry: 15 Mar 2026</span>
-            </div>
-        </div>
-
-        <!-- Pending Appraisal / Next Review -->
+        <!-- Pending Reviews -->
         <div class="stat-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6">
             <div class="flex items-center justify-between mb-4">
                 <div class="p-3 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
-                    <span class="material-icons-round text-orange-600 dark:text-orange-400">event</span>
+                    <span class="material-icons-round text-orange-600 dark:text-orange-400">pending</span>
                 </div>
-                <span class="badge badge-warning" th:text="${nextReviewStatus}">Upcoming</span>
+                <span class="badge badge-warning">Attention</span>
             </div>
-            <h3 class="text-2xl font-bold mb-1" th:text="${nextReviewDate}">Q2 2026</h3>
-            <p class="text-gray-600 dark:text-gray-400 text-sm">Next Appraisal</p>
+            <h3 class="text-2xl font-bold mb-1">28</h3>
+            <p class="text-gray-600 dark:text-gray-400 text-sm">Pending Reviews</p>
             <div class="mt-3">
                 <div class="flex items-center text-xs text-gray-500">
-                    <span class="material-icons-round text-xs mr-1">info</span>
-                    <span th:text="${appraisalProgress}">3 of 5 KPIs reviewed</span>
+                    <span class="material-icons-round text-xs mr-1">schedule</span>
+                    <span>12 overdue, 16 due this week</span>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- KPI Definitions Content (read‑only table, fills space) -->
+    <div style="display:flex;justify-content:end;margin-bottom:20px">
+        <button onclick="openModal('kpiDefinitionModal')" class="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 flex items-center space-x-2">
+            <span class="material-icons-round text-sm">add</span>
+            <span>Add KPI</span>
+        </button>
+    </div>
+
+    <!-- KPI Definitions Content -->
     <div id="content-definitions" class="tab-content">
-        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col">
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
             <div class="p-4 md:p-6 border-b border-gray-200 dark:border-gray-700">
                 <div class="flex items-center justify-between">
                     <h3 class="text-lg font-bold">KPI Definitions</h3>
-                    <div class="relative">
-                        <input type="text" placeholder="Search KPIs..."
-                               class="pl-10 pr-4 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none w-64">
-                        <span class="material-icons-round text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2">search</span>
+                    <div class="flex items-center space-x-3">
+                        <div class="relative">
+                            <input type="text" placeholder="Search KPIs..."
+                                   class="pl-10 pr-4 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none w-64">
+                            <span class="material-icons-round text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2">search</span>
+                        </div>
                     </div>
                 </div>
             </div>
-            <div class="overflow-x-auto flex-1 p-0">
+
+            <div class="overflow-x-auto">
                 <table class="w-full">
-                    <thead class="bg-gray-50 dark:bg-gray-750 sticky top-0">
+                    <thead class="bg-gray-50 dark:bg-gray-750">
                     <tr>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Code</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Name</th>
@@ -180,44 +445,102 @@
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Target Value</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Unit</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
                     </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200 dark:divide-gray-700" id="kpiDefinitionsTable">
+
+                    <!-- KPI Rows -->
                     <tr th:each="kpi : ${kpiDefinitions}" class="bg-white dark:bg-gray-800">
-                        <td class="px-6 py-4 whitespace-nowrap"><div th:text="${kpi.code}" class="font-medium">KPI001</div></td>
+
+                        <!-- Code -->
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div th:text="${kpi.code}" class="font-medium">KPI001</div>
+                        </td>
+
+                        <!-- Name & Description -->
                         <td class="px-6 py-4">
                             <div th:text="${kpi.name}" class="font-medium">Sales Target Achievement</div>
-                            <div th:text="${kpi.description}" class="text-sm text-gray-500">Percentage of monthly sales target achieved</div>
+                            <div th:text="${kpi.description}"
+                                 class="text-sm text-gray-500">
+                                Percentage of monthly sales target achieved
+                            </div>
                         </td>
+
+                        <!-- Category Badge -->
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <span th:text="${kpi.category}" class="px-2 py-1 text-xs rounded-full"
-                                  th:classappend="${kpi.category == 'PRODUCTIVITY' ? ' bg-blue-100 text-blue-800' :
-                                                    (kpi.category == 'ATTENDANCE' ? ' bg-green-100 text-green-800' :
-                                                    (kpi.category == 'QUALITY' ? ' bg-purple-100 text-purple-800' :
-                                                    ' bg-gray-100 text-gray-800'))}">Productivity</span>
+            <span th:text="${kpi.category}"
+                  class="px-2 py-1 text-xs rounded-full"
+                  th:classappend="${kpi.category == 'PRODUCTIVITY' ? ' bg-blue-100 text-blue-800' :
+                                  (kpi.category == 'ATTENDANCE' ? ' bg-green-100 text-green-800' :
+                                  (kpi.category == 'QUALITY' ? ' bg-purple-100 text-purple-800' :
+                                  ' bg-gray-100 text-gray-800'))}">
+                Productivity
+            </span>
                         </td>
+
+                        <!-- Target Value with Unit Symbol -->
                         <td class="px-6 py-4 whitespace-nowrap">
                             <th:block th:switch="${kpi.unit}">
-                                <span th:case="'PERCENTAGE'" th:text="${kpi.targetValue} + ' %'">100 %</span>
-                                <span th:case="'HOURS'" th:text="${kpi.targetValue} + ' h'">40 h</span>
-                                <span th:case="'NUMBER'" th:text="${kpi.targetValue}">4.5</span>
-                                <span th:case="*" th:text="${kpi.targetValue ?: '--'}">--</span>
+                <span th:case="'PERCENTAGE'"
+                      th:text="${kpi.targetValue} + ' %'">100 %</span>
+                                <span th:case="'HOURS'"
+                                      th:text="${kpi.targetValue} + ' h'">40 h</span>
+                                <span th:case="'NUMBER'"
+                                      th:text="${kpi.targetValue}">4.5</span>
+                                <span th:case="*"
+                                      th:text="${kpi.targetValue ?: '--'}">--</span>
                             </th:block>
                         </td>
+
+                        <!-- Unit (Full Display Name) -->
                         <td class="px-6 py-4 whitespace-nowrap"
                             th:text="${kpi.unit == 'PERCENTAGE' ? 'Percentage' :
-                                      (kpi.unit == 'HOURS' ? 'Hours' :
-                                      (kpi.unit == 'NUMBER' ? 'Number' : kpi.unit))}">Percentage</td>
+                      (kpi.unit == 'HOURS' ? 'Hours' :
+                      (kpi.unit == 'NUMBER' ? 'Number' : kpi.unit))}">
+                            Percentage
+                        </td>
+
+                        <!-- Status Badge -->
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <span th:text="${kpi.active ? 'Active' : 'Inactive'}"
-                                  class="px-2 py-1 text-xs rounded-full"
-                                  th:classappend="${kpi.active ? ' bg-green-100 text-green-800' : ' bg-red-100 text-red-800'}">Active</span>
+            <span th:text="${kpi.active ? 'Active' : 'Inactive'}"
+                  class="px-2 py-1 text-xs rounded-full"
+                  th:classappend="${kpi.active ? ' bg-green-100 text-green-800' :
+                                                ' bg-red-100 text-red-800'}">
+                Active
+            </span>
+                        </td>
+
+                        <!-- Action Buttons -->
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            <button th:onclick="'editKpiDefinition(' + ${kpi.id} + ')'"
+                                    class="text-primary-600 hover:text-primary-900 mr-3">
+                                <span class="material-icons-round text-sm">edit</span>
+                            </button>
+
+                            <button th:onclick="'deleteKpiDefinition(' + ${kpi.id} + ')'"
+                                    class="text-red-600 hover:text-red-900">
+                                <span class="material-icons-round text-sm">delete</span>
+                            </button>
+
+                            <button th:onclick="'assignKpi(' + ${kpi.id} + ')'"
+                                    class="text-blue-600 hover:text-blue-900 ml-3">
+                                <span class="material-icons-round text-sm">assignment</span>
+                            </button>
+                        </td>
+
+                    </tr>
+
+                    <!-- Empty State -->
+                    <tr th:if="${kpiDefinitions == null or #lists.isEmpty(kpiDefinitions)}">
+                        <td colspan="7"
+                            class="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                            No KPI definitions found.
                         </td>
                     </tr>
-                    <tr th:if="${kpiDefinitions == null or #lists.isEmpty(kpiDefinitions)}">
-                        <td colspan="6" class="px-6 py-4 text-center text-gray-500 dark:text-gray-400">No KPI definitions found.</td>
-                    </tr>
+
                     </tbody>
+
                 </table>
             </div>
         </div>
@@ -225,23 +548,79 @@
 
     <!-- KPI Assignments Content – loaded via HTMX -->
     <div id="content-assignments" class="tab-content hidden">
-        <div class="flex justify-center items-center h-full">
+        <!-- Placeholder with loading indicator – will be replaced by HTMX -->
+        <div class="flex justify-center items-center py-12">
             <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-            <span class="ml-3 text-gray-500">Loading your assignments...</span>
+            <span class="ml-3 text-gray-500">Loading assignments...</span>
         </div>
     </div>
 
-    <!-- KPI Measurements Content – read‑only table (fills space) -->
+    <!-- KPI Measurements Content – FULLY DYNAMIC with HTMX -->
     <div id="content-measurements" class="tab-content hidden">
-        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col">
-            <div class="p-6 border-b border-gray-200 dark:border-gray-700">
-                <h3 class="text-lg font-bold">My KPI Measurements</h3>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+            <!-- Measurement Form for Multiple KPIs -->
+            <div class="lg:col-span-1 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+                <h3 class="text-lg font-bold mb-4">Record KPI Measurements</h3>
+                <form id="measurementForm"
+                      hx-post="/kpi/measurements"
+                      hx-target="#measurementsTable"
+                      hx-swap="innerHTML"
+                      hx-indicator="#measurement-spinner"
+                      hx-on:htmx:before-request="disableMeasurementSubmit(event)"
+                      hx-on:htmx:after-request="if(event.detail.successful &amp;&amp; event.detail.requestConfig.verb === 'post') { this.reset(); document.getElementById('kpiMeasurementList').innerHTML = ''; showNotification('Measurements recorded successfully!', 'success'); refreshStats(); } enableMeasurementSubmit(event)"
+                      class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Employee *</label>
+                        <select id="measurementEmployee"
+                                name="employeeId"
+                                hx-get="/kpi/measurements/form-items"
+                                hx-target="#kpiMeasurementList"
+                                hx-swap="outerHTML"
+                                hx-trigger="change"
+                                hx-indicator="#kpi-loading-spinner"
+                                required
+                                class="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+                            <option value="">Select Employee</option>
+                            <option th:each="emp : ${employees}" th:value="${emp.id}" th:text="${emp.firstName + ' ' + emp.lastName}">Employee Name</option>
+                        </select>
+                        <span id="kpi-loading-spinner" class="htmx-indicator text-sm text-primary-600">Loading KPIs...</span>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Period *</label>
+                        <select id="measurementPeriod" name="period" required
+                                class="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+                            <option value="2026-01">January 2026</option>
+                            <option value="2026-02">February 2026</option>
+                            <option value="2026-03">March 2026</option>
+                            <option value="2026-04">April 2026</option>
+                            <option value="2026-05">May 2026</option>
+                            <option value="2026-06">June 2026</option>
+                            <option value="2026-07">July 2026</option>
+                            <option value="2026-08">August 2026</option>
+                            <option value="2026-09">September 2026</option>
+                            <option value="2026-10">October 2026</option>
+                            <option value="2026-11">November 2026</option>
+                            <option value="2026-12">December 2026</option>
+                        </select>
+                    </div>
+
+                    <!-- KPI list container -->
+                    <div id="kpiMeasurementList" class="space-y-3"></div>
+
+                    <button type="submit" id="recordMeasurementsBtn" class="w-full bg-primary-600 text-white py-2 rounded-lg hover:bg-primary-700">
+                        Record All Measurements
+                    </button>
+                    <span id="measurement-spinner" class="htmx-indicator text-center block text-primary-600">Submitting...</span>
+                </form>
             </div>
-            <div class="flex-1 overflow-auto p-6" id="measurementsTable">
-                <!-- Loaded via HTMX -->
-                <div class="flex justify-center items-center h-full">
-                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-                    <span class="ml-3 text-gray-500">Loading measurements...</span>
+
+            <!-- Recent Measurements Table -->
+            <div class="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+                <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+                    <h3 class="text-lg font-bold">Recent KPI Measurements</h3>
+                </div>
+                <div class="p-6 overflow-x-auto">
+                    <div id="measurementsTable"></div>
                 </div>
             </div>
         </div>
@@ -249,57 +628,842 @@
 
     <!-- Appraisal Content – loaded via HTMX -->
     <div id="content-appraisal" class="tab-content hidden">
-        <div class="flex justify-center items-center h-full">
+        <!-- Placeholder with loading indicator – will be replaced by HTMX -->
+        <div class="flex justify-center items-center py-12">
             <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-            <span class="ml-3 text-gray-500">Loading your appraisal...</span>
+            <span class="ml-3 text-gray-500">Loading appraisals...</span>
+        </div>
+    </div>
+
+    <!-- KPI Definition Modal -->
+    <div id="kpiDefinitionModal" class="modal">
+        <div class="modal-content">
+            <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+                <h3 class="text-lg font-bold">Add KPI Definition</h3>
+            </div>
+            <form id="kpiDefinitionForm" th:action="@{/kpi/definition}" method="post" onsubmit="disableSubmitButton(this)" class="p-6 space-y-4">
+                <input type="hidden" id="kpiId">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Code *</label>
+                        <input name="code" type="text" id="kpiCode" required
+                               class="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Name *</label>
+                        <input name="name" type="text" id="kpiName" required
+                               class="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Description</label>
+                    <textarea name="description" id="kpiDescription" rows="3"
+                              class="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none"></textarea>
+                </div>
+                <div class="grid grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Category *</label>
+                        <select name="category" id="kpiCategory" required
+                                class="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+                            <option value="">Select Category</option>
+                            <option value="PRODUCTIVITY">Productivity</option>
+                            <option value="ATTENDANCE">Attendance</option>
+                            <option value="QUALITY">Quality</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Target Value *</label>
+                        <input name="targetValue" type="number" step="0.01" id="kpiTarget" required
+                               class="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Unit *</label>
+                        <select name="unit" id="kpiUnit" required
+                                class="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+                            <option value="">Select Unit</option>
+                            <option value="PERCENTAGE">Percentage</option>
+                            <option value="NUMBER">Number</option>
+                            <option value="HOURS">Hours</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3">
+                    <button onclick="closeModal('kpiDefinitionModal')" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
+                        Save KPI
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ========== KPI ASSIGNMENT MODAL (INDEXED FIELDS) ========== -->
+    <div id="kpiAssignmentModal" class="modal">
+        <div class="modal-content">
+            <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+                <h3 class="text-lg font-bold">Assign Multiple KPIs</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Add multiple KPIs with weights (total must equal 1.0)</p>
+            </div>
+            <!-- Standard form submission – htmx will send as application/x-www-form-urlencoded -->
+            <form id="kpiAssignmentForm"
+                  hx-post="/kpi/assign"
+                  hx-target="#content-assignments"
+                  hx-swap="innerHTML"
+                  hx-indicator="#submit-spinner"
+                  hx-on:htmx:before-request="disableAssignmentSubmit()"
+                  hx-on:htmx:after-request="handleAssignmentResponse(event)"
+                  onsubmit="return validateAssignmentForm(event)"
+                  class="p-6 space-y-4">
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Assign To</label>
+                    <div class="space-y-3">
+                        <div class="flex items-center">
+                            <input type="radio" id="assignEmployee" name="assignTo" value="employee" checked
+                                   class="w-4 h-4 text-primary-600 focus:ring-primary-500">
+                            <label for="assignEmployee" class="ml-2 text-sm">Individual Employee</label>
+                        </div>
+                        <div class="flex items-center">
+                            <input type="radio" id="assignGrade" name="assignTo" value="grade"
+                                   class="w-4 h-4 text-primary-600 focus:ring-primary-500">
+                            <label for="assignGrade" class="ml-2 text-sm">Job Grade with Steps</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="employeeAssignment" class="assignment-option">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Employee *</label>
+                    <select id="assignmentEmployee" name="employeeId" required
+                            class="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+                        <option value="">Select Employee</option>
+                        <option th:each="employee : ${employees}" th:value="${employee.id}" th:text="${employee.firstName + ' ' + employee.lastName}">John Doe</option>
+                    </select>
+                </div>
+
+                <div id="gradeAssignment" class="assignment-option hidden">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Job Grade *</label>
+                    <select id="assignmentJobGrade" name="jobGradeId" class="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+                        <option value="">Select Job Grade</option>
+                        <option th:each="grade : ${jobGrades}" th:value="${grade.id}" th:text="${grade.name}">Grade 1</option>
+                    </select>
+                    <div class="mt-3">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Job Step *</label>
+                        <select id="assignmentJobStep" name="jobStepId" class="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none" disabled>
+                            <option value="">Select Job Step</option>
+                        </select>
+                        <p class="text-xs text-gray-500 mt-1">Select a job grade first to see available steps</p>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">KPIs with Weights</label>
+                    <div id="assignmentKpisContainer" class="space-y-3">
+                        <!-- KPI rows will be added here with indexed names -->
+                    </div>
+                    <button type="button" onclick="addKpiAssignmentRow()" class="mt-3 text-primary-600 hover:text-primary-800 flex items-center space-x-1">
+                        <span class="material-icons-round text-sm">add_circle</span>
+                        <span class="text-sm">Add Another KPI</span>
+                    </button>
+                </div>
+
+                <div class="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <div>
+                        <span class="text-sm text-gray-600 dark:text-gray-400">Total Weight:</span>
+                        <span id="totalWeight" class="ml-2 total-weight">0.00</span>
+                        <span id="weightError" class="ml-2 weight-error hidden">Total must be 1.0</span>
+                    </div>
+                </div>
+
+                <!-- Footer buttons with spinner -->
+                <div class="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <button type="button" onclick="closeModal('kpiAssignmentModal')" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
+                        Assign KPIs
+                    </button>
+                    <span id="submit-spinner" class="htmx-indicator ml-2">
+                    <span class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></span>
+                </span>
+                </div>
+            </form>
         </div>
     </div>
 
     <script th:inline="javascript">
         /*<![CDATA[*/
-        const currentEmployeeId = [[${#authentication.principal.id}]];  // adjust as needed
+        // Receive server-side data safely
+        const jobGrades = [[${jobGrades}]] || [];
+        const departments = [[${departments}]] || [];
+        const payGroups = [[${payGroups}]] || [];
+        const kpiDefinitions = [[${kpiDefinitions}]] || [];
+
+        // Build jobSteps array from jobGrades (handle both 'steps' and 'jobSteps' property names)
+        let jobSteps = [];
+        if (Array.isArray(jobGrades) && jobGrades.length > 0) {
+            jobGrades.forEach(grade => {
+                const stepsList = grade.steps || grade.jobSteps || [];
+                if (Array.isArray(stepsList) && stepsList.length > 0) {
+                    stepsList.forEach(step => {
+                        jobSteps.push({
+                            id: step.id,
+                            gradeId: grade.id,
+                            display: grade.name + ' - ' + step.name
+                        });
+                    });
+                }
+            });
+        }
         /*]]>*/
     </script>
 
     <script>
+        // Data Structures (used by modals) - hardcoded demo data, but kpiDefinitions now comes from server
+        let kpiAssignments = [
+            { id: 1, employeeId: 1, assignments: [ { kpiId: 1, weight: 0.3 }, { kpiId: 3, weight: 0.4 }, { kpiId: 4, weight: 0.3 } ], mandatory: true, type: 'employee' },
+            { id: 2, employeeId: 2, assignments: [ { kpiId: 2, weight: 0.5 }, { kpiId: 5, weight: 0.5 } ], mandatory: true, type: 'employee' },
+            { id: 3, jobStepId: 101, assignments: [ { kpiId: 1, weight: 0.6 }, { kpiId: 3, weight: 0.4 } ], mandatory: false, type: 'grade' }
+        ];
+
+        // Employees are now server-side, but keep a local reference for other functions (may be removed later)
+        let employees = [];
+
+        // ========== UPDATED TAB MANAGEMENT ==========
         function switchTab(tabName) {
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
-            document.querySelectorAll('.kpi-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.add('hidden');
+            });
+
+            document.querySelectorAll('.kpi-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
             const contentDiv = document.getElementById(`content-${tabName}`);
             contentDiv.classList.remove('hidden');
             document.getElementById(`tab-${tabName}`).classList.add('active');
 
-            if (tabName === 'assignments' && !contentDiv.hasAttribute('data-loaded')) {
-                htmx.ajax('GET', '/my-kpi/assignments', { target: '#content-assignments', swap: 'innerHTML' })
-                    .then(() => contentDiv.setAttribute('data-loaded', 'true'));
-            } else if (tabName === 'measurements' && !document.getElementById('measurementsTable').hasAttribute('data-loaded')) {
-                htmx.ajax('GET', '/my-kpi/measurements', { target: '#measurementsTable', swap: 'innerHTML' })
-                    .then(() => document.getElementById('measurementsTable').setAttribute('data-loaded', 'true'));
-            } else if (tabName === 'appraisal' && !contentDiv.hasAttribute('data-loaded')) {
-                htmx.ajax('GET', '/my-kpi/appraisal', { target: '#content-appraisal', swap: 'innerHTML' })
-                    .then(() => contentDiv.setAttribute('data-loaded', 'true'));
+            if (tabName === 'assignments') {
+                if (!contentDiv.hasAttribute('data-loaded')) {
+                    htmx.ajax('GET', '/fragments/kpi-assignments', {
+                        target: '#content-assignments',
+                        swap: 'innerHTML'
+                    }).then(() => {
+                        contentDiv.setAttribute('data-loaded', 'true');
+                    });
+                }
+            } else if (tabName === 'measurements') {
+                // Load the measurements table fragment if not already loaded
+                const tableBody = document.getElementById('measurementsTable');
+                if (!tableBody.hasAttribute('data-loaded')) {
+                    htmx.ajax('GET', '/fragments/kpi-measurements-table', {
+                        target: '#measurementsTable',
+                        swap: 'outerHTML'
+                    }).then(() => {
+                        tableBody.setAttribute('data-loaded', 'true');
+                    });
+                }
+            } else if (tabName === 'appraisal') {
+                // Load the appraisal fragment if not already loaded
+                if (!contentDiv.hasAttribute('data-loaded')) {
+                    htmx.ajax('GET', '/fragments/kpi-appraisal', {
+                        target: '#content-appraisal',
+                        swap: 'innerHTML'
+                    }).then(() => {
+                        contentDiv.setAttribute('data-loaded', 'true');
+                    });
+                }
             }
         }
 
-        function formatPeriod(period) { if (!period) return ''; const [y, m] = period.split('-'); return new Date(y, m-1).toLocaleDateString('en-US', { month:'long', year:'numeric' }); }
-        function getScoreClass(score) { return score >= 80 ? 'kpi-score-excellent' : score >= 60 ? 'kpi-score-good' : score >= 40 ? 'kpi-score-average' : 'kpi-score-poor'; }
+        // Modal Management (unchanged)
+        function openModal(modalId, isEdit = false) {
+            document.getElementById(modalId).style.display = 'block';
+            document.body.style.overflow = 'hidden';
+
+            if (modalId === 'kpiDefinitionModal' && !isEdit) {
+                resetKpiForm();
+            } else if (modalId === 'kpiAssignmentModal') {
+                resetAssignmentForm();
+                addKpiAssignmentRow();
+                setupAssignmentToggle();
+            }
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+
+        // Generate random KPI code
+        function generateRandomKpiCode() {
+            const prefix = "KPI";
+            const randomNum = Math.floor(1000 + Math.random() * 9000);
+            return prefix + randomNum;
+        }
+
+        // Helper functions for categories and units
+        function getCategoryClass(category) {
+            const classes = {
+                'PRODUCTIVITY': 'bg-blue-100 text-blue-800',
+                'ATTENDANCE': 'bg-green-100 text-green-800',
+                'QUALITY': 'bg-purple-100 text-purple-800'
+            };
+            return classes[category] || 'bg-gray-100 text-gray-800';
+        }
+
+        function getCategoryLabel(category) {
+            const labels = {
+                'PRODUCTIVITY': 'Productivity',
+                'ATTENDANCE': 'Attendance',
+                'QUALITY': 'Quality'
+            };
+            return labels[category] || category;
+        }
+
+        function getUnitLabel(unit) {
+            const labels = {
+                'PERCENTAGE': 'Percentage',
+                'NUMBER': 'Number',
+                'HOURS': 'Hours'
+            };
+            return labels[unit] || unit;
+        }
+
+        function getUnitSymbol(unit) {
+            const symbols = {
+                'PERCENTAGE': '%',
+                'NUMBER': '',
+                'HOURS': 'h'
+            };
+            return symbols[unit] || '';
+        }
+
+        // KPI Definition form functions (unchanged)
+        function resetKpiForm() {
+            document.getElementById('kpiDefinitionForm').reset();
+            document.getElementById('kpiId').value = '';
+            document.getElementById('kpiCode').value = generateRandomKpiCode();
+        }
+
+        function editKpiDefinition(id) {
+            const kpi = kpiDefinitions.find(k => k.id === id);
+            if (!kpi) return;
+
+            document.getElementById('kpiId').value = kpi.id;
+            document.getElementById('kpiCode').value = kpi.code;
+            document.getElementById('kpiName').value = kpi.name;
+            document.getElementById('kpiDescription').value = kpi.description;
+            document.getElementById('kpiCategory').value = kpi.category;
+            document.getElementById('kpiTarget').value = kpi.targetValue;
+            document.getElementById('kpiUnit').value = kpi.unit;
+
+            openModal('kpiDefinitionModal', true);
+        }
+
+        function deleteKpiDefinition(id) {
+            if (confirm('Are you sure you want to delete this KPI?')) {
+                showNotification('KPI deleted successfully! (demo only)', 'success');
+            }
+        }
+
+        function disableSubmitButton(form) {
+            const submitButton = form.querySelector('button[type="submit"]');
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.classList.add('opacity-50', 'cursor-not-allowed');
+                submitButton.innerHTML = 'Submitting...';
+            }
+            return true;
+        }
+        // Counter for indexing KPI rows
+let kpiRowCounter = 0;
+
+// Function to add a KPI row with indexed field names
+function addKpiAssignmentRow(kpiId = '', weight = '', mandatory = true) {
+    const container = document.getElementById('assignmentKpisContainer');
+    const index = kpiRowCounter++; // use and increment counter
+
+    const row = document.createElement('div');
+    row.className = 'kpi-item';
+    row.setAttribute('data-index', index);
+    row.innerHTML = `
+        <div class="kpi-item-header" onclick="toggleKpiItem(this)">
+            <div class="flex items-center space-x-2">
+                <span class="material-icons-round text-sm">expand_more</span>
+                <span>KPI Assignment</span>
+            </div>
+            <button type="button" onclick="removeKpiAssignmentRow(this)" class="text-red-600 hover:text-red-900">
+                <span class="material-icons-round text-sm">delete</span>
+            </button>
+        </div>
+        <div class="kpi-item-content hidden">
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">KPI</label>
+                    <select name="kpis[${index}].kpiId" class="kpi-select w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none" onchange="updateTotalWeight()">
+                        <option value="">Select KPI</option>
+                        ${kpiDefinitions.filter(k => k.active).map(k =>
+                            `<option value="${k.id}" ${kpiId == k.id ? 'selected' : ''}>${k.code} - ${k.name}</option>`
+                        ).join('')}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Weight (0-1)</label>
+                    <input type="number" step="0.01" min="0" max="1" value="${weight}"
+                           name="kpis[${index}].weight"
+                           class="weight-input w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none"
+                           onchange="updateTotalWeight()" oninput="updateTotalWeight()">
+                </div>
+            </div>
+            <div class="mt-3 flex items-center">
+                <input type="checkbox" name="kpis[${index}].mandatory" class="kpi-mandatory w-4 h-4 text-primary-600 rounded focus:ring-primary-500" ${mandatory ? 'checked' : ''} value="true">
+                <label class="ml-2 text-sm text-gray-700 dark:text-gray-300">Mandatory</label>
+                <!-- Hidden field to ensure 'false' is sent when checkbox is unchecked -->
+                <input type="hidden" name="kpis[${index}].mandatory" value="false">
+            </div>
+        </div>
+    `;
+    container.appendChild(row);
+    updateTotalWeight();
+}
+
+// Toggle row content (expand/collapse)
+function toggleKpiItem(header) {
+    const content = header.nextElementSibling;
+    const icon = header.querySelector('.material-icons-round');
+    content.classList.toggle('hidden');
+    icon.textContent = content.classList.contains('hidden') ? 'expand_more' : 'expand_less';
+}
+
+// Remove a KPI row and renumber remaining rows
+function removeKpiAssignmentRow(button) {
+    const row = button.closest('.kpi-item');
+    row.remove();
+    renumberKpiRows();
+    updateTotalWeight();
+}
+
+// Renumber all KPI rows so indices are contiguous (0,1,2,...)
+function renumberKpiRows() {
+    const rows = document.querySelectorAll('#assignmentKpisContainer .kpi-item');
+    rows.forEach((row, newIndex) => {
+        // Update data-index attribute
+        row.setAttribute('data-index', newIndex);
+        // Update name attributes in selects, inputs, and hidden fields
+        const select = row.querySelector('.kpi-select');
+        if (select) select.name = `kpis[${newIndex}].kpiId`;
+        const weightInput = row.querySelector('.weight-input');
+        if (weightInput) weightInput.name = `kpis[${newIndex}].weight`;
+        const checkbox = row.querySelector('.kpi-mandatory');
+        if (checkbox) checkbox.name = `kpis[${newIndex}].mandatory`;
+        const hidden = row.querySelector('input[type="hidden"][name$=".mandatory"]');
+        if (hidden) hidden.name = `kpis[${newIndex}].mandatory`;
+    });
+    // Reset the global counter to the next available index
+    kpiRowCounter = rows.length;
+}
+
+// Update total weight display
+function updateTotalWeight() {
+    const weightInputs = document.querySelectorAll('.weight-input');
+    let total = 0;
+    weightInputs.forEach(input => {
+        const value = parseFloat(input.value) || 0;
+        total += value;
+    });
+    const totalWeightElement = document.getElementById('totalWeight');
+    const weightErrorElement = document.getElementById('weightError');
+    totalWeightElement.textContent = total.toFixed(2);
+    if (Math.abs(total - 1.0) > 0.001) {
+        totalWeightElement.classList.add('text-red-600');
+        weightErrorElement.classList.remove('hidden');
+    } else {
+        totalWeightElement.classList.remove('text-red-600');
+        weightErrorElement.classList.add('hidden');
+    }
+}
+
+// Reset form (clear rows, reset fields, and ensure correct div visibility)
+function resetAssignmentForm() {
+    document.getElementById('kpiAssignmentForm').reset();
+    document.getElementById('assignmentKpisContainer').innerHTML = '';
+    document.getElementById('totalWeight').textContent = '0.00';
+    document.getElementById('weightError').classList.add('hidden');
+    const gradeSelect = document.getElementById('assignmentJobGrade');
+    const stepSelect = document.getElementById('assignmentJobStep');
+    if (gradeSelect) gradeSelect.value = '';
+    if (stepSelect) {
+        stepSelect.innerHTML = '<option value="">Select Job Step</option>';
+        stepSelect.disabled = true;
+    }
+    kpiRowCounter = 0; // reset counter
+
+    // Ensure correct visibility and required attributes based on default radio (employee)
+    const employeeDiv = document.getElementById('employeeAssignment');
+    const gradeDiv = document.getElementById('gradeAssignment');
+    const employeeSelect = document.getElementById('assignmentEmployee');
+    const jobGradeSelect = document.getElementById('assignmentJobGrade');
+    const jobStepSelect = document.getElementById('assignmentJobStep');
+    if (document.getElementById('assignEmployee').checked) {
+        employeeDiv.classList.remove('hidden');
+        gradeDiv.classList.add('hidden');
+        employeeSelect.required = true;
+        jobGradeSelect.required = false;
+        jobStepSelect.required = false;
+    } else {
+        employeeDiv.classList.add('hidden');
+        gradeDiv.classList.remove('hidden');
+        employeeSelect.required = false;
+        jobGradeSelect.required = true;
+        jobStepSelect.required = true;
+    }
+}
+function toggleMeasurementItem(kpiId, headerElement) {
+    const content = document.getElementById(`measurement-content-${kpiId}`);
+    const icon = headerElement.querySelector('.material-icons-round');
+    content.classList.toggle('hidden');
+    icon.textContent = content.classList.contains('hidden') ? 'expand_more' : 'expand_less';
+}
+
+// Setup radio toggle listeners with required attribute handling
+function setupAssignmentToggle() {
+    const assignEmployee = document.getElementById('assignEmployee');
+    const assignGrade = document.getElementById('assignGrade');
+    const employeeDiv = document.getElementById('employeeAssignment');
+    const gradeDiv = document.getElementById('gradeAssignment');
+    const employeeSelect = document.getElementById('assignmentEmployee');
+    const gradeSelect = document.getElementById('assignmentJobGrade');
+    const stepSelect = document.getElementById('assignmentJobStep');
+
+    // Remove existing listeners to avoid duplicates
+    const newEmployee = assignEmployee.cloneNode(true);
+    const newGrade = assignGrade.cloneNode(true);
+    assignEmployee.parentNode.replaceChild(newEmployee, assignEmployee);
+    assignGrade.parentNode.replaceChild(newGrade, assignGrade);
+
+    // Re-fetch elements
+    const updatedEmployee = document.getElementById('assignEmployee');
+    const updatedGrade = document.getElementById('assignGrade');
+
+    updatedEmployee.addEventListener('change', () => {
+        if (updatedEmployee.checked) {
+            employeeDiv.classList.remove('hidden');
+            gradeDiv.classList.add('hidden');
+            // Set required attributes
+            employeeSelect.required = true;
+            gradeSelect.required = false;
+            stepSelect.required = false;
+        }
+    });
+    updatedGrade.addEventListener('change', () => {
+        if (updatedGrade.checked) {
+            employeeDiv.classList.add('hidden');
+            gradeDiv.classList.remove('hidden');
+            // Set required attributes
+            employeeSelect.required = false;
+            gradeSelect.required = true;
+            stepSelect.required = true;
+            // Step select may still be disabled if no grade selected; that's fine.
+        }
+    });
+}
+
+// Validation (now checks indexed fields correctly)
+function validateAssignmentForm(event) {
+    // Basic HTML5 validation (required attributes)
+    const form = document.getElementById('kpiAssignmentForm');
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        event.preventDefault();
+        return false;
+    }
+
+    // Total weight must be 1.0
+    const totalWeight = parseFloat(document.getElementById('totalWeight').textContent);
+    if (Math.abs(totalWeight - 1.0) > 0.001) {
+        alert('Total weight must equal 1.0');
+        event.preventDefault();
+        return false;
+    }
+
+    // At least one KPI row with selected KPI
+    const kpiSelects = document.querySelectorAll('.kpi-select');
+    if (kpiSelects.length === 0 || !Array.from(kpiSelects).some(s => s.value)) {
+        alert('Please add at least one KPI');
+        event.preventDefault();
+        return false;
+    }
+
+    // Ensure every row has both KPI selected and weight entered
+    const rows = document.querySelectorAll('#assignmentKpisContainer .kpi-item');
+    for (let row of rows) {
+        const select = row.querySelector('.kpi-select');
+        const weight = row.querySelector('.weight-input');
+        if (!select.value || !weight.value) {
+            alert('Each KPI row must have a KPI selected and a weight entered.');
+            event.preventDefault();
+            return false;
+        }
+    }
+
+    // For grade assignment, ensure grade and step are selected
+    if (document.getElementById('assignGrade').checked) {
+        const grade = document.getElementById('assignmentJobGrade');
+        const step = document.getElementById('assignmentJobStep');
+        if (!grade.value || !step.value) {
+            alert('Please select both Job Grade and Job Step.');
+            event.preventDefault();
+            return false;
+        }
+    }
+
+    // For employee assignment, ensure employee is selected
+    if (document.getElementById('assignEmployee').checked) {
+        const employee = document.getElementById('assignmentEmployee');
+        if (!employee.value) {
+            alert('Please select an employee.');
+            event.preventDefault();
+            return false;
+        }
+    }
+
+    return true; // allow htmx submission
+}
+// Disable the Record Measurements button during form submission
+function disableMeasurementSubmit(event) {
+    const btn = document.getElementById('recordMeasurementsBtn');
+    if (btn) {
+        btn.disabled = true;
+        btn.classList.add('opacity-50', 'cursor-not-allowed');
+    }
+}
+
+// Re-enable the Record Measurements button after request completes (success or error)
+function enableMeasurementSubmit(event) {
+    const btn = document.getElementById('recordMeasurementsBtn');
+    if (btn) {
+        btn.disabled = false;
+        btn.classList.remove('opacity-50', 'cursor-not-allowed');
+    }
+}
+// Disable submit button during request
+function disableAssignmentSubmit() {
+    const btn = document.querySelector('#kpiAssignmentForm button[type="submit"]');
+    if (btn) {
+        btn.disabled = true;
+        btn.classList.add('opacity-50', 'cursor-not-allowed');
+        btn.innerHTML = 'Submitting...';
+    }
+}
+
+// Re-enable submit button on error
+function enableAssignmentSubmit() {
+    const btn = document.querySelector('#kpiAssignmentForm button[type="submit"]');
+    if (btn) {
+        btn.disabled = false;
+        btn.classList.remove('opacity-50', 'cursor-not-allowed');
+        btn.innerHTML = 'Assign KPIs';
+    }
+}
+
+// Handle response: close modal on success, show notification, re-enable button on error
+function handleAssignmentResponse(event) {
+    if (event.detail.successful) {
+        closeModal('kpiAssignmentModal');
+        showNotification('KPIs assigned successfully!', 'success');
+        enableAssignmentSubmit();
+        refreshStats(); // Refresh stats after assignment
+    } else {
+        enableAssignmentSubmit();
+        showNotification('Failed to assign KPIs. Please try again.', 'error');
+    }
+}
+
+        function viewAssignmentDetails(id, type) {
+            const assignments = kpiAssignments.filter(a =>
+                type === 'employee' ? a.employeeId === id : a.jobStepId === id
+            );
+            let details = '';
+            let totalWeight = 0;
+            assignments.forEach(assignment => {
+                assignment.assignments.forEach(a => {
+                    const kpi = kpiDefinitions.find(k => k.id === a.kpiId);
+                    if (kpi) {
+                        details += `${kpi.name}: ${(a.weight * 100).toFixed(0)}%\n`;
+                        totalWeight += a.weight;
+                    }
+                });
+            });
+            const title = type === 'employee'
+                ? employees.find(e => e.id === id)?.name
+                : getJobStepLabel(id);
+            alert(`${title} - KPI Assignments\n\n${details}\nTotal Weight: ${totalWeight.toFixed(2)}`);
+        }
+
+        function editAssignment(id, type) {
+            const assignments = kpiAssignments.filter(a =>
+                type === 'employee' ? a.employeeId === id : a.jobStepId === id
+            );
+            if (assignments.length === 0) return;
+
+            openModal('kpiAssignmentModal');
+
+            if (type === 'employee') {
+                document.getElementById('assignEmployee').checked = true;
+                // Trigger change event to update required attributes and visibility
+                document.getElementById('assignEmployee').dispatchEvent(new Event('change'));
+                document.getElementById('assignmentEmployee').value = id;
+            } else {
+                document.getElementById('assignGrade').checked = true;
+                document.getElementById('assignGrade').dispatchEvent(new Event('change'));
+                const step = jobSteps.find(s => s.id === id);
+                if (step) {
+                    const gradeSelect = document.getElementById('assignmentJobGrade');
+                    gradeSelect.value = step.gradeId;
+                    gradeSelect.dispatchEvent(new Event('change'));
+                    setTimeout(() => {
+                        const stepSelect = document.getElementById('assignmentJobStep');
+                        stepSelect.value = id;
+                    }, 100);
+                }
+            }
+
+            document.getElementById('assignmentKpisContainer').innerHTML = '';
+            assignments.forEach(assignment => {
+                assignment.assignments.forEach(a => {
+                    addKpiAssignmentRow(a.kpiId, a.weight);
+                });
+            });
+
+            kpiAssignments = kpiAssignments.filter(a =>
+                type === 'employee' ? a.employeeId !== id : a.jobStepId !== id
+            );
+        }
+
+        function deleteAllAssignments(id, type) {
+            if (confirm(`Are you sure you want to remove all KPI assignments?`)) {
+                kpiAssignments = kpiAssignments.filter(a =>
+                    type === 'employee' ? a.employeeId !== id : a.jobStepId !== id
+                );
+                showNotification('Assignments removed!', 'success');
+            }
+        }
+
+        // KPI Measurement functions – most are now replaced by HTMX, but we keep helpers for notifications etc.
+        // loadEmployeeOptions is no longer needed – removed
+
+        function viewMeasurementDetails(id) {
+            // This would need to fetch data from server; left as stub for now
+            alert('View details - server-side implementation needed');
+        }
+
+        function editMeasurement(id) {
+            alert('Edit measurement - server-side implementation needed');
+        }
+
+        function formatPeriod(period) {
+            const [year, month] = period.split('-');
+            const date = new Date(year, month - 1);
+            return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+        }
+
+        function getScoreClass(score) {
+            if (score >= 80) return 'kpi-score-excellent';
+            if (score >= 60) return 'kpi-score-good';
+            if (score >= 40) return 'kpi-score-average';
+            return 'kpi-score-poor';
+        }
+
+        // Utility Functions
         function showNotification(message, type) {
-            const n = document.createElement('div');
-            n.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${type === 'success' ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-red-100 text-red-800 border border-red-200'}`;
-            n.innerHTML = `<div class="flex items-center space-x-3"><span class="material-icons-round">${type === 'success' ? 'check_circle' : 'error'}</span><span>${message}</span></div>`;
-            document.body.appendChild(n);
-            setTimeout(() => n.remove(), 3000);
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
+                type === 'success' ? 'bg-green-100 text-green-800 border border-green-200' :
+                'bg-red-100 text-red-800 border border-red-200'
+            }`;
+            notification.innerHTML = `
+                <div class="flex items-center space-x-3">
+                    <span class="material-icons-round">${type === 'success' ? 'check_circle' : 'error'}</span>
+                    <span>${message}</span>
+                </div>
+            `;
+            document.body.appendChild(notification);
+            setTimeout(() => notification.remove(), 3000);
         }
-        function refreshStats() { htmx.ajax('GET', '/my-kpi/stats-cards', { target: '#stats-cards', swap: 'outerHTML' }); }
 
-        document.addEventListener('DOMContentLoaded', function() {
-            // Mobile menu (if present)
-            const menuToggle = document.getElementById('menuToggle'), mobileOverlay = document.getElementById('mobileOverlay'), sidebar = document.querySelector('.sidebar-container');
-            if (menuToggle && mobileOverlay && sidebar) {
-                menuToggle.addEventListener('click', () => { sidebar.classList.toggle('open'); mobileOverlay.classList.toggle('hidden'); document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : 'auto'; });
-                mobileOverlay.addEventListener('click', () => { sidebar.classList.remove('open'); mobileOverlay.classList.add('hidden'); document.body.style.overflow = 'auto'; });
+        // Refresh stats cards by fetching updated fragment from server
+        function refreshStats() {
+            htmx.ajax('GET', '/fragments/stats-cards', {
+                target: '#stats-cards',
+                swap: 'outerHTML'
+            });
+        }
+
+        // Setup grade step listener (runs once on page load)
+        function setupGradeStepListener() {
+            const gradeSelect = document.getElementById('assignmentJobGrade');
+            const stepSelect = document.getElementById('assignmentJobStep');
+            if (gradeSelect && stepSelect) {
+                gradeSelect.addEventListener('change', function() {
+                    const selectedGradeId = this.value;
+                    stepSelect.innerHTML = '<option value="">Select Job Step</option>';
+                    stepSelect.disabled = true;
+                    if (!selectedGradeId) return;
+
+                    const filteredSteps = jobSteps.filter(step => String(step.gradeId) === String(selectedGradeId));
+                    if (filteredSteps.length === 0) {
+                        const option = document.createElement('option');
+                        option.value = '';
+                        option.textContent = 'No steps available for this grade';
+                        option.disabled = true;
+                        stepSelect.appendChild(option);
+                    } else {
+                        filteredSteps.forEach(step => {
+                            const option = document.createElement('option');
+                            option.value = step.id;
+                            option.textContent = step.display;
+                            stepSelect.appendChild(option);
+                        });
+                        stepSelect.disabled = false;
+                    }
+                });
             }
-            // Theme toggle (if present)
+        }
+
+        function getJobStepLabel(stepId) {
+            const step = jobSteps.find(s => s.id == stepId);
+            return step ? step.display : 'Unknown Step';
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            setupGradeStepListener();
+
+            window.onclick = function(event) {
+                if (event.target.classList.contains('modal')) {
+                    event.target.style.display = 'none';
+                    document.body.style.overflow = 'auto';
+                }
+            };
+
+            const menuToggle = document.getElementById('menuToggle');
+            const mobileOverlay = document.getElementById('mobileOverlay');
+            const sidebar = document.querySelector('.sidebar-container');
+            if (menuToggle && mobileOverlay && sidebar) {
+                menuToggle.addEventListener('click', () => {
+                    sidebar.classList.toggle('open');
+                    mobileOverlay.classList.toggle('hidden');
+                    document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : 'auto';
+                });
+                mobileOverlay.addEventListener('click', () => {
+                    sidebar.classList.remove('open');
+                    mobileOverlay.classList.add('hidden');
+                    document.body.style.overflow = 'auto';
+                });
+            }
+
             const themeToggle = document.getElementById('themeToggle');
             if (themeToggle) {
                 const themeIcon = themeToggle.querySelector('.material-icons-round');
@@ -313,17 +1477,26 @@
                     if (themeIcon) themeIcon.textContent = 'light_mode';
                 }
             }
-            // Sidebar active state
+
             document.querySelectorAll('.sidebar-item').forEach(item => {
                 item.addEventListener('click', function(e) {
                     if (this.getAttribute('href') === '#') e.preventDefault();
                     document.querySelectorAll('.sidebar-item').forEach(nav => nav.classList.remove('active'));
                     this.classList.add('active');
-                    if (window.innerWidth < 1024 && sidebar) { sidebar.classList.remove('open'); if (mobileOverlay) mobileOverlay.classList.add('hidden'); document.body.style.overflow = 'auto'; }
+                    if (window.innerWidth < 1024 && sidebar) {
+                        sidebar.classList.remove('open');
+                        if (mobileOverlay) mobileOverlay.classList.add('hidden');
+                        document.body.style.overflow = 'auto';
+                    }
                 });
             });
+
             window.addEventListener('resize', () => {
-                if (window.innerWidth >= 1024 && sidebar) { sidebar.classList.remove('open'); if (mobileOverlay) mobileOverlay.classList.add('hidden'); document.body.style.overflow = 'auto'; }
+                if (window.innerWidth >= 1024 && sidebar) {
+                    sidebar.classList.remove('open');
+                    if (mobileOverlay) mobileOverlay.classList.add('hidden');
+                    document.body.style.overflow = 'auto';
+                }
             });
         });
     </script>
