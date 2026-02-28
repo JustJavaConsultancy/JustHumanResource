@@ -10,18 +10,31 @@ import com.justjava.humanresource.hr.entity.Employee;
 import com.justjava.humanresource.hr.entity.PayGroup;
 import com.justjava.humanresource.hr.service.EmployeeService;
 import com.justjava.humanresource.hr.service.SetupService;
+import com.justjava.humanresource.kpi.dto.AppraisalTaskViewDTO;
+import com.justjava.humanresource.kpi.entity.AppraisalCycle;
+import com.justjava.humanresource.kpi.entity.EmployeeAppraisal;
+import com.justjava.humanresource.kpi.service.AppraisalService;
+import com.justjava.humanresource.kpi.service.KpiAssignmentService;
+import com.justjava.humanresource.kpi.service.KpiDefinitionService;
+import com.justjava.humanresource.kpi.service.KpiMeasurementService;
 import com.justjava.humanresource.onboarding.dto.StartEmployeeOnboardingCommand;
 import com.justjava.humanresource.onboarding.service.EmployeeOnboardingService;
 import com.justjava.humanresource.payroll.entity.PaySlipDTO;
 import com.justjava.humanresource.payroll.service.PaySlipService;
 import com.justjava.humanresource.payroll.service.PayrollSetupService;
+import com.justjava.humanresource.workflow.dto.FlowableTaskDTO;
+import com.justjava.humanresource.workflow.service.FlowableTaskService;
+import org.flowable.engine.history.HistoricProcessInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Controller
 public class EmployeeController {
@@ -33,6 +46,21 @@ public class EmployeeController {
 
     @Autowired
     private EmployeeOnboardingService employeeOnboardingService;
+
+    @Autowired
+    private KpiAssignmentService kpiAssignmentService;
+
+    @Autowired
+    KpiMeasurementService kpiMeasurementService;
+
+    @Autowired
+    AppraisalService appraisalService;
+
+    @Autowired
+    private FlowableTaskService flowableTaskService;
+
+    @Autowired
+    private KpiDefinitionService kpiDefinitionService;
 
     @Autowired
     private EmployeeService employeeService;
@@ -130,9 +158,65 @@ public class EmployeeController {
     }
     @GetMapping("employee/performance")
     public String getPerformance(Model model){
+        String email = (String) authenticationManager.get("email");
+        Employee loginEmployee = employeeService.getByEmail(email);
+        // 🔹 COMPLETED PROCESSES
+        List<HistoricProcessInstance> completedProcesses =
+                flowableTaskService.getCompletedProcessInstancesForAssignee(
+                        "employeeAppraisalProcess"
+                );
+
+        // 🔹 ACTIVE TASKS
+        List<FlowableTaskDTO> tasks =
+                flowableTaskService.getTasksForAssignee(
+                        String.valueOf(loginEmployee.getId()),
+                        "employeeAppraisalProcess"
+                );
+        List<AppraisalTaskViewDTO> enrichedAppraisals = new ArrayList<>();
+
+        for (FlowableTaskDTO task : tasks) {
+
+            Map<String, Object> variables = task.getVariables();
+
+            if (variables.containsKey("appraisalId")) {
+
+                Long appraisalId =
+                        Long.valueOf(variables.get("appraisalId").toString());
+
+                EmployeeAppraisal appraisal =
+                        appraisalService.findAppraisalById(appraisalId);
+
+                enrichedAppraisals.add(
+                        new AppraisalTaskViewDTO(task, appraisal)
+                );
+            }
+        }
+        enrichedAppraisals.forEach(
+                appraisal -> System.out.println("Task: " + appraisal.getTask()+ ", Appraisal: " + appraisal.getAppraisal())
+        );
+        List<EmployeeAppraisal> employeeAppraisals = appraisalService.findAppraisalByEmployeeID(loginEmployee.getId());
+        // existing
+        model.addAttribute("tasks", tasks);
+        model.addAttribute("employeeAppraisals", employeeAppraisals);
+
+// add this
+        model.addAttribute("appraisalMap",
+                employeeAppraisals.stream()
+                        .collect(Collectors.toMap(EmployeeAppraisal::getId, ea -> ea))
+        );
         model.addAttribute("title", "Performance Management");
         model.addAttribute("subTitle", "View your performance reviews, set goals, and track your progress");
         return "employees/kpi";
+    }
+    @PostMapping("/employee/self-review")
+    public String submitSelfReview(@RequestParam String taskId,
+                                   @RequestParam Map<String, Object> formParams) {
+        System.out.println("Finalizing appraisal with ID: " + taskId + " and form parameters: " + formParams);
+        formParams.put("selfComplete", true);
+
+        flowableTaskService.completeTask(taskId,formParams);
+
+        return "redirect:/employee/performance";
     }
     @GetMapping("employee/documents")
     public String getDocuments(Model model){

@@ -46,6 +46,10 @@ public class AppraisalService {
                         new IllegalStateException("Appraisal not found: " + appraisalId)
                 );
     }
+    public List<EmployeeAppraisal> findAppraisalByEmployeeID(Long employeeId){
+        return appraisalRepository.findByEmployee_Id(employeeId);
+
+    }
     /* =========================================================
        STEP 1 — CREATE DRAFT APPRAISAL (KPI SCORE ONLY)
        ========================================================= */
