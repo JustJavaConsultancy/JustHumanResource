@@ -24,6 +24,13 @@ public class AuthenticationManager {
         }
         return groups.contains("/employees");
     }
+    public boolean isFinancialOfficer() {
+        List<String> groups = (List<String>) this.get("groups");
+        if (groups == null) {
+            return false;
+        }
+        return groups.contains("/financialOfficers");
+    }
 
     public Object getAllAttributes() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();

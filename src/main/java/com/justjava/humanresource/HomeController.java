@@ -19,6 +19,8 @@ public class HomeController {
         System.out.println(" Is Employee ==="+authenticationManager.isEmployee());
         if (authenticationManager.isEmployee()){
             return "redirect:/employee/dashboard";
+        } else if (authenticationManager.isFinancialOfficer()) {
+            return "redirect:/finance/dashboard";
         }
 
         model.addAttribute("title", "Welcome to JustJava HR");

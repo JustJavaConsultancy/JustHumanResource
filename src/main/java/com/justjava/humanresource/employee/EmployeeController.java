@@ -140,7 +140,7 @@ public class EmployeeController {
         PaySlipDTO latestPaySlip = paySlipService.getCurrentPeriodPaySlipForEmployee(1l,loginEmployee.getId());
 
         Employee employee = employeeService.getEmployeeWithBankDetails(loginEmployee.getId());
-        System.out.println("Latest Pay Slip: " + latestPaySlip);
+        System.out.println("Latest Pay Slip: " );
         model.addAttribute("previousPaySlip", null);
         model.addAttribute("latestPaySlip", latestPaySlip);
         model.addAttribute("employee", employee);
@@ -151,7 +151,6 @@ public class EmployeeController {
     }
     @GetMapping("employee/leave")
     public String getLeave(Model model){
-
         model.addAttribute("title", "Leave Management");
         model.addAttribute("subTitle", "View your leave balance, request time off, and track your leave history");
         return "employees/leave";
@@ -185,7 +184,6 @@ public class EmployeeController {
 
                 EmployeeAppraisal appraisal =
                         appraisalService.findAppraisalById(appraisalId);
-
                 enrichedAppraisals.add(
                         new AppraisalTaskViewDTO(task, appraisal)
                 );
