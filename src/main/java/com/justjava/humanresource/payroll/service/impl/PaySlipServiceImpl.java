@@ -175,6 +175,7 @@ public class PaySlipServiceImpl implements PaySlipService {
         return paySlipRepository
                 .findLatestByEmployee(employeeId)
                 .stream()
+                .filter(ps-> ps.getPayrollRun().getStatus() == PayrollRunStatus.POSTED)
                 .map(this::mapToDto)
                 .toList();
     }
