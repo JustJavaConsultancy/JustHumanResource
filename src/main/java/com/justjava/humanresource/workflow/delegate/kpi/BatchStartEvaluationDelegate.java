@@ -47,7 +47,7 @@ public class BatchStartEvaluationDelegate implements JavaDelegate {
         Page<Employee> result;
 
         do {
-            result = employeeRepository.findAll(
+            result = employeeRepository.findEmployeesWithAnyKpiMeasurement(
                     PageRequest.of(page, BATCH_SIZE));
 
             for (Employee employee : result.getContent()) {
