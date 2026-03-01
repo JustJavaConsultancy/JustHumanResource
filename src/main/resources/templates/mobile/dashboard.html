@@ -1,227 +1,408 @@
 <!DOCTYPE html>
-<html xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" xmlns:th="http://www.w3.org/1999/xhtml"
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="layouts/mobileEmployeeLayout">
 <head>
     <meta charset="UTF-8">
-    <title>Dashboard | JustHR Mobile</title>
+    <title>Dashboard · JustHR</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL@20..48,100..700,0..1&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              colors: {
+                primary: "#2463eb",
+                "background-light": "#f6f6f8",
+                "background-dark": "#111621",
+              },
+              fontFamily: { display: ["Inter"] },
+              borderRadius: { DEFAULT: "1rem", lg: "1.5rem", xl: "2rem", full: "9999px" },
+            }
+          }
+        }
+    </script>
+    <style>
+        * { -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'Inter', sans-serif; background-color: #f6f6f8; }
+        .dark body { background-color: #111621; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .badge { padding:0.2rem 0.7rem; font-size:0.65rem; font-weight:600; border-radius:9999px; letter-spacing:0.02em; text-transform:uppercase; display:inline-flex; align-items:center; gap:0.2rem; }
+        .badge-success { background:#dcfce7; color:#15803d; }
+        .badge-warning { background:#fef3c7; color:#b45309; }
+        .badge-info    { background:#dbeafe; color:#1e40af; }
+        .badge-neutral { background:#f3f4f6; color:#4b5563; }
+        .badge-orange  { background:#fff7ed; color:#c2410c; }
+        .dark .badge-success { background:#14532d; color:#86efac; }
+        .dark .badge-warning { background:#92400e; color:#fde68a; }
+        .dark .badge-info    { background:#1e3a8a; color:#bfdbfe; }
+        .dark .badge-neutral { background:#374151; color:#d1d5db; }
+        .dark .badge-orange  { background:#7c2d12; color:#fed7aa; }
+
+        .history-item { transition: background 0.15s; }
+        .history-item:active { background: #f1f5f9; }
+        .dark .history-item:active { background: #26334d; }
+    </style>
 </head>
 <body>
-<main layout:fragment="content">
+<main class="flex-1 overflow-y-auto no-scrollbar px-5 pb-4 space-y-5" layout:fragment="content">
 
-    <!-- Employee Quick Info Card -->
-    <div class="mobile-card p-4 mb-4">
-        <div class="flex items-center space-x-3">
-            <img src="https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=48&h=48&q=80"
-                 class="w-12 h-12 rounded-xl object-cover ring-2 ring-gray-200 dark:ring-gray-700">
-            <div class="flex-1">
-                <h3 class="font-bold text-gray-900 dark:text-white">Jane Okafor</h3>
-                <div class="flex items-center space-x-2 mt-1">
-                    <span class="badge badge-info">Grade 3</span>
-                    <span class="badge badge-success">Active</span>
-                </div>
-                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Marketing Specialist • EMP-2021-042</p>
+    <!-- ===== PAGE HEADER ===== -->
+    <div class="flex items-center justify-between mt-2">
+        <div class="flex items-center gap-2">
+            <div class="w-10 h-10 bg-primary/10 dark:bg-primary/20 rounded-2xl flex items-center justify-center shadow-inner">
+                <span class="material-symbols-outlined text-primary">home</span>
             </div>
-            <button class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg">
-                <span class="material-icons-round">more_vert</span>
-            </button>
+            <div>
+                <h2 class="text-xl font-bold tracking-tight">
+                    Good day, <span th:text="${employee.firstName}">Jane</span>
+                </h2>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Here's what's happening today.</p>
+            </div>
+        </div>
+        <!-- date pill -->
+        <div class="px-3 py-1.5 bg-white dark:bg-slate-800 rounded-full border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-600 dark:text-slate-300"
+             th:text="${#temporals.format(#temporals.createNow(), 'dd MMM yyyy')}">01 Mar 2026</div>
+    </div>
+
+
+    <!-- ===== QUICK STAT CARDS (horizontal scroll) ===== -->
+    <div class="flex overflow-x-auto no-scrollbar gap-3 -mx-1 px-1 pb-1">
+
+        <!-- Net Pay -->
+        <div class="flex-none w-40 p-4 rounded-2xl bg-primary text-white border border-primary/80">
+            <div class="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center mb-3">
+                <span class="material-symbols-outlined text-white">payments</span>
+            </div>
+            <p class="text-[0.65rem] font-semibold opacity-75 uppercase tracking-wider">Net Pay</p>
+            <p class="text-lg font-bold mt-0.5">
+                ₦<span th:text="${latestPaySlip != null ? #numbers.formatDecimal(latestPaySlip.netPay / 1000, 0, 'COMMA', 1, 'POINT') : '—'}">398.5</span>k
+            </p>
+            <p class="text-[0.6rem] opacity-60 mt-0.5"
+               th:text="${latestPaySlip != null ? #temporals.format(latestPaySlip.payDate, 'MMMM yyyy') : ''}">Feb 2026</p>
+        </div>
+
+        <!-- KPI Score -->
+        <div class="flex-none w-40 p-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+            <div class="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center mb-3">
+                <span class="material-symbols-outlined text-amber-600 dark:text-amber-400">monitoring</span>
+            </div>
+            <p class="text-[0.65rem] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">KPI Score</p>
+            <p class="text-lg font-bold mt-0.5 text-slate-900 dark:text-white">
+                <th:block th:if="${latestAppraisal != null and latestAppraisal.kpiScore != null}"
+                          th:text="${#numbers.formatDecimal(latestAppraisal.kpiScore, 1, 2)}">—</th:block>
+                <th:block th:unless="${latestAppraisal != null and latestAppraisal.kpiScore != null}">—</th:block>
+            </p>
+            <p class="text-[0.6rem] text-slate-400 mt-0.5"
+               th:text="${latestAppraisal != null and latestAppraisal.cycle != null ? latestAppraisal.cycle.name : 'No cycle'}">Q1 2026</p>
+        </div>
+
+        <!-- Pending Tasks -->
+        <div class="flex-none w-40 p-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+            <div class="w-9 h-9 rounded-xl bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center mb-3">
+                <span class="material-symbols-outlined text-orange-600 dark:text-orange-400">pending_actions</span>
+            </div>
+            <p class="text-[0.65rem] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Pending</p>
+            <p class="text-lg font-bold mt-0.5 text-slate-900 dark:text-white"
+               th:text="${tasks != null ? tasks.size() : 0}">0</p>
+            <p class="text-[0.6rem] text-slate-400 mt-0.5">task(s) to action</p>
+        </div>
+
+        <!-- Appraisal History -->
+        <div class="flex-none w-40 p-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+            <div class="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center mb-3">
+                <span class="material-symbols-outlined text-blue-600 dark:text-blue-400">assignment_turned_in</span>
+            </div>
+            <p class="text-[0.65rem] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Appraisals</p>
+            <p class="text-lg font-bold mt-0.5 text-slate-900 dark:text-white"
+               th:text="${employeeAppraisals != null ? employeeAppraisals.size() : 0}">0</p>
+            <p class="text-[0.6rem] text-slate-400 mt-0.5">total records</p>
         </div>
     </div>
 
-    <!-- Quick Stats Grid -->
-    <div class="grid grid-cols-2 gap-3 mb-4">
-        <div class="mobile-card p-4">
-            <div class="flex items-center justify-between mb-2">
-                <span class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Net Pay</span>
-                <span class="material-icons-round text-green-500 text-lg">payments</span>
-            </div>
-            <p class="text-lg font-bold text-gray-900 dark:text-white">₦540,000</p>
-            <p class="text-xs text-gray-500 dark:text-gray-400">This month</p>
-        </div>
 
-        <div class="mobile-card p-4">
-            <div class="flex items-center justify-between mb-2">
-                <span class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Leave Balance</span>
-                <span class="material-icons-round text-blue-500 text-lg">beach_access</span>
+    <!-- ===== PROFILE COMPLETENESS BANNER (only if incomplete) ===== -->
+    <div th:if="${employee.emergencyContact == null or (employee.bankDetails == null or employee.bankDetails.isEmpty())}"
+         class="flex items-start gap-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-4">
+        <span class="material-symbols-outlined text-amber-500 mt-0.5">warning</span>
+        <div class="flex-1">
+            <p class="text-sm font-semibold text-amber-800 dark:text-amber-300">Action needed on your profile</p>
+            <div class="flex flex-wrap gap-1.5 mt-1.5">
+                <span th:if="${employee.emergencyContact == null}" class="badge badge-orange">Emergency contact missing</span>
+                <span th:if="${employee.bankDetails == null or employee.bankDetails.isEmpty()}" class="badge badge-orange">Bank details missing</span>
             </div>
-            <p class="text-lg font-bold text-gray-900 dark:text-white">16 days</p>
-            <p class="text-xs text-gray-500 dark:text-gray-400">Annual remaining</p>
+        </div>
+        <a th:href="@{/mobile/employee/profile}" class="text-xs font-semibold text-amber-700 dark:text-amber-300 underline underline-offset-2 shrink-0">Fix →</a>
+    </div>
+
+
+    <!-- ===== PENDING APPRAISAL TASKS ===== -->
+
+    <!-- Empty state -->
+    <div th:if="${tasks == null or tasks.isEmpty()}"
+         class="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200 dark:border-slate-700">
+        <div class="flex items-center gap-2 mb-4">
+            <span class="material-symbols-outlined text-slate-400">pending_actions</span>
+            <h3 class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Pending Tasks</h3>
+        </div>
+        <div class="flex flex-col items-center py-6 text-center">
+            <div class="w-14 h-14 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center mb-3">
+                <span class="material-symbols-outlined text-2xl text-slate-400">check_circle</span>
+            </div>
+            <p class="text-sm font-semibold text-slate-700 dark:text-slate-200">All caught up!</p>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">No pending tasks right now.</p>
         </div>
     </div>
 
-    <!-- KPI Performance Card -->
-    <div class="mobile-card p-4 mb-4">
-        <div class="flex items-center justify-between mb-3">
-            <h4 class="font-bold text-gray-900 dark:text-white">Performance</h4>
-            <span class="badge badge-info text-xs">March 2025</span>
+    <!-- Task list -->
+    <div th:if="${tasks != null and !tasks.isEmpty()}"
+         class="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200 dark:border-slate-700">
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-orange-500">pending_actions</span>
+                <h3 class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Pending Tasks</h3>
+                <span class="badge badge-orange" th:text="${tasks.size()} + ' pending'">1 pending</span>
+            </div>
+            <a th:href="@{mobile/employee/performance}" class="text-primary text-xs font-semibold">View All</a>
         </div>
 
-        <div class="flex items-center justify-between mb-4 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-750 rounded-lg">
-            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Overall Score</span>
-            <div class="flex items-baseline">
-                <span class="text-2xl font-bold text-blue-600 dark:text-blue-400">84.5</span>
-                <span class="text-sm text-gray-500 ml-1">/ 100</span>
+        <div class="space-y-0">
+            <div th:each="task, taskStat : ${tasks}"
+                 th:if="${taskStat.index < 3}"
+                 th:with="selfComplete=${task.variables['selfComplete']},
+                           appraisal=${appraisalMap != null ? appraisalMap[task.variables['appraisalId']] : null}"
+                 class="history-item flex items-center gap-4 py-3.5 border-b border-slate-100 dark:border-slate-700 last:border-b-0 cursor-pointer">
+
+                <!-- icon -->
+                <div th:class="${selfComplete}
+                       ? 'w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center shrink-0'
+                       : 'w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center shrink-0'">
+                    <span th:class="${selfComplete}
+                            ? 'material-symbols-outlined text-green-600 dark:text-green-400'
+                            : 'material-symbols-outlined text-orange-600 dark:text-orange-400'"
+                          th:text="${selfComplete} ? 'hourglass_top' : 'edit_note'">edit_note</span>
+                </div>
+
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold truncate" th:text="${task.taskName}">Self Appraisal</p>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">
+                        <span th:text="${appraisal != null and appraisal.cycle != null ? appraisal.cycle.name : task.businessKey}">Q1 2026</span>
+                        &nbsp;·&nbsp;
+                        <span th:if="${selfComplete}" class="text-orange-500 font-medium">Awaiting manager</span>
+                        <span th:unless="${selfComplete}" class="text-orange-600 font-medium">Self-review needed</span>
+                    </p>
+                </div>
+
+                <a th:href="@{mobile/employee/performance}"
+                   th:class="${selfComplete}
+                     ? 'px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+                     : 'px-3 py-1.5 text-xs font-semibold rounded-lg bg-primary text-white'">
+                    <span th:text="${selfComplete} ? 'Track' : 'Review'">Review</span>
+                </a>
             </div>
         </div>
 
-        <div class="space-y-3">
-            <div>
-                <div class="flex justify-between text-sm mb-1">
-                    <span class="font-medium">Productivity</span>
-                    <span class="font-semibold">92%</span>
-                </div>
-                <div class="progress-bar">
-                    <div class="progress-fill bg-primary-600" style="width: 92%"></div>
-                </div>
-            </div>
-
-            <div>
-                <div class="flex justify-between text-sm mb-1">
-                    <span class="font-medium">Attendance</span>
-                    <span class="font-semibold">90%</span>
-                </div>
-                <div class="progress-bar">
-                    <div class="progress-fill bg-green-600" style="width: 90%"></div>
-                </div>
-            </div>
-
-            <div>
-                <div class="flex justify-between text-sm mb-1">
-                    <span class="font-medium">Quality</span>
-                    <span class="font-semibold">72%</span>
-                </div>
-                <div class="progress-bar">
-                    <div class="progress-fill bg-yellow-600" style="width: 72%"></div>
-                </div>
-            </div>
-        </div>
-
-        <div class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-            <a href="#" class="text-primary-600 hover:text-primary-700 text-sm font-medium flex items-center justify-between">
-                View Full Report
-                <span class="material-icons-round text-sm">arrow_forward</span>
+        <!-- show "and X more" if more than 3 -->
+        <div th:if="${tasks.size() > 3}"
+             class="pt-3 text-center">
+            <a th:href="@{mobile/employee/performance}" class="text-xs text-primary font-semibold">
+                + <span th:text="${tasks.size() - 3}">0</span> more task(s) →
             </a>
         </div>
     </div>
 
-    <!-- Payroll Breakdown Card -->
-    <div class="mobile-card p-4 mb-4">
-        <div class="flex items-center justify-between mb-3">
-            <h4 class="font-bold text-gray-900 dark:text-white">Payroll Snapshot</h4>
-            <button class="text-primary-600 hover:text-primary-700 text-sm font-medium">
-                View Payslip
-            </button>
+
+    <!-- ===== PAYROLL SNAPSHOT ===== -->
+    <div th:if="${latestPaySlip != null}"
+         class="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200 dark:border-slate-700">
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-green-600 dark:text-green-400">account_balance_wallet</span>
+                <h3 class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Latest Payslip</h3>
+                <span class="badge badge-success">Processed</span>
+            </div>
+            <a th:href="@{/mobile/employee/payroll}" class="text-primary text-xs font-semibold">View All</a>
         </div>
 
-        <div class="grid grid-cols-2 gap-3 mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-            <div>
-                <span class="text-xs text-gray-500 dark:text-gray-400">Basic Salary</span>
-                <p class="font-semibold text-gray-900 dark:text-white">₦450,000</p>
-            </div>
-            <div>
-                <span class="text-xs text-gray-500 dark:text-gray-400">Gross Pay</span>
-                <p class="font-semibold text-green-600 dark:text-green-400">₦620,000</p>
-            </div>
-        </div>
-
-        <div class="space-y-2">
-            <div class="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
-                <span class="text-sm">Housing Allowance</span>
-                <span class="text-sm font-medium">₦120,000</span>
-            </div>
-            <div class="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
-                <span class="text-sm">Transport</span>
-                <span class="text-sm font-medium">₦50,000</span>
-            </div>
-            <div class="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
-                <span class="text-sm text-red-600 dark:text-red-400">PAYE Tax</span>
-                <span class="text-sm font-medium text-red-600 dark:text-red-400">-₦65,000</span>
-            </div>
-            <div class="flex justify-between items-center py-2">
-                <span class="text-sm text-red-600 dark:text-red-400">Pension</span>
-                <span class="text-sm font-medium text-red-600 dark:text-red-400">-₦15,000</span>
-            </div>
-        </div>
-    </div>
-
-    <!-- Recent Leave Requests -->
-    <div class="mobile-card p-4 mb-4">
-        <div class="flex items-center justify-between mb-3">
-            <h4 class="font-bold text-gray-900 dark:text-white">Recent Leave</h4>
-            <a href="#" class="text-primary-600 hover:text-primary-700 text-sm font-medium">View All</a>
-        </div>
-
-        <div class="space-y-3">
-            <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <div class="flex items-center space-x-3">
-                    <div class="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
-                        <span class="material-icons-round text-green-600 dark:text-green-400 text-sm">check</span>
-                    </div>
-                    <div>
-                        <p class="text-sm font-medium">21–25 Mar 2025</p>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">Annual PTO • 5 days</p>
-                    </div>
-                </div>
-                <span class="badge badge-success">Approved</span>
-            </div>
-
-            <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <div class="flex items-center space-x-3">
-                    <div class="w-8 h-8 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
-                        <span class="material-icons-round text-red-600 dark:text-red-400 text-sm">close</span>
-                    </div>
-                    <div>
-                        <p class="text-sm font-medium">10 Feb 2025</p>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">Sick Leave • 1 day</p>
-                    </div>
-                </div>
-                <span class="badge badge-error">Rejected</span>
-            </div>
-        </div>
-
-        <div class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-            <button class="w-full px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-medium flex items-center justify-center">
-                <span class="material-icons-round text-sm mr-2">add</span>
-                Request Leave
-            </button>
-        </div>
-    </div>
-
-    <!-- Quick Actions -->
-    <div class="mobile-card p-4 mb-4">
-        <h4 class="font-bold text-gray-900 dark:text-white mb-3">Quick Actions</h4>
-        <div class="grid grid-cols-2 gap-3">
-            <a href="#" class="flex flex-col items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <span class="material-icons-round text-primary-600 dark:text-primary-400 text-2xl mb-2">description</span>
-                <span class="text-sm font-medium text-center">View Documents</span>
-            </a>
-            <a href="#" class="flex flex-col items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <span class="material-icons-round text-primary-600 dark:text-primary-400 text-2xl mb-2">trending_up</span>
-                <span class="text-sm font-medium text-center">Promotions</span>
-            </a>
-        </div>
-    </div>
-
-    <!-- Announcement -->
-    <div class="mobile-card p-4 mb-6">
-        <div class="flex items-start space-x-3">
-            <div class="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center flex-shrink-0">
-                <span class="material-icons-round text-blue-600 dark:text-blue-400 text-lg">campaign</span>
-            </div>
-            <div class="flex-1">
-                <p class="text-sm text-gray-700 dark:text-gray-300">
-                    <span class="font-semibold">Announcement:</span> Q2 performance reviews start on 1 April. Update your KPI targets.
+        <div class="grid grid-cols-3 gap-2 p-3 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
+            <div class="text-center">
+                <span class="text-[0.6rem] text-slate-500 dark:text-slate-400">Basic</span>
+                <p class="text-sm font-bold text-slate-900 dark:text-white">
+                    ₦<span th:text="${#numbers.formatDecimal(latestPaySlip.basicSalary / 1000, 0, 'COMMA', 0, 'POINT')}">400</span>k
                 </p>
             </div>
-            <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 flex-shrink-0">
-                <span class="material-icons-round text-sm">close</span>
-            </button>
+            <div class="text-center">
+                <span class="text-[0.6rem] text-slate-500 dark:text-slate-400">Gross</span>
+                <p class="text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                    ₦<span th:text="${#numbers.formatDecimal(latestPaySlip.grossPay / 1000, 0, 'COMMA', 0, 'POINT')}">400</span>k
+                </p>
+            </div>
+            <div class="text-center">
+                <span class="text-[0.6rem] text-slate-500 dark:text-slate-400">Net</span>
+                <p class="text-sm font-bold text-primary">
+                    ₦<span th:text="${#numbers.formatDecimal(latestPaySlip.netPay / 1000, 0, 'COMMA', 1, 'POINT')}">398.5</span>k
+                </p>
+            </div>
+        </div>
+
+        <div class="flex items-center justify-between mt-3 text-xs text-slate-500 dark:text-slate-400">
+            <span th:text="${#temporals.format(latestPaySlip.payDate, 'MMMM yyyy')}">February 2026</span>
+            <a th:href="@{mobile/employee/payroll}" class="flex items-center gap-1 text-primary font-semibold">
+                Full payslip <span class="material-symbols-outlined text-sm">arrow_forward</span>
+            </a>
         </div>
     </div>
 
-    <!-- Floating Action Button -->
-    <button class="floating-action">
-        <span class="material-icons-round">add</span>
-    </button>
+
+    <!-- ===== APPRAISAL HISTORY SNAPSHOT ===== -->
+    <div th:if="${employeeAppraisals != null and !employeeAppraisals.isEmpty()}"
+         class="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200 dark:border-slate-700">
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary">history</span>
+                <h3 class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Recent Appraisals</h3>
+                <span class="badge badge-info" th:text="${employeeAppraisals.size()} + ' total'">0 total</span>
+            </div>
+            <a th:href="@{mobile/employee/performance}" class="text-primary text-xs font-semibold">View All</a>
+        </div>
+
+        <div class="space-y-0">
+            <div th:each="appraisal, stat : ${employeeAppraisals}"
+                 th:if="${stat.index < 3}"
+                 th:with="isComplete=${appraisal.managerScore != null}"
+                 class="history-item flex items-center justify-between py-3 border-b border-slate-100 dark:border-slate-700 last:border-b-0">
+                <div>
+                    <div class="flex items-center gap-2 mb-0.5">
+                        <span class="text-sm font-semibold"
+                              th:text="${appraisal.cycle != null ? appraisal.cycle.name : 'Appraisal #' + appraisal.id}">Q1 2026</span>
+                        <span th:if="${appraisal.status != null}" th:switch="${appraisal.status.name()}">
+                            <span th:case="'COMPLETED'"   class="badge badge-success text-[0.55rem]" th:text="${appraisal.status}"></span>
+                            <span th:case="'IN_PROGRESS'" class="badge badge-warning text-[0.55rem]" th:text="${appraisal.status}"></span>
+                            <span th:case="'PENDING'"     class="badge badge-neutral text-[0.55rem]" th:text="${appraisal.status}"></span>
+                            <span th:case="*"             class="badge badge-neutral text-[0.55rem]" th:text="${appraisal.status}"></span>
+                        </span>
+                    </div>
+                    <div class="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+                        <span>KPI: <span class="font-medium text-slate-700 dark:text-slate-200"
+                                         th:text="${appraisal.kpiScore != null ? #numbers.formatDecimal(appraisal.kpiScore,1,2) : '—'}">—</span></span>
+                        <span th:if="${isComplete and appraisal.finalScore != null}"
+                              class="text-primary font-medium">
+                            Final: <span th:text="${#numbers.formatDecimal(appraisal.finalScore,1,2)}">—</span>
+                        </span>
+                        <span th:unless="${isComplete}" class="badge badge-orange text-[0.5rem]">Awaiting</span>
+                    </div>
+                </div>
+                <span class="material-symbols-outlined text-slate-400">chevron_right</span>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ===== QUICK LINKS ===== -->
+    <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200 dark:border-slate-700">
+        <div class="flex items-center gap-2 mb-4">
+            <span class="material-symbols-outlined text-primary">apps</span>
+            <h3 class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Quick Links</h3>
+        </div>
+        <div class="grid grid-cols-3 gap-3">
+            <a th:href="@{/mobile/employee/profile}"
+               class="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-700/50 border border-slate-100 dark:border-slate-700 active:scale-95 transition-transform">
+                <div class="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-blue-600 dark:text-blue-400">person</span>
+                </div>
+                <span class="text-[0.65rem] font-semibold text-slate-600 dark:text-slate-300">Profile</span>
+            </a>
+            <a th:href="@{mobile/employee/payroll}"
+               class="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-700/50 border border-slate-100 dark:border-slate-700 active:scale-95 transition-transform">
+                <div class="w-10 h-10 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-green-600 dark:text-green-400">payments</span>
+                </div>
+                <span class="text-[0.65rem] font-semibold text-slate-600 dark:text-slate-300">Payroll</span>
+            </a>
+            <a th:href="@{mobile/employee/performance}"
+               class="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-700/50 border border-slate-100 dark:border-slate-700 active:scale-95 transition-transform">
+                <div class="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-purple-600 dark:text-purple-400">assignment_turned_in</span>
+                </div>
+                <span class="text-[0.65rem] font-semibold text-slate-600 dark:text-slate-300">Appraisals</span>
+            </a>
+        </div>
+    </div>
+
+
+    <!-- ===== RECENT ACTIVITY ===== -->
+    <div th:if="${recentActivity != null and !recentActivity.isEmpty()}"
+         class="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200 dark:border-slate-700">
+        <div class="flex items-center gap-2 mb-4">
+            <span class="material-symbols-outlined text-primary">timeline</span>
+            <h3 class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Recent Activity</h3>
+        </div>
+
+        <!-- Timeline -->
+        <div class="relative space-y-4 before:absolute before:left-5 before:top-2 before:h-[calc(100%-16px)] before:w-px before:bg-slate-200 dark:before:bg-slate-700">
+            <div th:each="activity : ${recentActivity}"
+                 class="relative flex gap-4">
+                <div class="z-10 w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center shrink-0">
+                    <span class="material-symbols-outlined text-slate-500 dark:text-slate-300"
+                          style="font-size:17px;"
+                          th:text="${activity.icon ?: 'info'}">info</span>
+                </div>
+                <div class="pt-1.5 flex-1 min-w-0">
+                    <p class="text-sm font-medium text-slate-800 dark:text-slate-200" th:text="${activity.description}">Activity</p>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5" th:text="${activity.timeAgo}">2 hours ago</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fallback static activity if model not available -->
+    <div th:if="${recentActivity == null or recentActivity.isEmpty()}"
+         class="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200 dark:border-slate-700">
+        <div class="flex items-center gap-2 mb-4">
+            <span class="material-symbols-outlined text-primary">timeline</span>
+            <h3 class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Recent Activity</h3>
+        </div>
+        <div class="relative space-y-4 before:absolute before:left-5 before:top-2 before:h-[calc(100%-16px)] before:w-px before:bg-slate-200 dark:before:bg-slate-700">
+            <div class="relative flex gap-4">
+                <div class="z-10 w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
+                    <span class="material-symbols-outlined text-primary" style="font-size:17px;">celebration</span>
+                </div>
+                <div class="pt-1.5">
+                    <p class="text-sm font-medium text-slate-800 dark:text-slate-200"><span class="font-bold">Annual Promotion Cycle</span> has started.</p>
+                    <p class="text-xs text-slate-500 mt-0.5">2 hours ago</p>
+                </div>
+            </div>
+            <div class="relative flex gap-4">
+                <div class="z-10 w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center shrink-0">
+                    <span class="material-symbols-outlined text-emerald-600" style="font-size:17px;">check_circle</span>
+                </div>
+                <div class="pt-1.5">
+                    <p class="text-sm font-medium text-slate-800 dark:text-slate-200">Your <span class="font-bold">KPI Assessment</span> for Q1 was approved.</p>
+                    <p class="text-xs text-slate-500 mt-0.5">Yesterday</p>
+                </div>
+            </div>
+            <div class="relative flex gap-4">
+                <div class="z-10 w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center shrink-0">
+                    <span class="material-symbols-outlined text-slate-500 dark:text-slate-300" style="font-size:17px;">history_edu</span>
+                </div>
+                <div class="pt-1.5">
+                    <p class="text-sm font-medium text-slate-800 dark:text-slate-200">New <span class="font-bold">HR Policy</span> updated for 2026.</p>
+                    <p class="text-xs text-slate-500 mt-0.5">3 days ago</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- footer -->
+    <div class="text-center text-[0.55rem] text-slate-400 dark:text-slate-500 py-2">
+        <span class="material-symbols-outlined text-[0.6rem] align-middle">lock</span> JustHR · data is private and secure
+    </div>
 
 </main>
 </body>

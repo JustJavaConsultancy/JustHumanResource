@@ -1,5 +1,6 @@
 package com.justjava.humanresource.mobile;
 
+import com.justjava.humanresource.core.config.AuthenticationManager;
 import com.justjava.humanresource.core.enums.EmploymentStatus;
 import com.justjava.humanresource.hr.dto.EmployeeOnboardingResponseDTO;
 import com.justjava.humanresource.hr.dto.JobGradeResponseDTO;
@@ -8,9 +9,20 @@ import com.justjava.humanresource.hr.entity.Employee;
 import com.justjava.humanresource.hr.entity.PayGroup;
 import com.justjava.humanresource.hr.service.EmployeeService;
 import com.justjava.humanresource.hr.service.SetupService;
+import com.justjava.humanresource.kpi.dto.AppraisalTaskViewDTO;
+import com.justjava.humanresource.kpi.entity.EmployeeAppraisal;
+import com.justjava.humanresource.kpi.service.AppraisalService;
+import com.justjava.humanresource.kpi.service.KpiAssignmentService;
+import com.justjava.humanresource.kpi.service.KpiDefinitionService;
+import com.justjava.humanresource.kpi.service.KpiMeasurementService;
 import com.justjava.humanresource.onboarding.dto.StartEmployeeOnboardingCommand;
 import com.justjava.humanresource.onboarding.service.EmployeeOnboardingService;
+import com.justjava.humanresource.payroll.entity.PaySlipDTO;
+import com.justjava.humanresource.payroll.service.PaySlipService;
 import com.justjava.humanresource.payroll.service.PayrollSetupService;
+import com.justjava.humanresource.workflow.dto.FlowableTaskDTO;
+import com.justjava.humanresource.workflow.service.FlowableTaskService;
+import org.flowable.engine.history.HistoricProcessInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -21,11 +33,15 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/mobile")
 public class MobileEmployeeController {
+
 
     @Autowired
     private SetupService setupService;
@@ -39,17 +55,22 @@ public class MobileEmployeeController {
     @Autowired
     private PayrollSetupService payrollSetupService;
 
+    @Autowired
+    AuthenticationManager authenticationManager;
+
+
+    @Autowired
+    AppraisalService appraisalService;
+
+    @Autowired
+    private FlowableTaskService flowableTaskService;
+
+    @Autowired
+    private PaySlipService paySlipService;
+
+
     @GetMapping("/employees")
     public String getMobileEmployees(Model model) {
-        List<Department> departments = setupService.getAllDepartments();
-        List<PayGroup> payGroups = payrollSetupService.getAllPayGroups();
-        List<JobGradeResponseDTO> jobGrades = setupService.getAllJobGrades();
-        List<Employee> employees = employeeOnboardingService.getAllOnboardings();
-
-        model.addAttribute("employees", employees);
-        model.addAttribute("jobGrades", jobGrades);
-        model.addAttribute("departments", departments);
-        model.addAttribute("payGroups", payGroups);
         model.addAttribute("title", "Employee Management");
         model.addAttribute("subTitle", "Manage employee records and data");
         return "mobile/main";
@@ -72,17 +93,78 @@ public class MobileEmployeeController {
 
     @GetMapping("/employee/dashboard")
     public String getMobileEmployeeDashboard(Model model) {
+        String email = (String) authenticationManager.get("email");
+        // implement your own logic
+        Employee loginEmployee = employeeService.getByEmail(email);
+        Employee employee = employeeService.getEmployeeWithBankDetails(loginEmployee.getId());
+        PaySlipDTO latestPaySlip = paySlipService.getCurrentPeriodPaySlipForEmployee(1l,loginEmployee.getId());
+        System.out.println("Latest Pay Slip: " + latestPaySlip);
+        System.out.println("Logged in employee: " + loginEmployee);
+        List<PaySlipDTO> previousPaySlip = paySlipService.getPaySlipsByEmployee(loginEmployee.getId());
+        // 🔹 COMPLETED PROCESSES
+        List<HistoricProcessInstance> completedProcesses =
+                flowableTaskService.getCompletedProcessInstancesForAssignee(
+                        "employeeAppraisalProcess"
+                );
+
+        // 🔹 ACTIVE TASKS
+        List<FlowableTaskDTO> tasks =
+                flowableTaskService.getTasksForAssignee(
+                        String.valueOf(loginEmployee.getId()),
+                        "employeeAppraisalProcess"
+                );
+        List<AppraisalTaskViewDTO> enrichedAppraisals = new ArrayList<>();
+
+        for (FlowableTaskDTO task : tasks) {
+
+            Map<String, Object> variables = task.getVariables();
+
+            if (variables.containsKey("appraisalId")) {
+
+                Long appraisalId =
+                        Long.valueOf(variables.get("appraisalId").toString());
+
+                EmployeeAppraisal appraisal =
+                        appraisalService.findAppraisalById(appraisalId);
+                enrichedAppraisals.add(
+                        new AppraisalTaskViewDTO(task, appraisal)
+                );
+            }
+        }
+        enrichedAppraisals.forEach(
+                appraisal -> System.out.println("Task: " + appraisal.getTask()+ ", Appraisal: " + appraisal.getAppraisal())
+        );
+        List<EmployeeAppraisal> employeeAppraisals = appraisalService.findAppraisalByEmployeeID(loginEmployee.getId());
+        // existing
+        model.addAttribute("tasks", tasks);
+        model.addAttribute("employeeAppraisals", employeeAppraisals);
+
+// add this
+        model.addAttribute("appraisalMap",
+                employeeAppraisals.stream()
+                        .collect(Collectors.toMap(EmployeeAppraisal::getId, ea -> ea))
+        );
+        model.addAttribute("previousPaySlip", previousPaySlip);
+        model.addAttribute("employee", employee);
+        model.addAttribute("latestPaySlip", latestPaySlip);
         model.addAttribute("title", "Dashboard");
         model.addAttribute("subTitle", "Your personal overview");
-        model.addAttribute("userName", "Jane Okafor");
         return "mobile/dashboard";
     }
 
     @GetMapping("/employee/profile")
     public String getMobileEmployeeProfile(Model model) {
+        String email = (String) authenticationManager.get("email");
+        // implement your own logic
+        Employee loginEmployee = employeeService.getByEmail(email);
+        Employee employee = employeeService.getEmployeeWithBankDetails(loginEmployee.getId());
+        PaySlipDTO latestPaySlip = paySlipService.getCurrentPeriodPaySlipForEmployee(1l,loginEmployee.getId());
+        System.out.println("Latest Pay Slip: " + latestPaySlip);
+        System.out.println("Logged in employee: " + loginEmployee);
+        model.addAttribute("employee", employee);
+        model.addAttribute("latestPaySlip", latestPaySlip);
         model.addAttribute("title", "My Profile");
         model.addAttribute("subTitle", "View and update your information");
-        model.addAttribute("userName", "Jane Okafor");
         return "mobile/profile";
     }
 
@@ -90,15 +172,23 @@ public class MobileEmployeeController {
     public String getMobilePromotions(Model model) {
         model.addAttribute("title", "Promotions");
         model.addAttribute("subTitle", "View promotion history");
-        model.addAttribute("userName", "Jane Okafor");
         return "mobile/promotions";
     }
 
     @GetMapping("/employee/payroll")
     public String getMobilePayroll(Model model) {
-        model.addAttribute("title", "Payroll");
-        model.addAttribute("subTitle", "View pay information");
-        model.addAttribute("userName", "Jane Okafor");
+
+        String email = (String) authenticationManager.get("email");
+        // implement your own logic
+        Employee loginEmployee = employeeService.getByEmail(email);
+        PaySlipDTO latestPaySlip = paySlipService.getCurrentPeriodPaySlipForEmployee(1l,loginEmployee.getId());
+
+        List<PaySlipDTO> previousPaySlip = paySlipService.getPaySlipsByEmployee(loginEmployee.getId());
+        Employee employee = employeeService.getEmployeeWithBankDetails(loginEmployee.getId());
+        System.out.println("Latest Pay Slip: " );
+        model.addAttribute("previousPaySlip", previousPaySlip);
+        model.addAttribute("latestPaySlip", latestPaySlip);
+        model.addAttribute("employee", employee);
         return "mobile/payroll";
     }
 
@@ -106,15 +196,59 @@ public class MobileEmployeeController {
     public String getMobileLeave(Model model) {
         model.addAttribute("title", "Leave");
         model.addAttribute("subTitle", "Manage your time off");
-        model.addAttribute("userName", "Jane Okafor");
         return "mobile/leave";
     }
 
     @GetMapping("/employee/performance")
     public String getMobilePerformance(Model model) {
+        String email = (String) authenticationManager.get("email");
+        Employee loginEmployee = employeeService.getByEmail(email);
+        // 🔹 COMPLETED PROCESSES
+        List<HistoricProcessInstance> completedProcesses =
+                flowableTaskService.getCompletedProcessInstancesForAssignee(
+                        "employeeAppraisalProcess"
+                );
+
+        // 🔹 ACTIVE TASKS
+        List<FlowableTaskDTO> tasks =
+                flowableTaskService.getTasksForAssignee(
+                        String.valueOf(loginEmployee.getId()),
+                        "employeeAppraisalProcess"
+                );
+        List<AppraisalTaskViewDTO> enrichedAppraisals = new ArrayList<>();
+
+        for (FlowableTaskDTO task : tasks) {
+
+            Map<String, Object> variables = task.getVariables();
+
+            if (variables.containsKey("appraisalId")) {
+
+                Long appraisalId =
+                        Long.valueOf(variables.get("appraisalId").toString());
+
+                EmployeeAppraisal appraisal =
+                        appraisalService.findAppraisalById(appraisalId);
+                enrichedAppraisals.add(
+                        new AppraisalTaskViewDTO(task, appraisal)
+                );
+            }
+        }
+        enrichedAppraisals.forEach(
+                appraisal -> System.out.println("Task: " + appraisal.getTask()+ ", Appraisal: " + appraisal.getAppraisal())
+        );
+        List<EmployeeAppraisal> employeeAppraisals = appraisalService.findAppraisalByEmployeeID(loginEmployee.getId());
+        // existing
+        model.addAttribute("tasks", tasks);
+        model.addAttribute("employeeAppraisals", employeeAppraisals);
+
+// add this
+        model.addAttribute("appraisalMap",
+                employeeAppraisals.stream()
+                        .collect(Collectors.toMap(EmployeeAppraisal::getId, ea -> ea))
+        );
+
         model.addAttribute("title", "Performance");
         model.addAttribute("subTitle", "View your KPI metrics");
-        model.addAttribute("userName", "Jane Okafor");
         return "mobile/kpi";
     }
 
@@ -122,7 +256,6 @@ public class MobileEmployeeController {
     public String getMobileDocuments(Model model) {
         model.addAttribute("title", "Documents");
         model.addAttribute("subTitle", "Manage your documents");
-        model.addAttribute("userName", "Jane Okafor");
         return "mobile/documents";
     }
 }

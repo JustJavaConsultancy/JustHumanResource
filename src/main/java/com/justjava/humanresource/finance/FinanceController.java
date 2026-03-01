@@ -38,6 +38,36 @@ public class FinanceController {
     }
     @GetMapping("/finance/dashboard")
     public String getFinanceDashboard(Model model) {
+        List<HistoricTaskInstance> completedProcess =  flowableTaskService.getCompletedTaskstaskDefinitionKey("FormTask_15");
+        List<FlowableTaskDTO> approvalRequests = flowableTaskService.getTasksByTaskDefinition("FormTask_15", "payrollPeriodCloseProcess");
+        List<PaySlipDTO> paySlips = paySlipService.getCurrentPeriodPaySlips(1L);
+        System.out.println("Current period payslips:" + paySlips.size());
+        System.out.println("Completed process:" + completedProcess.size());
+        paySlips.forEach(
+                paySlip -> System.out.println(paySlip)
+        );
+        System.out.println("Lock approval requests:" + approvalRequests.size());
+
+        approvalRequests.forEach(
+                request -> System.out.println(request)
+        );
+        completedProcess.forEach(
+                process -> System.out.println(process.getProcessVariables()+ " - " + process.getEndTime())
+        );
+        List<PayrollJournalEntryDTO> journalEntries = payrollJournalService.getUnexported(1L);
+        journalEntries.forEach(
+                entry -> System.out.println(entry)        );
+
+
+        List<PaySlipDTO> payslipBankDetails = paySlipService.getCurrentPeriodPaySlips(1L);
+        payslipBankDetails.forEach(
+                paySlip -> System.out.println(paySlip)
+        );
+        model.addAttribute("bankDetails", payslipBankDetails);
+        model.addAttribute("journalEntries", journalEntries);
+        model.addAttribute("approvalRequests", approvalRequests);
+        model.addAttribute("paySlips", paySlips);
+        model.addAttribute("completedProcesses", completedProcess);
         model.addAttribute("title", "Finance Dashboard");
         model.addAttribute("subTitle", "Overview of financial performance and key metrics");
         return "finance/dashboard";
