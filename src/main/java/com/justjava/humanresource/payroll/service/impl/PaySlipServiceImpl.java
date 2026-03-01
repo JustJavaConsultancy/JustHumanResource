@@ -362,6 +362,7 @@ public class PaySlipServiceImpl implements PaySlipService {
                 .payrollRunId(run.getId())
                 .payDate(paySlip.getPayDate())
                 .versionNumber(paySlip.getVersionNumber())
+                .bankName(paySlip.getEmployee().getBankDetails().getFirst().getBankName())
 
                 .basicSalary(basicSalary)
                 .grossPay(paySlip.getGrossPay())
