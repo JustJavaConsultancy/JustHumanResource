@@ -44,11 +44,11 @@ public class PayrollJournalService {
             );
         }
 
-        if (period.getStatus() != PayrollPeriodStatus.LOCKED) {
-            throw new IllegalStateException(
-                    "Journal can only be generated for LOCKED period."
-            );
-        }
+//        if (period.getStatus() != PayrollPeriodStatus.LOCKED) {
+//            throw new IllegalStateException(
+//                    "Journal can only be generated for LOCKED period."
+//            );
+//        }
 
     /* ============================================================
        2️⃣ IDEMPOTENCY CHECK (COMPANY + PERIOD)
@@ -170,6 +170,7 @@ public class PayrollJournalService {
                            String description) {
 
         PayrollJournalEntry entry = new PayrollJournalEntry();
+        entry.setCompanyId(comppanyId);
         entry.setPayrollPeriodId(periodId);
         entry.setAccountCode(accountCode);
         entry.setAccountName(accountName);
