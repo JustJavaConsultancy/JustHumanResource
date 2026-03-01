@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:th="http://www.thymeleaf.org"
+      layout:decorate="layouts/financialOfficerLayout">
+<head>
+    <meta charset="UTF-8">
+    <title>Locked Periods Archive · HRPro Finance</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            200: '#bfdbfe',
+                            300: '#93c5fd',
+                            400: '#60a5fa',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            800: '#1e40af',
+                            900: '#1e3a8a',
+                        },
+                        secondary: {
+                            50: '#f8fafc',
+                            100: '#f1f5f9',
+                            200: '#e2e8f0',
+                            300: '#cbd5e1',
+                            400: '#94a3b8',
+                            500: '#64748b',
+                            600: '#475569',
+                            700: '#334155',
+                            800: '#1e293b',
+                            900: '#0f172a',
+                        }
+                    },
+                    fontFamily: {
+                        'sans': ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                    },
+                    borderRadius: {
+                        'xl': '1rem',
+                        '2xl': '1.5rem',
+                    }
+                },
+            },
+        };
+    </script>
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        body { overflow-x: hidden; }
+
+        .sidebar-item { transition: all 0.2s ease; position: relative; }
+        .sidebar-item.active { background-color: rgba(59,130,246,0.1); color:#3b82f6; border-left:3px solid #3b82f6; }
+        .sidebar-item.active .material-icons-round { color:#3b82f6; }
+        .sidebar-item:hover:not(.active) { background-color: rgba(59,130,246,0.05); }
+        .dark .sidebar-item.active { background-color: rgba(59,130,246,0.2); }
+
+        .stat-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .stat-card:hover { transform: translateY(-2px); box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); }
+
+        .badge { padding: 2px 8px; font-size: 0.75rem; font-weight: 500; border-radius: 9999px; }
+        .badge-success { background-color: #dcfce7; color: #16a34a; }
+        .badge-neutral { background-color: #f3f4f6; color: #4b5563; }
+        .dark .badge-neutral { background-color: #374151; color: #d1d5db; }
+
+        .sidebar-scroll::-webkit-scrollbar { width: 4px; }
+        .sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
+        .sidebar-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .dark .sidebar-scroll::-webkit-scrollbar-thumb { background: #4b5563; }
+
+        .sidebar-container { position: fixed; top: 0; left: 0; height: 100vh; width: 16rem; z-index: 40; overflow-y: auto; }
+        .main-content { margin-left: 16rem; width: calc(100% - 16rem); min-height: 100vh; }
+
+        @media (max-width: 1023px) {
+            .sidebar-container { transform: translateX(-100%); }
+            .sidebar-container.open { transform: translateX(0); }
+            .main-content { margin-left: 0; width: 100%; }
+        }
+
+        .period-card {
+            transition: all 0.2s ease;
+            border: 1px solid #e5e7eb;
+            background-color: white;
+            border-radius: 1rem;
+            overflow: hidden;
+        }
+        .dark .period-card { background-color: #1f2937; border-color: #374151; }
+        .period-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+            border-color: #2563eb;
+        }
+        .dark .period-card:hover { box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3); border-color: #3b82f6; }
+
+        .period-card-header {
+            padding: 1.25rem;
+            border-bottom: 1px solid #f3f4f6;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .dark .period-card-header { border-bottom-color: #374151; }
+        .period-card-body { padding: 1.25rem; }
+
+        .period-stat { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
+        .period-stat-label { font-size: 0.75rem; color: #6b7280; display: flex; align-items: center; gap: 0.25rem; }
+        .dark .period-stat-label { color: #9ca3af; }
+        .period-stat-value { font-weight: 600; color: #1f2937; }
+        .dark .period-stat-value { color: #f3f4f6; }
+
+        .view-details-btn {
+            width: 100%;
+            padding: 0.625rem;
+            background-color: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.75rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #2563eb;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.375rem;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+        .dark .view-details-btn { background-color: #111827; border-color: #374151; color: #60a5fa; }
+        .view-details-btn:hover { background-color: #2563eb; color: white; border-color: #2563eb; }
+        .dark .view-details-btn:hover { background-color: #3b82f6; color: white; }
+
+        /* Empty state */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 5rem 2rem;
+            background-color: white;
+            border: 2px dashed #e5e7eb;
+            border-radius: 1rem;
+            color: #6b7280;
+            grid-column: 1 / -1;
+        }
+        .dark .empty-state { background-color: #1f2937; border-color: #374151; color: #9ca3af; }
+        .empty-state .material-icons-round { font-size: 3rem; margin-bottom: 1rem; color: #d1d5db; }
+        .dark .empty-state .material-icons-round { color: #4b5563; }
+    </style>
+</head>
+<body>
+<main layout:fragment="content">
+
+    <!--/*
+    ============================================================
+     MODEL: completedProcesses — List<HistoricProcessInstance>
+       Each item exposes:
+         • endTime          → java.util.Date  (e.g. "Sun Mar 01 01:25:43 WAT 2026")
+         • processVariables → Map<String,Object> with keys:
+             periodId, totalGross, totalDeductions, initiator,
+             employeeCount, reconEmployeeCount, totalNet,
+             companyId, reconNet, reconGross, journalGenerated,
+             reconDeductions, periodStart (LocalDate), periodEnd (LocalDate)
+
+     NULL SAFETY:
+       • Outer null/empty guard → shows empty state panel
+       • Each processVariables value is guarded with ?: before render
+       • periodStart / periodEnd assumed java.time.LocalDate from Camunda
+    ============================================================
+    */-->
+
+    <!-- ═══════════════════════════════════════════════════════
+         GUARD: null or empty list → show empty state page
+    ════════════════════════════════════════════════════════════ -->
+    <div th:if="${completedProcesses == null or #lists.isEmpty(completedProcesses)}">
+
+        <!-- Skeleton stat cards (greyed-out) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div th:each="i : ${#numbers.sequence(1,4)}"
+                 class="stat-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 opacity-50">
+                <div class="h-3 bg-gray-200 dark:bg-gray-700 rounded w-24 mb-3 animate-pulse"></div>
+                <div class="h-7 bg-gray-200 dark:bg-gray-700 rounded w-16 mb-2 animate-pulse"></div>
+                <div class="h-3 bg-gray-200 dark:bg-gray-700 rounded w-20 animate-pulse"></div>
+            </div>
+        </div>
+
+        <!-- Full-width empty state -->
+        <div class="empty-state">
+            <span class="material-icons-round">inventory_2</span>
+            <h3 class="text-lg font-semibold mb-1">No locked periods yet</h3>
+            <p class="text-sm text-center max-w-xs">
+                Payroll periods that have been locked and finalised will appear here.
+                Lock a period from the current payroll run to get started.
+            </p>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════
+         MAIN CONTENT: list has at least one entry
+    ════════════════════════════════════════════════════════════ -->
+    <div th:unless="${completedProcesses == null or #lists.isEmpty(completedProcesses)}">
+
+        <!--
+        ─────────────────────────────────────────────────────────
+         Summary stat cards
+         Monetary totals & averages are computed client-side from
+         data-* attributes stamped on each card (see JS at bottom).
+         Period count and last-locked date are resolved server-side.
+        ─────────────────────────────────────────────────────────
+        -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+
+            <!-- Total locked periods -->
+            <div class="stat-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs text-gray-500 dark:text-gray-400">Total locked periods</span>
+                    <span class="material-icons-round text-primary-500">archive</span>
+                </div>
+                <p class="text-2xl font-bold" th:text="${#lists.size(completedProcesses)}">0</p>
+                <p class="text-xs text-gray-500 mt-1">All time</p>
+            </div>
+
+            <!-- Total net paid — populated by JS -->
+            <div class="stat-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs text-gray-500 dark:text-gray-400">Total net paid</span>
+                    <span class="material-icons-round text-green-500">payments</span>
+                </div>
+                <p class="text-2xl font-bold" id="stat-total-net">—</p>
+                <p class="text-xs text-gray-500 mt-1">All locked periods</p>
+            </div>
+
+            <!-- Average employees — populated by JS -->
+            <div class="stat-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs text-gray-500 dark:text-gray-400">Average employees</span>
+                    <span class="material-icons-round text-blue-500">people</span>
+                </div>
+                <p class="text-2xl font-bold" id="stat-avg-employees">—</p>
+                <p class="text-xs text-gray-500 mt-1">Per period</p>
+            </div>
+
+            <!-- Last locked — first item in sorted list -->
+            <div class="stat-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs text-gray-500 dark:text-gray-400">Last locked</span>
+                    <span class="material-icons-round text-purple-500">schedule</span>
+                </div>
+                <!--/* periodStart of the first process in the list */-->
+                <p class="text-2xl font-bold"
+                   th:with="first=${completedProcesses[0]}"
+                   th:text="${first.processVariables['periodStart'] != null}
+                               ? ${#temporals.format(first.processVariables['periodStart'], 'MMM yyyy')}
+                               : '—'">
+                    —
+                </p>
+                <p class="text-xs text-gray-500 mt-1"
+                   th:with="first=${completedProcesses[0]}"
+                   th:text="${first.endTime != null}
+                               ? ${#dates.format(first.endTime, 'dd MMM yyyy')}
+                               : 'Unknown date'">
+                    —
+                </p>
+            </div>
+        </div>
+
+        <!-- Period Cards Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+            <!--/* ─── Loop over each completed process ─── */-->
+            <div class="period-card"
+                 th:each="process : ${completedProcesses}"
+                 th:with="
+                     vars=${process.processVariables},
+                     periodStart=${vars['periodStart']},
+                     periodEnd=${vars['periodEnd']},
+                     totalGross=${vars['totalGross']},
+                     totalDeductions=${vars['totalDeductions']},
+                     reconNet=${vars['reconNet']},
+                     reconGross=${vars['reconGross']},
+                     reconDeductions=${vars['reconDeductions']},
+                     empCount=${vars['employeeCount']},
+                     periodId=${vars['periodId']},
+                     journalGenerated=${vars['journalGenerated']}
+                 "
+                 th:data-net="${reconNet != null ? reconNet : 0}"
+                 th:data-employees="${empCount != null ? empCount : 0}">
+
+                <!-- Card header -->
+                <div class="period-card-header">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
+                            <span class="material-icons-round text-green-600 dark:text-green-400">lock</span>
+                        </div>
+                        <div>
+                            <!-- Period name: "February 2026" derived from periodStart -->
+                            <h3 class="font-bold text-lg"
+                                th:text="${periodStart != null}
+                                            ? ${#temporals.format(periodStart, 'MMMM yyyy')}
+                                            : (${periodId != null} ? 'Period #' + periodId : 'Unknown period')">
+                                Period
+                            </h3>
+                            <!-- Locked date from endTime -->
+                            <p class="text-xs text-gray-500"
+                               th:text="${process.endTime != null}
+                                           ? 'Locked ' + ${#dates.format(process.endTime, 'dd MMM yyyy')}
+                                           : 'Lock date unavailable'">
+                                Locked —
+                            </p>
+                        </div>
+                    </div>
+                    <span class="badge badge-success">locked</span>
+                </div>
+
+                <!-- Card body -->
+                <div class="period-card-body">
+
+                    <!-- Employee count -->
+                    <div class="period-stat">
+                        <span class="period-stat-label">
+                            <span class="material-icons-round text-xs">people</span> Employees
+                        </span>
+                        <span class="period-stat-value"
+                              th:text="${empCount != null ? empCount : '—'}">
+                            —
+                        </span>
+                    </div>
+
+                    <!-- Gross pay -->
+                    <div class="period-stat">
+                        <span class="period-stat-label">
+                            <span class="material-icons-round text-xs">payments</span> Gross pay
+                        </span>
+                        <span class="period-stat-value"
+                              th:text="${reconGross != null}
+                                          ? '₦' + ${#numbers.formatDecimal(reconGross, 1, 'COMMA', 2, 'POINT')}
+                                          : (${totalGross != null}
+                                              ? '₦' + ${#numbers.formatDecimal(totalGross, 1, 'COMMA', 2, 'POINT')}
+                                              : '—')">
+                            —
+                        </span>
+                    </div>
+
+                    <!-- Deductions -->
+                    <div class="period-stat">
+                        <span class="period-stat-label">
+                            <span class="material-icons-round text-xs">remove_circle</span> Deductions
+                        </span>
+                        <span class="period-stat-value"
+                              th:text="${reconDeductions != null}
+                                          ? '₦' + ${#numbers.formatDecimal(reconDeductions, 1, 'COMMA', 2, 'POINT')}
+                                          : (${totalDeductions != null}
+                                              ? '₦' + ${#numbers.formatDecimal(totalDeductions, 1, 'COMMA', 2, 'POINT')}
+                                              : '—')">
+                            —
+                        </span>
+                    </div>
+
+                    <!-- Net pay (highlighted) -->
+                    <div class="period-stat">
+                        <span class="period-stat-label">
+                            <span class="material-icons-round text-xs">account_balance_wallet</span> Net pay
+                        </span>
+                        <span class="period-stat-value text-primary-600 font-bold"
+                              th:text="${reconNet != null}
+                                          ? '₦' + ${#numbers.formatDecimal(reconNet, 1, 'COMMA', 2, 'POINT')}
+                                          : '—'">
+                            —
+                        </span>
+                    </div>
+
+                    <!-- Journal badge — shown when journalGenerated is true -->
+                    <div class="mb-3" th:if="${journalGenerated != null and journalGenerated == true}">
+                        <span class="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 bg-emerald-50 dark:bg-emerald-900/30 dark:text-emerald-400 px-2 py-1 rounded-full">
+                            <span class="material-icons-round" style="font-size:0.85rem;">check_circle</span>
+                            Journal generated
+                        </span>
+                    </div>
+
+                    <!-- View details button -->
+                    <div class="mt-4">
+                        <a class="view-details-btn"
+                           th:href="${periodId != null}
+                                       ? @{/finance/locked-periods/{id}(id=${periodId})}
+                                       : '#'">
+                            <span class="material-icons-round text-sm">visibility</span> View details
+                        </a>
+                    </div>
+
+                </div><!--/ period-card-body -->
+            </div><!--/ th:each period-card -->
+
+        </div><!--/ grid -->
+
+
+    </div><!--/ th:unless (main content guard) -->
+
+    <!-- ═══════════════════════════════════════════════════════
+         CLIENT-SIDE: compute aggregate stats from data-* attrs
+         stamped on each .period-card by Thymeleaf above.
+    ════════════════════════════════════════════════════════════ -->
+    <script th:inline="javascript">
+        (function () {
+            const cards = document.querySelectorAll('.period-card');
+            if (!cards.length) return;
+
+            let totalNet = 0;
+            let totalEmployees = 0;
+            let validCards = 0;
+
+            cards.forEach(function (card) {
+                const net = parseFloat(card.dataset.net);
+                const emp = parseInt(card.dataset.employees, 10);
+
+                if (!isNaN(net))  { totalNet       += net; }
+                if (!isNaN(emp))  { totalEmployees += emp; validCards++; }
+            });
+
+            // Format Nigerian Naira with commas
+            function formatNGN(amount) {
+                return '₦' + amount.toLocaleString('en-NG', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+            }
+
+            // Abbreviate large numbers for the stat card headline
+            function abbreviate(amount) {
+                if (amount >= 1_000_000_000) return '₦' + (amount / 1_000_000_000).toFixed(1) + 'B';
+                if (amount >= 1_000_000)     return '₦' + (amount / 1_000_000).toFixed(1) + 'M';
+                if (amount >= 1_000)         return '₦' + (amount / 1_000).toFixed(1) + 'K';
+                return formatNGN(amount);
+            }
+
+            const statNet = document.getElementById('stat-total-net');
+            if (statNet) statNet.textContent = abbreviate(totalNet);
+
+            const statAvg = document.getElementById('stat-avg-employees');
+            if (statAvg) {
+                statAvg.textContent = validCards > 0
+                    ? Math.round(totalEmployees / validCards).toLocaleString()
+                    : '—';
+            }
+        })();
+    </script>
+
+</main>
+</body>
+</html>

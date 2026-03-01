@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html class="light" lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>Financial Officer Dashboard | JustHR</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+        darkMode: "class",
+        theme: {
+            extend: {
+                colors: {
+                    primary: {
+                        50: '#eff6ff',
+                        100: '#dbeafe',
+                        200: '#bfdbfe',
+                        300: '#93c5fd',
+                        400: '#60a5fa',
+                        500: '#3b82f6',
+                        600: '#2563eb',
+                        700: '#1d4ed8',
+                        800: '#1e40af',
+                        900: '#1e3a8a',
+                    },
+                    secondary: {
+                        50: '#f8fafc',
+                        100: '#f1f5f9',
+                        200: '#e2e8f0',
+                        300: '#cbd5e1',
+                        400: '#94a3b8',
+                        500: '#64748b',
+                        600: '#475569',
+                        700: '#334155',
+                        800: '#1e293b',
+                        900: '#0f172a',
+                    }
+                },
+                fontFamily: {
+                    'sans': ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                },
+                borderRadius: {
+                    'xl': '1rem',
+                    '2xl': '1.5rem',
+                },
+                boxShadow: {
+                    'card': '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)',
+                    'card-hover': '0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.02)',
+                }
+            },
+        },
+    };
+  </script>
+  <style>
+    * {
+        font-family: 'Inter', sans-serif;
+    }
+
+    body {
+        overflow-x: hidden;
+    }
+
+    .sidebar-item {
+        transition: all 0.2s ease;
+        position: relative;
+    }
+
+    .sidebar-item.active {
+        background-color: rgba(59, 130, 246, 0.08);
+        color: #2563eb;
+        border-left: 3px solid #2563eb;
+        font-weight: 500;
+    }
+
+    .sidebar-item.active .material-icons-round {
+        color: #2563eb;
+    }
+
+    .sidebar-item:hover:not(.active) {
+        background-color: rgba(59, 130, 246, 0.04);
+    }
+
+    .dark .sidebar-item.active {
+        background-color: rgba(59, 130, 246, 0.15);
+        color: #60a5fa;
+    }
+
+    .dark .sidebar-item.active .material-icons-round {
+        color: #60a5fa;
+    }
+
+    .stat-card {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.02);
+    }
+
+    .badge {
+        padding: 0.25rem 0.75rem;
+        font-size: 0.7rem;
+        font-weight: 600;
+        border-radius: 9999px;
+        letter-spacing: 0.025em;
+        text-transform: uppercase;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .badge-success {
+        background-color: #dcfce7;
+        color: #15803d;
+    }
+
+    .badge-warning {
+        background-color: #fef3c7;
+        color: #b45309;
+    }
+
+    .badge-error {
+        background-color: #fee2e2;
+        color: #b91c1c;
+    }
+
+    .badge-info {
+        background-color: #dbeafe;
+        color: #1e40af;
+    }
+
+    .badge-neutral {
+        background-color: #f3f4f6;
+        color: #4b5563;
+    }
+
+    .dark .badge-success {
+        background-color: #14532d;
+        color: #86efac;
+    }
+
+    .dark .badge-info {
+        background-color: #1e3a8a;
+        color: #bfdbfe;
+    }
+
+    .progress-bar {
+        height: 8px;
+        border-radius: 4px;
+        overflow: hidden;
+        background-color: #e5e7eb;
+    }
+
+    .dark .progress-bar {
+        background-color: #374151;
+    }
+
+    .progress-fill {
+        height: 100%;
+        border-radius: 4px;
+        transition: width 0.3s ease;
+    }
+
+    /* Custom scrollbar for sidebar */
+    .sidebar-scroll::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    .sidebar-scroll::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .sidebar-scroll::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+
+    .dark .sidebar-scroll::-webkit-scrollbar-thumb {
+        background: #4b5563;
+    }
+
+    /* Smooth transitions */
+    .transition-all {
+        transition-property: all;
+        transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+        transition-duration: 200ms;
+    }
+
+    /* Fixed sidebar */
+    .sidebar-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        width: 16rem;
+        z-index: 40;
+        overflow-y: auto;
+    }
+
+    .main-content {
+        margin-left: 16rem;
+        width: calc(100% - 16rem);
+        min-height: 100vh;
+    }
+
+    @media (max-width: 1023px) {
+        .sidebar-container {
+            transform: translateX(-100%);
+        }
+
+        .sidebar-container.open {
+            transform: translateX(0);
+        }
+
+        .main-content {
+            margin-left: 0;
+            width: 100%;
+        }
+    }
+
+    /* Payroll breakdown styling */
+    .pay-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #f3f4f6;
+    }
+
+    .dark .pay-item {
+        border-bottom-color: #1f2937;
+    }
+
+    .pay-item:last-child {
+        border-bottom: none;
+    }
+
+    .tax-badge, .statutory-badge {
+        display: inline-flex;
+        align-items: center;
+        margin-left: 0.5rem;
+        font-size: 0.65rem;
+        font-weight: 600;
+        padding: 0.15rem 0.5rem;
+        border-radius: 999px;
+        background-color: #f3f4f6;
+        color: #4b5563;
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+    }
+
+    .dark .tax-badge, .dark .statutory-badge {
+        background-color: #374151;
+        color: #d1d5db;
+    }
+
+    .statutory-badge {
+        background-color: #fee2e2;
+        color: #b91c1c;
+    }
+
+    .dark .statutory-badge {
+        background-color: #7f1d1d;
+        color: #fecaca;
+    }
+
+    .tax-badge {
+        background-color: #dbeafe;
+        color: #1e40af;
+    }
+
+    .dark .tax-badge {
+        background-color: #1e3a8a;
+        color: #bfdbfe;
+    }
+
+    /* Card styling */
+    .dashboard-card {
+        background-color: white;
+        border-radius: 1rem;
+        border: 1px solid #e5e7eb;
+        transition: box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+
+    .dark .dashboard-card {
+        background-color: #1f2937;
+        border-color: #374151;
+    }
+
+    .dashboard-card:hover {
+        border-color: #d1d5db;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+    }
+
+    .dark .dashboard-card:hover {
+        border-color: #4b5563;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Table styles */
+    .table-header {
+        background-color: #f9fafb;
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #6b7280;
+    }
+
+    .dark .table-header {
+        background-color: #111827;
+        color: #9ca3af;
+    }
+
+    .table-row {
+        transition: background-color 0.15s ease;
+    }
+
+    .table-row:hover {
+        background-color: #f9fafb;
+    }
+
+    .dark .table-row:hover {
+        background-color: #1e293b;
+    }
+
+    /* KPI progress labels */
+    .kpi-label {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.8rem;
+        margin-bottom: 0.25rem;
+    }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100 min-h-screen flex">
+<!-- ========== SIDEBAR (Employee view, retains profile picture) ========== -->
+<aside class="sidebar-container bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col">
+  <!-- Logo -->
+  <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+    <div class="flex items-center space-x-3">
+      <div class="w-10 h-10 bg-primary-600 rounded-lg flex items-center justify-center">
+        <span class="material-icons-round text-white text-xl">shield</span>
+      </div>
+      <div>
+        <h1 class="text-xl font-bold text-gray-800 dark:text-white">JUST<span class="text-primary-600">HR</span></h1>
+        <p class="text-xs text-gray-500 dark:text-gray-400 font-medium">Employee Portal</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Employee Profile (Sidebar – keeps picture) -->
+  <div class="p-5 border-b border-gray-200 dark:border-gray-700">
+    <div class="flex items-center space-x-3">
+      <img src="https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=48&h=48&q=80"
+           class="w-10 h-10 rounded-full ring-2 ring-gray-200 dark:ring-gray-700 object-cover">
+      <div class="flex-1 min-w-0">
+        <p th:text="${userName}" class="text-sm font-semibold text-gray-900 dark:text-white truncate">Jane Okafor</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 truncate flex items-center">
+          Financial Officer
+        </p>
+      </div>
+      <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+        <span class="material-icons-round text-sm">more_vert</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Employee Navigation -->
+  <nav class="flex-1 p-4 overflow-y-auto sidebar-scroll">
+    <div class="space-y-1">
+      <a th:href="@{/finance/dashboard}"
+         th:class="${currentPath.startsWith('/finance/dashboard')} ? 'sidebar-item active flex items-center space-x-3 px-3 py-3 rounded-lg' : 'sidebar-item flex items-center space-x-3 px-3 py-3 rounded-lg'">
+        <span class="material-icons-round text-gray-500 group-hover:text-primary-600 dark:text-gray-400">dashboard</span>
+        <span class="font-medium">Dashboard</span>
+      </a>
+      <a th:href="@{/finance/lockApproval}"
+         th:class="${currentPath.startsWith('/finance/lockApproval')} ? 'sidebar-item active flex items-center space-x-3 px-3 py-3 rounded-lg' : 'sidebar-item flex items-center space-x-3 px-3 py-3 rounded-lg'">
+        <span class="material-icons-round text-gray-500 group-hover:text-primary-600 dark:text-gray-400">lock</span>
+        <span class="font-medium">Lock Approval</span>
+      </a>
+      <a th:href="@{/finance/lockedPeriods}"
+         th:class="${currentPath.startsWith('/finance/lockedPeriods')} ? 'sidebar-item active flex items-center space-x-3 px-3 py-3 rounded-lg' : 'sidebar-item flex items-center space-x-3 px-3 py-3 rounded-lg'">
+        <span class="material-icons-round text-gray-500 group-hover:text-primary-600 dark:text-gray-400">archive</span>
+        <span class="font-medium">Locked Periods</span>
+      </a>
+      <a th:href="@{/employee/payroll}"
+         th:class="${currentPath.startsWith('/employee/payroll')} ? 'sidebar-item active flex items-center space-x-3 px-3 py-3 rounded-lg' : 'sidebar-item flex items-center space-x-3 px-3 py-3 rounded-lg'">
+        <span class="material-icons-round text-gray-500 group-hover:text-primary-600 dark:text-gray-400">assessment</span>
+        <span class="font-medium">Financial Posting</span>
+      </a>
+    </div>
+  </nav>
+
+  <!-- Settings & Logout -->
+  <div class="p-4 border-t border-gray-200 dark:border-gray-700">
+    <a href="#" class="sidebar-item flex items-center space-x-3 px-4 py-2.5 rounded-lg group mb-1">
+      <span class="material-icons-round text-gray-500 group-hover:text-primary-600 dark:text-gray-400">settings</span>
+      <span class="font-medium">Settings</span>
+    </a>
+    <a href="#" class="sidebar-item flex items-center space-x-3 px-4 py-2.5 rounded-lg group text-red-600 dark:text-red-400">
+      <span class="material-icons-round">logout</span>
+      <span class="font-medium">Logout</span>
+    </a>
+  </div>
+</aside>
+
+<!-- Mobile Overlay -->
+<div id="mobileOverlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden hidden"></div>
+
+<!-- ========== MAIN CONTENT ========== -->
+<div class="main-content flex flex-col">
+  <!-- Top Header -->
+  <header class="sticky top-0 z-30 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 md:px-6 py-4 backdrop-blur-sm bg-opacity-90 dark:bg-opacity-90">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center space-x-4">
+        <button id="menuToggle" class="lg:hidden p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+          <span class="material-icons-round">menu</span>
+        </button>
+        <div>
+          <h2 th:text="${title}" class="text-xl md:text-2xl font-bold text-gray-800 dark:text-white tracking-tight">Employee Dashboard</h2>
+          <p th:text="${subTitle}" class="text-sm text-gray-500 dark:text-gray-400">Welcome back, Jane. Here's your personal overview.</p>
+        </div>
+      </div>
+      <div class="flex items-center space-x-3">
+        <div class="hidden md:block relative">
+          <span class="material-icons-round text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2 text-lg">search</span>
+          <input type="text" placeholder="Search documents, policies..." class="pl-10 pr-4 py-2 w-72 bg-gray-100 dark:bg-gray-700 border-0 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none placeholder-gray-400">
+        </div>
+        <button class="relative p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+          <span class="material-icons-round">notifications</span>
+          <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white dark:ring-gray-800"></span>
+        </button>
+        <button id="themeToggle" class="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+          <span class="material-icons-round">dark_mode</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-1 p-4 md:p-6 lg:p-8 overflow-y-auto">
+    <section layout:fragment="content"></section>
+  </main>
+</div>
+
+<script>
+  // Mobile Sidebar Toggle
+  const menuToggle = document.getElementById('menuToggle');
+  const mobileOverlay = document.getElementById('mobileOverlay');
+  const sidebar = document.querySelector('.sidebar-container');
+
+  if (menuToggle && mobileOverlay && sidebar) {
+      menuToggle.addEventListener('click', () => {
+          sidebar.classList.toggle('open');
+          mobileOverlay.classList.toggle('hidden');
+          document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : 'auto';
+      });
+
+      mobileOverlay.addEventListener('click', () => {
+          sidebar.classList.remove('open');
+          mobileOverlay.classList.add('hidden');
+          document.body.style.overflow = 'auto';
+      });
+  }
+
+  // Theme Toggle
+  const themeToggle = document.getElementById('themeToggle');
+  const themeIcon = themeToggle.querySelector('.material-icons-round');
+
+  themeToggle.addEventListener('click', () => {
+      const isDark = document.documentElement.classList.toggle('dark');
+      themeIcon.textContent = isDark ? 'light_mode' : 'dark_mode';
+      localStorage.setItem('theme', isDark ? 'dark' : 'light');
+  });
+
+  // Initialize theme
+  if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.classList.add('dark');
+      themeIcon.textContent = 'light_mode';
+  }
+
+  // Sidebar active state
+  document.querySelectorAll('.sidebar-item').forEach(item => {
+      item.addEventListener('click', function(e) {
+          if (this.getAttribute('href') === '#') {
+              e.preventDefault();
+          }
+          document.querySelectorAll('.sidebar-item').forEach(nav => {
+              nav.classList.remove('active');
+          });
+          this.classList.add('active');
+
+          if (window.innerWidth < 1024) {
+              sidebar.classList.remove('open');
+              mobileOverlay.classList.add('hidden');
+              document.body.style.overflow = 'auto';
+          }
+      });
+  });
+
+  // Close sidebar on window resize
+  window.addEventListener('resize', () => {
+      if (window.innerWidth >= 1024) {
+          sidebar?.classList.remove('open');
+          mobileOverlay?.classList.add('hidden');
+          document.body.style.overflow = 'auto';
+      }
+  });
+</script>
+</body>
+</html>

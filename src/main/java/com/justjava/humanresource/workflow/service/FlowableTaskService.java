@@ -52,7 +52,7 @@ public class FlowableTaskService {
     ) {
 
         List<Task> tasks = taskService.createTaskQuery()
-                .taskDefinitionId(taskDefinitionKey)
+                .taskDefinitionKey(taskDefinitionKey)
                 .processDefinitionKey(processDefinitionKey)
                 .active()
                 .orderByTaskCreateTime()
@@ -87,16 +87,18 @@ public class FlowableTaskService {
                 .desc()
                 .list();
     }
-    public List<HistoricTaskInstance> getCompletedTasksByTaskDefinitionKey(
+    public List<HistoricTaskInstance> getCompletedTaskstaskDefinitionKey(
             String taskDefinitionKey
     ) {
         return historyService.createHistoricTaskInstanceQuery()
                 .taskDefinitionKey(taskDefinitionKey)
                 .finished()
+                .includeProcessVariables()
                 .orderByHistoricTaskInstanceEndTime()
                 .desc()
                 .list();
     }
+
     /* =====================================================
        COMPLETE TASK
        ===================================================== */

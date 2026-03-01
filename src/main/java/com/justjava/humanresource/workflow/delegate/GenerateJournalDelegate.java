@@ -22,11 +22,15 @@ public class GenerateJournalDelegate implements JavaDelegate {
     public void execute(DelegateExecution execution) {
 
         Long periodId = getRequiredLong(execution, "periodId");
-        Long companyId = getRequiredLong(execution, "companyId");
+        //Long companyId = getRequiredLong(execution, "companyId");
 
         PayrollPeriod period = periodRepository.findById(periodId)
                 .orElseThrow(() ->
                         new IllegalStateException("Payroll period not found."));
+
+
+        System.out.println("Period ID in generate journal entry : " + periodId
+        + " Period Company ID: " + period.getCompanyId());
 
 /*
         if (!period.getCompanyId().equals(companyId)) {
@@ -36,11 +40,11 @@ public class GenerateJournalDelegate implements JavaDelegate {
         }
 */
 
-        if (period.getStatus() != PayrollPeriodStatus.LOCKED) {
-            throw new IllegalStateException(
-                    "Journal can only be generated for LOCKED period."
-            );
-        }
+//        if (period.getStatus() != PayrollPeriodStatus.LOCKED) {
+//            throw new IllegalStateException(
+//                    "Journal can only be generated for LOCKED period."
+//            );
+//        }
 
         log.info("Generating journal entries for company {} period {}",
                 period.getCompanyId(), periodId);
