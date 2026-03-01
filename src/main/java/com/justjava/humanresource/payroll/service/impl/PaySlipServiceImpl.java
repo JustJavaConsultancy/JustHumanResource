@@ -3,6 +3,7 @@ package com.justjava.humanresource.payroll.service.impl;
 
 import com.justjava.humanresource.core.enums.PayrollRunStatus;
 import com.justjava.humanresource.hr.entity.Employee;
+import com.justjava.humanresource.hr.entity.EmployeeBankDetail;
 import com.justjava.humanresource.payroll.entity.*;
 import com.justjava.humanresource.payroll.enums.PayComponentType;
 import com.justjava.humanresource.payroll.enums.PayrollPeriodStatus;
@@ -355,6 +356,12 @@ public class PaySlipServiceImpl implements PaySlipService {
             }
         }
 
+        List<EmployeeBankDetail> employeeBankDetails= paySlip.getEmployee().getBankDetails();
+        EmployeeBankDetail employeeBankDetail=null;
+        if(employeeBankDetails!=null && !employeeBankDetails.isEmpty()){
+            employeeBankDetail=employeeBankDetails.get(0);
+        }
+
         return PaySlipDTO.builder()
                 .id(paySlip.getId())
                 .employeeId(paySlip.getEmployee().getId())
@@ -362,8 +369,8 @@ public class PaySlipServiceImpl implements PaySlipService {
                 .payrollRunId(run.getId())
                 .payDate(paySlip.getPayDate())
                 .versionNumber(paySlip.getVersionNumber())
-                .bankName(paySlip.getEmployee().getBankDetails().getFirst().getBankName())
-                .bankAccountNumber(paySlip.getEmployee().getBankDetails().getFirst().getAccountNumber())
+                .bankName(employeeBankDetail!=null?employeeBankDetail.getBankName():null)
+                .bankAccountNumber(employeeBankDetail!=null?employeeBankDetail.getAccountNumber():null)
                 .basicSalary(basicSalary)
                 .grossPay(paySlip.getGrossPay())
                 .totalDeductions(paySlip.getTotalDeductions())
