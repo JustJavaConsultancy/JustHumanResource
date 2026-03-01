@@ -1,6 +1,8 @@
 package com.justjava.humanresource.finance;
 
+import com.justjava.humanresource.payroll.dto.PayrollJournalEntryDTO;
 import com.justjava.humanresource.payroll.entity.PaySlipDTO;
+import com.justjava.humanresource.payroll.service.PayrollJournalService;
 import com.justjava.humanresource.payroll.service.impl.PaySlipServiceImpl;
 import com.justjava.humanresource.workflow.dto.FlowableTaskDTO;
 import com.justjava.humanresource.workflow.service.FlowableTaskService;
@@ -15,6 +17,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Controller
 public class FinanceController {
@@ -23,6 +26,9 @@ public class FinanceController {
 
     @Autowired
     FlowableTaskService flowableTaskService;
+
+    @Autowired
+    PayrollJournalService payrollJournalService;
 
     @GetMapping("/finance")
     public String getFinancePage(Model model) {
@@ -76,5 +82,16 @@ public class FinanceController {
         model.addAttribute("title", "Locked Periods");
         model.addAttribute("subTitle", "All finalised payroll periods");
         return "finance/lockedPeriods";
+    }
+    @GetMapping("/finance/posting")
+    public String getPostingPage(Model model) {
+        List<PayrollJournalEntryDTO> journalEntries = payrollJournalService.getUnexported(1L);
+        journalEntries.forEach(
+                entry -> System.out.println(entry)        );
+
+        model.addAttribute("journalEntries", journalEntries);
+        model.addAttribute("title", "Financial Posting");
+        model.addAttribute("subTitle", "Manage financial postings and journal entries");
+        return "finance/posting";
     }
 }
