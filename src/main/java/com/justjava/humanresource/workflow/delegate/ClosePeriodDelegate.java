@@ -52,7 +52,7 @@ public class ClosePeriodDelegate implements JavaDelegate {
            CLOSE AND OPEN NEXT PERIOD (SERVICE CONTROLLED)
            ============================================================ */
 
-        payrollPeriodService.closeAndOpenNext(companyId);
+        payrollPeriodService.closeAndOpenNext(period.getCompanyId());
 
         /* ============================================================
            AUDIT TRAIL
