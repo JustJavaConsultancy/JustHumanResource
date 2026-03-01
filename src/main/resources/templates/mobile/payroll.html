@@ -3,469 +3,617 @@
       layout:decorate="layouts/mobileEmployeeLayout">
 <head>
     <meta charset="UTF-8">
-    <title>Payroll | JustHR Mobile</title>
+    <title>Payroll · HRPro</title>
+    <!-- Tailwind + fonts -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL@20..48,100..700,0..1&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              colors: {
+                primary: "#2463eb",
+                "background-light": "#f6f6f8",
+                "background-dark": "#111621",
+              },
+              fontFamily: { display: ["Inter"] },
+              borderRadius: { DEFAULT: "1rem", lg: "1.5rem", xl: "2rem", full: "9999px" },
+            }
+          }
+        }
+    </script>
+    <style>
+        * { -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'Inter', sans-serif; background-color: #f6f6f8; }
+        .dark body { background-color: #111621; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .badge { padding:0.2rem 0.7rem; font-size:0.65rem; font-weight:600; border-radius:9999px; letter-spacing:0.02em; text-transform:uppercase; display:inline-flex; align-items:center; gap:0.2rem; }
+        .badge-success { background:#dcfce7; color:#15803d; }
+        .badge-warning { background:#fef3c7; color:#b45309; }
+        .badge-info    { background:#dbeafe; color:#1e40af; }
+        .badge-neutral { background:#f3f4f6; color:#4b5563; }
+        .dark .badge-success { background:#14532d; color:#86efac; }
+        .dark .badge-warning { background:#92400e; color:#fde68a; }
+        .dark .badge-info    { background:#1e3a8a; color:#bfdbfe; }
+        .dark .badge-neutral { background:#374151; color:#d1d5db; }
+
+        .pay-item {
+          display: flex; align-items: center; justify-content: space-between;
+          padding: 0.7rem 0;
+          border-bottom: 1px solid #f1f5f9;
+        }
+        .dark .pay-item { border-bottom-color: #1e293b; }
+        .pay-item:last-child { border-bottom: none; }
+
+        .tax-badge, .statutory-badge {
+          display: inline-flex; align-items: center; gap:0.2rem;
+          font-size:0.6rem; font-weight:600; padding:0.15rem 0.5rem; border-radius:999px;
+          background:#dbeafe; color:#1e40af; text-transform:uppercase;
+        }
+        .dark .tax-badge { background:#1e3a8a; color:#bfdbfe; }
+        .statutory-badge { background:#fee2e2; color:#b91c1c; }
+        .dark .statutory-badge { background:#571c1c; color:#fecaca; }
+
+        .modal-overlay {
+          position: fixed; inset:0; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center;
+          z-index:100; padding:1rem; opacity:0; visibility:hidden; transition:opacity 0.2s, visibility 0.2s;
+          backdrop-filter: blur(3px);
+        }
+        .modal-overlay.active { opacity:1; visibility:visible; }
+        .modal-container {
+          max-width:40rem; width:100%; max-height:90vh; overflow-y:auto;
+          background:white; border-radius:1.5rem; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);
+          transform:scale(0.95); transition:transform 0.2s ease-out;
+        }
+        .dark .modal-container { background:#1f2937; border:1px solid #374151; }
+        .modal-overlay.active .modal-container { transform:scale(1); }
+
+        .history-item {
+          transition: background 0.15s;
+          -webkit-tap-highlight-color: rgba(0,0,0,0.05);
+        }
+        .history-item:active { background: #f1f5f9; }
+        .dark .history-item:active { background: #26334d; }
+
+        .sticky-header {
+          position: sticky; top:0; z-index:10;
+          background: rgba(246, 246, 248, 0.85);
+          backdrop-filter: blur(10px);
+          border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+        .dark .sticky-header {
+          background: rgba(17, 22, 33, 0.85);
+          border-bottom-color: rgba(255,255,255,0.05);
+        }
+    </style>
 </head>
 <body>
-<main layout:fragment="content">
+<main class="flex-1 overflow-y-auto no-scrollbar px-5 pb-4 space-y-5" layout:fragment="content">
 
-    <!-- Current Payroll Summary -->
-    <div class="mobile-card p-4 mb-4">
-        <div class="flex items-center justify-between mb-3">
-            <h4 class="font-bold text-gray-900 dark:text-white">Current Payroll</h4>
-            <span class="badge badge-info text-xs">March 2025</span>
+    <!-- page title + period -->
+    <div class="flex items-center justify-between mt-2">
+        <div class="flex items-center gap-2">
+            <div class="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-2xl flex items-center justify-center shadow-inner-light">
+                <span class="material-symbols-outlined text-green-600 dark:text-green-400">payments</span>
+            </div>
+            <div>
+                <h2 class="text-xl font-bold tracking-tight">Payroll</h2>
+                <p class="text-xs text-slate-500 dark:text-slate-400">
+                    <span th:text="${#temporals.format(latestPaySlip.payDate, 'MMMM yyyy')}">February 2026</span>
+                    · <span th:text="${latestPaySlip.employeeName}">Akinrinde A.</span>
+                </p>
+            </div>
         </div>
+        <!-- removed shadow-soft, added border -->
+        <div class="px-3 py-1.5 bg-white dark:bg-slate-800 rounded-full border border-slate-200 dark:border-slate-700 text-xs font-medium">
+            <span class="text-primary">₦<span th:text="${#numbers.formatDecimal(latestPaySlip.netPay, 0, 'COMMA', 0, 'POINT')}">398,500</span></span> net
+        </div>
+    </div>
 
-        <div class="grid grid-cols-3 gap-3 mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+    <!-- earnings summary card (flat) -->
+    <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200 dark:border-slate-700">
+        <div class="flex items-center gap-2 mb-3">
+            <span class="material-symbols-outlined text-primary">account_balance_wallet</span>
+            <h3 class="section-title text-xs font-semibold text-slate-500 dark:text-slate-400">Earnings summary</h3>
+        </div>
+        <!-- mini metric row (kept as is) -->
+        <div class="grid grid-cols-3 gap-2 p-3 bg-slate-50 dark:bg-slate-700/50 rounded-xl mb-4">
             <div class="text-center">
-                <span class="text-xs text-gray-500 dark:text-gray-400">Basic</span>
-                <p class="font-bold text-gray-900 dark:text-white text-sm">₦450k</p>
+                <span class="text-[0.6rem] text-slate-500 dark:text-slate-400">Basic</span>
+                <p class="text-sm font-bold text-slate-900 dark:text-white">
+                    ₦<span th:text="${#numbers.formatDecimal(latestPaySlip.basicSalary / 1000, 0, 'COMMA', 0, 'POINT')}">400</span>k
+                </p>
             </div>
             <div class="text-center">
-                <span class="text-xs text-gray-500 dark:text-gray-400">Gross</span>
-                <p class="font-bold text-green-600 dark:text-green-400 text-sm">₦620k</p>
+                <span class="text-[0.6rem] text-slate-500 dark:text-slate-400">Gross</span>
+                <p class="text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                    ₦<span th:text="${#numbers.formatDecimal(latestPaySlip.grossPay / 1000, 0, 'COMMA', 0, 'POINT')}">400</span>k
+                </p>
             </div>
             <div class="text-center">
-                <span class="text-xs text-gray-500 dark:text-gray-400">Net</span>
-                <p class="font-bold text-primary-600 dark:text-primary-400 text-sm">₦540k</p>
+                <span class="text-[0.6rem] text-slate-500 dark:text-slate-400">Net</span>
+                <p class="text-sm font-bold text-primary dark:text-primary-400">
+                    ₦<span th:text="${#numbers.formatDecimal(latestPaySlip.netPay / 1000, 0, 'COMMA', 1, 'POINT')}">398.5</span>k
+                </p>
             </div>
         </div>
 
-        <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-3">
-            <span>Paygroup: PG4 - Marketing</span>
-            <span>Next pay: 31 Mar 2025</span>
-        </div>
-
-        <button id="viewCurrentPayslipBtn" class="w-full px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-medium flex items-center justify-center">
-            <span class="material-icons-round text-sm mr-2">visibility</span>
-            View Current Payslip
-        </button>
-    </div>
-
-    <!-- Earnings Breakdown -->
-    <div class="mobile-card p-4 mb-4">
-        <h4 class="font-bold text-gray-900 dark:text-white mb-3">Earnings Breakdown</h4>
-
-        <div class="space-y-2">
-            <div class="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
-                <div class="flex items-center space-x-2">
-                    <span class="text-sm">Basic Salary</span>
+        <!-- allowances & deductions -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <!-- allowances -->
+            <div>
+                <div class="flex items-center text-[0.6rem] font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider mb-2">
+                    <span class="material-symbols-outlined text-sm mr-1 text-emerald-600">add_circle</span> Allowances
                 </div>
-                <span class="text-sm font-medium">₦450,000</span>
-            </div>
-
-            <div class="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
-                <div class="flex items-center space-x-2">
-                    <span class="text-sm">Housing Allowance</span>
-                    <span class="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded text-xs">taxable</span>
+                <div class="space-y-1.5">
+                    <div th:each="allowance : ${latestPaySlip.allowances}" class="pay-item text-sm">
+                        <span class="flex items-center">
+                            <span th:text="${allowance.description}">Allowance</span>
+                            <span th:if="${allowance.taxable}" class="tax-badge ml-2">
+                                <span class="material-symbols-outlined text-[0.5rem]">bolt</span>taxable
+                            </span>
+                        </span>
+                        <span class="font-medium">
+                            ₦<span th:text="${#numbers.formatDecimal(allowance.amount, 0, 'COMMA', 2, 'POINT')}">0.00</span>
+                        </span>
+                    </div>
+                    <div th:if="${#lists.isEmpty(latestPaySlip.allowances)}"
+                         class="pay-item text-sm text-slate-400 dark:text-slate-500 italic">
+                        No allowances for this period.
+                    </div>
                 </div>
-                <span class="text-sm font-medium">₦120,000</span>
             </div>
-
-            <div class="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
-                <div class="flex items-center space-x-2">
-                    <span class="text-sm">Transport Allowance</span>
-                    <span class="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded text-xs">taxable</span>
+            <!-- deductions -->
+            <div>
+                <div class="flex items-center text-[0.6rem] font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider mb-2">
+                    <span class="material-symbols-outlined text-sm mr-1 text-red-500">remove_circle</span> Deductions
                 </div>
-                <span class="text-sm font-medium">₦50,000</span>
-            </div>
-
-            <div class="flex justify-between items-center py-2">
-                <span class="text-sm">Lunch Allowance</span>
-                <span class="text-sm font-medium">₦30,000</span>
-            </div>
-        </div>
-    </div>
-
-    <!-- Deductions Breakdown -->
-    <div class="mobile-card p-4 mb-4">
-        <h4 class="font-bold text-gray-900 dark:text-white mb-3">Deductions</h4>
-
-        <div class="space-y-2">
-            <div class="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
-                <div class="flex items-center space-x-2">
-                    <span class="text-sm">PAYE Tax</span>
-                    <span class="px-1.5 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded text-xs">statutory</span>
+                <div class="space-y-1.5">
+                    <div th:each="deduction : ${latestPaySlip.deductions}" class="pay-item text-sm">
+                        <span class="flex items-center">
+                            <span th:text="${deduction.description}">Deduction</span>
+                            <span th:if="${deduction.code == 'PAYE' or deduction.code == 'PENSION'}"
+                                  class="statutory-badge ml-2">
+                                <span class="material-symbols-outlined text-[0.5rem]">gavel</span>statutory
+                            </span>
+                        </span>
+                        <span class="font-medium">
+                            -₦<span th:text="${#numbers.formatDecimal(deduction.amount, 0, 'COMMA', 2, 'POINT')}">0.00</span>
+                        </span>
+                    </div>
+                    <div th:if="${#lists.isEmpty(latestPaySlip.deductions)}"
+                         class="pay-item text-sm text-slate-400 dark:text-slate-500 italic">
+                        No deductions for this period.
+                    </div>
                 </div>
-                <span class="text-sm font-medium text-red-600 dark:text-red-400">-₦65,000</span>
             </div>
+        </div>
 
-            <div class="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
-                <div class="flex items-center space-x-2">
-                    <span class="text-sm">Pension</span>
-                    <span class="px-1.5 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded text-xs">statutory</span>
+        <!-- tax details -->
+        <div class="mt-4 pt-3 border-t border-slate-200 dark:border-slate-700 space-y-1.5 text-xs">
+            <div class="flex justify-between">
+                <span class="text-slate-600 dark:text-slate-400">PAYE Tax</span>
+                <span class="font-medium text-slate-900 dark:text-white">
+                    <th:block th:with="paye=${latestPaySlip.deductions.?[code == 'PAYE']}">
+                        ₦<span th:if="${not #lists.isEmpty(paye)}"
+                               th:text="${#numbers.formatDecimal(paye[0].amount, 0, 'COMMA', 2, 'POINT')}">1,500.00</span>
+                        <span th:unless="${not #lists.isEmpty(paye)}">—</span>
+                    </th:block>
+                </span>
+            </div>
+            <div class="flex justify-between">
+                <span class="text-slate-600 dark:text-slate-400">Tax band</span>
+                <span class="font-medium text-slate-900 dark:text-white"
+                      th:text="${latestPaySlip.appliedTaxBandSummary}">Calculated via PAYE configuration</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="text-slate-600 dark:text-slate-400">Pension</span>
+                <span class="font-medium text-slate-900 dark:text-white">
+                    ₦<span th:text="${#numbers.formatDecimal(latestPaySlip.pensionAmount, 0, 'COMMA', 2, 'POINT')}">0.00</span>
+                    <span class="text-xs text-slate-400 ml-1"
+                          th:if="${latestPaySlip.appliedPensionSchemeName != null}"
+                          th:text="'(' + ${latestPaySlip.appliedPensionSchemeName} + ')'"></span>
+                </span>
+            </div>
+            <div class="flex justify-between pt-1 border-t border-slate-200 dark:border-slate-700">
+                <span class="font-semibold text-slate-700 dark:text-slate-300">Total deductions</span>
+                <span class="font-medium text-red-600 dark:text-red-400">
+                    -₦<span th:text="${#numbers.formatDecimal(latestPaySlip.totalDeductions, 0, 'COMMA', 2, 'POINT')}">1,500.00</span>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- payment method & download (side by side) - flat cards -->
+    <div class="grid grid-cols-2 gap-4">
+        <!-- payment method card -->
+        <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-slate-200 dark:border-slate-700">
+            <div class="flex items-center gap-1.5 mb-3">
+                <span class="material-symbols-outlined text-primary">account_balance</span>
+                <h3 class="text-[0.6rem] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Payment</h3>
+            </div>
+            <div class="flex items-center gap-2">
+                <div class="w-9 h-9 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
+                    <span class="material-symbols-outlined text-blue-600 dark:text-blue-400">credit_card</span>
                 </div>
-                <span class="text-sm font-medium text-red-600 dark:text-red-400">-₦15,000</span>
-            </div>
-
-            <div class="flex justify-between items-center py-2">
-                <span class="text-sm">Health Insurance</span>
-                <span class="text-sm font-medium text-red-600 dark:text-red-400">-₦8,000</span>
-            </div>
-        </div>
-    </div>
-
-    <!-- Year-to-Date Summary -->
-    <div class="mobile-card p-4 mb-4">
-        <h4 class="font-bold text-gray-900 dark:text-white mb-3">Year-to-Date (2025)</h4>
-
-        <div class="grid grid-cols-2 gap-3">
-            <div class="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <span class="text-xs text-gray-500 dark:text-gray-400">Total Earnings</span>
-                <p class="font-bold text-gray-900 dark:text-white">₦1,860,000</p>
-            </div>
-            <div class="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <span class="text-xs text-gray-500 dark:text-gray-400">Total Tax</span>
-                <p class="font-bold text-gray-900 dark:text-white">₦195,000</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Payment Method -->
-    <div class="mobile-card p-4 mb-4">
-        <h4 class="font-bold text-gray-900 dark:text-white mb-3">Payment Method</h4>
-
-        <div class="flex items-center space-x-3">
-            <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-                <span class="material-icons-round text-blue-600 dark:text-blue-400">credit_card</span>
-            </div>
-            <div class="flex-1">
-                <p class="text-sm font-medium text-gray-900 dark:text-white">Bank Transfer</p>
-                <p class="text-xs text-gray-500 dark:text-gray-400">First Bank • **** 3456</p>
+                <div>
+                    <p class="text-xs font-medium">Bank Transfer</p>
+                    <th:block th:if="${employee.bankDetails != null and not #lists.isEmpty(employee.bankDetails)}">
+                        <p class="text-[0.6rem] text-slate-500">
+                            <span th:text="${employee.bankDetails[0].bankName}">First Bank</span> ·
+                            ****<span th:text="${#strings.substring(employee.bankDetails[0].accountNumber, employee.bankDetails[0].accountNumber.length()-4)}">3456</span>
+                        </p>
+                    </th:block>
+                    <th:block th:else>
+                        <p class="text-[0.6rem] text-slate-500">No bank details on file</p>
+                    </th:block>
+                </div>
             </div>
         </div>
 
-        <div class="mt-3 text-xs text-gray-500 flex items-center">
-            <span class="material-icons-round text-xs mr-1">schedule</span>
-            Payment processed on last working day
-        </div>
-    </div>
-
-    <!-- Payroll Calendar -->
-    <div class="mobile-card p-4 mb-4">
-        <h4 class="font-bold text-gray-900 dark:text-white mb-3">Upcoming Payments</h4>
-
-        <div class="space-y-2">
-            <div class="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <span class="text-sm text-gray-600 dark:text-gray-300">March 2025</span>
-                <span class="text-sm font-medium text-gray-900 dark:text-white">31 Mar</span>
+        <!-- download current payslip card (flat) -->
+        <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-slate-200 dark:border-slate-700">
+            <div class="flex items-center gap-1.5 mb-2">
+                <span class="material-symbols-outlined text-primary">download</span>
+                <h3 class="text-[0.6rem] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Payslip</h3>
             </div>
-            <div class="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <span class="text-sm text-gray-600 dark:text-gray-300">April 2025</span>
-                <span class="text-sm font-medium text-gray-900 dark:text-white">30 Apr</span>
-            </div>
-            <div class="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <span class="text-sm text-gray-600 dark:text-gray-300">May 2025</span>
-                <span class="text-sm font-medium text-gray-900 dark:text-white">30 May</span>
-            </div>
-        </div>
-    </div>
-
-    <!-- Payslip History -->
-    <div class="mobile-card p-4 mb-6">
-        <div class="flex items-center justify-between mb-3">
-            <h4 class="font-bold text-gray-900 dark:text-white">Payslip History</h4>
-            <button class="text-primary-600 hover:text-primary-700 text-sm font-medium">
-                Download All
+            <p class="text-[0.6rem] text-slate-500 mb-2">
+                <span th:text="${#temporals.format(latestPaySlip.payDate, 'MMM yyyy')}">Feb 2026</span>
+                · #<span th:text="${latestPaySlip.id}">1</span>
+            </p>
+            <!-- removed shadow-soft, kept flat -->
+            <button onclick="openModal('viewPayslipModal')"
+                    class="w-full py-2.5 bg-primary hover:bg-primary-600 active:scale-95 text-white rounded-xl text-xs font-medium flex items-center justify-center transition-all border border-primary-700">
+                <span class="material-symbols-outlined text-sm mr-1">visibility</span> View
             </button>
         </div>
+    </div>
 
-        <div class="space-y-3">
-            <!-- March 2025 -->
-            <div class="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <div class="flex items-center justify-between mb-2">
-                    <span class="text-sm font-medium text-gray-900 dark:text-white">Mar 2025</span>
-                    <span class="badge badge-success">Processed</span>
+    <!-- payslip history (flat) -->
+    <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200 dark:border-slate-700">
+        <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary">history</span>
+                <h3 class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">History</h3>
+            </div>
+            <a href="#" class="text-primary text-xs font-medium flex items-center gap-1">
+                <span>Download all</span>
+                <span class="material-symbols-outlined text-sm">archive</span>
+            </a>
+        </div>
+
+        <!-- history list with border separators (no individual backgrounds) -->
+        <div class="divide-y divide-slate-100 dark:divide-slate-700">
+            <!-- current payslip row -->
+            <div class="history-item flex items-center justify-between py-3 cursor-pointer"
+                 onclick="openModal('viewPayslipModal')">
+                <div class="flex-1">
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="text-sm font-semibold"
+                              th:text="${#temporals.format(latestPaySlip.payDate, 'MMMM yyyy')}">February 2026</span>
+                        <span th:if="${latestPaySlip.status == null or latestPaySlip.status == 'PROCESSED'}"
+                              class="badge badge-success text-[0.55rem] px-2 py-0.5">Processed</span>
+                        <span th:if="${latestPaySlip.status == 'PENDING'}"
+                              class="badge badge-warning text-[0.55rem] px-2 py-0.5">Pending</span>
+                        <span th:if="${latestPaySlip.status == 'ARCHIVED'}"
+                              class="badge badge-neutral text-[0.55rem] px-2 py-0.5">Archived</span>
+                    </div>
+                    <div class="flex items-center gap-3 text-xs">
+                        <span>Gross: ₦<span th:text="${#numbers.formatDecimal(latestPaySlip.grossPay / 1000, 0, 'COMMA', 0, 'POINT')}">400</span>k</span>
+                        <span class="text-primary font-medium">Net: ₦<span th:text="${#numbers.formatDecimal(latestPaySlip.netPay / 1000, 0, 'COMMA', 1, 'POINT')}">398.5</span>k</span>
+                    </div>
                 </div>
-                <div class="grid grid-cols-2 gap-2 text-xs">
-                    <div class="flex justify-between">
-                        <span class="text-gray-500">Gross:</span>
-                        <span>₦620,000</span>
+                <span class="material-symbols-outlined text-slate-400">chevron_right</span>
+            </div>
+
+            <!-- previous payslip rows -->
+            <th:block th:each="payslip : ${previousPaySlips}">
+                <div class="history-item flex items-center justify-between py-3 cursor-pointer"
+                     th:onclick="|openModal('viewPayslipModal_${payslip.id}')|">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="text-sm font-semibold"
+                                  th:text="${#temporals.format(payslip.payDate, 'MMMM yyyy')}">January 2026</span>
+                            <span th:if="${payslip.status == null or payslip.status == 'PROCESSED'}"
+                                  class="badge badge-success text-[0.55rem] px-2 py-0.5">Processed</span>
+                            <span th:if="${payslip.status == 'PENDING'}"
+                                  class="badge badge-warning text-[0.55rem] px-2 py-0.5">Pending</span>
+                            <span th:if="${payslip.status == 'ARCHIVED'}"
+                                  class="badge badge-neutral text-[0.55rem] px-2 py-0.5">Archived</span>
+                        </div>
+                        <div class="flex items-center gap-3 text-xs">
+                            <span>Gross: ₦<span th:text="${#numbers.formatDecimal(payslip.grossPay / 1000, 0, 'COMMA', 0, 'POINT')}">400</span>k</span>
+                            <span class="text-primary font-medium">Net: ₦<span th:text="${#numbers.formatDecimal(payslip.netPay / 1000, 0, 'COMMA', 1, 'POINT')}">398.5</span>k</span>
+                        </div>
                     </div>
-                    <div class="flex justify-between">
-                        <span class="text-gray-500">Net:</span>
-                        <span class="font-semibold text-primary-600 dark:text-primary-400">₦540,000</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-gray-500">Tax:</span>
-                        <span>₦65,000</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-gray-500">Pension:</span>
-                        <span>₦15,000</span>
-                    </div>
+                    <span class="material-symbols-outlined text-slate-400">chevron_right</span>
                 </div>
-                <div class="flex items-center justify-end space-x-2 mt-2">
-                    <button class="text-gray-500 hover:text-primary-600 p-1 view-payslip-btn" data-period="Mar 2025">
-                        <span class="material-icons-round text-lg">visibility</span>
-                    </button>
-                    <button class="text-gray-500 hover:text-primary-600 p-1">
-                        <span class="material-icons-round text-lg">download</span>
-                    </button>
+            </th:block>
+        </div>
+    </div>
+
+    <!-- footer note -->
+    <div class="text-center text-[0.55rem] text-slate-400 dark:text-slate-500 py-2">
+        <span class="material-symbols-outlined text-[0.6rem] align-middle">lock</span> Updated monthly · contact HR for corrections
+    </div>
+
+    <!-- ========== MODAL: Current Payslip ========== (shadows kept for depth) -->
+    <div id="viewPayslipModal" class="modal-overlay">
+        <div class="modal-container p-6">
+            <!-- header -->
+            <div class="flex items-center justify-between mb-5">
+                <h3 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary">description</span>
+                    Payslip · <span th:text="${#temporals.format(latestPaySlip.payDate, 'MMMM yyyy')}">February 2026</span>
+                </h3>
+                <button class="close-modal p-1 -mr-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+
+            <!-- company header -->
+            <div class="flex items-center justify-between bg-slate-50 dark:bg-slate-800/60 rounded-xl p-3 mb-4 text-xs">
+                <div>
+                    <p class="font-semibold">HRPro Solutions Ltd.</p>
+                    <p class="text-gray-500 dark:text-gray-400 text-[0.6rem]">
+                        Payroll Period:
+                        <span th:text="${#temporals.format(latestPaySlip.payDate, '01 MMM yyyy')}">01 Feb 2026</span>
+                        – <span th:text="${#temporals.format(latestPaySlip.payDate, 'dd MMM yyyy')}">27 Feb 2026</span>
+                    </p>
+                </div>
+                <div class="text-right text-[0.6rem] text-gray-500">
+                    <p>Payslip ID: <span th:text="${latestPaySlip.id}">1</span></p>
+                    <p>Run ID: <span th:text="${latestPaySlip.payrollRunId}">1</span></p>
                 </div>
             </div>
 
-            <!-- February 2025 -->
-            <div class="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <div class="flex items-center justify-between mb-2">
-                    <span class="text-sm font-medium text-gray-900 dark:text-white">Feb 2025</span>
-                    <span class="badge badge-success">Processed</span>
+            <!-- employee info grid -->
+            <div class="grid grid-cols-2 gap-3 mb-4 text-sm">
+                <div>
+                    <span class="text-gray-500 text-[0.6rem]">Employee Name</span>
+                    <p class="font-medium" th:text="${latestPaySlip.employeeName}">Akinrinde Akinyinka</p>
                 </div>
-                <div class="grid grid-cols-2 gap-2 text-xs">
-                    <div class="flex justify-between">
-                        <span class="text-gray-500">Gross:</span>
-                        <span>₦620,000</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-gray-500">Net:</span>
-                        <span class="font-semibold text-primary-600 dark:text-primary-400">₦540,000</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-gray-500">Tax:</span>
-                        <span>₦65,000</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-gray-500">Pension:</span>
-                        <span>₦15,000</span>
-                    </div>
+                <div>
+                    <span class="text-gray-500 text-[0.6rem]">Employee ID</span>
+                    <p class="font-medium" th:text="${latestPaySlip.employeeId}">1</p>
                 </div>
-                <div class="flex items-center justify-end space-x-2 mt-2">
-                    <button class="text-gray-500 hover:text-primary-600 p-1 view-payslip-btn" data-period="Feb 2025">
-                        <span class="material-icons-round text-lg">visibility</span>
-                    </button>
-                    <button class="text-gray-500 hover:text-primary-600 p-1">
-                        <span class="material-icons-round text-lg">download</span>
-                    </button>
+                <div>
+                    <span class="text-gray-500 text-[0.6rem]">Pay Date</span>
+                    <p class="font-medium" th:text="${#temporals.format(latestPaySlip.payDate, 'dd MMMM yyyy')}">27 February 2026</p>
+                </div>
+                <div>
+                    <span class="text-gray-500 text-[0.6rem]">Pension Scheme</span>
+                    <p class="font-medium" th:text="${latestPaySlip.appliedPensionSchemeName}">Active scheme during run</p>
                 </div>
             </div>
 
-            <!-- January 2025 -->
-            <div class="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <div class="flex items-center justify-between mb-2">
-                    <span class="text-sm font-medium text-gray-900 dark:text-white">Jan 2025</span>
-                    <span class="badge badge-success">Processed</span>
-                </div>
-                <div class="grid grid-cols-2 gap-2 text-xs">
-                    <div class="flex justify-between">
-                        <span class="text-gray-500">Gross:</span>
-                        <span>₦620,000</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-gray-500">Net:</span>
-                        <span class="font-semibold text-primary-600 dark:text-primary-400">₦540,000</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-gray-500">Tax:</span>
-                        <span>₦65,000</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-gray-500">Pension:</span>
-                        <span>₦15,000</span>
+            <!-- earnings -->
+            <div class="space-y-3">
+                <div>
+                    <h4 class="text-[0.6rem] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Earnings</h4>
+                    <div class="bg-slate-50 dark:bg-slate-800/40 rounded-xl p-3 space-y-1 text-sm">
+                        <div class="flex justify-between">
+                            <span>Basic Salary</span>
+                            <span class="font-medium">₦<span th:text="${#numbers.formatDecimal(latestPaySlip.basicSalary, 0, 'COMMA', 2, 'POINT')}">400,000.00</span></span>
+                        </div>
+                        <div th:each="allowance : ${latestPaySlip.allowances}" class="flex justify-between">
+                            <span th:text="${allowance.description}">Allowance</span>
+                            <span>₦<span th:text="${#numbers.formatDecimal(allowance.amount, 0, 'COMMA', 2, 'POINT')}">0.00</span></span>
+                        </div>
+                        <div th:if="${#lists.isEmpty(latestPaySlip.allowances)}"
+                             class="text-sm text-gray-400 italic">No allowances.</div>
                     </div>
                 </div>
-                <div class="flex items-center justify-end space-x-2 mt-2">
-                    <button class="text-gray-500 hover:text-primary-600 p-1 view-payslip-btn" data-period="Jan 2025">
-                        <span class="material-icons-round text-lg">visibility</span>
-                    </button>
-                    <button class="text-gray-500 hover:text-primary-600 p-1">
-                        <span class="material-icons-round text-lg">download</span>
-                    </button>
+                <!-- deductions -->
+                <div>
+                    <h4 class="text-[0.6rem] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Deductions</h4>
+                    <div class="bg-slate-50 dark:bg-slate-800/40 rounded-xl p-3 space-y-1 text-sm">
+                        <div th:each="deduction : ${latestPaySlip.deductions}" class="flex justify-between">
+                            <span th:text="${deduction.description}">Deduction</span>
+                            <span class="font-medium text-red-600 dark:text-red-400">
+                                -₦<span th:text="${#numbers.formatDecimal(deduction.amount, 0, 'COMMA', 2, 'POINT')}">0.00</span>
+                            </span>
+                        </div>
+                        <div th:if="${#lists.isEmpty(latestPaySlip.deductions)}"
+                             class="text-sm text-gray-400 italic">No deductions.</div>
+                    </div>
                 </div>
+            </div>
+
+            <!-- totals -->
+            <div class="mt-4 pt-3 border-t border-gray-200 dark:border-gray-700 space-y-1 text-sm">
+                <div class="flex justify-between">
+                    <span class="font-medium">Gross Pay</span>
+                    <span>₦<span th:text="${#numbers.formatDecimal(latestPaySlip.grossPay, 0, 'COMMA', 2, 'POINT')}">400,000.00</span></span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="font-medium">Total Deductions</span>
+                    <span class="text-red-600">
+                        -₦<span th:text="${#numbers.formatDecimal(latestPaySlip.totalDeductions, 0, 'COMMA', 2, 'POINT')}">1,500.00</span>
+                    </span>
+                </div>
+                <div class="flex justify-between text-base font-bold pt-2 border-t border-gray-200 dark:border-gray-700">
+                    <span>Net Pay</span>
+                    <span class="text-primary">
+                        ₦<span th:text="${#numbers.formatDecimal(latestPaySlip.netPay, 0, 'COMMA', 2, 'POINT')}">398,500.00</span>
+                    </span>
+                </div>
+            </div>
+
+            <!-- tax band note -->
+            <div class="mt-2 text-[0.55rem] text-gray-500 flex items-center gap-1">
+                <span class="material-symbols-outlined text-[0.6rem]">info</span>
+                Tax band: <span th:text="${latestPaySlip.appliedTaxBandSummary}">Calculated via PAYE configuration</span>
+            </div>
+
+            <!-- actions -->
+            <div class="flex justify-end gap-3 mt-6">
+                <button class="px-5 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-xs font-medium flex items-center gap-1 hover:bg-gray-50 dark:hover:bg-gray-700 transition active:scale-95">
+                    <span class="material-symbols-outlined text-sm">print</span> Print
+                </button>
+                <button class="px-5 py-2.5 bg-primary text-white rounded-xl text-xs font-medium flex items-center gap-1 hover:bg-primary-600 transition active:scale-95 border border-primary-700">
+                    <span class="material-symbols-outlined text-sm">download</span> Download PDF
+                </button>
             </div>
         </div>
     </div>
 
-    <!-- Info Footer -->
-    <div class="text-center text-xs text-gray-500 dark:text-gray-400 mb-6">
-        <span class="material-icons-round text-xs align-text-bottom mr-1">lock</span>
-        Payroll information is updated monthly. Contact HR for corrections.
-    </div>
-
-    <!-- Payslip Modal -->
-    <div id="payslipModal" class="modal-overlay">
-        <div class="modal-container">
-            <div class="swipe-indicator"></div>
-            <div class="p-4">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-bold text-gray-900 dark:text-white">Payslip • March 2025</h3>
-                    <button class="close-modal text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                        <span class="material-icons-round">close</span>
+    <!-- ========== MODALS: Previous Payslips ========== (same as above, truncated for brevity) -->
+    <th:block th:each="payslip : ${previousPaySlips}">
+        <div th:id="'viewPayslipModal_' + ${payslip.id}" class="modal-overlay">
+            <div class="modal-container p-6">
+                <!-- header -->
+                <div class="flex items-center justify-between mb-5">
+                    <h3 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                        <span class="material-symbols-outlined text-primary">description</span>
+                        Payslip · <span th:text="${#temporals.format(payslip.payDate, 'MMMM yyyy')}">January 2026</span>
+                    </h3>
+                    <button class="close-modal p-1 -mr-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                        <span class="material-symbols-outlined">close</span>
                     </button>
                 </div>
 
-                <!-- Company Header -->
-                <div class="border-b border-gray-200 dark:border-gray-700 pb-3 mb-4">
-                    <p class="text-sm font-bold text-gray-900 dark:text-white">HRPro Solutions Ltd.</p>
-                    <p class="text-xs text-gray-500">Period: 01 Mar 2025 – 31 Mar 2025</p>
-                    <div class="flex justify-between text-xs text-gray-500 mt-1">
-                        <span>Employee #: EMP-2021-042</span>
-                        <span>Paygroup: PG4</span>
+                <!-- company header -->
+                <div class="flex items-center justify-between bg-slate-50 dark:bg-slate-800/60 rounded-xl p-3 mb-4 text-xs">
+                    <div>
+                        <p class="font-semibold">HRPro Solutions Ltd.</p>
+                        <p class="text-gray-500 dark:text-gray-400 text-[0.6rem]">
+                            Payroll Period:
+                            <span th:text="${#temporals.format(payslip.payDate, '01 MMM yyyy')}">01 Jan 2026</span>
+                            – <span th:text="${#temporals.format(payslip.payDate, 'dd MMM yyyy')}">31 Jan 2026</span>
+                        </p>
+                    </div>
+                    <div class="text-right text-[0.6rem] text-gray-500">
+                        <p>Payslip ID: <span th:text="${payslip.id}">2</span></p>
+                        <p>Run ID: <span th:text="${payslip.payrollRunId}">2</span></p>
                     </div>
                 </div>
 
-                <!-- Employee Info -->
+                <!-- employee info grid -->
                 <div class="grid grid-cols-2 gap-3 mb-4 text-sm">
                     <div>
-                        <p class="text-xs text-gray-500">Employee</p>
-                        <p class="font-medium">Jane Okafor</p>
+                        <span class="text-gray-500 text-[0.6rem]">Employee Name</span>
+                        <p class="font-medium" th:text="${payslip.employeeName}">Akinrinde Akinyinka</p>
                     </div>
                     <div>
-                        <p class="text-xs text-gray-500">Department</p>
-                        <p>Marketing</p>
+                        <span class="text-gray-500 text-[0.6rem]">Employee ID</span>
+                        <p class="font-medium" th:text="${payslip.employeeId}">1</p>
                     </div>
                     <div>
-                        <p class="text-xs text-gray-500">Job Title</p>
-                        <p>Marketing Specialist</p>
+                        <span class="text-gray-500 text-[0.6rem]">Pay Date</span>
+                        <p class="font-medium" th:text="${#temporals.format(payslip.payDate, 'dd MMMM yyyy')}">31 January 2026</p>
                     </div>
                     <div>
-                        <p class="text-xs text-gray-500">Grade/Step</p>
-                        <p>Grade 3 • Step 2</p>
+                        <span class="text-gray-500 text-[0.6rem]">Pension Scheme</span>
+                        <p class="font-medium" th:text="${payslip.appliedPensionSchemeName}">Active scheme during run</p>
                     </div>
                 </div>
 
-                <!-- Earnings -->
-                <div class="mb-4">
-                    <h5 class="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-2">Earnings</h5>
-                    <div class="space-y-1">
-                        <div class="flex justify-between text-sm">
-                            <span>Basic Salary</span>
-                            <span class="font-medium">₦450,000</span>
-                        </div>
-                        <div class="flex justify-between text-sm">
-                            <span>Housing Allowance</span>
-                            <span>₦120,000</span>
-                        </div>
-                        <div class="flex justify-between text-sm">
-                            <span>Transport Allowance</span>
-                            <span>₦50,000</span>
-                        </div>
-                        <div class="flex justify-between text-sm">
-                            <span>Lunch Allowance</span>
-                            <span>₦30,000</span>
+                <!-- earnings -->
+                <div class="space-y-3">
+                    <div>
+                        <h4 class="text-[0.6rem] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Earnings</h4>
+                        <div class="bg-slate-50 dark:bg-slate-800/40 rounded-xl p-3 space-y-1 text-sm">
+                            <div class="flex justify-between">
+                                <span>Basic Salary</span>
+                                <span class="font-medium">₦<span th:text="${#numbers.formatDecimal(payslip.basicSalary, 0, 'COMMA', 2, 'POINT')}">400,000.00</span></span>
+                            </div>
+                            <div th:each="allowance : ${payslip.allowances}" class="flex justify-between">
+                                <span th:text="${allowance.description}">Allowance</span>
+                                <span>₦<span th:text="${#numbers.formatDecimal(allowance.amount, 0, 'COMMA', 2, 'POINT')}">0.00</span></span>
+                            </div>
+                            <div th:if="${#lists.isEmpty(payslip.allowances)}"
+                                 class="text-sm text-gray-400 italic">No allowances.</div>
                         </div>
                     </div>
-                </div>
-
-                <!-- Deductions -->
-                <div class="mb-4">
-                    <h5 class="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-2">Deductions</h5>
-                    <div class="space-y-1">
-                        <div class="flex justify-between text-sm">
-                            <span>PAYE Tax</span>
-                            <span>-₦65,000</span>
-                        </div>
-                        <div class="flex justify-between text-sm">
-                            <span>Pension (Employee)</span>
-                            <span>-₦15,000</span>
-                        </div>
-                        <div class="flex justify-between text-sm">
-                            <span>Health Insurance</span>
-                            <span>-₦8,000</span>
+                    <div>
+                        <h4 class="text-[0.6rem] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Deductions</h4>
+                        <div class="bg-slate-50 dark:bg-slate-800/40 rounded-xl p-3 space-y-1 text-sm">
+                            <div th:each="deduction : ${payslip.deductions}" class="flex justify-between">
+                                <span th:text="${deduction.description}">Deduction</span>
+                                <span class="font-medium text-red-600 dark:text-red-400">
+                                    -₦<span th:text="${#numbers.formatDecimal(deduction.amount, 0, 'COMMA', 2, 'POINT')}">0.00</span>
+                                </span>
+                            </div>
+                            <div th:if="${#lists.isEmpty(payslip.deductions)}"
+                                 class="text-sm text-gray-400 italic">No deductions.</div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Totals -->
-                <div class="border-t border-gray-200 dark:border-gray-700 pt-3">
-                    <div class="flex justify-between text-sm mb-1">
-                        <span class="font-semibold">Gross Pay</span>
-                        <span>₦620,000</span>
+                <!-- totals -->
+                <div class="mt-4 pt-3 border-t border-gray-200 dark:border-gray-700 space-y-1 text-sm">
+                    <div class="flex justify-between">
+                        <span class="font-medium">Gross Pay</span>
+                        <span>₦<span th:text="${#numbers.formatDecimal(payslip.grossPay, 0, 'COMMA', 2, 'POINT')}">400,000.00</span></span>
                     </div>
-                    <div class="flex justify-between text-sm mb-2">
-                        <span class="font-semibold">Total Deductions</span>
-                        <span>₦88,000</span>
+                    <div class="flex justify-between">
+                        <span class="font-medium">Total Deductions</span>
+                        <span class="text-red-600">
+                            -₦<span th:text="${#numbers.formatDecimal(payslip.totalDeductions, 0, 'COMMA', 2, 'POINT')}">1,500.00</span>
+                        </span>
                     </div>
                     <div class="flex justify-between text-base font-bold pt-2 border-t border-gray-200 dark:border-gray-700">
                         <span>Net Pay</span>
-                        <span class="text-primary-600 dark:text-primary-400">₦540,000</span>
+                        <span class="text-primary">
+                            ₦<span th:text="${#numbers.formatDecimal(payslip.netPay, 0, 'COMMA', 2, 'POINT')}">398,500.00</span>
+                        </span>
                     </div>
                 </div>
 
-                <div class="flex space-x-3 mt-6">
-                    <button class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-center">
-                        <span class="material-icons-round text-sm mr-1">print</span> Print
+                <!-- tax band note -->
+                <div class="mt-2 text-[0.55rem] text-gray-500 flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[0.6rem]">info</span>
+                    Tax band: <span th:text="${payslip.appliedTaxBandSummary}">Calculated via PAYE configuration</span>
+                </div>
+
+                <!-- actions -->
+                <div class="flex justify-end gap-3 mt-6">
+                    <button class="px-5 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-xs font-medium flex items-center gap-1 hover:bg-gray-50 dark:hover:bg-gray-700 transition active:scale-95">
+                        <span class="material-symbols-outlined text-sm">print</span> Print
                     </button>
-                    <button class="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 flex items-center justify-center">
-                        <span class="material-icons-round text-sm mr-1">download</span> Download
+                    <button class="px-5 py-2.5 bg-primary text-white rounded-xl text-xs font-medium flex items-center gap-1 hover:bg-primary-600 transition active:scale-95 border border-primary-700">
+                        <span class="material-symbols-outlined text-sm">download</span> Download PDF
                     </button>
                 </div>
             </div>
         </div>
-    </div>
+    </th:block>
 
+    <!-- modal control (unchanged) -->
     <script>
-        // Payslip Modal Control
-        const payslipModal = document.getElementById('payslipModal');
-
-        function openPayslipModal() {
-            payslipModal.classList.add('active');
-            document.body.style.overflow = 'hidden';
-        }
-
-        function closePayslipModal() {
-            payslipModal.classList.remove('active');
-            document.body.style.overflow = 'auto';
-        }
-
-        // Open modal from buttons
-        document.getElementById('viewCurrentPayslipBtn').addEventListener('click', openPayslipModal);
-
-        document.querySelectorAll('.view-payslip-btn').forEach(btn => {
-            btn.addEventListener('click', openPayslipModal);
-        });
-
-        // Close via close button
-        document.querySelectorAll('.close-modal').forEach(btn => {
-            btn.addEventListener('click', closePayslipModal);
-        });
-
-        // Close when clicking overlay
-        payslipModal.addEventListener('click', (e) => {
-            if (e.target === payslipModal) {
-                closePayslipModal();
+        function openModal(id) {
+            const modal = document.getElementById(id);
+            if (modal) {
+                modal.classList.add('active');
+                document.body.style.overflow = 'hidden';
             }
-        });
+        }
 
-        // Prevent modal container clicks from closing modal
-        payslipModal.querySelector('.modal-container').addEventListener('click', (e) => {
-            e.stopPropagation();
-        });
-
-        // Touch gestures for modal
-        (function() {
-            let startY = 0;
-            let currentY = 0;
-            let isDragging = false;
-
-            const modalContainer = payslipModal.querySelector('.modal-container');
-
-            modalContainer.addEventListener('touchstart', (e) => {
-                startY = e.touches[0].clientY;
-                isDragging = true;
+        document.querySelectorAll('.modal-overlay').forEach(modal => {
+            modal.querySelectorAll('.close-modal').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    modal.classList.remove('active');
+                    document.body.style.overflow = 'auto';
+                });
             });
 
-            modalContainer.addEventListener('touchmove', (e) => {
-                if (!isDragging) return;
-                currentY = e.touches[0].clientY;
-                const deltaY = currentY - startY;
-
-                if (deltaY > 0) {
-                    modalContainer.style.transform = `translateY(${deltaY}px)`;
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.classList.remove('active');
+                    document.body.style.overflow = 'auto';
                 }
             });
 
-            modalContainer.addEventListener('touchend', () => {
-                if (!isDragging) return;
-                isDragging = false;
-
-                const deltaY = currentY - startY;
-                if (deltaY > 100) {
-                    closePayslipModal();
-                }
-                modalContainer.style.transform = '';
+            modal.querySelector('.modal-container')?.addEventListener('click', (e) => {
+                e.stopPropagation();
             });
-        })();
+        });
     </script>
-
 </main>
 </body>
 </html>

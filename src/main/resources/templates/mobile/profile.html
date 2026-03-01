@@ -3,938 +3,908 @@
       layout:decorate="layouts/mobileEmployeeLayout">
 <head>
     <meta charset="UTF-8">
-    <title>Profile | JustHR Mobile</title>
+    <title>Profile · My Info</title>
+    <!-- Tailwind + fonts -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL@20..48,100..700,0..1&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              colors: {
+                primary: "#2463eb",
+                "background-light": "#f6f6f8",
+                "background-dark": "#111621",
+              },
+              fontFamily: { display: ["Inter"], mono: ["DM Mono", "monospace"] },
+              borderRadius: { DEFAULT: "1rem", lg: "1.5rem", xl: "2rem", full: "9999px" },
+              boxShadow: {
+                'soft': '0 4px 20px -4px rgba(0, 0, 0, 0.08), 0 2px 6px -2px rgba(0, 0, 0, 0.02)',
+                'card': '0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.02)',
+              }
+            }
+          }
+        }
+    </script>
     <style>
-        .profile-section {
-            margin-bottom: 1rem;
-        }
+        * { -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'Inter', sans-serif; background-color: #f6f6f8; }
+        .dark body { background-color: #111621; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-        .info-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.75rem 0;
-            border-bottom: 1px solid #f3f4f6;
-        }
+        .badge { padding:0.2rem 0.7rem; font-size:0.65rem; font-weight:600; border-radius:9999px; letter-spacing:0.02em; text-transform:uppercase; display:inline-flex; align-items:center; gap:0.2rem; }
+        .badge-success { background:#dcfce7; color:#15803d; }
+        .badge-warning { background:#fef3c7; color:#b45309; }
+        .badge-info    { background:#dbeafe; color:#1e40af; }
+        .badge-grade   { background:#dbeafe; color:#1e40af; }
+        .dark .badge-success { background:#14532d; color:#86efac; }
+        .dark .badge-warning { background:#92400e; color:#fde68a; }
+        .dark .badge-grade   { background:#1e3a8a; color:#bfdbfe; }
 
-        .dark .info-row {
-            border-bottom-color: #374151;
+        .field-pill {
+          display: inline-flex; align-items: center; gap: 4px;
+          padding: 2px 8px; border-radius: 9999px; font-size: 0.6rem;
+          font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
         }
+        .pill-system { background: #e0e7ff; color: #1e40af; border: 1px solid #bfdbfe; }
+        .pill-employee { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+        .dark .pill-system { background: #1e3a8a; color: #bfdbfe; border-color: #3b82f6; }
+        .dark .pill-employee { background: #14532d; color: #86efac; border-color: #166534; }
 
-        .info-row:last-child {
-            border-bottom: none;
+        .card {
+          background: white; border: 1px solid #e5e7eb; border-radius: 1.25rem;
+          transition: border-color 0.2s, box-shadow 0.2s;
         }
-
-        .info-label {
-            font-size: 0.875rem;
-            color: #6b7280;
-            font-weight: 500;
-        }
-
-        .dark .info-label {
-            color: #9ca3af;
-        }
-
-        .info-value {
-            font-size: 0.875rem;
-            font-weight: 600;
-            color: #111827;
-            text-align: right;
-        }
-
-        .dark .info-value {
-            color: #f3f4f6;
-        }
+        .dark .card { background: #1f2937; border-color: #374151; }
 
         .section-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 1rem;
+          display: flex; align-items: center; justify-content: space-between;
+          margin-bottom: 1rem; padding-bottom: 0.75rem; border-bottom: 1px solid #e5e7eb;
         }
+        .dark .section-header { border-bottom-color: #374151; }
 
-        .section-title {
-            font-size: 1rem;
-            font-weight: 700;
-            color: #111827;
-            display: flex;
-            align-items: center;
+        .section-icon {
+          width: 34px; height: 34px; border-radius: 10px;
+          display: flex; align-items: center; justify-content: center;
         }
+        .section-icon.blue { background: #dbeafe; color: #1d4ed8; }
+        .section-icon.green { background: #dcfce7; color: #15803d; }
+        .section-icon.purple { background: #ede9fe; color: #6d28d9; }
+        .section-icon.amber { background: #fef3c7; color: #92400e; }
+        .section-icon.rose { background: #ffe4e6; color: #be123c; }
+        .dark .section-icon.blue { background: #1e3a8a; color: #93c5fd; }
+        .dark .section-icon.green { background: #14532d; color: #86efac; }
+        .dark .section-icon.purple { background: #2e1065; color: #c4b5fd; }
+        .dark .section-icon.amber { background: #1c1207; color: #fcd34d; }
+        .dark .section-icon.rose { background: #4c0519; color: #fda4af; }
 
-        .dark .section-title {
-            color: #f3f4f6;
+        .section-title { font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:#64748b; }
+        .dark .section-title { color:#94a3b8; }
+
+        .info-item { display:flex; flex-direction:column; gap:4px; }
+        .info-label { font-size:0.65rem; font-weight:600; text-transform:uppercase; color:#94a3b8; }
+        .info-value { font-size:0.9rem; font-weight:500; color:#0f172a; }
+        .dark .info-value { color:#f1f5f9; }
+        .info-value.empty { color:#92400e; font-style:italic; display:flex; align-items:center; gap:4px; }
+        .dark .info-value.empty { color:#fcd34d; }
+
+        .completion-chip {
+          display:inline-flex; align-items:center; gap:6px; padding:4px 12px; border-radius:9999px;
+          font-size:0.7rem; font-weight:700; text-transform:uppercase;
         }
+        .chip-incomplete { background:#fffbeb; color:#92400e; border:1px solid #fde68a; }
+        .chip-complete { background:#dcfce7; color:#15803d; border:1px solid #bbf7d0; }
+        .dark .chip-incomplete { background:#1c1207; color:#fcd34d; border-color:#92400e; }
+        .dark .chip-complete { background:#052e16; color:#86efac; border-color:#166534; }
 
         .edit-btn {
-            color: #2563eb;
-            font-size: 0.875rem;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
+          display:inline-flex; align-items:center; gap:4px; padding:6px 12px; border-radius:8px;
+          font-size:0.7rem; font-weight:600; cursor:pointer; transition: background 0.15s, transform 0.1s;
+          border:none; outline:none;
         }
+        .edit-btn:active { transform:scale(0.97); }
+        .edit-btn-primary { background:#2563eb; color:white; }
+        .edit-btn-ghost { background:transparent; color:#2563eb; border:1.5px solid #bfdbfe; }
+        .edit-btn-fill { background:#fffbeb; color:#92400e; border:1.5px dashed #fbbf24; }
+        .dark .edit-btn-ghost { color:#60a5fa; border-color:#1e3a8a; }
+        .dark .edit-btn-fill { background:#1c1207; color:#fcd34d; border-color:#92400e; }
 
-        .edit-btn:hover {
-            color: #1d4ed8;
+        .notice {
+          display:flex; align-items:flex-start; gap:8px; padding:10px 12px; border-radius:10px;
+          font-size:0.75rem; line-height:1.5;
         }
+        .notice-info { background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af; }
+        .notice-warn { background:#fffbeb; border:1px solid #fde68a; color:#92400e; }
+        .dark .notice-info { background:#1e3a8a20; border-color:#1e3a8a; color:#93c5fd; }
+        .dark .notice-warn { background:#1c120720; border-color:#92400e; color:#fcd34d; }
 
-        .dark .edit-btn {
-            color: #60a5fa;
+        .avatar-ring {
+          border-radius:1rem; object-fit:cover; box-shadow:0 0 0 4px #e0e7ff, 0 4px 20px rgba(37,99,235,0.12);
         }
+        .dark .avatar-ring { box-shadow:0 0 0 4px #1e3a8a, 0 4px 20px rgba(37,99,235,0.2); }
 
-        .dark .edit-btn:hover {
-            color: #93c5fd;
+        .avatar-placeholder {
+          border-radius:1rem; background:linear-gradient(135deg,#e0e7ff,#dbeafe);
+          display:flex; align-items:center; justify-content:center; flex-direction:column; gap:4px;
+          box-shadow:0 0 0 3px white,0 0 0 5px #c7d7fe,0 4px 20px rgba(37,99,235,0.10);
+          border:2.5px dashed #93c5fd; cursor:pointer; transition:box-shadow 0.2s, border-color 0.2s;
         }
+        .dark .avatar-placeholder { background:linear-gradient(135deg,#1e3a8a33,#1e293b); border-color:#3b82f6; box-shadow:0 0 0 3px #0f172a,0 0 0 5px #1e3a8a; }
+        .avatar-initials { font-size:1.8rem; font-weight:700; color:#2563eb; line-height:1; }
+        .dark .avatar-initials { color:#93c5fd; }
 
-        /* Mobile Modal Styles */
-        .mobile-modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(0, 0, 0, 0.5);
-            display: flex;
-            align-items: flex-end;
-            justify-content: center;
-            z-index: 100;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.3s ease, visibility 0.3s ease;
+        .modal-overlay {
+          position:fixed; inset:0; background:rgba(0,0,0,0.45); backdrop-filter:blur(4px);
+          display:flex; align-items:center; justify-content:center; z-index:200; padding:1rem;
+          opacity:0; visibility:hidden; transition:opacity 0.2s, visibility 0.2s;
         }
+        .modal-overlay.active { opacity:1; visibility:visible; }
+        .modal-container {
+          width:100%; max-width:34rem; max-height:88vh; overflow-y:auto;
+          background:white; border-radius:1.5rem; box-shadow:0 25px 50px -12px black;
+          transform:translateY(16px) scale(0.98); transition:transform 0.22s cubic-bezier(0.34,1.4,0.64,1);
+        }
+        .dark .modal-container { background:#1f2937; border:1px solid #374151; }
+        .modal-overlay.active .modal-container { transform:translateY(0) scale(1); }
+        .modal-header { display:flex; align-items:center; justify-content:space-between; padding:1.25rem 1.5rem; border-bottom:1px solid #e5e7eb; }
+        .dark .modal-header { border-bottom-color:#374151; }
+        .modal-title { font-size:1rem; font-weight:700; }
+        .modal-body { padding:1.5rem; }
+        .modal-footer { display:flex; justify-content:flex-end; gap:10px; padding:1rem 1.5rem; border-top:1px solid #e5e7eb; background:#f8fafc; border-radius:0 0 1.5rem 1.5rem; }
+        .dark .modal-footer { background:#0f172a; border-top-color:#374151; }
 
-        .mobile-modal-overlay.active {
-            opacity: 1;
-            visibility: visible;
-        }
+        .form-input { width:100%; padding:9px 12px; border:1.5px solid #e5e7eb; border-radius:9px; background:white; font-size:0.875rem; transition:border-color 0.15s; }
+        .dark .form-input { background:#1f2937; border-color:#374151; color:white; }
+        .form-input:focus { border-color:#2563eb; outline:none; box-shadow:0 0 0 3px rgba(37,99,235,0.12); }
+        .form-input:read-only { background:#f8fafc; color:#94a3b8; cursor:not-allowed; }
 
-        .mobile-modal-container {
-            width: 100%;
-            max-height: 90vh;
-            overflow-y: auto;
-            background-color: white;
-            border-radius: 1rem 1rem 0 0;
-            transform: translateY(100%);
-            transition: transform 0.3s ease;
-            padding-bottom: env(safe-area-inset-bottom);
-        }
-
-        .dark .mobile-modal-container {
-            background-color: #1f2937;
-        }
-
-        .mobile-modal-overlay.active .mobile-modal-container {
-            transform: translateY(0);
-        }
-
-        .modal-swipe-indicator {
-            width: 2rem;
-            height: 0.25rem;
-            background-color: #d1d5db;
-            border-radius: 9999px;
-            margin: 0.75rem auto 0;
-        }
-
-        .dark .modal-swipe-indicator {
-            background-color: #4b5563;
-        }
-
-        .form-group {
-            margin-bottom: 1rem;
-        }
-
-        .form-label {
-            display: block;
-            font-size: 0.75rem;
-            font-weight: 600;
-            color: #6b7280;
-            margin-bottom: 0.5rem;
-            text-transform: uppercase;
-            letter-spacing: 0.025em;
-        }
-
-        .dark .form-label {
-            color: #9ca3af;
-        }
-
-        .form-input {
-            width: 100%;
-            padding: 0.75rem;
-            border: 1px solid #d1d5db;
-            border-radius: 0.5rem;
-            background-color: white;
-            color: #111827;
-            font-size: 0.875rem;
-            transition: border-color 0.2s ease, box-shadow 0.2s ease;
-        }
-
-        .form-input:focus {
-            outline: none;
-            border-color: #2563eb;
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-        }
-
-        .dark .form-input {
-            background-color: #374151;
-            border-color: #4b5563;
-            color: #f3f4f6;
-        }
-
-        .dark .form-input:focus {
-            border-color: #60a5fa;
-            box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.1);
-        }
-
-        .form-textarea {
-            resize: vertical;
-            min-height: 4rem;
-        }
-
-        .btn-primary {
-            background-color: #2563eb;
-            color: white;
-            padding: 0.75rem 1rem;
-            border-radius: 0.5rem;
-            font-size: 0.875rem;
-            font-weight: 600;
-            border: none;
-            cursor: pointer;
-            transition: background-color 0.2s ease;
-            width: 100%;
-        }
-
-        .btn-primary:hover {
-            background-color: #1d4ed8;
-        }
-
-        .btn-secondary {
-            background-color: transparent;
-            color: #6b7280;
-            padding: 0.75rem 1rem;
-            border-radius: 0.5rem;
-            font-size: 0.875rem;
-            font-weight: 600;
-            border: 1px solid #d1d5db;
-            cursor: pointer;
-            transition: background-color 0.2s ease;
-            width: 100%;
-        }
-
-        .btn-secondary:hover {
-            background-color: #f9fafb;
-        }
-
-        .dark .btn-secondary {
-            color: #d1d5db;
-            border-color: #4b5563;
-        }
-
-        .dark .btn-secondary:hover {
-            background-color: #374151;
-        }
+        .pay-row { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; border-radius:10px; background:#f8fafc; }
+        .dark .pay-row { background:#0f172a; }
+        .pay-amount { font-family:'DM Mono',monospace; font-size:0.9rem; font-weight:700; }
     </style>
 </head>
 <body>
-<main layout:fragment="content">
+<main class="flex-1 overflow-y-auto no-scrollbar px-5 pb-4 space-y-5" layout:fragment="content">
 
-    <!-- Profile Header -->
-    <div class="mobile-card p-4 mb-4">
-        <div class="flex items-center space-x-4">
-            <div class="relative">
-                <img src="https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=80&h=80&q=80"
-                     class="w-20 h-20 rounded-xl object-cover ring-2 ring-gray-200 dark:ring-gray-700">
-                <button id="editPhotoBtn" class="absolute bottom-0 right-0 bg-white dark:bg-gray-800 rounded-full p-1 shadow-md border border-gray-200 dark:border-gray-600">
-                    <span class="material-icons-round text-primary-600 dark:text-primary-400 text-sm">camera_alt</span>
+    <!-- ===== PROFILE HEADER CARD ===== -->
+    <div class="card p-5 mt-2">
+        <div class="flex flex-col sm:flex-row gap-4">
+            <!-- avatar with upload -->
+            <div class="relative flex-shrink-0 self-center sm:self-start" id="avatarWrapper">
+                <div id="avatarPlaceholder" class="avatar-placeholder w-24 h-24 pulse-dash" title="Click to upload your profile photo">
+                    <span th:text="${employee.firstName.substring(0,1) + employee.lastName.substring(0,1)}"
+                          class="avatar-initials">JO</span>
+                    <span class="text-[0.55rem] font-semibold uppercase text-blue-500 dark:text-blue-300">Add photo</span>
+                </div>
+                <img id="avatarImage" src="" alt="Profile" class="w-24 h-24 avatar-ring" style="display:none">
+                <button id="editPhotoBtn"
+                        class="absolute -bottom-1 -right-1 w-8 h-8 bg-white dark:bg-slate-800 rounded-full shadow-lg border border-gray-200 dark:border-gray-700 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-blue-600 dark:text-blue-400 text-sm">camera_alt</span>
                 </button>
             </div>
+
             <div class="flex-1">
-                <h3 class="text-xl font-bold text-gray-900 dark:text-white">Jane Okafor</h3>
-                <div class="flex flex-wrap gap-2 mt-2">
-                    <span class="badge badge-info">Grade 3 • Step 2</span>
-                    <span class="badge badge-success">Active</span>
+                <div class="flex items-start justify-between gap-2">
+                    <div>
+                        <h2 th:text="${employee.firstName + ' ' + employee.lastName}"
+                            class="text-xl font-bold">Jane Okafor</h2>
+                        <div class="flex flex-wrap items-center gap-2 mt-1">
+                            <span th:text="${employee.jobStep.jobGrade.name + ' · ' + employee.jobStep.name}"
+                                  class="badge badge-grade">Grade 3 · Step 2</span>
+                            <span class="badge badge-success">Active</span>
+                            <span class="flex items-center gap-1 text-[0.6rem] text-slate-500 dark:text-slate-400 font-mono"
+                                  th:text="${employee.employeeNumber}">EMP-2021-042</span>
+                        </div>
+                    </div>
+                    <button id="editProfileBtn" class="edit-btn edit-btn-primary self-start">
+                        <span class="material-symbols-outlined text-sm">edit</span> Edit
+                    </button>
                 </div>
-                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1 flex items-center">
-                    <span class="material-icons-round text-xs mr-1">badge</span>
-                    EMP-2021-042
-                </p>
-            </div>
-        </div>
 
-        <div class="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-            <div class="text-center">
-                <p class="text-xs text-gray-500 dark:text-gray-400">Department</p>
-                <p class="font-semibold text-gray-900 dark:text-white">Marketing</p>
-            </div>
-            <div class="text-center">
-                <p class="text-xs text-gray-500 dark:text-gray-400">Date of Hire</p>
-                <p class="font-semibold text-gray-900 dark:text-white">12 Apr 2021</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Personal Information -->
-    <div class="mobile-card p-4 mb-4">
-        <div class="section-header">
-            <h4 class="section-title">
-                <span class="material-icons-round text-primary-600 dark:text-primary-400 mr-2">person_outline</span>
-                Personal Information
-            </h4>
-            <button id="editPersonalInfoBtn" class="edit-btn">
-                <span class="material-icons-round text-sm mr-1">edit</span>
-                Edit
-            </button>
-        </div>
-
-        <div class="profile-section">
-            <div class="info-row">
-                <span class="info-label">Full Name</span>
-                <span class="info-value">Jane Okafor</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Email</span>
-                <span class="info-value">jane.okafor@company.com</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Phone</span>
-                <span class="info-value">+234 801 234 5678</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Date of Birth</span>
-                <span class="info-value">15 May 1990</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Gender</span>
-                <span class="info-value">Female</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Marital Status</span>
-                <span class="info-value">Married</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Address</span>
-                <span class="info-value">14 Admiralty Way, Lekki Phase 1, Lagos</span>
+                <div class="grid grid-cols-2 gap-3 mt-4 pt-3 border-t border-slate-200 dark:border-slate-700">
+                    <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-slate-400 text-sm">business</span>
+                        <div>
+                            <p class="info-label">Department</p>
+                            <p th:text="${employee.department.name}" class="text-sm font-medium">Marketing</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-slate-400 text-sm">calendar_today</span>
+                        <div>
+                            <p class="info-label">Hire date</p>
+                            <p th:text="${#temporals.format(employee.createdAt, 'dd MMM yyyy')}" class="text-sm font-medium">12 Apr 2021</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 col-span-2">
+                        <span class="material-symbols-outlined text-slate-400 text-sm">mail</span>
+                        <div>
+                            <p class="info-label">Email</p>
+                            <p th:text="${employee.email}" class="text-sm font-medium">jane.o@example.com</p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Employment Details -->
-    <div class="mobile-card p-4 mb-4">
+    <!-- field type legend -->
+    <div class="flex flex-wrap items-center gap-2">
+        <span class="text-[0.55rem] font-semibold text-slate-500 uppercase">Field types:</span>
+        <span class="field-pill pill-system"><span class="material-symbols-outlined text-[0.5rem]">lock</span> System</span>
+        <span class="field-pill pill-employee"><span class="material-symbols-outlined text-[0.5rem]">edit</span> You can edit</span>
+    </div>
+
+    <!-- ===== PERSONAL INFORMATION ===== -->
+    <div class="card p-5">
         <div class="section-header">
-            <h4 class="section-title">
-                <span class="material-icons-round text-primary-600 dark:text-primary-400 mr-2">work_outline</span>
-                Employment Details
-            </h4>
-            <button id="editEmploymentBtn" class="edit-btn">
-                <span class="material-icons-round text-sm mr-1">edit</span>
-                Edit
+            <div class="flex items-center gap-2">
+                <div class="section-icon blue"><span class="material-symbols-outlined text-lg">person_outline</span></div>
+                <p class="section-title">Personal Information</p>
+            </div>
+            <button id="editPersonalInfoBtn" class="edit-btn edit-btn-ghost">
+                <span class="material-symbols-outlined text-sm">edit</span> Edit
             </button>
         </div>
-
-        <div class="profile-section">
-            <div class="info-row">
-                <span class="info-label">Employee Number</span>
-                <span class="info-value">EMP-2021-042</span>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <!-- system fields -->
+            <div class="info-item">
+                <p class="info-label">Full name <span class="field-pill pill-system ml-1"><span class="material-symbols-outlined text-[0.5rem]">lock</span></span></p>
+                <p th:text="${employee.firstName + ' ' + employee.lastName}" class="info-value">Jane Okafor</p>
             </div>
-            <div class="info-row">
-                <span class="info-label">Employment Status</span>
-                <span class="info-value"><span class="badge badge-success text-xs">Active</span> (Permanent)</span>
+            <div class="info-item">
+                <p class="info-label">Email <span class="field-pill pill-system ml-1"><span class="material-symbols-outlined text-[0.5rem]">lock</span></span></p>
+                <p th:text="${employee.email}" class="info-value">jane.o@example.com</p>
             </div>
-            <div class="info-row">
-                <span class="info-label">Job Title</span>
-                <span class="info-value">Marketing Specialist</span>
+            <div class="info-item">
+                <p class="info-label">Phone <span class="field-pill pill-system ml-1"><span class="material-symbols-outlined text-[0.5rem]">lock</span></span></p>
+                <p th:text="${employee.phoneNumber}" class="info-value">+234 801 234 5678</p>
             </div>
-            <div class="info-row">
-                <span class="info-label">Department</span>
-                <span class="info-value">Marketing</span>
+            <!-- employee-editable fields -->
+            <div class="info-item">
+                <p class="info-label">Date of birth <span class="field-pill pill-employee ml-1"><span class="material-symbols-outlined text-[0.5rem]">edit</span></span></p>
+                <p th:if="${employee.dateOfBirth != null}"
+                   th:text="${#temporals.format(employee.dateOfBirth, 'dd MMM yyyy')}" class="info-value"></p>
+                <p th:unless="${employee.dateOfBirth != null}"
+                   class="info-value empty"><span class="material-symbols-outlined text-sm">warning_amber</span> Not provided</p>
             </div>
-            <div class="info-row">
-                <span class="info-label">Grade / Step</span>
-                <span class="info-value">Grade 3 • Step 2</span>
+            <div class="info-item">
+                <p class="info-label">Gender <span class="field-pill pill-employee ml-1"><span class="material-symbols-outlined text-[0.5rem]">edit</span></span></p>
+                <p th:if="${employee.gender != null}" th:text="${employee.gender}" class="info-value"></p>
+                <p th:unless="${employee.gender != null}"
+                   class="info-value empty"><span class="material-symbols-outlined text-sm">warning_amber</span> Not provided</p>
             </div>
-            <div class="info-row">
-                <span class="info-label">Pay Group</span>
-                <span class="info-value">PG4 - Marketing</span>
+            <div class="info-item">
+                <p class="info-label">Marital status <span class="field-pill pill-employee ml-1"><span class="material-symbols-outlined text-[0.5rem]">edit</span></span></p>
+                <p th:if="${employee.maritalStatus != null}" th:text="${employee.maritalStatus}" class="info-value"></p>
+                <p th:unless="${employee.maritalStatus != null}"
+                   class="info-value empty"><span class="material-symbols-outlined text-sm">warning_amber</span> Not provided</p>
             </div>
-            <div class="info-row">
-                <span class="info-label">Reports To</span>
-                <span class="info-value">Michael Adenuga</span>
+            <div class="info-item col-span-2">
+                <p class="info-label">Residential address <span class="field-pill pill-employee ml-1"><span class="material-symbols-outlined text-[0.5rem]">edit</span></span></p>
+                <p th:if="${employee.residentialAddress != null}" th:text="${employee.residentialAddress}" class="info-value"></p>
+                <p th:unless="${employee.residentialAddress != null}"
+                   class="info-value empty"><span class="material-symbols-outlined text-sm">warning_amber</span> Not provided</p>
             </div>
-            <div class="info-row">
-                <span class="info-label">Work Location</span>
-                <span class="info-value">Lagos HQ</span>
+            <div class="info-item col-span-2">
+                <p class="info-label">My mission <span class="field-pill pill-employee ml-1"><span class="material-symbols-outlined text-[0.5rem]">edit</span></span></p>
+                <p th:if="${employee.mission != null}" th:text="${employee.mission}" class="info-value"></p>
+                <p th:unless="${employee.mission != null}"
+                   class="info-value empty"><span class="material-symbols-outlined text-sm">warning_amber</span> Not provided</p>
             </div>
         </div>
     </div>
 
-    <!-- Compensation Summary -->
-    <div class="mobile-card p-4 mb-4">
+    <!-- ===== EMPLOYMENT DETAILS ===== -->
+    <div class="card p-5">
         <div class="section-header">
-            <h4 class="section-title">
-                <span class="material-icons-round text-primary-600 dark:text-primary-400 mr-2">payments</span>
-                Compensation
-            </h4>
-            <button class="edit-btn">
-                View Payslip
-                <span class="material-icons-round text-sm ml-1">arrow_forward</span>
-            </button>
+            <div class="flex items-center gap-2">
+                <div class="section-icon purple"><span class="material-symbols-outlined text-lg">work_outline</span></div>
+                <p class="section-title">Employment Details</p>
+            </div>
+            <span class="field-pill pill-system"><span class="material-symbols-outlined text-[0.6rem]">lock</span> HR</span>
         </div>
-
-        <div class="space-y-3">
-            <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <span class="text-sm text-gray-600 dark:text-gray-300">Basic Salary</span>
-                <span class="font-semibold text-gray-900 dark:text-white">₦450,000</span>
-            </div>
-            <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <span class="text-sm text-gray-600 dark:text-gray-300">Gross Pay</span>
-                <span class="font-semibold text-green-600 dark:text-green-400">₦620,000</span>
-            </div>
-            <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <span class="text-sm text-gray-600 dark:text-gray-300">Net Pay</span>
-                <span class="font-semibold text-primary-600 dark:text-primary-400">₦540,000</span>
-            </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+            <div><span class="info-label">Employee number</span>
+                <p th:text="${employee.employeeNumber}" class="font-mono">EMP-2021-042</p></div>
+            <div><span class="info-label">Status</span>
+                <p><span class="badge badge-success text-[0.55rem]">Active</span> · Permanent</p></div>
+            <div><span class="info-label">Date of hire</span>
+                <p th:text="${#temporals.format(employee.createdAt, 'dd MMMM yyyy')}">12 April 2021</p></div>
+            <div><span class="info-label">Probation end</span>
+                <p>11 Oct 2021 <span class="text-green-600 text-[0.6rem]">(Completed)</span></p></div>
+            <div><span class="info-label">Department</span>
+                <p th:text="${employee.department.name}">Marketing</p></div>
+            <div><span class="info-label">Grade / Step</span>
+                <p th:text="${employee.jobStep.jobGrade.name + ' · ' + employee.jobStep.name}">Grade 3 · Step 2</p></div>
+            <div><span class="info-label">Pay group</span><p>PG4 - Marketing</p></div>
+            <div><span class="info-label">Reports to</span>
+                <p>Michael Adenuga <span class="block text-[0.55rem] text-slate-500">Marketing Manager</span></p></div>
+            <div class="col-span-2"><span class="info-label">Work location</span><p>Lagos HQ</p></div>
+        </div>
+        <div class="notice notice-info mt-3">
+            <span class="material-symbols-outlined text-sm">info</span>
+            <span>Employment details are managed by HR. Contact HR for changes.</span>
         </div>
     </div>
 
-    <!-- Bank Details -->
-    <div class="mobile-card p-4 mb-4">
+    <!-- ===== EMERGENCY CONTACT ===== -->
+    <div class="card p-5">
         <div class="section-header">
-            <h4 class="section-title">
-                <span class="material-icons-round text-primary-600 dark:text-primary-400 mr-2">account_balance</span>
-                Bank Details
-            </h4>
-            <button id="editBankBtn" class="edit-btn">
-                <span class="material-icons-round text-sm mr-1">edit</span>
-                Edit
-            </button>
-        </div>
-
-        <div class="profile-section">
-            <div class="info-row">
-                <span class="info-label">Account Holder</span>
-                <span class="info-value">Jane Okafor</span>
+            <div class="flex items-center gap-2">
+                <div class="section-icon rose"><span class="material-symbols-outlined text-lg">contact_emergency</span></div>
+                <p class="section-title">Emergency Contact</p>
             </div>
-            <div class="info-row">
-                <span class="info-label">Bank Name</span>
-                <span class="info-value">First Bank of Nigeria</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Account Number</span>
-                <span class="info-value">**** **** 3456</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Account Type</span>
-                <span class="info-value">Savings</span>
+            <div class="flex items-center gap-2">
+                <span id="emergencyStatus" class="completion-chip"
+                      th:classappend="${employee.emergencyContact != null ? 'chip-complete' : 'chip-incomplete'}">
+                    <span class="material-symbols-outlined text-xs"
+                          th:text="${employee.emergencyContact != null ? 'check_circle' : 'warning_amber'}">warning_amber</span>
+                    <span th:text="${employee.emergencyContact != null ? 'Complete' : 'Incomplete'}">Incomplete</span>
+                </span>
+                <button id="editEmergencyBtn" class="edit-btn"
+                        th:classappend="${employee.emergencyContact != null ? 'edit-btn-ghost' : 'edit-btn-fill'}">
+                    <span class="material-symbols-outlined text-sm"
+                          th:text="${employee.emergencyContact != null ? 'edit' : 'add'}">add</span>
+                    <span th:text="${employee.emergencyContact != null ? 'Edit' : 'Add'}">Add</span>
+                </button>
             </div>
         </div>
-    </div>
-
-    <!-- Emergency Contact -->
-    <div class="mobile-card p-4 mb-4">
-        <div class="section-header">
-            <h4 class="section-title">
-                <span class="material-icons-round text-primary-600 dark:text-primary-400 mr-2">contact_emergency</span>
-                Emergency Contact
-            </h4>
-            <button id="editEmergencyBtn" class="edit-btn">
-                <span class="material-icons-round text-sm mr-1">edit</span>
-                Edit
-            </button>
-        </div>
-
-        <div class="profile-section">
-            <div class="info-row">
-                <span class="info-label">Name</span>
-                <span class="info-value">Chidi Okafor</span>
+        <div class="grid grid-cols-2 gap-4">
+            <div class="info-item">
+                <span class="info-label">Full name</span>
+                <p th:if="${employee.emergencyContact != null}"
+                   th:text="${employee.emergencyContact.contactName}" class="info-value"></p>
+                <p th:unless="${employee.emergencyContact != null}" class="info-value empty">Not provided</p>
             </div>
-            <div class="info-row">
+            <div class="info-item">
                 <span class="info-label">Relationship</span>
-                <span class="info-value">Spouse</span>
+                <p th:if="${employee.emergencyContact != null}"
+                   th:text="${employee.emergencyContact.relationship}" class="info-value"></p>
+                <p th:unless="${employee.emergencyContact != null}" class="info-value empty">Not provided</p>
             </div>
-            <div class="info-row">
+            <div class="info-item">
                 <span class="info-label">Phone</span>
-                <span class="info-value">+234 802 345 6789</span>
+                <p th:if="${employee.emergencyContact != null}"
+                   th:text="${employee.emergencyContact.phoneNumber}" class="info-value"></p>
+                <p th:unless="${employee.emergencyContact != null}" class="info-value empty">Not provided</p>
             </div>
-            <div class="info-row">
-                <span class="info-label">Alt Phone</span>
-                <span class="info-value">+234 803 456 7890</span>
+            <div class="info-item">
+                <span class="info-label">Alternative</span>
+                <p th:if="${employee.emergencyContact != null and employee.emergencyContact.alternativePhoneNumber != null}"
+                   th:text="${employee.emergencyContact.alternativePhoneNumber}" class="info-value"></p>
+                <p th:unless="${employee.emergencyContact != null and employee.emergencyContact.alternativePhoneNumber != null}"
+                   class="info-value empty">Not provided</p>
             </div>
-            <div class="info-row">
-                <span class="info-label">Email</span>
-                <span class="info-value">chidi.okafor@email.com</span>
-            </div>
+        </div>
+        <div class="notice notice-warn mt-3" th:unless="${employee.emergencyContact != null}">
+            <span class="material-symbols-outlined text-sm">warning</span>
+            <span>Please add an emergency contact. Important for your safety.</span>
+        </div>
+        <div class="notice notice-info mt-3" th:if="${employee.emergencyContact != null}">
+            <span class="material-symbols-outlined text-sm">check_circle</span>
+            <span>Emergency contact saved. You can update it anytime.</span>
         </div>
     </div>
 
-    <!-- Documents -->
-    <div class="mobile-card p-4 mb-4">
+    <!-- ===== COMPENSATION ===== -->
+    <div class="card p-5">
         <div class="section-header">
-            <h4 class="section-title">
-                <span class="material-icons-round text-primary-600 dark:text-primary-400 mr-2">description</span>
-                Documents
-            </h4>
-            <button class="edit-btn">
-                View All
-                <span class="material-icons-round text-sm ml-1">arrow_forward</span>
-            </button>
+            <div class="flex items-center gap-2">
+                <div class="section-icon green"><span class="material-symbols-outlined text-lg">payments</span></div>
+                <p class="section-title">Compensation</p>
+            </div>
+            <span class="field-pill pill-system"><span class="material-symbols-outlined text-[0.6rem]">lock</span> HR</span>
         </div>
-
         <div class="space-y-2">
-            <a href="#" class="flex items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <span class="material-icons-round text-red-500 mr-3">picture_as_pdf</span>
-                <div class="flex-1">
-                    <p class="text-sm font-medium">Employment Contract.pdf</p>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">2.1 MB</p>
+            <div class="pay-row">
+                <span class="pay-label">Gross Pay</span>
+                <span th:text="${'₦' + latestPaySlip.grossPay}" class="pay-amount text-emerald-600">₦620,000</span>
+            </div>
+            <div class="pay-row">
+                <span class="pay-label">Net Pay</span>
+                <span th:text="${'₦' + latestPaySlip.netPay}" class="pay-amount text-primary">₦540,000</span>
+            </div>
+        </div>
+        <a href="#" class="flex items-center justify-between mt-3 text-sm font-semibold text-primary">
+            View Full Payslip <span class="material-symbols-outlined text-sm">arrow_forward</span>
+        </a>
+    </div>
+
+    <!-- ===== BANK DETAILS ===== -->
+    <div class="card overflow-hidden">
+        <div class="bg-gradient-to-r from-blue-800 to-blue-600 p-4 text-white">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-white/80">account_balance</span>
+                    <div>
+                        <p class="text-[0.6rem] font-semibold uppercase tracking-wider opacity-70">Bank Details</p>
+                        <p class="text-[0.55rem] opacity-60">Provided by you</p>
+                    </div>
                 </div>
-                <span class="material-icons-round text-gray-400">download</span>
-            </a>
-            <a href="#" class="flex items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <span class="material-icons-round text-blue-500 mr-3">image</span>
-                <div class="flex-1">
-                    <p class="text-sm font-medium">ID Card.jpg</p>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">1.5 MB</p>
+                <span class="field-pill bg-white/20 text-white border border-white/30">
+                    <span class="material-symbols-outlined text-[0.5rem]">edit</span> Yours
+                </span>
+            </div>
+        </div>
+        <div class="p-5">
+            <div class="flex items-center justify-between mb-3">
+                <span th:if="${not #lists.isEmpty(employee.bankDetails)}" class="completion-chip chip-complete">
+                    <span class="material-symbols-outlined text-xs">check_circle</span> Set up
+                </span>
+                <span th:unless="${not #lists.isEmpty(employee.bankDetails)}" class="completion-chip chip-incomplete">
+                    <span class="material-symbols-outlined text-xs">warning_amber</span> Not set up
+                </span>
+                <button id="editBankBtn" class="edit-btn"
+                        th:classappend="${not #lists.isEmpty(employee.bankDetails)} ? 'edit-btn-ghost' : 'edit-btn-fill'">
+                    <span class="material-symbols-outlined text-sm"
+                          th:text="${not #lists.isEmpty(employee.bankDetails)} ? 'edit' : 'add'">add</span>
+                    <span th:text="${not #lists.isEmpty(employee.bankDetails)} ? 'Edit' : 'Add'">Add</span>
+                </button>
+            </div>
+            <!-- Populated -->
+            <div th:if="${not #lists.isEmpty(employee.bankDetails)}" class="space-y-3">
+                <div class="info-item">
+                    <span class="info-label">Account Name</span>
+                    <p th:text="${employee.bankDetails[0].accountName}" class="info-value">John Doe</p>
                 </div>
-                <span class="material-icons-round text-gray-400">download</span>
-            </a>
-            <a href="#" class="flex items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <span class="material-icons-round text-red-500 mr-3">description</span>
-                <div class="flex-1">
-                    <p class="text-sm font-medium">Tax Certificate.pdf</p>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">890 KB</p>
+                <div class="info-item">
+                    <span class="info-label">Bank Name</span>
+                    <p th:text="${employee.bankDetails[0].bankName}" class="info-value">First Bank</p>
                 </div>
-                <span class="material-icons-round text-gray-400">download</span>
-            </a>
+                <div class="info-item">
+                    <span class="info-label">Account Number</span>
+                    <p class="info-value font-mono"
+                       th:text="'**** **** ' + ${#strings.substring(employee.bankDetails[0].accountNumber, employee.bankDetails[0].accountNumber.length()-4)}">**** **** 1234</p>
+                    <p class="text-[0.55rem] text-slate-400 mt-0.5">(last 4 digits shown)</p>
+                </div>
+            </div>
+            <!-- Empty -->
+            <div th:unless="${not #lists.isEmpty(employee.bankDetails)}" class="space-y-3">
+                <div class="info-item"><span class="info-label">Account Name</span><p class="info-value empty">Not provided</p></div>
+                <div class="info-item"><span class="info-label">Bank Name</span><p class="info-value empty">Not provided</p></div>
+                <div class="info-item"><span class="info-label">Account Number</span><p class="info-value empty">Not provided</p></div>
+            </div>
+            <div class="notice notice-warn mt-3">
+                <span class="material-symbols-outlined text-sm">warning</span>
+                <span>Bank details required for salary payments.</span>
+            </div>
         </div>
     </div>
 
-    <!-- Recent Activity -->
-    <div class="mobile-card p-4 mb-6">
+    <!-- ===== DOCUMENTS ===== -->
+    <div class="card p-5">
         <div class="section-header">
-            <h4 class="section-title">
-                <span class="material-icons-round text-primary-600 dark:text-primary-400 mr-2">history</span>
-                Recent Activity
-            </h4>
-            <button class="edit-btn">
-                View All
-                <span class="material-icons-round text-sm ml-1">arrow_forward</span>
-            </button>
-        </div>
-
-        <div class="space-y-3">
-            <div class="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <div class="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
-                    <span class="material-icons-round text-green-600 dark:text-green-400 text-sm">check</span>
-                </div>
-                <div class="flex-1">
-                    <p class="text-sm font-medium">Leave approved</p>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">Annual PTO • 5 days (21–25 Mar 2025)</p>
-                </div>
-                <span class="text-xs text-gray-500">2 days ago</span>
+            <div class="flex items-center gap-2">
+                <div class="section-icon amber"><span class="material-symbols-outlined text-lg">description</span></div>
+                <p class="section-title">Documents</p>
             </div>
+        </div>
+        <div class="space-y-1">
+            <a href="#" class="flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800">
+                <span class="material-symbols-outlined text-red-500">picture_as_pdf</span>
+                <span class="text-sm flex-1">Employment Contract.pdf</span>
+                <span class="material-symbols-outlined text-sm text-slate-400">download</span>
+            </a>
+            <a href="#" class="flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800">
+                <span class="material-symbols-outlined text-blue-500">image</span>
+                <span class="text-sm flex-1">ID Card.jpg</span>
+                <span class="material-symbols-outlined text-sm text-slate-400">download</span>
+            </a>
+            <a href="#" class="flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800">
+                <span class="material-symbols-outlined text-green-500">description</span>
+                <span class="text-sm flex-1">Tax Certificate.pdf</span>
+                <span class="material-symbols-outlined text-sm text-slate-400">download</span>
+            </a>
+        </div>
+        <a href="#" class="flex items-center justify-between mt-3 text-sm font-semibold text-primary">
+            View All <span class="material-symbols-outlined text-sm">arrow_forward</span>
+        </a>
+    </div>
 
-            <div class="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <div class="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
-                    <span class="material-icons-round text-blue-600 dark:text-blue-400 text-sm">trending_up</span>
+    <!-- ===== RECENT ACTIVITY ===== -->
+    <div class="card p-5">
+        <div class="section-header">
+            <div class="flex items-center gap-2">
+                <div class="section-icon blue"><span class="material-symbols-outlined text-lg">history</span></div>
+                <p class="section-title">Recent Activity</p>
+            </div>
+            <a href="#" class="text-sm font-semibold text-primary">View All</a>
+        </div>
+        <div class="space-y-2">
+            <div class="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl">
+                <div class="flex items-center gap-3">
+                    <div class="w-7 h-7 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-green-600 text-sm">check</span>
+                    </div>
+                    <div>
+                        <p class="text-xs font-semibold">Leave approved</p>
+                        <p class="text-[0.55rem] text-slate-500">5 days (21–25 Mar 2025)</p>
+                    </div>
                 </div>
-                <div class="flex-1">
-                    <p class="text-sm font-medium">Promotion approved</p>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">Grade 2 → Grade 3 • Step 2</p>
+                <span class="text-[0.55rem] text-slate-400">2d ago</span>
+            </div>
+            <div class="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl">
+                <div class="flex items-center gap-3">
+                    <div class="w-7 h-7 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-blue-600 text-sm">trending_up</span>
+                    </div>
+                    <div>
+                        <p class="text-xs font-semibold">Promotion approved</p>
+                        <p class="text-[0.55rem] text-slate-500">Grade 2 → 3</p>
+                    </div>
                 </div>
-                <span class="text-xs text-gray-500">01 Jun 2024</span>
+                <span class="text-[0.55rem] text-slate-400">01 Jun 2024</span>
+            </div>
+        </div>
+    </div>
+    <div class="text-center text-[0.55rem] text-slate-400 py-2">Profile information · last updated 02 Mar 2026</div>
+
+
+    <!-- ========== MODALS ========== -->
+
+    <!-- Edit Photo Modal -->
+    <div id="editPhotoModal" class="modal-overlay">
+        <div class="modal-container">
+            <div class="modal-header">
+                <div>
+                    <p class="modal-title">Update Profile Photo</p>
+                    <p class="text-[0.65rem] text-slate-500">JPG, PNG · max 5MB</p>
+                </div>
+                <button class="close-modal text-slate-400"><span class="material-symbols-outlined">close</span></button>
+            </div>
+            <div class="modal-body space-y-4">
+                <div class="flex justify-center">
+                    <div id="modalAvatarPlaceholder" class="avatar-placeholder w-28 h-28">
+                        <span class="avatar-initials" id="modalAvatarInitials">JO</span>
+                        <span class="text-[0.5rem]">No photo</span>
+                    </div>
+                    <img id="modalAvatarImage" src="" class="w-28 h-28 avatar-ring" style="display:none">
+                </div>
+                <label class="flex items-center justify-center gap-2 w-full py-3 bg-primary text-white rounded-xl text-sm font-semibold">
+                    <span class="material-symbols-outlined">upload</span> Choose Photo
+                    <input type="file" accept="image/*" class="hidden" id="photoInput">
+                </label>
+            </div>
+            <div class="modal-footer">
+                <button class="edit-btn edit-btn-ghost close-modal">Cancel</button>
+                <button id="savePhotoBtn" class="edit-btn edit-btn-primary">Save Photo</button>
             </div>
         </div>
     </div>
 
-    <!-- ========== MOBILE MODALS ========== -->
-
-    <!-- Modal: Edit Photo -->
-    <div id="editPhotoModal" class="mobile-modal-overlay">
-        <div class="mobile-modal-container">
-            <div class="modal-swipe-indicator"></div>
-            <div class="p-4">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-bold text-gray-900 dark:text-white">Update Profile Photo</h3>
-                    <button class="close-modal text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                        <span class="material-icons-round">close</span>
-                    </button>
+    <!-- Edit Profile Header Modal -->
+    <div id="editProfileModal" class="modal-overlay">
+        <div class="modal-container">
+            <div class="modal-header">
+                <div>
+                    <p class="modal-title">Edit Profile</p>
+                    <p class="text-[0.65rem] text-slate-500">Basic information</p>
                 </div>
-
-                <div class="text-center mb-6">
-                    <img src="https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=120&h=120&q=80"
-                         class="w-24 h-24 rounded-xl object-cover ring-4 ring-gray-100 dark:ring-gray-700 mx-auto mb-4">
-                    <label class="btn-primary cursor-pointer">
-                        Choose New Photo
-                        <input type="file" accept="image/*" class="hidden">
-                    </label>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">JPG, PNG or GIF up to 5MB</p>
+                <button class="close-modal text-slate-400"><span class="material-symbols-outlined">close</span></button>
+            </div>
+            <div class="modal-body space-y-3">
+                <div class="notice notice-info text-xs">Name and employee number are managed by HR.</div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="form-group">
+                        <label class="info-label">First Name <span class="field-pill pill-system">lock</span></label>
+                        <input type="text" th:value="${employee.firstName}" value="Jane" class="form-input" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label class="info-label">Last Name <span class="field-pill pill-system">lock</span></label>
+                        <input type="text" th:value="${employee.lastName}" value="Okafor" class="form-input" readonly>
+                    </div>
                 </div>
-
-                <div class="flex space-x-3">
-                    <button class="btn-secondary close-modal">Cancel</button>
-                    <button class="btn-primary">Save Changes</button>
+                <div class="form-group">
+                    <label class="info-label">Job Title</label>
+                    <input type="text" value="Marketing Specialist" class="form-input">
                 </div>
+                <div class="form-group">
+                    <label class="info-label">Department <span class="field-pill pill-system">lock</span></label>
+                    <input type="text" th:value="${employee.department.name}" value="Marketing" class="form-input" readonly>
+                </div>
+                <div class="form-group">
+                    <label class="info-label">Employee Number <span class="field-pill pill-system">lock</span></label>
+                    <input type="text" th:value="${employee.employeeNumber}" value="EMP-2021-042" class="form-input font-mono" readonly>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="edit-btn edit-btn-ghost close-modal">Cancel</button>
+                <button class="edit-btn edit-btn-primary">Save Changes</button>
             </div>
         </div>
     </div>
 
-    <!-- Modal: Edit Personal Information -->
-    <div id="editPersonalInfoModal" class="mobile-modal-overlay">
-        <div class="mobile-modal-container">
-            <div class="modal-swipe-indicator"></div>
-            <div class="p-4">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-bold text-gray-900 dark:text-white">Edit Personal Information</h3>
-                    <button class="close-modal text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                        <span class="material-icons-round">close</span>
-                    </button>
+    <!-- Edit Personal Info Modal -->
+    <div id="editPersonalInfoModal" class="modal-overlay">
+        <div class="modal-container">
+            <div class="modal-header">
+                <div>
+                    <p class="modal-title">Personal Information</p>
+                    <p class="text-[0.65rem] text-slate-500">Update your details</p>
                 </div>
-
-                <div class="space-y-4">
-                    <div class="form-group">
-                        <label class="form-label">Full Name</label>
-                        <input type="text" value="Jane Okafor" class="form-input">
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Email Address</label>
-                        <input type="email" value="jane.okafor@company.com" class="form-input">
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Phone Number</label>
-                        <input type="tel" value="+234 801 234 5678" class="form-input">
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Date of Birth</label>
-                        <input type="date" value="1990-05-15" class="form-input">
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Gender</label>
-                        <select class="form-input">
-                            <option selected>Female</option>
-                            <option>Male</option>
-                            <option>Other</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Marital Status</label>
-                        <select class="form-input">
-                            <option>Single</option>
-                            <option selected>Married</option>
-                            <option>Divorced</option>
-                            <option>Widowed</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Residential Address</label>
-                        <textarea class="form-input form-textarea">14 Admiralty Way, Lekki Phase 1, Lagos</textarea>
-                    </div>
-                </div>
-
-                <div class="flex space-x-3 mt-6">
-                    <button class="btn-secondary close-modal">Cancel</button>
-                    <button class="btn-primary">Save Changes</button>
-                </div>
+                <button class="close-modal text-slate-400"><span class="material-symbols-outlined">close</span></button>
             </div>
-        </div>
-    </div>
+            <form th:action="@{/update-personal-info}" method="post" th:object="${employee}">
+                <div class="modal-body space-y-4">
+                    <div class="notice notice-info text-xs">Name, email, phone are HR-managed.</div>
 
-    <!-- Modal: Edit Employment Details -->
-    <div id="editEmploymentModal" class="mobile-modal-overlay">
-        <div class="mobile-modal-container">
-            <div class="modal-swipe-indicator"></div>
-            <div class="p-4">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-bold text-gray-900 dark:text-white">Edit Employment Details</h3>
-                    <button class="close-modal text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                        <span class="material-icons-round">close</span>
-                    </button>
-                </div>
+                    <input type="hidden" th:field="*{id}" />
 
-                <div class="space-y-4">
-                    <div class="form-group">
-                        <label class="form-label">Employee Number</label>
-                        <input type="text" value="EMP-2021-042" readonly class="form-input bg-gray-100 dark:bg-gray-700">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="form-group">
+                            <label class="info-label">Full Name <span class="field-pill pill-system">lock</span></label>
+                            <input type="text" th:value="*{firstName} + ' ' + *{lastName}" class="form-input" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label class="info-label">Email <span class="field-pill pill-system">lock</span></label>
+                            <input type="email" th:value="*{email}" class="form-input" readonly>
+                        </div>
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">Job Title</label>
-                        <input type="text" value="Marketing Specialist" class="form-input">
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Department</label>
-                        <select class="form-input">
-                            <option selected>Marketing</option>
-                            <option>Engineering</option>
-                            <option>Sales</option>
-                            <option>Operations</option>
-                        </select>
+                        <label class="info-label">Phone <span class="field-pill pill-system">lock</span></label>
+                        <input type="tel" th:value="*{phoneNumber}" class="form-input" readonly>
                     </div>
 
                     <div class="grid grid-cols-2 gap-3">
                         <div class="form-group">
-                            <label class="form-label">Job Grade</label>
-                            <select class="form-input">
-                                <option>Grade 1</option>
-                                <option>Grade 2</option>
-                                <option selected>Grade 3</option>
-                                <option>Grade 4</option>
-                            </select>
+                            <label class="info-label">Date of birth <span class="field-pill pill-employee">edit</span></label>
+                            <input type="date" th:field="*{dateOfBirth}" class="form-input">
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Step Level</label>
-                            <select class="form-input">
-                                <option>Step 1</option>
-                                <option selected>Step 2</option>
-                                <option>Step 3</option>
-                                <option>Step 4</option>
+                            <label class="info-label">Gender <span class="field-pill pill-employee">edit</span></label>
+                            <select th:field="*{gender}" class="form-input">
+                                <option value="">Select gender</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Prefer not to say">Prefer not to say</option>
                             </select>
                         </div>
                     </div>
-
                     <div class="form-group">
-                        <label class="form-label">Pay Group</label>
-                        <select class="form-input">
-                            <option selected>PG4 - Marketing</option>
-                            <option>PG1 - Executive</option>
-                            <option>PG2 - Engineering</option>
-                            <option>PG3 - Sales</option>
+                        <label class="info-label">Marital status <span class="field-pill pill-employee">edit</span></label>
+                        <select th:field="*{maritalStatus}" class="form-input">
+                            <option value="">Select status</option>
+                            <option value="Single">Single</option>
+                            <option value="Married">Married</option>
+                            <option value="Divorced">Divorced</option>
+                            <option value="Widowed">Widowed</option>
                         </select>
                     </div>
-
                     <div class="form-group">
-                        <label class="form-label">Reports To</label>
-                        <input type="text" value="Michael Adenuga" class="form-input">
+                        <label class="info-label">Residential address <span class="field-pill pill-employee">edit</span></label>
+                        <textarea th:field="*{residentialAddress}" class="form-input" rows="2" placeholder="Enter your residential address..."></textarea>
                     </div>
-
                     <div class="form-group">
-                        <label class="form-label">Work Location</label>
-                        <input type="text" value="Lagos HQ" class="form-input">
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Employment Status</label>
-                        <select class="form-input">
-                            <option selected>Active (Permanent)</option>
-                            <option>Probation</option>
-                            <option>Contract</option>
-                            <option>Intern</option>
-                        </select>
+                        <label class="info-label">My mission <span class="field-pill pill-employee">edit</span></label>
+                        <textarea th:field="*{mission}" class="form-input" rows="2" placeholder="What is your personal mission?"></textarea>
                     </div>
                 </div>
-
-                <div class="flex space-x-3 mt-6">
-                    <button class="btn-secondary close-modal">Cancel</button>
-                    <button class="btn-primary">Save Changes</button>
+                <div class="modal-footer">
+                    <button type="button" class="edit-btn edit-btn-ghost close-modal">Cancel</button>
+                    <button type="submit" class="edit-btn edit-btn-primary">Save Changes</button>
                 </div>
-            </div>
+            </form>
         </div>
     </div>
 
-    <!-- Modal: Edit Emergency Contact -->
-    <div id="editEmergencyModal" class="mobile-modal-overlay">
-        <div class="mobile-modal-container">
-            <div class="modal-swipe-indicator"></div>
-            <div class="p-4">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-bold text-gray-900 dark:text-white">Edit Emergency Contact</h3>
-                    <button class="close-modal text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                        <span class="material-icons-round">close</span>
-                    </button>
+    <!-- Edit Emergency Contact Modal -->
+    <div id="editEmergencyModal" class="modal-overlay">
+        <div class="modal-container">
+            <div class="modal-header">
+                <div>
+                    <p class="modal-title">Emergency Contact</p>
+                    <p class="text-[0.65rem] text-slate-500">All fields are yours</p>
                 </div>
-
-                <div class="space-y-4">
-                    <div class="form-group">
-                        <label class="form-label">Full Name</label>
-                        <input type="text" value="Chidi Okafor" class="form-input">
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Relationship</label>
-                        <select class="form-input">
-                            <option selected>Spouse</option>
-                            <option>Parent</option>
-                            <option>Sibling</option>
-                            <option>Friend</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Phone Number</label>
-                        <input type="tel" value="+234 802 345 6789" class="form-input">
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Alternative Phone</label>
-                        <input type="tel" value="+234 803 456 7890" class="form-input">
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Email Address</label>
-                        <input type="email" value="chidi.okafor@email.com" class="form-input">
-                    </div>
-                </div>
-
-                <div class="flex space-x-3 mt-6">
-                    <button class="btn-secondary close-modal">Cancel</button>
-                    <button class="btn-primary">Save Changes</button>
-                </div>
+                <button type="button" class="close-modal text-slate-400"><span class="material-symbols-outlined">close</span></button>
             </div>
+            <form th:action="@{/add-emergency-contact}" method="post">
+                <div class="modal-body space-y-3">
+                    <div class="notice notice-warn text-xs">
+                        <span class="material-symbols-outlined text-sm">emergency</span>
+                        This person will be contacted in case of emergency.
+                    </div>
+
+                    <input type="hidden" name="id" th:value="${employee.id}" />
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="form-group">
+                            <label class="info-label">Full name *</label>
+                            <input type="text"
+                                   name="emergencyContactName"
+                                   th:value="${employee.emergencyContact?.contactName}"
+                                   class="form-input"
+                                   placeholder="e.g. Chidi Okafor"
+                                   required>
+                        </div>
+                        <div class="form-group">
+                            <label class="info-label">Relationship *</label>
+                            <select name="emergencyRelationship" class="form-input" required>
+                                <option value="">Select relationship</option>
+                                <option th:selected="${employee.emergencyContact?.relationship == 'Spouse'}" value="Spouse">Spouse</option>
+                                <option th:selected="${employee.emergencyContact?.relationship == 'Parent'}" value="Parent">Parent</option>
+                                <option th:selected="${employee.emergencyContact?.relationship == 'Sibling'}" value="Sibling">Sibling</option>
+                                <option th:selected="${employee.emergencyContact?.relationship == 'Child'}" value="Child">Child</option>
+                                <option th:selected="${employee.emergencyContact?.relationship == 'Friend'}" value="Friend">Friend</option>
+                                <option th:selected="${employee.emergencyContact?.relationship == 'Other'}" value="Other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="info-label">Phone number *</label>
+                        <input type="tel"
+                               name="emergencyPhoneNumber"
+                               th:value="${employee.emergencyContact?.phoneNumber}"
+                               class="form-input"
+                               placeholder="+234 8XX XXX XXXX"
+                               required>
+                    </div>
+                    <div class="form-group">
+                        <label class="info-label">Alternative phone</label>
+                        <input type="tel"
+                               name="emergencyAlternativePhoneNumber"
+                               th:value="${employee.emergencyContact?.alternativePhoneNumber}"
+                               class="form-input"
+                               placeholder="+234 8XX XXX XXXX (optional)">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="edit-btn edit-btn-ghost close-modal">Cancel</button>
+                    <button type="submit" class="edit-btn edit-btn-primary">Save Contact</button>
+                </div>
+            </form>
         </div>
     </div>
 
-    <!-- Modal: Edit Bank Details -->
-    <div id="editBankModal" class="mobile-modal-overlay">
-        <div class="mobile-modal-container">
-            <div class="modal-swipe-indicator"></div>
-            <div class="p-4">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-bold text-gray-900 dark:text-white">Edit Bank Details</h3>
-                    <button class="close-modal text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                        <span class="material-icons-round">close</span>
-                    </button>
+    <!-- Edit Bank Modal -->
+    <div id="editBankModal" class="modal-overlay">
+        <div class="modal-container">
+            <div class="modal-header">
+                <div>
+                    <p class="modal-title">Bank Details</p>
+                    <p class="text-[0.65rem] text-slate-500">Managed by you</p>
                 </div>
-
-                <div class="space-y-4">
-                    <div class="form-group">
-                        <label class="form-label">Account Holder Name</label>
-                        <input type="text" value="Jane Okafor" class="form-input">
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Bank Name</label>
-                        <input type="text" value="First Bank of Nigeria" class="form-input">
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Account Number</label>
-                        <input type="text" value="**** **** 3456" class="form-input">
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Account Type</label>
-                        <select class="form-input">
-                            <option selected>Savings</option>
-                            <option>Current</option>
-                            <option>Domiciliary</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="flex space-x-3 mt-6">
-                    <button class="btn-secondary close-modal">Cancel</button>
-                    <button class="btn-primary">Save Changes</button>
-                </div>
+                <button class="close-modal text-slate-400"><span class="material-symbols-outlined">close</span></button>
             </div>
+            <form th:action="@{/update/bank-info}" method="post">
+                <div class="modal-body space-y-3">
+                    <div class="notice notice-warn text-xs">
+                        <span class="material-symbols-outlined text-sm">account_balance</span>
+                        Salary will be paid to this account. Ensure all details are accurate.
+                    </div>
+
+                    <input type="hidden" name="id" th:value="${employee.id}" />
+
+                    <div class="form-group">
+                        <label class="info-label">Account Name *</label>
+                        <input type="text"
+                               name="accountName"
+                               th:value="${not #lists.isEmpty(employee.bankDetails) ? employee.bankDetails[0].accountName : ''}"
+                               class="form-input"
+                               placeholder="Full name as on bank account"
+                               required>
+                    </div>
+                    <div class="form-group">
+                        <label class="info-label">Bank Name *</label>
+                        <input type="text"
+                               name="bankName"
+                               th:value="${not #lists.isEmpty(employee.bankDetails) ? employee.bankDetails[0].bankName : ''}"
+                               class="form-input"
+                               placeholder="e.g. First Bank"
+                               required>
+                    </div>
+                    <div class="form-group">
+                        <label class="info-label">Account Number *</label>
+                        <input type="text"
+                               name="accountNumber"
+                               th:value="${not #lists.isEmpty(employee.bankDetails) ? employee.bankDetails[0].accountNumber : ''}"
+                               class="form-input font-mono"
+                               placeholder="10-digit NUBAN"
+                               maxlength="10"
+                               required>
+                    </div>
+                    <div class="notice notice-info text-xs mt-2">
+                        <span class="material-symbols-outlined text-sm">security</span>
+                        Encrypted; only last 4 digits shown.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="edit-btn edit-btn-ghost close-modal">Cancel</button>
+                    <button type="submit" class="edit-btn edit-btn-primary">Save Bank Details</button>
+                </div>
+            </form>
         </div>
     </div>
 
+    <!-- JavaScript -->
     <script>
-        // ========== MOBILE MODAL CONTROL ==========
-        const modals = {
-            editPhoto: document.getElementById('editPhotoModal'),
-            editPersonalInfo: document.getElementById('editPersonalInfoModal'),
-            editEmployment: document.getElementById('editEmploymentModal'),
-            editEmergency: document.getElementById('editEmergencyModal'),
-            editBank: document.getElementById('editBankModal')
-        };
-
-        // Open modal
-        function openModal(modal) {
-            modal.classList.add('active');
-            document.body.style.overflow = 'hidden';
-        }
-
-        // Close modal
-        function closeModal(modal) {
-            modal.classList.remove('active');
-            document.body.style.overflow = 'auto';
-        }
-
-        // Attach open events to buttons
-        document.getElementById('editPhotoBtn').addEventListener('click', (e) => {
-            e.preventDefault();
-            openModal(modals.editPhoto);
-        });
-        document.getElementById('editPersonalInfoBtn').addEventListener('click', (e) => {
-            e.preventDefault();
-            openModal(modals.editPersonalInfo);
-        });
-        document.getElementById('editEmploymentBtn').addEventListener('click', (e) => {
-            e.preventDefault();
-            openModal(modals.editEmployment);
-        });
-        document.getElementById('editEmergencyBtn').addEventListener('click', (e) => {
-            e.preventDefault();
-            openModal(modals.editEmergency);
-        });
-        document.getElementById('editBankBtn').addEventListener('click', (e) => {
-            e.preventDefault();
-            openModal(modals.editBank);
-        });
-
-        // Close modal via close buttons
-        document.querySelectorAll('.close-modal').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const modal = e.target.closest('.mobile-modal-overlay');
-                if (modal) closeModal(modal);
-            });
-        });
-
-        // Close when clicking overlay (background)
-        Object.values(modals).forEach(modal => {
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
-                    closeModal(modal);
-                }
-            });
-        });
-
-        // Prevent closing when clicking inside modal container
-        document.querySelectorAll('.mobile-modal-container').forEach(container => {
-            container.addEventListener('click', (e) => e.stopPropagation());
-        });
-
-        // Touch gestures for modal dismissal
         (function() {
-            document.querySelectorAll('.mobile-modal-container').forEach(modalContainer => {
-                let startY = 0;
-                let currentY = 0;
-                let isDragging = false;
+          const modals = {
+            editPhoto: document.getElementById('editPhotoModal'),
+            editProfile: document.getElementById('editProfileModal'),
+            editPersonalInfo: document.getElementById('editPersonalInfoModal'),
+            editEmergency: document.getElementById('editEmergencyModal'),
+            editBank: document.getElementById('editBankModal'),
+          };
 
-                modalContainer.addEventListener('touchstart', (e) => {
-                    startY = e.touches[0].clientY;
-                    isDragging = true;
-                });
+          function openModal(modal) { modal.classList.add('active'); document.body.style.overflow = 'hidden'; }
+          function closeModal(modal) { modal.classList.remove('active'); document.body.style.overflow = ''; }
 
-                modalContainer.addEventListener('touchmove', (e) => {
-                    if (!isDragging) return;
-                    currentY = e.touches[0].clientY;
-                    const deltaY = currentY - startY;
+          document.getElementById('editPhotoBtn').addEventListener('click', () => openModal(modals.editPhoto));
+          document.getElementById('editProfileBtn').addEventListener('click', () => openModal(modals.editProfile));
+          document.getElementById('editPersonalInfoBtn').addEventListener('click', () => openModal(modals.editPersonalInfo));
+          document.getElementById('editEmergencyBtn').addEventListener('click', () => openModal(modals.editEmergency));
+          document.getElementById('editBankBtn').addEventListener('click', () => openModal(modals.editBank));
 
-                    if (deltaY > 0) {
-                        modalContainer.style.transform = `translateY(${deltaY}px)`;
-                    }
-                });
+          // Avatar placeholder also opens photo modal
+          const avatarPlaceholder = document.getElementById('avatarPlaceholder');
+          if (avatarPlaceholder) avatarPlaceholder.addEventListener('click', () => openModal(modals.editPhoto));
 
-                modalContainer.addEventListener('touchend', () => {
-                    if (!isDragging) return;
-                    isDragging = false;
+          document.querySelectorAll('.close-modal').forEach(btn => {
+            btn.addEventListener('click', e => { const modal = e.target.closest('.modal-overlay'); if(modal) closeModal(modal); });
+          });
 
-                    const deltaY = currentY - startY;
-                    if (deltaY > 100) {
-                        const modal = modalContainer.closest('.mobile-modal-overlay');
-                        closeModal(modal);
-                    }
-                    modalContainer.style.transform = '';
-                });
+          Object.values(modals).forEach(m => {
+            if(m) m.addEventListener('click', e => { if(e.target === m) closeModal(m); });
+          });
+
+          document.addEventListener('keydown', e => { if(e.key === 'Escape') Object.values(modals).forEach(m => closeModal(m)); });
+
+          // Avatar initials from rendered name
+          const nameEl = document.querySelector('h2');
+          const name = nameEl ? nameEl.textContent.trim() : 'JO';
+          const parts = name.trim().split(/\s+/);
+          const initials = parts.length >= 2
+            ? (parts[0][0] + parts[parts.length-1][0]).toUpperCase()
+            : (parts[0] ? parts[0][0].toUpperCase() : '?');
+          document.querySelectorAll('.avatar-initials').forEach(el => el.textContent = initials);
+
+          // Photo upload preview
+          const photoInput = document.getElementById('photoInput');
+          const modalPlaceholder = document.getElementById('modalAvatarPlaceholder');
+          const modalImage = document.getElementById('modalAvatarImage');
+          const avatarImage = document.getElementById('avatarImage');
+
+          if(photoInput) {
+            photoInput.addEventListener('change', function() {
+              const file = this.files[0];
+              if(!file) return;
+              const reader = new FileReader();
+              reader.onload = e => {
+                if(modalImage) { modalImage.src = e.target.result; modalImage.style.display = ''; }
+                if(modalPlaceholder) modalPlaceholder.style.display = 'none';
+                photoInput._src = e.target.result;
+              };
+              reader.readAsDataURL(file);
             });
+          }
+
+          document.getElementById('savePhotoBtn')?.addEventListener('click', () => {
+            const src = photoInput?._src;
+            if(!src) { alert('Please choose a photo first.'); return; }
+            if(avatarImage) { avatarImage.src = src; avatarImage.style.display = ''; }
+            if(avatarPlaceholder) avatarPlaceholder.style.display = 'none';
+            closeModal(modals.editPhoto);
+            if(modalImage) { modalImage.src = ''; modalImage.style.display = 'none'; }
+            if(modalPlaceholder) modalPlaceholder.style.display = '';
+            photoInput.value = '';
+            delete photoInput._src;
+          });
+
+          // Disable submit on form submission to prevent double-clicks
+          document.querySelectorAll('form[th\\:action]').forEach(form => {
+            form.addEventListener('submit', function() {
+              const btn = this.querySelector('button[type="submit"]');
+              if(btn) { btn.disabled = true; btn.classList.add('opacity-50', 'cursor-not-allowed'); }
+            });
+          });
         })();
     </script>
-
 </main>
 </body>
 </html>

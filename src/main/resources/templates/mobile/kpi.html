@@ -1,445 +1,860 @@
 <!DOCTYPE html>
-<html xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" xmlns:th="http://www.w3.org/1999/xhtml"
+<html xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" xmlns:th="http://www.thymeleaf.org"
       layout:decorate="layouts/mobileEmployeeLayout">
 <head>
     <meta charset="UTF-8">
-    <title>Performance | JustHR Mobile</title>
+    <title>KPI · My Appraisals</title>
+    <!-- Tailwind + fonts -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL@20..48,100..700,0..1&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              colors: {
+                primary: "#2463eb",
+                "background-light": "#f6f6f8",
+                "background-dark": "#111621",
+              },
+              fontFamily: { display: ["Inter"] },
+              borderRadius: { DEFAULT: "1rem", lg: "1.5rem", xl: "2rem", full: "9999px" },
+            }
+          }
+        }
+    </script>
     <style>
-        .kpi-card {
-            background-color: white;
-            border: 1px solid #e5e7eb;
-            border-radius: 1rem;
-            padding: 1rem;
-            margin-bottom: 1rem;
-            transition: all 0.2s ease;
+        * { -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'Inter', sans-serif; background-color: #f6f6f8; }
+        .dark body { background-color: #111621; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* badges */
+        .badge { padding:0.2rem 0.7rem; font-size:0.65rem; font-weight:600; border-radius:9999px; letter-spacing:0.02em; text-transform:uppercase; display:inline-flex; align-items:center; gap:0.2rem; }
+        .badge-success { background:#dcfce7; color:#15803d; }
+        .badge-warning { background:#fef3c7; color:#b45309; }
+        .badge-info    { background:#dbeafe; color:#1e40af; }
+        .badge-neutral { background:#f3f4f6; color:#4b5563; }
+        .badge-purple  { background:#f3e8ff; color:#7e22ce; }
+        .badge-orange  { background:#fff7ed; color:#c2410c; }
+        .dark .badge-success { background:#14532d; color:#86efac; }
+        .dark .badge-warning { background:#92400e; color:#fde68a; }
+        .dark .badge-info    { background:#1e3a8a; color:#bfdbfe; }
+        .dark .badge-purple  { background:#4c1d95; color:#d8b4fe; }
+        .dark .badge-orange  { background:#7c2d12; color:#fed7aa; }
+
+        /* cards - flat now */
+        .glass-card {
+          background: rgba(255,255,255,0.9);
+          backdrop-filter: blur(2px);
+          border: 1px solid rgba(255,255,255,0.3);
+        }
+        .dark .glass-card {
+          background: rgba(31,41,55,0.9);
+          border-color: rgba(55,65,81,0.5);
         }
 
-        .dark .kpi-card {
-            background-color: #1f2937;
-            border-color: #374151;
-        }
+        .progress-bar-purple { height:8px; border-radius:4px; overflow:hidden; background:#f3e8ff; }
+        .dark .progress-bar-purple { background:#4c1d95; }
+        .progress-fill-purple { height:100%; border-radius:4px; background:linear-gradient(90deg,#9333ea,#7c3aed); transition:width .3s; }
 
-        .kpi-card:active {
-            transform: scale(0.98);
-        }
+        .score-ring { width:72px; height:72px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:conic-gradient(#9333ea 0deg,#e5e7eb 0deg); transition:background .4s; flex-shrink:0; }
+        .score-ring-inner { width:54px; height:54px; border-radius:50%; background:white; display:flex; align-items:center; justify-content:center; flex-direction:column; }
+        .dark .score-ring-inner { background:#1f2937; }
 
-        .progress-bar {
-            height: 6px;
-            border-radius: 3px;
-            overflow: hidden;
-            background-color: #e5e7eb;
-        }
-
-        .dark .progress-bar {
-            background-color: #374151;
-        }
-
-        .progress-fill {
-            height: 100%;
-            border-radius: 3px;
-            transition: width 0.3s ease;
-        }
-
-        .score-circle {
-            width: 4rem;
-            height: 4rem;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-            color: white;
-            font-weight: bold;
-            font-size: 1.125rem;
-        }
-
-        .period-selector {
-            background-color: white;
-            border: 1px solid #e5e7eb;
-            border-radius: 0.75rem;
-            padding: 0.75rem;
-            margin-bottom: 1rem;
-        }
-
-        .dark .period-selector {
-            background-color: #1f2937;
-            border-color: #374151;
-        }
-
-        .period-chip {
-            padding: 0.5rem 1rem;
-            border-radius: 9999px;
-            font-size: 0.875rem;
-            font-weight: 500;
-            transition: all 0.2s ease;
-            white-space: nowrap;
-        }
-
-        .period-chip.active {
-            background-color: #2563eb;
-            color: white;
-        }
-
-        .period-chip:not(.active) {
-            background-color: #f3f4f6;
-            color: #6b7280;
-        }
-
-        .dark .period-chip:not(.active) {
-            background-color: #374151;
-            color: #d1d5db;
-        }
+        .step-connector { width:2px; height:2rem; background:#e5e7eb; margin:4px 0; }
+        .step-connector.done   { background:#22c55e; }
+        .step-connector.active { background:linear-gradient(#9333ea,#e5e7eb); }
+        .dark .step-connector  { background:#374151; }
 
         .history-item {
-            background-color: white;
-            border: 1px solid #e5e7eb;
-            border-radius: 0.75rem;
-            padding: 1rem;
-            margin-bottom: 0.75rem;
+          transition: background 0.15s;
+          -webkit-tap-highlight-color: rgba(0,0,0,0.05);
+        }
+        .history-item:active {
+          background: #f1f5f9;
+        }
+        .dark .history-item:active { background: #26334d; }
+
+        .sticky-header {
+          position: sticky; top:0; z-index:10;
+          background: rgba(246, 246, 248, 0.85);
+          backdrop-filter: blur(10px);
+          border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+        .dark .sticky-header {
+          background: rgba(17, 22, 33, 0.85);
+          border-bottom-color: rgba(255,255,255,0.05);
         }
 
-        .dark .history-item {
-            background-color: #1f2937;
-            border-color: #374151;
+        /* modal */
+        .modal-overlay {
+          position: fixed; inset:0; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center;
+          z-index:100; padding:1rem; opacity:0; visibility:hidden; transition:opacity 0.2s, visibility 0.2s;
+          backdrop-filter: blur(3px);
         }
+        .modal-overlay.active { opacity:1; visibility:visible; }
+        .modal-container {
+          max-width:40rem; width:100%; max-height:90vh; overflow-y:auto;
+          background:white; border-radius:1.5rem; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);
+          transform:scale(0.95); transition:transform 0.2s ease-out;
+        }
+        .dark .modal-container { background:#1f2937; border:1px solid #374151; }
+        .modal-overlay.active .modal-container { transform:scale(1); }
 
-        .kpi-detail-card {
-            background-color: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 0.75rem;
-            padding: 1rem;
-            margin-bottom: 0.75rem;
-        }
+        .btn-submit { display:inline-flex; align-items:center; gap:8px; padding:.6rem 1.5rem; background:linear-gradient(135deg,#9333ea,#7c3aed); color:white; border:none; border-radius:.625rem; font-size:.875rem; font-weight:600; cursor:pointer; box-shadow:0 4px 12px rgba(147,51,234,.35); transition: opacity 0.2s, transform 0.1s; }
+        .btn-submit:active { transform: scale(0.97); opacity:0.9; }
+        .btn-submit:disabled { opacity:.5; }
+        textarea.self-comment-input:focus { outline:none; border-color:#9333ea !important; box-shadow:0 0 0 3px rgba(147,51,234,.15); }
+        .char-counter { font-size:.7rem; color:#9ca3af; }
+        .char-counter.warn { color:#f59e0b; }
+        .char-counter.over { color:#ef4444; }
 
-        .dark .kpi-detail-card {
-            background-color: #1e293b;
-            border-color: #334155;
-        }
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
+        input[type="number"] { -moz-appearance:textfield; }
+
+        .line-clamp-2 { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
     </style>
 </head>
 <body>
-<main layout:fragment="content">
+<main class="flex-1 overflow-y-auto no-scrollbar px-5 pb-4 space-y-5" layout:fragment="content">
 
-    <!-- Period Selector -->
-    <div class="period-selector">
-        <h4 class="font-semibold text-gray-900 dark:text-white mb-3">Performance Period</h4>
-        <div class="flex space-x-2 overflow-x-auto pb-2">
-            <button class="period-chip active">March 2025</button>
-            <button class="period-chip">February 2025</button>
-            <button class="period-chip">January 2025</button>
-            <button class="period-chip">Q1 2025</button>
-            <button class="period-chip">Q4 2024</button>
+    <!-- page header with summary -->
+    <div class="flex items-center justify-between mt-2">
+        <div class="flex items-center gap-2">
+            <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center shadow-inner">
+                <span class="material-symbols-outlined text-blue-600 dark:text-blue-400">assignment_turned_in</span>
+            </div>
+            <div>
+                <h2 class="text-xl font-bold tracking-tight">My Appraisals</h2>
+                <p class="text-xs text-slate-500 dark:text-slate-400">
+                    <span th:text="${tasks != null ? tasks.size() : 0}">0</span> pending
+                    &nbsp;·&nbsp;
+                    <span th:text="${employeeAppraisals != null ? employeeAppraisals.size() : 0}">0</span> total
+                </p>
+            </div>
         </div>
     </div>
 
-    <!-- Overall Score Card -->
-    <div class="mobile-card p-4 mb-4 bg-gradient-to-r from-primary-50 to-blue-50 dark:from-gray-800 dark:to-gray-750">
-        <div class="flex items-center space-x-4">
-            <div class="score-circle">
-                84.5
+    <!-- ===== PENDING TASKS SECTION ===== -->
+
+    <!-- NEW empty state: mobile‑style icon + text, no card -->
+    <div th:if="${tasks == null or tasks.isEmpty()}"
+         class="flex flex-col items-center justify-center py-12 px-4 text-center">
+        <div class="w-20 h-20 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4">
+            <span class="material-symbols-outlined text-4xl text-slate-400 dark:text-slate-500">check_circle</span>
+        </div>
+        <p class="text-base font-semibold text-slate-700 dark:text-slate-200">No pending appraisal tasks</p>
+        <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">See your full appraisal history below.</p>
+    </div>
+
+    <!-- Container for pending tasks (only shown when tasks exist) -->
+    <div th:if="${tasks != null and !tasks.isEmpty()}"
+         class="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200 dark:border-slate-700">
+
+        <!-- heading inside the container -->
+        <div class="flex items-center gap-2 mb-4">
+            <span class="material-symbols-outlined text-purple-600 dark:text-purple-400">pending_actions</span>
+            <h3 class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Pending tasks</h3>
+            <span class="badge badge-purple" th:text="${tasks.size()} + ' task(s)'">0 tasks</span>
+        </div>
+
+        <!-- ── Task loop ── each task now flat, separated by borders -->
+        <div th:each="task, taskStat : ${tasks}"
+             th:with="
+               selfComplete=${task.variables['selfComplete']},
+               managerComplete=${task.variables['managerComplete']},
+               kpiScoreVar=${task.variables['kpiScore']},
+               appraisalIdVar=${task.variables['appraisalId']},
+               managerScoreVar=${task.variables['managerScore']},
+               managerCommentVar=${task.variables['managerComment']},
+               appraisal=${appraisalMap[task.variables['appraisalId']]},
+               processComplete=${appraisal != null and appraisal.managerScore != null}
+             "
+             class="py-5 border-b border-slate-100 dark:border-slate-700 last:border-b-0 space-y-4">
+
+            <!-- banner (kept as is, it's an inner element) -->
+            <div th:class="${selfComplete}
+                   ? 'flex items-center gap-3 bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800 rounded-xl p-3.5'
+                   : 'flex items-center gap-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-xl p-3.5'">
+                <div th:class="${selfComplete}
+                       ? 'w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center'
+                       : 'w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center'">
+                    <span th:class="${selfComplete}
+                            ? 'material-symbols-outlined text-green-600 dark:text-green-400'
+                            : 'material-symbols-outlined text-purple-600 dark:text-purple-400'"
+                          style="font-size:17px;"
+                          th:text="${selfComplete} ? 'check_circle' : 'edit_note'">edit_note</span>
+                </div>
+                <div class="flex-1">
+                    <p th:class="${selfComplete}
+                         ? 'text-sm font-semibold text-green-800 dark:text-green-300'
+                         : 'text-sm font-semibold text-purple-800 dark:text-purple-300'"
+                       th:text="${selfComplete} ? 'Self-review submitted — awaiting manager' : 'Action: complete self-review'">
+                    </p>
+                    <p th:class="${selfComplete}
+                         ? 'text-[0.6rem] text-green-600 dark:text-green-400'
+                         : 'text-[0.6rem] text-purple-600 dark:text-purple-400'">
+                        <span th:text="${task.taskName}">Self Appraisal</span>
+                        &nbsp;·&nbsp;
+                        <span th:text="${appraisal != null and appraisal.cycle != null} ? ${appraisal.cycle.name} : ${task.businessKey}">Q2 2026</span>
+                        &nbsp;·&nbsp; Opened:
+                        <span th:text="${#temporals.format(task.createdTime,'dd MMM yyyy')}"></span>
+                    </p>
+                </div>
+                <a th:if="${!selfComplete}"
+                   th:href="'#review-form-' + ${task.taskId}"
+                   class="text-xs font-semibold text-purple-700 dark:text-purple-300 underline underline-offset-2">form ↓</a>
             </div>
-            <div class="flex-1">
-                <h3 class="font-bold text-gray-900 dark:text-white">Overall KPI Score</h3>
-                <p class="text-sm text-gray-600 dark:text-gray-300">Weighted average of all KPIs</p>
-                <div class="flex items-center space-x-4 mt-2">
-                    <div class="text-center">
-                        <span class="text-xs text-gray-500 dark:text-gray-400">Target</span>
-                        <p class="font-semibold text-gray-900 dark:text-white">80.0</p>
+
+            <!-- score summary card (simplified background) -->
+            <div class="bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4 border border-slate-200 dark:border-slate-600">
+                <div class="flex items-center justify-between gap-2 flex-wrap">
+                    <div class="flex items-center gap-2">
+                        <div class="w-12 h-12 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center shadow-sm">
+                            <span class="text-base font-bold text-blue-600 dark:text-blue-400"
+                                  th:text="${appraisal != null and appraisal.kpiScore != null}
+                                           ? ${#numbers.formatDecimal(appraisal.kpiScore,1,2)}
+                                           : (${kpiScoreVar} ?: '—')">—</span>
+                        </div>
+                        <div>
+                            <p class="text-[0.6rem] text-slate-500 dark:text-slate-400">System KPI</p>
+                            <p class="text-[0.55rem] text-slate-400"
+                               th:text="'Cycle ' + (${appraisal != null and appraisal.cycle != null} ? ${appraisal.cycle.name} : ${task.businessKey})">Cycle</p>
+                        </div>
                     </div>
-                    <div class="text-center">
-                        <span class="text-xs text-gray-500 dark:text-gray-400">Status</span>
-                        <p class="font-semibold text-green-600 dark:text-green-400">Exceeds</p>
+                    <div class="flex gap-3">
+                        <div class="text-center">
+                            <span class="text-[0.5rem] text-slate-500">Self</span>
+                            <p th:if="${appraisal != null and appraisal.selfScore != null}"
+                               class="text-xs font-medium text-purple-600"
+                               th:text="${#numbers.formatDecimal(appraisal.selfScore,1,2)}"></p>
+                            <p th:if="${appraisal == null or appraisal.selfScore == null}"
+                               class="text-xs font-medium text-slate-400">—</p>
+                        </div>
+                        <div class="text-center">
+                            <span class="text-[0.5rem] text-slate-500">Mgr</span>
+                            <p th:if="${managerScoreVar != null}"
+                               class="text-xs font-medium text-green-600"
+                               th:text="${managerScoreVar}"></p>
+                            <p th:if="${managerScoreVar == null}"
+                               class="text-xs font-medium text-slate-400">—</p>
+                        </div>
+                        <div class="text-center">
+                            <span class="text-[0.5rem] text-slate-500">Final</span>
+                            <p th:if="${processComplete and appraisal.finalScore != null}"
+                               class="text-xs font-medium text-emerald-600"
+                               th:text="${#numbers.formatDecimal(appraisal.finalScore,1,2)}"></p>
+                            <p th:if="${!processComplete or appraisal == null or appraisal.finalScore == null}"
+                               class="text-xs font-medium text-slate-300">—</p>
+                        </div>
                     </div>
-                    <div class="text-center">
-                        <span class="text-xs text-gray-500 dark:text-gray-400">Rank</span>
-                        <p class="font-semibold text-gray-900 dark:text-white">Top 15%</p>
+                </div>
+            </div>
+
+            <!-- process timeline (unchanged) -->
+            <div class="space-y-2">
+                <!-- Step 1: Self Appraisal -->
+                <div class="flex items-start gap-3">
+                    <div class="flex flex-col items-center">
+                        <div th:if="${selfComplete}"
+                             class="w-7 h-7 rounded-full bg-green-100 dark:bg-green-900/30 border-2 border-green-500 flex items-center justify-center">
+                            <span class="material-symbols-outlined text-green-600" style="font-size:14px;">check</span>
+                        </div>
+                        <div th:if="${!selfComplete}"
+                             class="w-7 h-7 rounded-full bg-purple-100 dark:bg-purple-900/30 border-2 border-purple-400 flex items-center justify-center">
+                            <span class="material-symbols-outlined text-purple-600" style="font-size:14px;">person</span>
+                        </div>
+                        <div th:class="${selfComplete} ? 'step-connector done' : 'step-connector active'"></div>
+                    </div>
+                    <div class="pt-0.5 flex-1">
+                        <p class="text-xs font-medium">Self appraisal</p>
+                        <p class="text-[0.55rem] text-slate-500"
+                           th:text="${selfComplete} ? 'Submitted' : 'In progress'">In progress</p>
+                    </div>
+                </div>
+                <!-- Step 2: Manager Review -->
+                <div class="flex items-start gap-3">
+                    <div class="flex flex-col items-center">
+                        <div th:if="${processComplete}"
+                             class="w-7 h-7 rounded-full bg-green-100 dark:bg-green-900/30 border-2 border-green-500 flex items-center justify-center">
+                            <span class="material-symbols-outlined text-green-600" style="font-size:14px;">check</span>
+                        </div>
+                        <div th:if="${!processComplete and managerScoreVar != null}"
+                             class="w-7 h-7 rounded-full bg-blue-100 dark:bg-blue-900/30 border-2 border-blue-400 flex items-center justify-center">
+                            <span class="material-symbols-outlined text-blue-500" style="font-size:14px;">hourglass_bottom</span>
+                        </div>
+                        <div th:if="${selfComplete and managerScoreVar == null and !processComplete}"
+                             class="w-7 h-7 rounded-full bg-orange-100 dark:bg-orange-900/30 border-2 border-orange-400 flex items-center justify-center">
+                            <span class="material-symbols-outlined text-orange-500" style="font-size:14px;">hourglass_top</span>
+                        </div>
+                        <div th:if="${!selfComplete}"
+                             class="w-7 h-7 rounded-full bg-gray-100 dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center">
+                            <span class="material-symbols-outlined text-gray-400" style="font-size:14px;">manage_accounts</span>
+                        </div>
+                        <div th:class="${processComplete} ? 'step-connector done' : 'step-connector'"></div>
+                    </div>
+                    <div class="pt-0.5 flex-1">
+                        <p class="text-xs font-medium"
+                           th:class="${processComplete or managerScoreVar != null} ? 'text-xs font-medium' : 'text-xs font-medium text-slate-500'">
+                            Manager review</p>
+                        <p class="text-[0.55rem]">
+                            <span th:if="${processComplete}"                                               class="text-slate-500">Completed</span>
+                            <span th:if="${!processComplete and managerScoreVar != null}"                  class="text-blue-500">Finalising</span>
+                            <span th:if="${selfComplete and managerScoreVar == null and !processComplete}" class="text-orange-400">Awaiting manager</span>
+                            <span th:if="${!selfComplete}"                                                 class="text-slate-400">Waiting</span>
+                        </p>
+                        <div th:if="${managerCommentVar != null and !#strings.isEmpty(managerCommentVar.toString())}"
+                             class="mt-1 p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-100 dark:border-gray-700">
+                            <p class="text-[0.55rem] italic text-gray-600 dark:text-gray-300" th:text="${managerCommentVar}"></p>
+                        </div>
+                    </div>
+                </div>
+                <!-- Step 3: Final Score -->
+                <div class="flex items-start gap-3">
+                    <div class="flex flex-col items-center">
+                        <div th:if="${processComplete}"
+                             class="w-7 h-7 rounded-full bg-green-100 dark:bg-green-900/30 border-2 border-green-500 flex items-center justify-center">
+                            <span class="material-symbols-outlined text-green-600" style="font-size:14px;">emoji_events</span>
+                        </div>
+                        <div th:if="${!processComplete}"
+                             class="w-7 h-7 rounded-full bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 flex items-center justify-center">
+                            <span class="material-symbols-outlined text-gray-300 dark:text-gray-500" style="font-size:14px;">lock</span>
+                        </div>
+                    </div>
+                    <div class="pt-0.5 flex-1">
+                        <p class="text-xs font-medium"
+                           th:class="${processComplete} ? 'text-xs font-medium' : 'text-xs font-medium text-slate-400'">
+                            Final score</p>
+                        <p class="text-[0.55rem] text-slate-400"
+                           th:text="${processComplete} ? 'Finalised' : 'Locked'">Locked</p>
                     </div>
                 </div>
             </div>
+
+            <!-- pending banners (unchanged) -->
+            <div th:if="${!selfComplete}"
+                 class="flex items-start gap-2 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl p-3">
+                <span class="material-symbols-outlined text-orange-500 text-sm">info</span>
+                <div>
+                    <p class="text-xs font-semibold text-orange-800 dark:text-orange-300">Final score not yet available</p>
+                    <p class="text-[0.55rem] text-orange-600 dark:text-orange-400">Complete self-review below</p>
+                </div>
+            </div>
+
+            <div th:if="${selfComplete and !processComplete}"
+                 class="flex items-start gap-2 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl p-3">
+                <span class="material-symbols-outlined text-orange-500 text-sm">hourglass_top</span>
+                <div>
+                    <p class="text-xs font-semibold text-orange-800 dark:text-orange-300">Waiting for manager review</p>
+                    <p class="text-[0.55rem] text-orange-600 dark:text-orange-400">Final score available once manager completes their review.</p>
+                </div>
+            </div>
+
+            <div th:if="${processComplete}"
+                 class="p-4 bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800 rounded-xl">
+                <p class="text-[0.6rem] font-semibold text-green-700 dark:text-green-400 uppercase tracking-wider mb-3 flex items-center gap-1">
+                    <span class="material-symbols-outlined" style="font-size:13px;">emoji_events</span> Final Results
+                </p>
+                <div class="grid grid-cols-4 gap-2 mb-3">
+                    <div class="bg-white dark:bg-gray-800 p-2 rounded-lg text-center">
+                        <p class="text-[0.5rem] text-gray-400">KPI</p>
+                        <p class="text-xs font-bold text-blue-600"
+                           th:text="${appraisal.kpiScore != null ? #numbers.formatDecimal(appraisal.kpiScore,1,2) : '—'}"></p>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 p-2 rounded-lg text-center">
+                        <p class="text-[0.5rem] text-gray-400">Self</p>
+                        <p class="text-xs font-bold text-purple-600"
+                           th:text="${appraisal.selfScore != null ? #numbers.formatDecimal(appraisal.selfScore,1,2) : '—'}"></p>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 p-2 rounded-lg text-center">
+                        <p class="text-[0.5rem] text-gray-400">Mgr</p>
+                        <p class="text-xs font-bold text-green-600"
+                           th:text="${#numbers.formatDecimal(appraisal.managerScore,1,2)}"></p>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 p-2 rounded-lg text-center border-2 border-emerald-300 dark:border-emerald-700">
+                        <p class="text-[0.5rem] text-gray-400">Final</p>
+                        <p class="text-xs font-bold text-emerald-600"
+                           th:text="${appraisal.finalScore != null ? #numbers.formatDecimal(appraisal.finalScore,1,2) : '—'}"></p>
+                    </div>
+                </div>
+                <div th:if="${appraisal.managerComment != null and !#strings.isEmpty(appraisal.managerComment)}"
+                     class="p-2.5 bg-white dark:bg-gray-800 rounded-lg mb-2">
+                    <p class="text-[0.55rem] font-semibold text-gray-400 uppercase tracking-wider mb-1">Manager's Comment</p>
+                    <p class="text-xs italic text-gray-700 dark:text-gray-300" th:text="${appraisal.managerComment}"></p>
+                </div>
+                <div th:if="${appraisal.completedAt != null}" class="text-[0.5rem] text-gray-400 text-right">
+                    Completed: <span th:text="${#temporals.format(appraisal.completedAt,'dd MMM yyyy, HH:mm')}"></span>
+                </div>
+            </div>
+
+            <!-- self-review form (unchanged) -->
+            <div th:id="'review-form-' + ${task.taskId}"
+                 class="mt-2 border-t border-purple-100 dark:border-purple-900 pt-4 scroll-mt-6">
+                <p class="text-xs font-semibold text-purple-700 dark:text-purple-300 mb-3 flex items-center gap-1">
+                    <span class="material-symbols-outlined text-sm">edit_note</span> Your self‑review
+                </p>
+
+                <!-- READ-ONLY -->
+                <div th:if="${selfComplete}"
+                     class="flex items-start gap-3 bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800 rounded-xl p-3.5">
+                    <div class="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center flex-shrink-0">
+                        <span class="material-symbols-outlined text-green-600" style="font-size:17px;">check_circle</span>
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-sm font-semibold text-green-800 dark:text-green-300">Self-review submitted</p>
+                        <p class="text-[0.6rem] text-green-600 dark:text-green-400 mt-0.5">Your review is now with your manager.</p>
+                        <div class="flex gap-4 mt-2 flex-wrap">
+                            <div>
+                                <p class="text-[0.55rem] font-semibold text-gray-400 uppercase mb-0.5">Your Score</p>
+                                <p class="text-lg font-bold text-purple-600 dark:text-purple-400"
+                                   th:text="${appraisal != null and appraisal.selfScore != null}
+                                            ? ${#numbers.formatDecimal(appraisal.selfScore,1,2)} : '—'"></p>
+                            </div>
+                            <div th:if="${appraisal != null and appraisal.selfCompletedAt != null}">
+                                <p class="text-[0.55rem] font-semibold text-gray-400 uppercase mb-0.5">Submitted</p>
+                                <p class="text-xs text-gray-600 dark:text-gray-400"
+                                   th:text="${#temporals.format(appraisal.selfCompletedAt,'dd MMM yyyy, HH:mm')}"></p>
+                            </div>
+                        </div>
+                        <div th:if="${appraisal != null and appraisal.selfComment != null and !#strings.isEmpty(appraisal.selfComment)}"
+                             class="mt-2">
+                            <p class="text-[0.55rem] font-semibold text-gray-400 uppercase mb-1">Your Comment</p>
+                            <p class="text-xs text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 rounded-lg p-2 border border-gray-100 dark:border-gray-700"
+                               th:text="${appraisal.selfComment}"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FORM -->
+                <div th:if="${!selfComplete}">
+                    <form th:action="@{/employee/self-review}"
+                          method="post"
+                          th:id="'selfReviewForm_' + ${taskStat.index}"
+                          th:attr="data-kpi-score=${appraisal != null and appraisal.kpiScore != null}
+                                                  ? ${appraisal.kpiScore} : ${kpiScoreVar},
+                                   data-task-idx=${taskStat.index}">
+
+                        <input type="hidden" name="taskId" th:value="${task.taskId}">
+
+                        <div class="flex flex-col items-center sm:flex-row sm:items-center gap-4 mb-3">
+                            <div class="score-ring" th:id="'scoreRing_' + ${taskStat.index}">
+                                <div class="score-ring-inner">
+                                    <span class="text-lg font-bold text-purple-700 dark:text-purple-300 leading-none"
+                                          th:id="'ringValue_' + ${taskStat.index}">—</span>
+                                    <span class="text-[9px] text-gray-400">/100</span>
+                                </div>
+                            </div>
+                            <div class="w-full">
+                                <input type="number"
+                                       name="selfScore"
+                                       th:id="'selfScoreInput_' + ${taskStat.index}"
+                                       min="0" max="100" step="0.1" placeholder="Enter score"
+                                       th:attr="oninput='onScoreInput(this,' + ${taskStat.index} + ')'"
+                                       class="w-full px-4 py-3 bg-white dark:bg-slate-800 border-2 border-purple-200 dark:border-purple-700 rounded-xl text-gray-900 dark:text-white font-bold text-xl focus:border-purple-500 outline-none">
+                            </div>
+                        </div>
+                        <div class="progress-bar-purple mt-2 mb-1">
+                            <div class="progress-fill-purple" th:id="'selfScoreBar_' + ${taskStat.index}" style="width:0%"></div>
+                        </div>
+                        <div class="flex justify-between text-[0.5rem] text-gray-400 mb-3">
+                            <span>0</span>
+                            <span th:id="'scoreOutcomeLabel_' + ${taskStat.index}">—</span>
+                            <span>100</span>
+                        </div>
+
+                        <div class="p-3 bg-gray-50 dark:bg-slate-700/50 rounded-xl border border-gray-100 dark:border-gray-700 mb-3">
+                            <div class="flex items-center justify-between text-[0.6rem]">
+                                <span class="text-slate-500">KPI</span>
+                                <span class="font-bold text-blue-600"
+                                      th:text="${appraisal != null and appraisal.kpiScore != null}
+                                               ? ${#numbers.formatDecimal(appraisal.kpiScore,1,2)}
+                                               : (${kpiScoreVar} ?: '—')">—</span>
+                            </div>
+                            <div class="flex items-center justify-between text-[0.6rem] mt-1">
+                                <span class="text-slate-500">Your Score</span>
+                                <span class="font-bold text-purple-700 dark:text-purple-300"
+                                      th:id="'selfScoreDisplay_' + ${taskStat.index}">—</span>
+                            </div>
+                            <div class="flex items-center justify-between text-[0.6rem] mt-1 pt-1 border-t border-gray-200 dark:border-gray-600">
+                                <span class="text-slate-500">Difference</span>
+                                <span class="font-semibold" th:id="'scoreDiff_' + ${taskStat.index}">—</span>
+                            </div>
+                        </div>
+
+                        <div class="mt-3">
+                            <div class="flex items-center justify-between mb-2">
+                                <label class="text-[0.6rem] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Comment</label>
+                                <span class="char-counter" th:id="'charCounter_' + ${taskStat.index}">0 / 2000</span>
+                            </div>
+                            <textarea name="selfComment"
+                                      maxlength="2000" rows="4"
+                                      th:id="'selfComment_' + ${taskStat.index}"
+                                      th:attr="oninput='onCommentInput(this,' + ${taskStat.index} + ')'"
+                                      placeholder="Describe your performance… Achievements, challenges, improvements…"
+                                      class="self-comment-input w-full px-4 py-3 bg-white dark:bg-slate-800 border-2 border-purple-200 dark:border-purple-700 rounded-xl text-sm placeholder-gray-400 resize-none"></textarea>
+                            <div class="flex flex-wrap gap-2 mt-2">
+                                <button type="button"
+                                        th:attr="onclick='appendPrompt(\'I exceeded my target on \',' + ${taskStat.index} + ')'"
+                                        class="text-[0.55rem] px-2 py-1 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded-full border border-purple-200">+ Exceeded</button>
+                                <button type="button"
+                                        th:attr="onclick='appendPrompt(\'I faced challenges with \',' + ${taskStat.index} + ')'"
+                                        class="text-[0.55rem] px-2 py-1 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded-full border border-purple-200">+ Challenge</button>
+                                <button type="button"
+                                        th:attr="onclick='appendPrompt(\'Next period, I plan to improve \',' + ${taskStat.index} + ')'"
+                                        class="text-[0.55rem] px-2 py-1 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded-full border border-purple-200">+ Improvement</button>
+                            </div>
+                        </div>
+
+                        <div th:id="'validationMsg_' + ${taskStat.index}"
+                             class="hidden mt-3 flex items-center gap-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-2.5">
+                            <span class="material-symbols-outlined text-base">error_outline</span>
+                            <span th:id="'validationText_' + ${taskStat.index}"></span>
+                        </div>
+
+                        <div class="flex items-center justify-between gap-3 mt-5 pt-3 border-t border-purple-100 dark:border-purple-900">
+                            <p class="text-[0.55rem] text-slate-500 flex items-center gap-1">
+                                <span class="material-symbols-outlined text-xs">info</span> Visible to manager
+                            </p>
+                            <div class="flex gap-2">
+                                <button type="button"
+                                        th:attr="onclick='clearForm(' + ${taskStat.index} + ')'"
+                                        class="px-4 py-2 text-sm text-slate-600 dark:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 active:scale-95 transition">Clear</button>
+                                <button type="button"
+                                        th:id="'submitBtn_' + ${taskStat.index}"
+                                        th:attr="onclick='submitSelfReview(' + ${taskStat.index} + ')'"
+                                        class="btn-submit text-sm px-5 py-2">
+                                    <span class="material-symbols-outlined text-base">send</span> Submit
+                                </button>
+                            </div>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- Individual KPIs -->
-    <div class="space-y-3 mb-4">
-        <!-- Productivity KPI -->
-        <div class="kpi-detail-card">
-            <div class="flex items-center justify-between mb-2">
-                <div class="flex items-center space-x-2">
-                    <span class="font-medium text-gray-900 dark:text-white">Productivity</span>
-                    <span class="badge badge-info text-xs">50% weight</span>
-                </div>
-                <span class="text-lg font-bold text-gray-900 dark:text-white">92%</span>
-            </div>
-            <div class="progress-bar mb-2">
-                <div class="progress-fill bg-primary-600" style="width: 92%"></div>
-            </div>
-            <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-2">
-                <span>Score: 92/100</span>
-                <span>Target: 80%</span>
-                <span class="text-green-600 font-medium">+12% above target</span>
-            </div>
-            <p class="text-xs text-gray-500 dark:text-gray-400 flex items-center">
-                <span class="material-icons-round text-xs mr-1">info</span>
-                Measured by tasks completed vs. goal
-            </p>
-        </div>
 
-        <!-- Attendance KPI -->
-        <div class="kpi-detail-card">
-            <div class="flex items-center justify-between mb-2">
-                <div class="flex items-center space-x-2">
-                    <span class="font-medium text-gray-900 dark:text-white">Attendance</span>
-                    <span class="badge badge-info text-xs">30% weight</span>
-                </div>
-                <span class="text-lg font-bold text-gray-900 dark:text-white">90%</span>
-            </div>
-            <div class="progress-bar mb-2">
-                <div class="progress-fill bg-green-600" style="width: 90%"></div>
-            </div>
-            <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-2">
-                <span>Score: 90/100</span>
-                <span>Target: 95%</span>
-                <span class="text-yellow-600 font-medium">-5% below target</span>
-            </div>
-            <p class="text-xs text-gray-500 dark:text-gray-400 flex items-center">
-                <span class="material-icons-round text-xs mr-1">info</span>
-                Attendance rate (excluding approved leave)
-            </p>
-        </div>
-
-        <!-- Quality KPI -->
-        <div class="kpi-detail-card">
-            <div class="flex items-center justify-between mb-2">
-                <div class="flex items-center space-x-2">
-                    <span class="font-medium text-gray-900 dark:text-white">Quality</span>
-                    <span class="badge badge-info text-xs">20% weight</span>
-                </div>
-                <span class="text-lg font-bold text-gray-900 dark:text-white">72%</span>
-            </div>
-            <div class="progress-bar mb-2">
-                <div class="progress-fill bg-yellow-600" style="width: 72%"></div>
-            </div>
-            <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-2">
-                <span>Score: 72/100</span>
-                <span>Target: 85%</span>
-                <span class="text-red-600 font-medium">-13% below target</span>
-            </div>
-            <p class="text-xs text-gray-500 dark:text-gray-400 flex items-center">
-                <span class="material-icons-round text-xs mr-1">info</span>
-                Error rate & customer feedback score
-            </p>
-        </div>
-
-        <!-- Innovation KPI -->
-        <div class="kpi-detail-card opacity-70">
-            <div class="flex items-center justify-between mb-2">
-                <div class="flex items-center space-x-2">
-                    <span class="font-medium text-gray-900 dark:text-white">Innovation</span>
-                    <span class="badge badge-neutral text-xs">10% weight</span>
-                </div>
-                <span class="text-lg font-bold text-gray-500 dark:text-gray-400">—</span>
-            </div>
-            <div class="progress-bar mb-2 bg-gray-200 dark:bg-gray-700">
-                <div class="progress-fill bg-gray-400" style="width: 0%"></div>
-            </div>
-            <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-2">
-                <span>No measurement yet</span>
-                <span>Target: 5 ideas</span>
-            </div>
-            <p class="text-xs text-gray-500 dark:text-gray-400 flex items-center">
-                <span class="material-icons-round text-xs mr-1">hourglass_empty</span>
-                Pending evaluation at end of quarter
-            </p>
-        </div>
-    </div>
-
-    <!-- KPI Categories Overview -->
-    <div class="mobile-card p-4 mb-4">
-        <h4 class="font-bold text-gray-900 dark:text-white mb-3">KPI Categories</h4>
-        <div class="space-y-3">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center">
-                    <span class="w-3 h-3 bg-primary-600 rounded-full mr-3"></span>
-                    <span class="text-sm font-medium">Productivity</span>
-                </div>
-                <span class="text-xs text-gray-500 dark:text-gray-400">1 KPI</span>
-            </div>
-            <div class="flex items-center justify-between">
-                <div class="flex items-center">
-                    <span class="w-3 h-3 bg-green-600 rounded-full mr-3"></span>
-                    <span class="text-sm font-medium">Attendance</span>
-                </div>
-                <span class="text-xs text-gray-500 dark:text-gray-400">1 KPI</span>
-            </div>
-            <div class="flex items-center justify-between">
-                <div class="flex items-center">
-                    <span class="w-3 h-3 bg-yellow-600 rounded-full mr-3"></span>
-                    <span class="text-sm font-medium">Quality</span>
-                </div>
-                <span class="text-xs text-gray-500 dark:text-gray-400">1 KPI</span>
-            </div>
-            <div class="flex items-center justify-between">
-                <div class="flex items-center">
-                    <span class="w-3 h-3 bg-purple-600 rounded-full mr-3"></span>
-                    <span class="text-sm font-medium">Innovation</span>
-                </div>
-                <span class="text-xs text-gray-500 dark:text-gray-400">1 KPI</span>
-            </div>
-        </div>
-    </div>
-
-    <!-- Department Benchmark -->
-    <div class="mobile-card p-4 mb-4">
-        <h4 class="font-bold text-gray-900 dark:text-white mb-3">Department Benchmark</h4>
+    <!-- ===== APPRAISAL HISTORY SECTION ===== (flat card, no shadow) -->
+    <div th:if="${employeeAppraisals != null and !employeeAppraisals.isEmpty()}"
+         class="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200 dark:border-slate-700">
         <div class="flex items-center justify-between mb-3">
-            <span class="text-sm text-gray-600 dark:text-gray-300">Marketing Average</span>
-            <span class="text-xl font-bold text-gray-900 dark:text-white">81.2</span>
-        </div>
-        <div class="flex items-center justify-between text-sm mb-3">
-            <span class="text-gray-500">Your score</span>
-            <span class="font-medium text-green-600">+3.3 above dept</span>
-        </div>
-        <div class="pt-3 border-t border-gray-200 dark:border-gray-700">
-            <div class="flex items-center justify-between text-sm">
-                <span class="text-gray-500">Company average</span>
-                <span class="font-medium text-gray-900 dark:text-white">78.5</span>
+            <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary">history</span>
+                <h3 class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">History</h3>
+                <span class="badge badge-info" th:text="${employeeAppraisals.size()} + ' record(s)'">0</span>
             </div>
         </div>
-    </div>
 
-    <!-- Performance History -->
-    <div class="mobile-card p-4 mb-4">
-        <div class="flex items-center justify-between mb-3">
-            <h4 class="font-bold text-gray-900 dark:text-white">Performance History</h4>
-            <a href="#" class="text-primary-600 hover:text-primary-700 text-sm font-medium">View All</a>
-        </div>
-
-        <div class="space-y-3">
-            <!-- March 2025 -->
-            <div class="history-item">
-                <div class="flex items-center justify-between mb-2">
-                    <span class="font-medium text-gray-900 dark:text-white">March 2025</span>
-                    <div class="flex items-center space-x-2">
-                        <span class="text-lg font-bold text-gray-900 dark:text-white">84.5</span>
-                        <span class="badge badge-success">Exceeds</span>
+        <!-- history list (flat, border separator) -->
+        <div class="space-y-0">
+            <div th:each="appraisal : ${employeeAppraisals}"
+                 th:with="isComplete=${appraisal.managerScore != null}"
+                 th:attr="
+                   data-cycle=${appraisal.cycle != null ? appraisal.cycle.name : 'Appraisal #' + appraisal.id},
+                   data-kpi=${appraisal.kpiScore != null ? #numbers.formatDecimal(appraisal.kpiScore,1,2) : '—'},
+                   data-self=${appraisal.selfScore != null ? #numbers.formatDecimal(appraisal.selfScore,1,2) : '—'},
+                   data-manager=${isComplete ? #numbers.formatDecimal(appraisal.managerScore,1,2) : '—'},
+                   data-final=${isComplete and appraisal.finalScore != null ? #numbers.formatDecimal(appraisal.finalScore,1,2) : '—'},
+                   data-status=${appraisal.status != null ? appraisal.status.name() : ''},
+                   data-outcome=${isComplete and appraisal.outcome != null ? appraisal.outcome.name() : ''},
+                   data-manager-comment=${isComplete and appraisal.managerComment != null ? appraisal.managerComment : ''},
+                   data-self-comment=${appraisal.selfComment != null ? appraisal.selfComment : ''},
+                   data-self-date=${appraisal.selfCompletedAt != null ? #temporals.format(appraisal.selfCompletedAt,'dd MMM yyyy') : ''},
+                   data-completed-date=${isComplete and appraisal.completedAt != null ? #temporals.format(appraisal.completedAt,'dd MMM yyyy') : ''}
+                 "
+                 class="history-item flex items-center justify-between py-3 border-b border-slate-100 dark:border-slate-700 last:border-b-0 cursor-pointer"
+                 onclick="openHistoryModal(this)">
+                <div>
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="text-sm font-semibold"
+                              th:text="${appraisal.cycle != null} ? ${appraisal.cycle.name} : 'Appraisal #' + ${appraisal.id}">Cycle</span>
+                        <!-- Status badge -->
+                        <span th:if="${appraisal.status != null}" th:switch="${appraisal.status.name()}">
+                            <span th:case="'COMPLETED'"   class="badge badge-success text-[0.55rem]" th:text="${appraisal.status}"></span>
+                            <span th:case="'IN_PROGRESS'" class="badge badge-warning text-[0.55rem]" th:text="${appraisal.status}"></span>
+                            <span th:case="'PENDING'"     class="badge badge-neutral text-[0.55rem]" th:text="${appraisal.status}"></span>
+                            <span th:case="*"             class="badge badge-neutral text-[0.55rem]" th:text="${appraisal.status}"></span>
+                        </span>
+                        <!-- Outcome badge -->
+                        <span th:if="${isComplete and appraisal.outcome != null}" th:switch="${appraisal.outcome.name()}">
+                            <span th:case="'EXCEEDS_EXPECTATION'" class="badge badge-success text-[0.55rem]" th:text="${appraisal.outcome}"></span>
+                            <span th:case="'MEETS_EXPECTATION'"   class="badge badge-info text-[0.55rem]"    th:text="${appraisal.outcome}"></span>
+                            <span th:case="'NEEDS_IMPROVEMENT'"   class="badge badge-warning text-[0.55rem]" th:text="${appraisal.outcome}"></span>
+                            <span th:case="*"                     class="badge badge-neutral text-[0.55rem]" th:text="${appraisal.outcome}"></span>
+                        </span>
+                    </div>
+                    <div class="flex items-center gap-3 text-xs">
+                        <span>KPI: <span th:text="${appraisal.kpiScore != null ? #numbers.formatDecimal(appraisal.kpiScore,1,2) : '—'}">—</span></span>
+                        <span th:if="${isComplete and appraisal.finalScore != null}"
+                              class="text-primary font-medium">
+                            Final: <span th:text="${#numbers.formatDecimal(appraisal.finalScore,1,2)}">—</span>
+                        </span>
+                        <span th:if="${!isComplete and appraisal.selfScore != null}"
+                              class="text-slate-400">
+                            Self: <span th:text="${#numbers.formatDecimal(appraisal.selfScore,1,2)}">—</span>
+                        </span>
+                        <span th:if="${!isComplete}" class="badge badge-orange">Awaiting</span>
                     </div>
                 </div>
-                <div class="grid grid-cols-4 gap-2 text-xs">
-                    <div class="text-center">
-                        <span class="text-gray-500">Productivity</span>
-                        <p class="font-medium">92</p>
-                    </div>
-                    <div class="text-center">
-                        <span class="text-gray-500">Attendance</span>
-                        <p class="font-medium">90</p>
-                    </div>
-                    <div class="text-center">
-                        <span class="text-gray-500">Quality</span>
-                        <p class="font-medium">72</p>
-                    </div>
-                    <div class="text-center">
-                        <span class="text-gray-500">Innovation</span>
-                        <p class="font-medium text-gray-400">—</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- February 2025 -->
-            <div class="history-item">
-                <div class="flex items-center justify-between mb-2">
-                    <span class="font-medium text-gray-900 dark:text-white">February 2025</span>
-                    <div class="flex items-center space-x-2">
-                        <span class="text-lg font-bold text-gray-900 dark:text-white">85.0</span>
-                        <span class="badge badge-success">Exceeds</span>
-                    </div>
-                </div>
-                <div class="grid grid-cols-4 gap-2 text-xs">
-                    <div class="text-center">
-                        <span class="text-gray-500">Productivity</span>
-                        <p class="font-medium">88</p>
-                    </div>
-                    <div class="text-center">
-                        <span class="text-gray-500">Attendance</span>
-                        <p class="font-medium">92</p>
-                    </div>
-                    <div class="text-center">
-                        <span class="text-gray-500">Quality</span>
-                        <p class="font-medium">75</p>
-                    </div>
-                    <div class="text-center">
-                        <span class="text-gray-500">Innovation</span>
-                        <p class="font-medium text-gray-400">—</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- January 2025 -->
-            <div class="history-item">
-                <div class="flex items-center justify-between mb-2">
-                    <span class="font-medium text-gray-900 dark:text-white">January 2025</span>
-                    <div class="flex items-center space-x-2">
-                        <span class="text-lg font-bold text-gray-900 dark:text-white">81.8</span>
-                        <span class="badge badge-warning">Meets</span>
-                    </div>
-                </div>
-                <div class="grid grid-cols-4 gap-2 text-xs">
-                    <div class="text-center">
-                        <span class="text-gray-500">Productivity</span>
-                        <p class="font-medium">85</p>
-                    </div>
-                    <div class="text-center">
-                        <span class="text-gray-500">Attendance</span>
-                        <p class="font-medium">88</p>
-                    </div>
-                    <div class="text-center">
-                        <span class="text-gray-500">Quality</span>
-                        <p class="font-medium">70</p>
-                    </div>
-                    <div class="text-center">
-                        <span class="text-gray-500">Innovation</span>
-                        <p class="font-medium text-gray-400">—</p>
-                    </div>
-                </div>
+                <span class="material-symbols-outlined text-slate-400">chevron_right</span>
             </div>
         </div>
     </div>
 
-    <!-- How KPIs are Calculated -->
-    <div class="mobile-card p-4 mb-4">
-        <h4 class="font-bold text-gray-900 dark:text-white mb-3">How KPIs are Calculated</h4>
-        <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
-            Your overall score is a weighted average of all assigned KPIs. Each KPI is normalized to a score out of 100 based on actual vs. target.
-        </p>
-        <div class="space-y-2 text-sm">
-            <div class="flex items-start">
-                <span class="material-icons-round text-green-600 text-lg mr-2 mt-0.5">check_circle</span>
-                <span class="text-gray-600 dark:text-gray-400">Scores above 100 are capped at 100</span>
+    <!-- footer note -->
+    <div class="text-center text-[0.55rem] text-slate-400 dark:text-slate-500 py-2">
+        <span class="material-symbols-outlined text-[0.6rem] align-middle">lock</span> KPI data managed by HR
+    </div>
+
+
+    <!-- ── Appraisal detail modal (unchanged) ── -->
+    <div id="appraisalModal" class="modal-overlay">
+        <div class="modal-container p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary">assignment</span>
+                    <span id="modalCycle">—</span>
+                </h3>
+                <button onclick="closeModal('appraisalModal')" class="p-1 -mr-1 text-gray-400 hover:text-gray-600">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
             </div>
-            <div class="flex items-start">
-                <span class="material-icons-round text-blue-600 text-lg mr-2 mt-0.5">timeline</span>
-                <span class="text-gray-600 dark:text-gray-400">KPIs without measurement are excluded</span>
+
+            <div class="flex justify-between items-center mb-4">
+                <span id="modalStatusBadge" class="badge badge-neutral">—</span>
+                <span id="modalCompletedDate" class="text-xs text-slate-500"></span>
             </div>
-            <div class="flex items-start">
-                <span class="material-icons-round text-orange-600 text-lg mr-2 mt-0.5">update</span>
-                <span class="text-gray-600 dark:text-gray-400">Scores are updated monthly by HR</span>
+
+            <div class="grid grid-cols-4 gap-2 mb-4">
+                <div class="bg-blue-50 dark:bg-blue-900/10 p-3 rounded-xl text-center">
+                    <span class="text-[0.55rem] text-slate-500">KPI</span>
+                    <p class="text-base font-bold text-blue-600" id="modalKpi">—</p>
+                </div>
+                <div class="bg-purple-50 dark:bg-purple-900/10 p-3 rounded-xl text-center">
+                    <span class="text-[0.55rem] text-slate-500">Self</span>
+                    <p class="text-base font-bold text-purple-600" id="modalSelf">—</p>
+                </div>
+                <div class="bg-green-50 dark:bg-green-900/10 p-3 rounded-xl text-center">
+                    <span class="text-[0.55rem] text-slate-500">Manager</span>
+                    <p class="text-base font-bold text-green-600" id="modalManager">—</p>
+                </div>
+                <div class="bg-emerald-50 dark:bg-emerald-900/10 p-3 rounded-xl text-center border-2 border-emerald-200">
+                    <span class="text-[0.55rem] text-slate-500">Final</span>
+                    <p class="text-base font-bold text-emerald-600" id="modalFinal">—</p>
+                </div>
+            </div>
+
+            <div id="modalManagerCommentWrap" class="mb-4 p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl hidden">
+                <p class="text-[0.6rem] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Manager comment</p>
+                <p class="text-sm italic" id="modalManagerComment"></p>
+            </div>
+
+            <div id="modalSelfCommentWrap" class="mb-4 p-3 bg-purple-50 dark:bg-purple-900/10 rounded-xl hidden">
+                <p class="text-[0.6rem] font-semibold text-slate-500 uppercase tracking-wider mb-1">Your comment</p>
+                <p class="text-sm" id="modalSelfComment"></p>
+            </div>
+
+            <div class="border-t border-slate-200 dark:border-slate-700 pt-3 text-xs text-slate-500 flex justify-between">
+                <span id="modalSelfDate"></span>
+                <span id="modalFinalDate"></span>
+            </div>
+
+            <div class="flex justify-end gap-3 mt-5">
+                <button class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-xs font-medium flex items-center gap-1 hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-95"
+                        onclick="window.print()">
+                    <span class="material-symbols-outlined text-sm">print</span> Print
+                </button>
             </div>
         </div>
     </div>
 
-    <!-- Help Text -->
-    <div class="text-center text-xs text-gray-500 dark:text-gray-400 mb-6">
-        <span class="material-icons-round text-xs align-text-bottom mr-1">lock</span>
-        KPI data is provided by HR. For questions, contact your manager or HR representative.
-    </div>
+    <!-- modal control + form scripts (unchanged) -->
+    <script th:inline="javascript">
 
-    <script>
-        // Period selector functionality
-        document.querySelectorAll('.period-chip').forEach(chip => {
-            chip.addEventListener('click', function() {
-                document.querySelectorAll('.period-chip').forEach(c => c.classList.remove('active'));
-                this.classList.add('active');
-            });
+        /* ── Modal ── */
+        function openModal(id) {
+            document.getElementById(id).classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+            document.body.style.overflow = 'auto';
+        }
+        document.querySelectorAll('.modal-overlay').forEach(modal => {
+            modal.addEventListener('click', e => { if (e.target === modal) closeModal(modal.id); });
         });
+
+        function openHistoryModal(el) {
+            const d = el.dataset;
+
+            document.getElementById('modalCycle').textContent   = d.cycle   || '—';
+            document.getElementById('modalKpi').textContent     = d.kpi     || '—';
+            document.getElementById('modalSelf').textContent    = d.self    || '—';
+            document.getElementById('modalManager').textContent = d.manager || '—';
+            document.getElementById('modalFinal').textContent   = d.final   || '—';
+
+            const statusMap = {
+                COMPLETED:   ['badge-success', 'Completed'],
+                IN_PROGRESS: ['badge-warning', 'In Progress'],
+                PENDING:     ['badge-neutral', 'Pending'],
+            };
+            const sb = document.getElementById('modalStatusBadge');
+            const [cls, label] = statusMap[d.status] || ['badge-neutral', d.status || '—'];
+            sb.className = 'badge ' + cls;
+            sb.textContent = label;
+
+            const outcomeMap = {
+                EXCEEDS_EXPECTATION: ['badge-success', 'Exceeds'],
+                MEETS_EXPECTATION:   ['badge-info',    'Meets'],
+                NEEDS_IMPROVEMENT:   ['badge-warning', 'Needs Improvement'],
+            };
+            let outcomeEl = document.getElementById('modalOutcomeBadge');
+            if (!outcomeEl) {
+                outcomeEl = document.createElement('span');
+                outcomeEl.id = 'modalOutcomeBadge';
+                sb.parentNode.insertBefore(outcomeEl, sb.nextSibling);
+            }
+            if (d.outcome && outcomeMap[d.outcome]) {
+                const [oCls, oLabel] = outcomeMap[d.outcome];
+                outcomeEl.className = 'badge ' + oCls + ' ml-1';
+                outcomeEl.textContent = oLabel;
+            } else {
+                outcomeEl.className = 'hidden';
+            }
+
+            document.getElementById('modalCompletedDate').textContent = d.completedDate ? 'Finalised ' + d.completedDate : '';
+            document.getElementById('modalSelfDate').textContent      = d.selfDate      ? 'Self: '     + d.selfDate      : '';
+            document.getElementById('modalFinalDate').textContent     = d.completedDate ? 'Completed: '+ d.completedDate : '';
+
+            const mcWrap = document.getElementById('modalManagerCommentWrap');
+            if (d.managerComment) {
+                document.getElementById('modalManagerComment').textContent = d.managerComment;
+                mcWrap.classList.remove('hidden');
+            } else {
+                mcWrap.classList.add('hidden');
+            }
+
+            const scWrap = document.getElementById('modalSelfCommentWrap');
+            if (d.selfComment) {
+                document.getElementById('modalSelfComment').textContent = d.selfComment;
+                scWrap.classList.remove('hidden');
+            } else {
+                scWrap.classList.add('hidden');
+            }
+
+            openModal('appraisalModal');
+        }
+
+        function getKpiScore(idx) {
+            const form = document.getElementById('selfReviewForm_' + idx);
+            return form ? parseFloat(form.dataset.kpiScore) || 0 : 0;
+        }
+
+        function onScoreInput(input, idx) {
+            const val = input.value;
+            const n   = parseFloat(val);
+            const KPI = getKpiScore(idx);
+            const bar      = document.getElementById('selfScoreBar_'      + idx);
+            const ring     = document.getElementById('scoreRing_'         + idx);
+            const ringVal  = document.getElementById('ringValue_'         + idx);
+            const selfDisp = document.getElementById('selfScoreDisplay_'  + idx);
+            const diff     = document.getElementById('scoreDiff_'         + idx);
+            const label    = document.getElementById('scoreOutcomeLabel_' + idx);
+
+            if (isNaN(n) || val === '') {
+                bar.style.width = '0%';
+                ring.style.background = 'conic-gradient(#9333ea 0deg,#e5e7eb 0deg)';
+                ringVal.textContent = '—';
+                if (selfDisp) selfDisp.textContent = '—';
+                if (diff) { diff.textContent = '—'; diff.className = 'font-semibold text-gray-500'; }
+                label.textContent = '—';
+                return;
+            }
+            const c   = Math.min(Math.max(n, 0), 100);
+            const deg = (c / 100) * 360;
+            bar.style.width = c + '%';
+            ring.style.background = `conic-gradient(#9333ea ${deg}deg,#e5e7eb ${deg}deg)`;
+            ringVal.textContent = c.toFixed(1);
+            if (selfDisp) selfDisp.textContent = c.toFixed(1);
+
+            if (diff) {
+                const delta = (c - KPI).toFixed(1);
+                if      (delta > 0) { diff.textContent = '+' + delta; diff.className = 'font-semibold text-green-600'; }
+                else if (delta < 0) { diff.textContent =       delta; diff.className = 'font-semibold text-red-500';   }
+                else                { diff.textContent = '0.0';       diff.className = 'font-semibold text-gray-500';  }
+            }
+
+            label.textContent = c >= 80 ? 'Exceeds' : c >= 60 ? 'Meets' : c >= 40 ? 'Needs Improvement' : 'Unsatisfactory';
+        }
+
+        function onCommentInput(el, idx) {
+            const len = el.value.length;
+            const c   = document.getElementById('charCounter_' + idx);
+            c.textContent = len + ' / 2000';
+            c.className = 'char-counter' + (len >= 2000 ? ' over' : len >= 1800 ? ' warn' : '');
+        }
+
+        function appendPrompt(text, idx) {
+            const ta  = document.getElementById('selfComment_' + idx);
+            const sep = ta.value.length > 0 && !ta.value.endsWith('\n') ? '\n' : '';
+            ta.value += sep + text;
+            ta.focus();
+            onCommentInput(ta, idx);
+        }
+
+        function showError(idx, msg) {
+            const el = document.getElementById('validationMsg_' + idx);
+            document.getElementById('validationText_' + idx).textContent = msg;
+            el.classList.remove('hidden'); el.classList.add('flex');
+        }
+        function hideError(idx) {
+            const el = document.getElementById('validationMsg_' + idx);
+            el.classList.add('hidden'); el.classList.remove('flex');
+        }
+
+        function submitSelfReview(idx) {
+            hideError(idx);
+            const scoreInput = document.getElementById('selfScoreInput_' + idx);
+            const commentEl  = document.getElementById('selfComment_'    + idx);
+            const score      = parseFloat(scoreInput.value);
+
+            if (scoreInput.value === '' || isNaN(score)) {
+                showError(idx, 'Please enter your self score before submitting.');
+                scoreInput.focus(); return;
+            }
+            if (score < 0 || score > 100) {
+                showError(idx, 'Score must be between 0 and 100.');
+                scoreInput.focus(); return;
+            }
+            if (commentEl.value.trim().length < 20) {
+                showError(idx, 'Please add a comment of at least 20 characters.');
+                commentEl.focus(); return;
+            }
+
+            const btn = document.getElementById('submitBtn_' + idx);
+            btn.disabled = true;
+            btn.innerHTML = `<svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg"
+                fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+            </svg> Submitting…`;
+
+            document.getElementById('selfReviewForm_' + idx).submit();
+        }
+
+        function clearForm(idx) {
+            const scoreInput = document.getElementById('selfScoreInput_' + idx);
+            const commentEl  = document.getElementById('selfComment_'    + idx);
+            scoreInput.value = ''; commentEl.value = '';
+            onScoreInput(scoreInput, idx);
+            onCommentInput(commentEl, idx);
+            hideError(idx);
+        }
     </script>
 
 </main>

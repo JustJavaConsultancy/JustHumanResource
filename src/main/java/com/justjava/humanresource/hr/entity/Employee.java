@@ -56,7 +56,7 @@ public class Employee extends BaseEntity {
     @JoinColumn(name = "pay_group_id")
     private PayGroup payGroup;
 
-    @OneToMany(mappedBy = "employee", fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "employee", fetch = FetchType.EAGER)
     private List<EmployeeBankDetail> bankDetails;
 
     private boolean payrollEnabled;
