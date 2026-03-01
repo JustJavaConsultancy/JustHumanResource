@@ -65,4 +65,5 @@ public interface EmployeeRepository extends JpaRepository<Employee,Long> {
             "LEFT JOIN FETCH e.bankDetails " +
             "WHERE e.id = :id")
     Optional<Employee> findByIdWithBankDetails(@Param("id") Long id);
+
 }

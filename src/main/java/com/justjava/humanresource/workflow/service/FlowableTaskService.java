@@ -87,6 +87,16 @@ public class FlowableTaskService {
                 .desc()
                 .list();
     }
+    public List<HistoricTaskInstance> getCompletedTasksByTaskDefinitionKey(
+            String taskDefinitionKey
+    ) {
+        return historyService.createHistoricTaskInstanceQuery()
+                .taskDefinitionKey(taskDefinitionKey)
+                .finished()
+                .orderByHistoricTaskInstanceEndTime()
+                .desc()
+                .list();
+    }
     /* =====================================================
        COMPLETE TASK
        ===================================================== */
