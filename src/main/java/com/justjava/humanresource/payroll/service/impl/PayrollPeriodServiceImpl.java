@@ -68,15 +68,19 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
     @Transactional
     public void closeAndOpenNext(Long companyId) {
 
+        // ---------------------------------------------------------
+        // 1. Get Current OPEN Period
+        // ---------------------------------------------------------
+
         PayrollPeriod current = getOpenPeriod(companyId);
 
-        /* --------------------------------------------------------
-           Ensure All Runs Are POSTED
-           -------------------------------------------------------- */
+        // ---------------------------------------------------------
+        // 2. Validate All Runs Are POSTED
+        // ---------------------------------------------------------
 
         long incomplete =
                 payrollRunRepository
-                        .countByCompanyIdAndPayrollDateBetweenAndStatusNot(
+                        .countByEmployee_Department_Company_IdAndPayrollDateBetweenAndStatusNot(
                                 companyId,
                                 current.getPeriodStart(),
                                 current.getPeriodEnd(),
@@ -89,17 +93,16 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
             );
         }
 
-        /* --------------------------------------------------------
-           Close Current Period
-           -------------------------------------------------------- */
+        // ---------------------------------------------------------
+        // 3. Close Current Period
+        // ---------------------------------------------------------
 
         current.setStatus(PayrollPeriodStatus.CLOSED);
         repository.save(current);
 
-        /* --------------------------------------------------------
-           Create Next Period (Cycle-Based)
-           Uses same cycle length as previous period
-           -------------------------------------------------------- */
+        // ---------------------------------------------------------
+        // 4. Compute Next Period Range
+        // ---------------------------------------------------------
 
         long cycleDays =
                 current.getPeriodEnd().toEpochDay()
@@ -116,8 +119,36 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
         next.setStatus(PayrollPeriodStatus.OPEN);
 
         repository.save(next);
-    }
 
+        // ---------------------------------------------------------
+        // 5. Ensure New Period Has No Existing Runs (Idempotency Guard)
+        // ---------------------------------------------------------
+
+        long existingNewPeriodRuns =
+                payrollRunRepository.countByEmployee_Department_Company_IdAndPayrollDateBetween(
+                        companyId,
+                        nextStart,
+                        nextEnd
+                );
+
+        if (existingNewPeriodRuns > 0) {
+            throw new IllegalStateException(
+                    "Payroll runs already exist for new period. Aborting carry-forward."
+            );
+        }
+
+        // ---------------------------------------------------------
+        // 6. Bulk Carry Forward (Single SQL Statement)
+        // ---------------------------------------------------------
+
+        payrollRunRepository.bulkCarryForward(
+                companyId,
+                current.getPeriodStart(),
+                current.getPeriodEnd(),
+                nextStart,
+                nextEnd
+        );
+    }
     /* ============================================================
        GET OPEN PERIOD
        ============================================================ */

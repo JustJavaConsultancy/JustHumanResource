@@ -3,6 +3,7 @@ package com.justjava.humanresource.payroll.repositories;
 import com.justjava.humanresource.core.enums.PayrollRunStatus;
 import com.justjava.humanresource.payroll.entity.PayrollRun;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -134,6 +135,55 @@ public interface PayrollRunRepository
             @Param("status") PayrollRunStatus status
     );
 
-
-
+    @Modifying
+    @Query(value = """
+INSERT INTO payroll_run (
+    employee_id,
+    payroll_date,
+    period_start,
+    period_end,
+    status,
+    run_type,
+    version_number,
+    gross_pay,
+    total_deductions,
+    net_pay,
+    parent_run_id,
+    created_at,
+    updated_at
+)
+SELECT
+    pr.employee_id,
+    :newPeriodEnd,
+    :newPeriodStart,
+    :newPeriodEnd,
+    'IN_PROGRESS',
+    'ORIGINAL',
+    1,
+    pr.gross_pay,
+    pr.total_deductions,
+    pr.net_pay,
+    pr.id,
+    NOW(),
+    NOW()
+FROM payroll_run pr
+JOIN employee e ON e.id = pr.employee_id
+JOIN department d ON d.id = e.department_id
+WHERE d.company_id = :companyId
+AND pr.period_start = :oldPeriodStart
+AND pr.period_end = :oldPeriodEnd
+AND pr.status = 'POSTED'
+""", nativeQuery = true)
+    void bulkCarryForward(
+            @Param("companyId") Long companyId,
+            @Param("oldPeriodStart") LocalDate oldPeriodStart,
+            @Param("oldPeriodEnd") LocalDate oldPeriodEnd,
+            @Param("newPeriodStart") LocalDate newPeriodStart,
+            @Param("newPeriodEnd") LocalDate newPeriodEnd
+    );
+    long countByEmployee_Department_Company_IdAndPayrollDateBetween(
+            Long companyId,
+            LocalDate start,
+            LocalDate end
+    );
 }
