@@ -1,6 +1,7 @@
 package com.justjava.humanresource.payroll.service;
 
 import com.justjava.humanresource.core.enums.PayrollRunStatus;
+import com.justjava.humanresource.payroll.dto.PayrollJournalEntryDTO;
 import com.justjava.humanresource.payroll.entity.PayrollJournalEntry;
 import com.justjava.humanresource.payroll.entity.PayrollPeriod;
 import com.justjava.humanresource.payroll.enums.PayrollPeriodStatus;
@@ -14,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -22,6 +24,7 @@ public class PayrollJournalService {
     private final PayrollRunRepository payrollRunRepository;
     private final PayrollJournalEntryRepository journalRepository;
 
+    private final PayrollPeriodService payrollPeriodService;
     private final PayrollPeriodRepository payrollPeriodRepository;
     @Transactional
     public void generateJournalEntries(
@@ -179,5 +182,59 @@ public class PayrollJournalService {
         entry.setExported(false);
 
         journalRepository.save(entry);
+    }
+    @Transactional(readOnly = true)
+    public List<PayrollJournalEntryDTO> getUnexported(Long companyId) {
+
+        return journalRepository
+                .findUnexportedByCompany(companyId)
+                .stream()
+                .map(this::mapToDto)
+                .collect(Collectors.toList());
+    }
+
+
+    @Transactional
+    public void markAsExported(Long journalEntryId) {
+
+        PayrollJournalEntry entry =
+                journalRepository.findById(journalEntryId)
+                        .orElseThrow(() ->
+                                new IllegalStateException("Journal entry not found."));
+
+        entry.setExported(true);
+        journalRepository.save(entry);
+    }
+
+    /* ============================================================
+       MAPPING HELPERS
+       ============================================================ */
+
+    private PayrollJournalEntryDTO mapToDto(PayrollJournalEntry entity) {
+
+        PayrollPeriod period =
+                payrollPeriodService.findById(entity.getPayrollPeriodId());
+
+
+        return mapToDtoWithPeriod(entity, period);
+    }
+
+    private PayrollJournalEntryDTO mapToDtoWithPeriod(
+            PayrollJournalEntry entity,
+            PayrollPeriod period) {
+
+        return PayrollJournalEntryDTO.builder()
+                .id(entity.getId())
+                .companyId(entity.getCompanyId())
+                .payrollPeriodId(entity.getPayrollPeriodId())
+                .periodStart(period != null ? period.getPeriodStart() : null)
+                .periodEnd(period != null ? period.getPeriodEnd() : null)
+                .accountCode(entity.getAccountCode())
+                .accountName(entity.getAccountName())
+                .debitAmount(entity.getDebitAmount())
+                .creditAmount(entity.getCreditAmount())
+                .description(entity.getDescription())
+                .exported(entity.isExported())
+                .build();
     }
 }

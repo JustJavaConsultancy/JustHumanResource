@@ -209,4 +209,9 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
                 )
         );
     }
+
+    @Override
+    public PayrollPeriod findById(Long id) {
+        return repository.findById(id).orElse(null);
+    }
 }

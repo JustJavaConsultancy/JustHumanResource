@@ -83,4 +83,6 @@ public interface PayrollPeriodService {
     void initiatePeriodCloseApproval(
             Long companyId
     );
+
+    PayrollPeriod findById(Long id);
 }
