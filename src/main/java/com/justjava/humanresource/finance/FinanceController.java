@@ -94,4 +94,15 @@ public class FinanceController {
         model.addAttribute("subTitle", "Manage financial postings and journal entries");
         return "finance/posting";
     }
+    @GetMapping("/finance/bankDetails")
+    public String getBankDetailsPage(Model model) {
+        List<PaySlipDTO> payslipBankDetails = paySlipService.getCurrentPeriodPaySlips(1L);
+        payslipBankDetails.forEach(
+                paySlip -> System.out.println(paySlip)
+        );
+        model.addAttribute("bankDetails", payslipBankDetails);
+        model.addAttribute("title", "Bank Details");
+        model.addAttribute("subTitle", "Manage bank details and transactions");
+        return "finance/bankDetails";
+    }
 }

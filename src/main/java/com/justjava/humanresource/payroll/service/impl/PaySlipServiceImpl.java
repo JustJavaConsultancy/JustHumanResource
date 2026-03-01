@@ -363,7 +363,7 @@ public class PaySlipServiceImpl implements PaySlipService {
                 .payDate(paySlip.getPayDate())
                 .versionNumber(paySlip.getVersionNumber())
                 .bankName(paySlip.getEmployee().getBankDetails().getFirst().getBankName())
-
+                .bankAccountNumber(paySlip.getEmployee().getBankDetails().getFirst().getAccountNumber())
                 .basicSalary(basicSalary)
                 .grossPay(paySlip.getGrossPay())
                 .totalDeductions(paySlip.getTotalDeductions())

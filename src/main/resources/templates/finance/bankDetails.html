@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:th="http://www.thymeleaf.org"
+      layout:decorate="layouts/financialOfficerLayout">
+<head>
+    <meta charset="UTF-8">
+    <title>Bank Details</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50:'#eff6ff',100:'#dbeafe',200:'#bfdbfe',300:'#93c5fd',
+                            400:'#60a5fa',500:'#3b82f6',600:'#2563eb',700:'#1d4ed8',
+                            800:'#1e40af',900:'#1e3a8a',
+                        },
+                    },
+                    fontFamily: {
+                        'sans': ['DM Sans','system-ui','sans-serif'],
+                        'mono': ['DM Mono','monospace'],
+                    },
+                },
+            },
+        };
+    </script>
+    <style>
+        * { font-family: 'DM Sans', sans-serif; }
+        body { overflow-x: hidden; }
+
+        /* Sidebar */
+        .sidebar-item { transition: all 0.2s ease; }
+        .sidebar-item.active { background-color:rgba(59,130,246,0.1); color:#3b82f6; border-left:3px solid #3b82f6; }
+        .dark .sidebar-item.active { background-color:rgba(59,130,246,0.2); }
+        .sidebar-container { position:fixed; top:0; left:0; height:100vh; width:16rem; z-index:40; overflow-y:auto; }
+        .main-content { margin-left:16rem; width:calc(100% - 16rem); min-height:100vh; }
+        @media (max-width:1023px) {
+            .sidebar-container { transform:translateX(-100%); }
+            .sidebar-container.open { transform:translateX(0); }
+            .main-content { margin-left:0; width:100%; }
+        }
+
+        /* Stat cards */
+        .stat-card { transition:transform 0.2s ease, box-shadow 0.2s ease; }
+        .stat-card:hover { transform:translateY(-2px); box-shadow:0 10px 25px -5px rgba(0,0,0,0.1); }
+
+        /* Employee cards */
+        #cardGrid { display:grid; grid-template-columns:repeat(auto-fill, minmax(300px,1fr)); gap:1.5rem; }
+        .employee-card {
+            background:white; border:1px solid #e5e7eb; border-radius:1rem;
+            padding:1.25rem; transition:all 0.2s ease;
+            animation:fadeInUp 0.3s ease both;
+        }
+        @keyframes fadeInUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+        .dark .employee-card { background:#1f2937; border-color:#374151; }
+        .employee-card:hover { transform:translateY(-4px); box-shadow:0 20px 25px -5px rgba(0,0,0,0.1); border-color:#2563eb; }
+        .dark .employee-card:hover { border-color:#3b82f6; }
+
+        /* Account pill */
+        .account-number {
+            font-family:'DM Mono',monospace; background:#f3f4f6;
+            padding:0.25rem 0.75rem; border-radius:9999px; font-size:0.82rem;
+            display:inline-flex; align-items:center; gap:0.4rem;
+        }
+        .dark .account-number { background:#374151; }
+        .toggle-btn { cursor:pointer; color:#6b7280; transition:color 0.2s; font-size:1rem !important; user-select:none; }
+        .toggle-btn:hover { color:#2563eb; }
+
+        /* Badges */
+        .badge { padding:2px 10px; font-size:0.72rem; font-weight:600; border-radius:9999px; letter-spacing:0.03em; text-transform:uppercase; }
+        .badge-success { background:#dcfce7; color:#15803d; }
+        .badge-warning { background:#fef9c3; color:#a16207; }
+        .badge-danger  { background:#fee2e2; color:#b91c1c; }
+        .badge-neutral { background:#f3f4f6; color:#6b7280; }
+
+        /* Toggle switch */
+        .toggle-checkbox { right:auto; left:0; top:0; transition:all 0.2s; }
+        .toggle-checkbox:checked { left:calc(100% - 1.5rem); border-color:#2563eb; }
+        .toggle-checkbox:checked + .toggle-label { background-color:#2563eb; }
+
+        /* Empty state */
+        #emptyState {
+            display:none; flex-direction:column; align-items:center;
+            justify-content:center; padding:5rem 2rem; gap:1rem;
+        }
+        .empty-icon { width:80px; height:80px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:#eff6ff; }
+        .dark .empty-icon { background:rgba(59,130,246,0.15); }
+
+        /* Pagination */
+        .page-btn {
+            padding:0.375rem 0.75rem; border-radius:0.375rem; font-size:0.875rem;
+            border:1px solid #d1d5db; cursor:pointer; transition:all 0.15s;
+            background:white; color:#374151;
+        }
+        .dark .page-btn { background:#1f2937; border-color:#4b5563; color:#d1d5db; }
+        .page-btn:hover:not(:disabled):not(.active) { background:#f9fafb; }
+        .dark .page-btn:hover:not(:disabled):not(.active) { background:#374151; }
+        .page-btn.active { background:#2563eb; color:white; border-color:#2563eb; }
+        .page-btn:disabled { opacity:0.4; cursor:default; }
+        .page-ellipsis { padding:0.375rem 0.5rem; color:#9ca3af; font-size:0.875rem; }
+    </style>
+</head>
+<body>
+<main layout:fragment="content">
+
+    <!--/*
+    ════════════════════════════════════════════════════════════════
+      HOW THIS WORKS
+      ─────────────────────────────────────────────────────────────
+      Thymeleaf serialises the full List<PaySlipDTO> into a single
+      JS constant (ALL_RECORDS) via th:inline="javascript".
+      JavaScript then handles:
+        • rendering cards
+        • client-side search/filter
+        • client-side pagination (PAGE_SIZE = 6)
+        • CSV download (all filtered rows, no server round-trip)
+
+      The controller only needs to put ONE attribute on the model:
+        model.addAttribute("bankDetails", page.getContent());
+        OR
+        model.addAttribute("bankDetails", listOfPaySlipDTOs);
+
+      Fields used from PaySlipDTO:
+        employeeId, employeeName, bankName, bankAccountNumber,
+        netPay, payDate, status
+    ════════════════════════════════════════════════════════════════
+    */-->
+
+    <!-- ① Inject full list from Thymeleaf into JS -->
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        const ALL_RECORDS = /*[[${bankDetails}]]*/ [];
+        /*]]>*/
+    </script>
+
+    <!-- ── Summary Bar ──────────────────────────────────────────── -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+        <div class="flex items-center space-x-3">
+            <span class="material-icons-round text-primary-600">calendar_today</span>
+            <div class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm">
+                <span class="font-medium">Current period:</span>
+                <span id="periodLabel">—</span>
+            </div>
+        </div>
+        <div class="flex items-center space-x-4">
+            <div class="stat-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 px-5 py-3">
+                <span class="text-xs text-gray-500">Total net pay</span>
+                <p id="totalNetPay" class="text-xl font-bold text-primary-600">₦0</p>
+            </div>
+            <div class="stat-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 px-5 py-3">
+                <span class="text-xs text-gray-500">Employees</span>
+                <p id="totalEmployees" class="text-xl font-bold">0</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Search + Controls ─────────────────────────────────────── -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div class="relative w-full sm:w-80">
+            <span class="material-icons-round text-gray-400 absolute left-3 top-1/2 -translate-y-1/2">search</span>
+            <input type="text" id="searchInput"
+                   placeholder="Search employee, bank, or account..."
+                   class="pl-10 pr-4 py-2 w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 text-sm"/>
+        </div>
+
+        <div class="flex items-center space-x-4">
+            <!-- Reveal all -->
+            <label class="flex items-center space-x-2 cursor-pointer select-none">
+                <span class="text-sm text-gray-600 dark:text-gray-300">Reveal all</span>
+                <div class="relative inline-block w-10 align-middle">
+                    <input type="checkbox" id="revealAllToggle"
+                           class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                    <label for="revealAllToggle"
+                           class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                </div>
+            </label>
+
+            <!-- CSV download — pure JavaScript, no server call -->
+            <button id="exportCsvBtn"
+                    class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center text-sm font-medium transition-colors">
+                <span class="material-icons-round text-sm mr-2">file_download</span> Export CSV
+            </button>
+        </div>
+    </div>
+
+    <!-- ── Card Grid (populated by JS) ──────────────────────────── -->
+    <div id="cardGrid"></div>
+
+    <!-- ── Empty State (shown by JS when no results) ─────────────── -->
+    <div id="emptyState"
+         class="bg-white dark:bg-gray-800 rounded-2xl border border-dashed border-gray-300 dark:border-gray-600">
+        <div class="empty-icon">
+            <span class="material-icons-round text-primary-500" style="font-size:2.2rem">account_balance</span>
+        </div>
+        <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-200">No bank details found</h3>
+        <p class="text-sm text-gray-500 dark:text-gray-400 text-center max-w-xs">
+            There are no payslip records for this period, or your search returned no results.
+        </p>
+        <button onclick="clearSearch()"
+                class="mt-2 px-5 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors">
+            Clear search
+        </button>
+    </div>
+
+    <!-- ── Pagination (populated by JS) ─────────────────────────── -->
+    <div id="paginationWrapper" class="flex flex-col sm:flex-row justify-between items-center gap-3 mt-8" style="display:none!important">
+        <span id="pageInfo" class="text-sm text-gray-500 dark:text-gray-400"></span>
+        <nav id="pageButtons" class="flex items-center flex-wrap gap-1"></nav>
+    </div>
+
+    <!-- ── Security note ─────────────────────────────────────────── -->
+    <div class="mt-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 flex items-start space-x-3">
+        <span class="material-icons-round text-blue-600 dark:text-blue-400 mt-0.5">info</span>
+        <p class="text-sm text-blue-800 dark:text-blue-200">
+            Account numbers are masked by default. Use the <strong>eye icon</strong> on each card or the
+            <strong>Reveal all</strong> toggle to show full numbers. No account data is stored in the browser.
+        </p>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         MAIN SCRIPT
+         ═══════════════════════════════════════════════════════════ -->
+    <script>
+        (function () {
+            'use strict';
+
+            /* ── Config ───────────────────────────────────────────── */
+            const PAGE_SIZE = 6;
+
+            /* ── Data — safely normalise whatever Thymeleaf injects ── */
+            const records = (Array.isArray(ALL_RECORDS) && ALL_RECORDS.length)
+                ? ALL_RECORDS
+                : [];
+
+            /* ── State ────────────────────────────────────────────── */
+            let filtered    = [...records];
+            let currentPage = 0;
+            let revealAll   = false;
+
+            /* ── Utility helpers ──────────────────────────────────── */
+            function fmt(str) {
+                // Escape HTML for safe innerHTML injection
+                return String(str ?? '')
+                    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+                    .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+            }
+
+            function formatMoney(amount) {
+                if (amount == null) return '—';
+                return '₦' + Number(amount).toLocaleString('en-NG', {
+                    minimumFractionDigits: 2, maximumFractionDigits: 2
+                });
+            }
+
+            function maskAccount(num) {
+                const s = String(num ?? '');
+                return s ? '•••• •••• ' + s.slice(-4) : '—';
+            }
+
+            function revealAccount(num) {
+                const s = String(num ?? '');
+                if (!s) return '—';
+                // Groups of 4 digits
+                return s.replace(/(.{4})(?=.)/g, '$1 ').trim();
+            }
+
+            function formatPayDate(val) {
+                if (!val) return '—';
+                // Thymeleaf serialises LocalDate as [yyyy, m, d] array
+                const d = Array.isArray(val)
+                    ? new Date(val[0], val[1] - 1, val[2])
+                    : new Date(val);
+                return isNaN(d) ? '—'
+                    : d.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+            }
+
+            function getInitials(name) {
+                if (!name) return '??';
+                const p = name.trim().split(/\s+/);
+                return (p.length >= 2
+                    ? p[0][0] + p[p.length - 1][0]
+                    : name.substring(0, 2)).toUpperCase();
+            }
+
+            function avatarStyle(id) {
+                const hue = (Number(id ?? 0) * 47) % 360;
+                return `background:hsl(${hue},60%,92%);color:hsl(${hue},50%,35%)`;
+            }
+
+            function badge(status) {
+                const s = String(status ?? '').toUpperCase();
+                const cls = s === 'COMPLETED' || s === 'APPROVED' ? 'badge-success'
+                          : s === 'PENDING'   || s === 'DRAFT'    ? 'badge-warning'
+                          : s === 'FAILED'                        ? 'badge-danger'
+                          : 'badge-neutral';
+                return `<span class="badge ${cls}">${fmt(status ?? 'Unknown')}</span>`;
+            }
+
+            /* ── Card HTML builder ────────────────────────────────── */
+            function buildCard(slip, i) {
+                const acc     = slip.bankAccountNumber ?? '';
+                const display = revealAll ? revealAccount(acc) : maskAccount(acc);
+                const eye     = revealAll ? 'visibility_off' : 'visibility';
+
+                return `
+                <div class="employee-card" style="animation-delay:${i * 45}ms">
+                    <div class="flex items-start justify-between mb-3">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0"
+                                 style="${avatarStyle(slip.employeeId)}">${fmt(getInitials(slip.employeeName))}</div>
+                            <div>
+                                <h3 class="font-semibold text-gray-900 dark:text-gray-100">${fmt(slip.employeeName ?? '—')}</h3>
+                                <p class="text-xs text-gray-500">EMP${fmt(slip.employeeId ?? '')}</p>
+                            </div>
+                        </div>
+                        ${badge(slip.status)}
+                    </div>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Bank</span>
+                            <span class="font-medium text-gray-800 dark:text-gray-200">${fmt(slip.bankName ?? '—')}</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-500">Account</span>
+                            <div class="account-number">
+                                <span class="account-display">${fmt(display)}</span>
+                                <span class="material-icons-round toggle-btn"
+                                      data-full="${fmt(acc)}"
+                                      onclick="toggleAccount(this)">${eye}</span>
+                            </div>
+                        </div>
+                        <div class="flex justify-between pt-2 border-t border-gray-200 dark:border-gray-700 mt-2">
+                            <span class="font-semibold text-gray-700 dark:text-gray-300">Net pay</span>
+                            <span class="text-lg font-bold text-primary-600">${formatMoney(slip.netPay)}</span>
+                        </div>
+                    </div>
+                </div>`;
+            }
+
+            /* ── Render cards for the current page ────────────────── */
+            function renderCards() {
+                const grid      = document.getElementById('cardGrid');
+                const empty     = document.getElementById('emptyState');
+                const pagWrap   = document.getElementById('paginationWrapper');
+
+                if (!filtered.length) {
+                    grid.innerHTML  = '';
+                    grid.style.display    = 'none';
+                    empty.style.display   = 'flex';
+                    pagWrap.style.display = 'none';
+                    return;
+                }
+
+                empty.style.display   = 'none';
+                grid.style.display    = 'grid';
+                pagWrap.style.removeProperty('display');
+
+                const start = currentPage * PAGE_SIZE;
+                const slice = filtered.slice(start, start + PAGE_SIZE);
+                grid.innerHTML = slice.map(buildCard).join('');
+
+                renderPagination();
+            }
+
+            /* ── Pagination ───────────────────────────────────────── */
+            function renderPagination() {
+                const total      = filtered.length;
+                const totalPages = Math.ceil(total / PAGE_SIZE);
+                const start      = currentPage * PAGE_SIZE + 1;
+                const end        = Math.min(currentPage * PAGE_SIZE + PAGE_SIZE, total);
+
+                document.getElementById('pageInfo').textContent =
+                    `Showing ${start} to ${end} of ${total} entries`;
+
+                const nav = document.getElementById('pageButtons');
+                nav.innerHTML = '';
+
+                const make = (label, page, isActive, disabled) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'page-btn' + (isActive ? ' active' : '');
+                    btn.textContent = label;
+                    btn.disabled = disabled;
+                    if (!disabled && !isActive) {
+                        btn.addEventListener('click', () => { currentPage = page; renderCards(); });
+                    }
+                    return btn;
+                };
+
+                const ellipsis = () => {
+                    const s = document.createElement('span');
+                    s.className = 'page-ellipsis';
+                    s.textContent = '…';
+                    return s;
+                };
+
+                // Previous
+                nav.appendChild(make('Previous', currentPage - 1, false, currentPage === 0));
+
+                if (totalPages <= 7) {
+                    for (let i = 0; i < totalPages; i++) {
+                        nav.appendChild(make(i + 1, i, i === currentPage, false));
+                    }
+                } else {
+                    nav.appendChild(make(1, 0, currentPage === 0, false));
+                    if (currentPage > 3) nav.appendChild(ellipsis());
+
+                    const lo = Math.max(1, currentPage - 1);
+                    const hi = Math.min(totalPages - 2, currentPage + 1);
+                    for (let i = lo; i <= hi; i++) {
+                        nav.appendChild(make(i + 1, i, i === currentPage, false));
+                    }
+
+                    if (currentPage < totalPages - 4) nav.appendChild(ellipsis());
+                    nav.appendChild(make(totalPages, totalPages - 1, currentPage === totalPages - 1, false));
+                }
+
+                // Next
+                nav.appendChild(make('Next', currentPage + 1, false, currentPage >= totalPages - 1));
+            }
+
+            /* ── Summary stats (always computed over the full list) ── */
+            function updateSummary() {
+                const total = records.reduce((s, r) => s + Number(r.netPay ?? 0), 0);
+                document.getElementById('totalNetPay').textContent    = formatMoney(total);
+                document.getElementById('totalEmployees').textContent = records.length;
+                document.getElementById('periodLabel').textContent    =
+                    records.length ? formatPayDate(records[0].payDate) : '—';
+            }
+
+            /* ── Search ───────────────────────────────────────────── */
+            function applySearch() {
+                const q = document.getElementById('searchInput').value.trim().toLowerCase();
+                filtered = q
+                    ? records.filter(r =>
+                        (r.employeeName      ?? '').toLowerCase().includes(q) ||
+                        (r.bankName          ?? '').toLowerCase().includes(q) ||
+                        (r.bankAccountNumber ?? '').toLowerCase().includes(q) ||
+                        String(r.employeeId  ?? '').includes(q))
+                    : [...records];
+                currentPage = 0;
+                renderCards();
+            }
+
+            window.clearSearch = function () {
+                document.getElementById('searchInput').value = '';
+                applySearch();
+            };
+
+            let searchTimer;
+            document.getElementById('searchInput').addEventListener('input', () => {
+                clearTimeout(searchTimer);
+                searchTimer = setTimeout(applySearch, 300);
+            });
+
+            /* ── Per-card account toggle ──────────────────────────── */
+            window.toggleAccount = function (icon) {
+                const div  = icon.closest('.account-number');
+                const span = div.querySelector('.account-display');
+                const full = icon.dataset.full ?? '';
+                if (!full) return;
+                const masked = span.textContent.includes('•');
+                span.textContent   = masked ? revealAccount(full) : maskAccount(full);
+                icon.textContent   = masked ? 'visibility_off'   : 'visibility';
+            };
+
+            /* ── Master reveal toggle ─────────────────────────────── */
+            document.getElementById('revealAllToggle').addEventListener('change', function () {
+                revealAll = this.checked;
+                document.querySelectorAll('.account-number').forEach(div => {
+                    const span = div.querySelector('.account-display');
+                    const icon = div.querySelector('.toggle-btn');
+                    const full = icon?.dataset.full ?? '';
+                    if (!full) return;
+                    span.textContent = revealAll ? revealAccount(full) : maskAccount(full);
+                    if (icon) icon.textContent = revealAll ? 'visibility_off' : 'visibility';
+                });
+            });
+
+            /* ── CSV Export — pure client-side ────────────────────── */
+            document.getElementById('exportCsvBtn').addEventListener('click', () => {
+                const header = ['Employee ID','Employee Name','Bank Name',
+                                'Account Number','Net Pay (NGN)','Pay Date','Status'];
+
+                const csvRows = [header, ...filtered.map(r => [
+                    r.employeeId        ?? '',
+                    r.employeeName      ?? '',
+                    r.bankName          ?? '',
+                    r.bankAccountNumber ?? '',
+                    r.netPay != null ? Number(r.netPay).toFixed(2) : '',
+                    formatPayDate(r.payDate),
+                    r.status            ?? '',
+                ])].map(row =>
+                    row.map(cell => {
+                        const s = String(cell).replace(/"/g, '""');
+                        return /[,"\n\r]/.test(s) ? `"${s}"` : s;
+                    }).join(',')
+                ).join('\r\n');
+
+                // BOM so Excel opens with correct encoding
+                const blob = new Blob(['\uFEFF' + csvRows], { type: 'text/csv;charset=utf-8;' });
+                const url  = URL.createObjectURL(blob);
+                const a    = Object.assign(document.createElement('a'), {
+                    href: url,
+                    download: `bank-details-${new Date().toISOString().slice(0,10)}.csv`,
+                });
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            });
+
+            /* ── Sidebar ──────────────────────────────────────────── */
+            const menuToggle    = document.getElementById('menuToggle');
+            const mobileOverlay = document.getElementById('mobileOverlay');
+            const sidebar       = document.querySelector('.sidebar-container');
+
+            menuToggle?.addEventListener('click', () => {
+                sidebar.classList.toggle('open');
+                mobileOverlay?.classList.toggle('hidden');
+                document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : '';
+            });
+            mobileOverlay?.addEventListener('click', () => {
+                sidebar.classList.remove('open');
+                mobileOverlay.classList.add('hidden');
+                document.body.style.overflow = '';
+            });
+            window.addEventListener('resize', () => {
+                if (window.innerWidth >= 1024 && sidebar) {
+                    sidebar.classList.remove('open');
+                    mobileOverlay?.classList.add('hidden');
+                    document.body.style.overflow = '';
+                }
+            });
+            document.querySelectorAll('.sidebar-item').forEach(item => {
+                item.addEventListener('click', function (e) {
+                    if (this.getAttribute('href') === '#') e.preventDefault();
+                    document.querySelectorAll('.sidebar-item').forEach(n => n.classList.remove('active'));
+                    this.classList.add('active');
+                    if (window.innerWidth < 1024 && sidebar) {
+                        sidebar.classList.remove('open');
+                        mobileOverlay?.classList.add('hidden');
+                        document.body.style.overflow = '';
+                    }
+                });
+            });
+
+            /* ── Theme ────────────────────────────────────────────── */
+            const themeToggle = document.getElementById('themeToggle');
+            if (themeToggle) {
+                const icon = themeToggle.querySelector('.material-icons-round');
+                themeToggle.addEventListener('click', () => {
+                    const dark = document.documentElement.classList.toggle('dark');
+                    icon.textContent = dark ? 'light_mode' : 'dark_mode';
+                    localStorage.setItem('theme', dark ? 'dark' : 'light');
+                });
+                const saved = localStorage.getItem('theme');
+                if (saved === 'dark' || (!saved && matchMedia('(prefers-color-scheme:dark)').matches)) {
+                    document.documentElement.classList.add('dark');
+                    icon.textContent = 'light_mode';
+                }
+            }
+
+            /* ── Bootstrap ────────────────────────────────────────── */
+            updateSummary();
+            applySearch(); // renders cards + pagination on load
+
+        })();
+    </script>
+
+</main>
+</body>
+</html>

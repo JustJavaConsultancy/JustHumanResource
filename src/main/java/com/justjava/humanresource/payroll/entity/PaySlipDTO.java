@@ -43,4 +43,5 @@ public class PaySlipDTO {
     BigDecimal pensionAmount;
     PayrollRunStatus status;
     String bankName;
+    String bankAccountNumber;
 }
