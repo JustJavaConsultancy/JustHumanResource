@@ -278,6 +278,66 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
         if (run.getStatus() == PayrollRunStatus.POSTED)
             throw new IllegalStateException("Already POSTED.");
 
+        // ----------------------------------------------------
+        // 1. Determine Payroll Year
+        // ----------------------------------------------------
+
+        int payrollYear = run.getPayrollDate().getYear();
+        run.setPayrollYear(payrollYear);
+
+        // ----------------------------------------------------
+        // 2. Fetch Previous YTD Snapshot
+        // ----------------------------------------------------
+
+        Optional<PayrollRun> previousOpt =
+                payrollRunRepository
+                        .findTopByEmployee_IdAndPayrollYearAndStatusOrderByPayrollDateDesc(
+                                run.getEmployee().getId(),
+                                payrollYear,
+                                PayrollRunStatus.POSTED
+                        );
+
+        BigDecimal previousYtdGross = BigDecimal.ZERO;
+        BigDecimal previousYtdTaxable = BigDecimal.ZERO;
+        BigDecimal previousYtdDeductions = BigDecimal.ZERO;
+        BigDecimal previousYtdNet = BigDecimal.ZERO;
+        BigDecimal previousYtdPaye = BigDecimal.ZERO;
+
+        if (previousOpt.isPresent()) {
+            PayrollRun previous = previousOpt.get();
+            previousYtdGross = previous.getYtdGross();
+            previousYtdTaxable = previous.getYtdTaxable();
+            previousYtdDeductions = previous.getYtdDeductions();
+            previousYtdNet = previous.getYtdNet();
+            previousYtdPaye = previous.getYtdPaye();
+        }
+
+        // ----------------------------------------------------
+        // 3. Compute Current Taxable + PAYE
+        // ----------------------------------------------------
+
+        BigDecimal currentTaxable =
+                payrollLineItemRepository
+                        .sumTaxableEarnings(run.getId());
+
+        BigDecimal currentPaye =
+                payrollLineItemRepository
+                        .sumByRunAndCode(run.getId(), "PAYE");
+
+        // ----------------------------------------------------
+        // 4. Accumulate YTD
+        // ----------------------------------------------------
+
+        run.setYtdGross(previousYtdGross.add(run.getGrossPay()));
+        run.setYtdTaxable(previousYtdTaxable.add(currentTaxable));
+        run.setYtdDeductions(previousYtdDeductions.add(run.getTotalDeductions()));
+        run.setYtdNet(previousYtdNet.add(run.getNetPay()));
+        run.setYtdPaye(previousYtdPaye.add(currentPaye));
+
+        // ----------------------------------------------------
+        // 5. Mark POSTED
+        // ----------------------------------------------------
+
         run.setStatus(PayrollRunStatus.POSTED);
         payrollRunRepository.save(run);
     }
