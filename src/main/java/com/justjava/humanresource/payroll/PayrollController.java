@@ -7,6 +7,7 @@ import com.justjava.humanresource.hr.entity.Employee;
 import com.justjava.humanresource.hr.entity.PayGroup;
 import com.justjava.humanresource.hr.service.EmployeeService;
 import com.justjava.humanresource.hr.service.SetupService;
+import com.justjava.humanresource.onboarding.service.EmployeeOnboardingService;
 import com.justjava.humanresource.payroll.entity.*;
 import com.justjava.humanresource.payroll.service.PayGroupService;
 import com.justjava.humanresource.payroll.service.PaySlipService;
@@ -43,12 +44,16 @@ public class PayrollController {
     @Autowired
     private AuthenticationManager authenticationManager;
 
+    @Autowired
+    private EmployeeOnboardingService employeeOnboardingService;
+
 
 
     @Autowired
     private EmployeeService employeeService;
     @GetMapping("/payroll")
     public String getPayroll(Model model) {
+        List<Employee> employees = employeeOnboardingService.getAllOnboardings();
         List<Allowance> allowances = payrollSetupService.getActiveAllowances();
         List<Deduction> deductions = payrollSetupService.getActiveDeductions();
         List<PayGroup> payGroups = payrollSetupService.getAllPayGroups();
@@ -63,6 +68,7 @@ public class PayrollController {
         System.out.println("The payroll is " + payrollPeriodService.getPeriodStatusForDate(1L,LocalDate.now()));
         model.addAttribute("payrollStatus", payrollPeriodService.getPeriodStatusForDate(1L,LocalDate.now()));
         model.addAttribute("allowances", allowances.size());
+        model.addAttribute("employees", employees.size());
         model.addAttribute("taxableAllowances", taxableAllowances.size());
         model.addAttribute("saturatoryDeductions", saturatoryDeductions.size());
         model.addAttribute("deductions", deductions.size());

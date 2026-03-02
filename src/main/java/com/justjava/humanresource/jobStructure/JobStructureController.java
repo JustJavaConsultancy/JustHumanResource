@@ -3,7 +3,9 @@ package com.justjava.humanresource.jobStructure;
 import com.justjava.humanresource.hr.dto.CreateJobGradeWithStepsCommand;
 import com.justjava.humanresource.hr.dto.JobGradeResponseDTO;
 import com.justjava.humanresource.hr.entity.Department;
+import com.justjava.humanresource.hr.entity.Employee;
 import com.justjava.humanresource.hr.service.SetupService;
+import com.justjava.humanresource.onboarding.service.EmployeeOnboardingService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -17,9 +19,12 @@ public class JobStructureController {
     @Autowired
     private SetupService setupService;
 
+    @Autowired
+    private EmployeeOnboardingService employeeOnboardingService;
+
     @GetMapping("/job-structure")
     public String getJobStructure(Model model) {
-
+        List<Employee> employees = employeeOnboardingService.getAllOnboardings();
         List<JobGradeResponseDTO> jobGrades = setupService.getAllJobGrades();
         List<Department> departments = setupService.getAllDepartments();
 
@@ -30,6 +35,7 @@ public class JobStructureController {
 
         model.addAttribute("departments", departments);
         model.addAttribute("grades", jobGrades);
+        model.addAttribute("employees", employees.size());
         model.addAttribute("totalSteps", totalSteps);
         model.addAttribute("title","Job Structure Management");
         model.addAttribute("subTitle","Define and manage job roles, hierarchies, and reporting structures");
