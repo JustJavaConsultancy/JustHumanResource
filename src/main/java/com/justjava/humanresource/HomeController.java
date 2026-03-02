@@ -25,7 +25,7 @@ public class HomeController {
 
         model.addAttribute("title", "Welcome to JustJava HR");
         model.addAttribute("subTitle", "Streamline your HR processes with ease");
-        return "index";
+        return "redirect:/departments";
     }
 
 }

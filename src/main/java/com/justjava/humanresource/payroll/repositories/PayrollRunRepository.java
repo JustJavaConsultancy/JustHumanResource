@@ -137,12 +137,13 @@ public interface PayrollRunRepository
 
     @Modifying
     @Query(value = """
-INSERT INTO payroll_run (
+INSERT INTO payroll_runs (
     employee_id,
     payroll_date,
     period_start,
     period_end,
     status,
+    flowable_process_instance_id,
     run_type,
     version_number,
     gross_pay,
@@ -158,6 +159,7 @@ SELECT
     :newPeriodStart,
     :newPeriodEnd,
     'IN_PROGRESS',
+    pr.flowable_process_instance_id,
     'ORIGINAL',
     1,
     pr.gross_pay,
@@ -166,9 +168,9 @@ SELECT
     pr.id,
     NOW(),
     NOW()
-FROM payroll_run pr
-JOIN employee e ON e.id = pr.employee_id
-JOIN department d ON d.id = e.department_id
+FROM payroll_runs pr
+JOIN employees e ON e.id = pr.employee_id
+JOIN departments d ON d.id = e.department_id
 WHERE d.company_id = :companyId
 AND pr.period_start = :oldPeriodStart
 AND pr.period_end = :oldPeriodEnd
