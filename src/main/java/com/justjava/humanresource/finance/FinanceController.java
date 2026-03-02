@@ -38,8 +38,8 @@ public class FinanceController {
     }
     @GetMapping("/finance/dashboard")
     public String getFinanceDashboard(Model model) {
-        List<HistoricTaskInstance> completedProcess =  flowableTaskService.getCompletedTaskstaskDefinitionKey("FormTask_15");
-        List<FlowableTaskDTO> approvalRequests = flowableTaskService.getTasksByTaskDefinition("FormTask_15", "payrollPeriodCloseProcess");
+        List<HistoricTaskInstance> completedProcess =  flowableTaskService.getCompletedTaskstaskDefinitionKey("financeOfficer");
+        List<FlowableTaskDTO> approvalRequests = flowableTaskService.getTasksByTaskDefinition("financeOfficer", "payrollPeriodCloseProcess");
         List<PaySlipDTO> paySlips = paySlipService.getCurrentPeriodPaySlips(1L);
         System.out.println("Current period payslips:" + paySlips.size());
         System.out.println("Completed process:" + completedProcess.size());
@@ -74,8 +74,8 @@ public class FinanceController {
     }
     @GetMapping("/finance/lockApproval")
     public String getLockApprovalPage(Model model) {
-        List<HistoricTaskInstance> completedProcess =  flowableTaskService.getCompletedTaskstaskDefinitionKey("FormTask_15");
-        List<FlowableTaskDTO> approvalRequests = flowableTaskService.getTasksByTaskDefinition("FormTask_15", "payrollPeriodCloseProcess");
+        List<HistoricTaskInstance> completedProcess =  flowableTaskService.getCompletedTaskstaskDefinitionKey("financeOfficer");
+        List<FlowableTaskDTO> approvalRequests = flowableTaskService.getTasksByTaskDefinition("financeOfficer", "payrollPeriodCloseProcess");
         List<PaySlipDTO> paySlips = paySlipService.getCurrentPeriodPaySlips(1L);
         System.out.println("Current period payslips:" + paySlips.size());
         System.out.println("Completed process:" + completedProcess.size());
@@ -104,7 +104,7 @@ public class FinanceController {
     }
     @GetMapping("/finance/lockedPeriods")
     public String getLockedPeriodsPage(Model model) {
-        List<HistoricTaskInstance> completedProcess =  flowableTaskService.getCompletedTaskstaskDefinitionKey("FormTask_15");
+        List<HistoricTaskInstance> completedProcess =  flowableTaskService.getCompletedTaskstaskDefinitionKey("financeOfficer");
         completedProcess.forEach(
                 process -> System.out.println(process)
         );
