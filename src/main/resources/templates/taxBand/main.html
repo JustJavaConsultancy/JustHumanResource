@@ -104,36 +104,50 @@
         <div class="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg"><span class="material-icons-round text-blue-600 dark:text-blue-400">receipt</span></div>
         <span class="badge badge-info">ACTIVE</span>
       </div>
-      <h3 th:text="${#lists.size(activeBands)}" class="text-2xl font-bold mb-1">8</h3>
+      <h3 th:text="${#lists.size(activeBands)}" class="text-2xl font-bold mb-1">0</h3>
       <p class="text-gray-600 dark:text-gray-400 text-sm">Active Tax Bands</p>
-      <div class="mt-3 flex items-center text-xs text-gray-500"><span class="material-icons-round text-xs mr-1">check_circle</span>7 current + 1 future effective</div>
+      <div class="mt-3 flex items-center text-xs text-gray-500">
+        <span class="material-icons-round text-xs mr-1">check_circle</span>
+        <span th:text="${(#lists.size(activeBands) - futureCount) + ' current + ' + futureCount + ' future effective'}">0 current</span>
+      </div>
     </div>
     <div class="stat-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6">
       <div class="flex items-center justify-between mb-4">
-        <div class="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg"><span class="material-icons-round text-purple-600 dark:text-purple-400">calendar_month</span></div>
-        <span class="text-sm text-gray-500">2026</span>
+        <div class="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+          <span class="material-icons-round text-purple-600 dark:text-purple-400">calendar_month</span>
+        </div>
+        <span class="text-sm text-gray-500" th:text="${primaryTaxYear}">—</span>
       </div>
-      <h3 class="text-2xl font-bold mb-1">2026</h3>
+      <h3 th:text="${primaryTaxYear}" class="text-2xl font-bold mb-1">—</h3>
       <p class="text-gray-600 dark:text-gray-400 text-sm">Primary Tax Year</p>
-      <div class="mt-3"><span class="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">Effective from 2026-01-01</span></div>
+      <div class="mt-3">
+     <span class="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded"
+          th:text="${earliestFrom != null ? 'Effective from ' + earliestFrom : 'No bands'}">—</span>
+      </div>
     </div>
     <div class="stat-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6">
       <div class="flex items-center justify-between mb-4">
         <div class="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg"><span class="material-icons-round text-green-600 dark:text-green-400">percent</span></div>
         <span class="badge badge-success">Ø rate</span>
       </div>
-      <h3 class="text-2xl font-bold mb-1">22.3%</h3>
+      <h3 th:text="${avgRate + '%'}" class="text-2xl font-bold mb-1">0%</h3>
       <p class="text-gray-600 dark:text-gray-400 text-sm">Average Rate</p>
-      <div class="mt-3 text-xs text-gray-500">based on 8 active bands</div>
+      <div class="mt-3 text-xs text-gray-500"
+           th:text="'based on ' + ${#lists.size(activeBands)} + ' active band(s)'">based on 0 active bands</div>
     </div>
     <div class="stat-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6">
       <div class="flex items-center justify-between mb-4">
         <div class="p-3 bg-red-100 dark:bg-red-900/30 rounded-lg"><span class="material-icons-round text-red-600 dark:text-red-400">update</span></div>
         <span class="badge badge-warning">Expiry</span>
       </div>
-      <h3 class="text-2xl font-bold mb-1">Dec 31, 2026</h3>
+      <h3 th:text="${nextExpiry != null ? nextExpiry : 'None'}" class="text-2xl font-bold mb-1">None</h3>
       <p class="text-gray-600 dark:text-gray-400 text-sm">Next Scheduled Expiry</p>
-      <div class="mt-3 flex items-center text-xs text-gray-500"><span class="material-icons-round text-xs mr-1">schedule</span>1 band ends Q4 2024</div>
+      <div class="mt-3 flex items-center text-xs text-gray-500">
+        <span class="material-icons-round text-xs mr-1">schedule</span>
+        <span th:if="${nextExpiry != null}"
+              th:text="'Expires ' + ${nextExpiry}">—</span>
+        <span th:if="${nextExpiry == null}">No upcoming expiries</span>
+      </div>
     </div>
   </div>
 
@@ -239,33 +253,76 @@
         <div class="flex items-center space-x-3"><span class="material-icons-round text-primary-600">event_note</span><h3 class="text-lg font-bold">Effective Dating Overview</h3></div>
       </div>
       <div class="space-y-4">
+        <!-- Current year bands -->
         <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-750 rounded-lg">
-          <div class="flex items-center space-x-3"><span class="material-icons-round text-indigo-600">date_range</span><div><p class="text-sm font-medium">Current tax year</p><p class="text-xs text-gray-500">effective_from 2024-01-01 · 7 bands</p></div></div>
+          <div class="flex items-center space-x-3">
+            <span class="material-icons-round text-indigo-600">date_range</span>
+            <div>
+              <p class="text-sm font-medium">Current tax year</p>
+              <p class="text-xs text-gray-500"
+                 th:text="'effective_from ' + ${earliestFrom} + ' · ' + ${#lists.size(activeBands) - futureCount} + ' band(s)'">—</p>
+            </div>
+          </div>
           <span class="badge badge-success">active</span>
         </div>
+        <!-- Future bands -->
         <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-750 rounded-lg">
-          <div class="flex items-center space-x-3"><span class="material-icons-round text-amber-600">history</span><div><p class="text-sm font-medium">Historical (2023)</p><p class="text-xs text-gray-500">expired 2023-12-31 · 1 band</p></div></div>
-          <span class="badge badge-neutral">archived</span>
+          <div class="flex items-center space-x-3">
+            <span class="material-icons-round text-blue-600">upcoming</span>
+            <div>
+              <p class="text-sm font-medium">Future bands</p>
+              <p class="text-xs text-gray-500"
+                 th:text="${futureCount} + ' band(s) not yet effective'">0 bands not yet effective</p>
+            </div>
+          </div>
+          <span th:text="${futureCount > 0 ? 'pending' : 'none'}"
+                th:classappend="${futureCount > 0} ? 'badge-info' : 'badge-neutral'"
+                class="badge">none</span>
         </div>
+        <!-- Next expiry -->
         <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-750 rounded-lg">
-          <div class="flex items-center space-x-3"><span class="material-icons-round text-blue-600">upcoming</span><div><p class="text-sm font-medium">Future (2025)</p><p class="text-xs text-gray-500">effective_from 2025-01-01 · draft</p></div></div>
-          <span class="badge badge-info">pending</span>
+          <div class="flex items-center space-x-3">
+            <span class="material-icons-round text-amber-600">event_busy</span>
+            <div>
+              <p class="text-sm font-medium">Next expiry date</p>
+              <p class="text-xs text-gray-500"
+                 th:text="${nextExpiry != null ? 'Expires ' + nextExpiry : 'No upcoming expiries'}">—</p>
+            </div>
+          </div>
+          <span th:text="${nextExpiry != null ? 'expiring' : 'stable'}"
+                th:classappend="${nextExpiry != null} ? 'badge-warning' : 'badge-success'"
+                class="badge">stable</span>
         </div>
       </div>
     </div>
     <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6">
       <div class="flex items-center justify-between mb-6"><h3 class="text-lg font-bold">Regime & Compliance</h3></div>
       <div class="space-y-4">
-        <div class="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
-          <div class="flex items-center space-x-3"><div class="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center"><span class="material-icons-round text-blue-600 dark:text-blue-400">receipt</span></div><div><p class="text-sm font-medium">PAYE-FED (standard)</p><p class="text-xs text-gray-500">8 bands · 2024–2025</p></div></div>
+        <!-- Dynamic regime rows -->
+        <div th:each="entry : ${regimeCounts}"
+             class="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
+          <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
+              <span class="material-icons-round text-blue-600 dark:text-blue-400">receipt</span>
+            </div>
+            <div>
+              <p class="text-sm font-medium" th:text="${entry.key}">—</p>
+              <p class="text-xs text-gray-500" th:text="${entry.value + ' band(s)'}">0 bands</p>
+            </div>
+          </div>
           <span class="badge badge-success">active</span>
         </div>
+        <!-- Unique constraint row (static compliance note) -->
         <div class="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
-          <div class="flex items-center space-x-3"><div class="w-10 h-10 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center"><span class="material-icons-round text-purple-600 dark:text-purple-400">account_balance</span></div><div><p class="text-sm font-medium">PAYE-NR (non-resident)</p><p class="text-xs text-gray-500">3 bands · flat 15%</p></div></div>
-          <span class="badge badge-neutral">inactive</span>
-        </div>
-        <div class="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
-          <div class="flex items-center space-x-3"><div class="w-10 h-10 bg-amber-100 dark:bg-amber-900 rounded-lg flex items-center justify-center"><span class="material-icons-round text-amber-600 dark:text-amber-400">gavel</span></div><div><p class="text-sm font-medium">Unique constraint</p><p class="text-xs text-gray-500">(lower_bound, effective_from) enforced</p></div></div>
+          <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 bg-amber-100 dark:bg-amber-900 rounded-lg flex items-center justify-center">
+              <span class="material-icons-round text-amber-600 dark:text-amber-400">gavel</span>
+            </div>
+            <div>
+              <p class="text-sm font-medium">Unique constraint</p>
+              <p class="text-xs text-gray-500">(lower_bound, effective_from) enforced</p>
+            </div>
+          </div>
           <span class="material-icons-round text-green-600">check_circle</span>
         </div>
       </div>
