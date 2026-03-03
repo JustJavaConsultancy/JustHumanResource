@@ -356,17 +356,32 @@
   <!-- Employee Profile (Sidebar – keeps picture) -->
   <div class="p-5 border-b border-gray-200 dark:border-gray-700">
     <div class="flex items-center space-x-3">
-      <img src="https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=48&h=48&q=80"
-           class="w-10 h-10 rounded-full ring-2 ring-gray-200 dark:ring-gray-700 object-cover">
+
+      <!-- Initials Avatar -->
+      <div class="w-10 h-10 rounded-full ring-2 ring-gray-200 dark:ring-gray-700
+              flex items-center justify-center bg-primary text-white font-semibold text-sm">
+    <span th:text="${#strings.substring(userName,0,1).toUpperCase() +
+                    (#strings.contains(userName,' ') ?
+                    #strings.substring(userName, userName.indexOf(' ') + 1, userName.indexOf(' ') + 2).toUpperCase()
+                    : '')}">
+      JO
+    </span>
+      </div>
+
       <div class="flex-1 min-w-0">
-        <p th:text="${userName}" class="text-sm font-semibold text-gray-900 dark:text-white truncate">Jane Okafor</p>
+        <p th:text="${userName}"
+           class="text-sm font-semibold text-gray-900 dark:text-white truncate">
+          Jane Okafor
+        </p>
         <p class="text-xs text-gray-500 dark:text-gray-400 truncate flex items-center">
           Financial Officer
         </p>
       </div>
+
       <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
         <span class="material-icons-round text-sm">more_vert</span>
       </button>
+
     </div>
   </div>
 

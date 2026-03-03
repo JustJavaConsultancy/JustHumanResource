@@ -107,6 +107,60 @@ public class EmployeeController {
     }
     @GetMapping("/employee/dashboard")
     public String getEmployeeDashboard(Model model) {
+        String email = (String) authenticationManager.get("email");
+        // implement your own logic
+        Employee loginEmployee = employeeService.getByEmail(email);
+        Employee employee = employeeService.getEmployeeWithBankDetails(loginEmployee.getId());
+        PaySlipDTO latestPaySlip = paySlipService.getCurrentPeriodPaySlipForEmployee(1l,loginEmployee.getId());
+        System.out.println("Latest Pay Slip: " + latestPaySlip);
+        System.out.println("Logged in employee: " + loginEmployee);
+        List<PaySlipDTO> previousPaySlip = paySlipService.getPaySlipsByEmployee(loginEmployee.getId());
+        // 🔹 COMPLETED PROCESSES
+        List<HistoricProcessInstance> completedProcesses =
+                flowableTaskService.getCompletedProcessInstancesForAssignee(
+                        "employeeAppraisalProcess"
+                );
+
+        // 🔹 ACTIVE TASKS
+        List<FlowableTaskDTO> tasks =
+                flowableTaskService.getTasksForAssignee(
+                        String.valueOf(loginEmployee.getId()),
+                        "employeeAppraisalProcess"
+                );
+        List<AppraisalTaskViewDTO> enrichedAppraisals = new ArrayList<>();
+
+        for (FlowableTaskDTO task : tasks) {
+
+            Map<String, Object> variables = task.getVariables();
+
+            if (variables.containsKey("appraisalId")) {
+
+                Long appraisalId =
+                        Long.valueOf(variables.get("appraisalId").toString());
+
+                EmployeeAppraisal appraisal =
+                        appraisalService.findAppraisalById(appraisalId);
+                enrichedAppraisals.add(
+                        new AppraisalTaskViewDTO(task, appraisal)
+                );
+            }
+        }
+        enrichedAppraisals.forEach(
+                appraisal -> System.out.println("Task: " + appraisal.getTask()+ ", Appraisal: " + appraisal.getAppraisal())
+        );
+        List<EmployeeAppraisal> employeeAppraisals = appraisalService.findAppraisalByEmployeeID(loginEmployee.getId());
+        // existing
+        model.addAttribute("tasks", tasks);
+        model.addAttribute("employeeAppraisals", employeeAppraisals);
+
+// add this
+        model.addAttribute("appraisalMap",
+                employeeAppraisals.stream()
+                        .collect(Collectors.toMap(EmployeeAppraisal::getId, ea -> ea))
+        );
+        model.addAttribute("previousPaySlip", previousPaySlip);
+        model.addAttribute("employee", employee);
+        model.addAttribute("latestPaySlip", latestPaySlip);
         model.addAttribute("title", "Employee Dashboard");
         model.addAttribute("subTitle", "View your profile, performance metrics, and payroll information");
         return "employees/dashboard";

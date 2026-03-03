@@ -111,6 +111,53 @@ public class KpiController {
                     kpis.forEach(kpi -> System.out.println("  KPI: " + kpi.getName()));
                 }
         );
+        List<FlowableTaskDTO> tasks =
+                flowableTaskService.getTasksForAssignee(
+                        "mgr",
+                        "employeeAppraisalProcess"
+                );
+
+        List<AppraisalTaskViewDTO> managerPending = new ArrayList<>();
+        List<AppraisalTaskViewDTO> selfPending = new ArrayList<>();
+        List<AppraisalTaskViewDTO> completedAppraisals = new ArrayList<>();
+
+        // =========================
+        // ACTIVE TASK PROCESSING
+        // =========================
+        for (FlowableTaskDTO task : tasks) {
+
+            Map<String, Object> variables = task.getVariables();
+            if (!variables.containsKey("appraisalId")) continue;
+
+            Long appraisalId =
+                    Long.valueOf(variables.get("appraisalId").toString());
+
+            EmployeeAppraisal appraisal =
+                    appraisalService.findAppraisalById(appraisalId);
+
+            Boolean managerComplete =
+                    Boolean.parseBoolean(
+                            String.valueOf(variables.get("managerComplete"))
+                    );
+
+            Boolean selfComplete =
+                    Boolean.parseBoolean(
+                            String.valueOf(variables.get("selfComplete"))
+                    );
+
+            AppraisalTaskViewDTO dto =
+                    new AppraisalTaskViewDTO(task, appraisal);
+
+            if (!managerComplete) {
+                managerPending.add(dto);
+            }
+
+            if (!selfComplete) {
+                selfPending.add(dto);
+            }
+        }
+        model.addAttribute("managerPendingAppraisals", managerPending);
+
         model.addAttribute("assignmentsByEmployee", assignmentsByEmployee.size());
         model.addAttribute("assignmentsByJobStep", assignmentsByJobStep.size());
         model.addAttribute("totalAssignments",assignmentsByEmployee.size() + assignmentsByJobStep.size());
@@ -330,6 +377,53 @@ public class KpiController {
                     kpis.forEach(kpi -> System.out.println("  KPI: " + kpi.getName()));
                 }
         );
+
+        List<FlowableTaskDTO> tasks =
+                flowableTaskService.getTasksForAssignee(
+                        "mgr",
+                        "employeeAppraisalProcess"
+                );
+
+        List<AppraisalTaskViewDTO> managerPending = new ArrayList<>();
+        List<AppraisalTaskViewDTO> selfPending = new ArrayList<>();
+        List<AppraisalTaskViewDTO> completedAppraisals = new ArrayList<>();
+
+        // =========================
+        // ACTIVE TASK PROCESSING
+        // =========================
+        for (FlowableTaskDTO task : tasks) {
+
+            Map<String, Object> variables = task.getVariables();
+            if (!variables.containsKey("appraisalId")) continue;
+
+            Long appraisalId =
+                    Long.valueOf(variables.get("appraisalId").toString());
+
+            EmployeeAppraisal appraisal =
+                    appraisalService.findAppraisalById(appraisalId);
+
+            Boolean managerComplete =
+                    Boolean.parseBoolean(
+                            String.valueOf(variables.get("managerComplete"))
+                    );
+
+            Boolean selfComplete =
+                    Boolean.parseBoolean(
+                            String.valueOf(variables.get("selfComplete"))
+                    );
+
+            AppraisalTaskViewDTO dto =
+                    new AppraisalTaskViewDTO(task, appraisal);
+
+            if (!managerComplete) {
+                managerPending.add(dto);
+            }
+
+            if (!selfComplete) {
+                selfPending.add(dto);
+            }
+        }
+        model.addAttribute("managerPendingAppraisals", managerPending);
         model.addAttribute("assignmentsByEmployee", assignmentsByEmployee.size());
         model.addAttribute("assignmentsByJobStep", assignmentsByJobStep.size());
         model.addAttribute("totalAssignments",assignmentsByEmployee.size() + assignmentsByJobStep.size());
