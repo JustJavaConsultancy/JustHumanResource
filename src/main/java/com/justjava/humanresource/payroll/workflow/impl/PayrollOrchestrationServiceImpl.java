@@ -120,6 +120,8 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
 
         run.setPeriodStart(open.getPeriodStart());
         run.setPeriodEnd(open.getPeriodEnd());
+        run.setFlowableBusinessKey(employee.getId().toString());
+        run.setPayrollYear(open.getPeriodStart().getYear());
 
         return payrollRunRepository.save(run).getId();
     }
