@@ -64,8 +64,20 @@ public class KeycloakAdminService {
             String lastName,
             Map<String, List<String>> attributes
     ) {
+
         Assert.hasText(username, "Username must not be empty");
         Assert.hasText(password, "Password must not be empty");
+
+        // ✅ Step 1: Check if user already exists
+        Optional<UserRepresentation> existingUser =
+                users().search(username, 0, 1)
+                        .stream()
+                        .filter(u -> u.getUsername().equalsIgnoreCase(username))
+                        .findFirst();
+
+        if (existingUser.isPresent()) {
+            return existingUser.get().getId();
+        }
 
         UserRepresentation user = new UserRepresentation();
         user.setUsername(username);
@@ -83,6 +95,19 @@ public class KeycloakAdminService {
 
         try (Response response = users().create(user)) {
 
+            if (response.getStatus() == Response.Status.CONFLICT.getStatusCode()) {
+
+                // Another thread created it between check and create
+                return users().search(username, 0, 1)
+                        .stream()
+                        .filter(u -> u.getUsername().equalsIgnoreCase(username))
+                        .findFirst()
+                        .map(UserRepresentation::getId)
+                        .orElseThrow(() ->
+                                new IllegalStateException("User exists but cannot retrieve ID")
+                        );
+            }
+
             if (response.getStatus() != Response.Status.CREATED.getStatusCode()) {
                 throw new IllegalStateException(
                         "Failed to create user. Status: "
@@ -95,7 +120,6 @@ public class KeycloakAdminService {
             return extractUserId(response.getLocation());
         }
     }
-
     private CredentialRepresentation buildPasswordCredential(String password) {
         CredentialRepresentation credential = new CredentialRepresentation();
         credential.setType(CredentialRepresentation.PASSWORD);

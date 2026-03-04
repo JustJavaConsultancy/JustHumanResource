@@ -44,15 +44,15 @@ public class Employee extends BaseEntity {
     @Column(nullable = false)
     private RecordStatus status = RecordStatus.ACTIVE;
 
-    @ManyToOne(optional = false)
+    @ManyToOne//(optional = false)
     @JoinColumn(name = "department_id")
     private Department department;
 
-    @ManyToOne(optional = false)
+    @ManyToOne//(optional = false)
     @JoinColumn(name = "job_step_id")
     private JobStep jobStep;
 
-    @ManyToOne(optional = false)
+    @ManyToOne//(optional = true)
     @JoinColumn(name = "pay_group_id")
     private PayGroup payGroup;
 
