@@ -188,4 +188,10 @@ AND pr.status = 'POSTED'
             LocalDate start,
             LocalDate end
     );
+    Optional<PayrollRun>
+    findTopByEmployee_IdAndPayrollYearAndStatusOrderByPayrollDateDesc(
+            Long employeeId,
+            Integer payrollYear,
+            PayrollRunStatus status
+    );
 }

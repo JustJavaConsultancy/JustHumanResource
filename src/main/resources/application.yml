@@ -1,8 +1,8 @@
 spring:
   datasource:
-    url: ${JDBC_DATABASE_URL:jdbc:postgresql://localhost:5433/humanresource}
+    url: ${JDBC_DATABASE_URL:jdbc:postgresql://localhost:5432/humanresource}
     username: ${JDBC_DATABASE_USERNAME:postgres}
-    password: ${JDBC_DATABASE_PASSWORD:020775Rashy!}
+    password: ${JDBC_DATABASE_PASSWORD:Boluwatife2006}
     hikari:
       connection-timeout: 30000
       maximum-pool-size: 10
@@ -37,20 +37,23 @@ spring:
       client:
         provider:
           keycloak:
-            issuer-uri: ${ISSUER_URI:https://ngcloak-production.up.railway.app/realms/humanResources}
+            issuer-uri: ${ISSUER_URI:https://ngcloak-production.up.railway.app/realms/auth-realm}
+
+          keycloak-mobile:
+            issuer-uri: ${ISSUER_URI:https://ngcloak-production.up.railway.app/realms/mobile-auth-realm}
 
         registration:
           keycloak:
             provider: keycloak
-            client_id: ${KEYCLOAK_CLIENT_ID:humanResources}
-            client_secret: ${KEYCLOAK_CLIENT_SECRET:OrAILfmKCscBT2uUIMHntG2PRvYXg8iP}
+            client_id: ${KEYCLOAK_CLIENT_ID:auth}
+            client_secret: ${KEYCLOAK_CLIENT_SECRET:B4pNaVz73UEZZeQNIrk7qXFdjTjLgnJu}
             authorization-grant-type: authorization_code
             scope: openid,profile,email
 
           keycloak-mobile:
-            provider: keycloak
-            client_id: ${KEYCLOAK_CLIENT_ID:humanResources}
-            client_secret: ${KEYCLOAK_CLIENT_SECRET:OrAILfmKCscBT2uUIMHntG2PRvYXg8iP}
+            provider: keycloak-mobile
+            client_id: ${KEYCLOAK_CLIENT_ID:auth-mobile}
+            client_secret: ${KEYCLOAK_CLIENT_SECRET:sTZZkB0OSJXpuot1QAOTTooPoG5lkElF}
             authorization-grant-type: authorization_code
             scope: openid,profile,email
 error:

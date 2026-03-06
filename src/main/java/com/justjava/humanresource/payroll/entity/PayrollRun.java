@@ -94,4 +94,22 @@ public class PayrollRun extends BaseEntity {
     private Integer versionNumber = 1;
     private String appliedTaxBandSummary;
     private String appliedPensionSchemeName;
+
+    @Column(precision = 19, scale = 2)
+    private BigDecimal ytdGross = BigDecimal.ZERO;
+
+    @Column(precision = 19, scale = 2)
+    private BigDecimal ytdTaxable = BigDecimal.ZERO;
+
+    @Column(precision = 19, scale = 2)
+    private BigDecimal ytdDeductions = BigDecimal.ZERO;
+
+    @Column(precision = 19, scale = 2)
+    private BigDecimal ytdNet = BigDecimal.ZERO;
+
+    @Column(precision = 19, scale = 2)
+    private BigDecimal ytdPaye = BigDecimal.ZERO;
+
+    @Column(nullable = false)
+    private Integer payrollYear;
 }
