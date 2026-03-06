@@ -65,7 +65,7 @@ public class PayrollController {
                 .stream()
                 .filter(Deduction:: isStatutory)
                 .toList();
-        System.out.println("The payroll is " + payrollPeriodService.getOpenPeriod(1L));
+        System.out.println("The payroll is " + payrollPeriodService.getPeriodStatusForDate(1L,LocalDate.now()));
         model.addAttribute("payrollStatus", payrollPeriodService.getPeriodStatusForDate(1L,LocalDate.now()));
         model.addAttribute("allowances", allowances.size());
         model.addAttribute("employees", employees.size());
@@ -205,22 +205,13 @@ public class PayrollController {
     public String getEmployeePayroll(Model model) {
         List<PaySlipDTO> paySlips = paySlipService.getCurrentPeriodPaySlips(1L);
         List<PaySlipDTO> previousPaySlips = paySlipService.getAllClosedPeriodPaySlips(1L);
-        paySlips.forEach(
+        previousPaySlips.forEach(
                 paySlip -> System.out.println(" Pay Slip for Employee ==="+paySlip.getEmployeeName()
                         +" the Pay Period ==="+paySlip.getPayDate()
                         +" the Gross Pay ==="+paySlip.getGrossPay()
                         +" the Basic Salary ==="+paySlip.getGrossPay()
                         +" the Total Deductions ==="+paySlip.getTotalDeductions()
-                        //+" the Net Pay ==="+paySlip.getStatus())
         ));
-        System.out.println("The total completed pay slips are ==="+previousPaySlips.size());
-        previousPaySlips.forEach(
-                paySlip -> System.out.println(" Previous Pay Slip for Employee ==="+paySlip.getEmployeeName()
-                        +" the Pay Period ==="+paySlip.getPayDate()
-                        +" the Gross Pay ==="+paySlip.getGrossPay()
-                        +" the Basic Salary ==="+paySlip.getGrossPay()
-                        +" the Total Deductions ==="+paySlip.getTotalDeductions())
-        );
         model.addAttribute("paySlips", paySlips);
         model.addAttribute("previousPeriods",previousPaySlips);
         model.addAttribute("title", "Payroll Management");
