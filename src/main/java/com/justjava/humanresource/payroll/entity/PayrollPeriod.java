@@ -5,10 +5,13 @@ import com.justjava.humanresource.payroll.enums.PayrollPeriodStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.ToString;
+
 import java.time.LocalDate;
 @Getter
 @Setter
 @Entity
+@ToString
 @Table(name = "payroll_periods",
         uniqueConstraints = {
                 @UniqueConstraint(
@@ -49,5 +52,10 @@ public class PayrollPeriod extends BaseEntity {
 
     @Column(name = "cycle_length_days")
     private Integer cycleLengthDays;
+
+    String getPeriodName(){
+        return periodStart.toString()+"-"+periodEnd.toString();
+
+    }
 }
 

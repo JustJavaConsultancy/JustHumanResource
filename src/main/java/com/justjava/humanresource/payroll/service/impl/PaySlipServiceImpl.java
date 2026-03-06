@@ -84,11 +84,13 @@ public class PaySlipServiceImpl implements PaySlipService {
                                         PayrollPeriodStatus.LOCKED
                                 )
                         )
-                        .orElseThrow(() ->
-                                new IllegalStateException(
-                                        "No active payroll period found."));
+                        .orElse(null);
 
-        return paySlipRepository
+        if(current==null)
+            return new ArrayList<>();
+
+        System.out.println( " The Period Here====="+current);
+        List<PaySlipDTO> currentPaySlips=paySlipRepository
                 .findLatestForCompanyAndPeriod(
                         companyId,
                         current.getPeriodStart(),
@@ -97,6 +99,8 @@ public class PaySlipServiceImpl implements PaySlipService {
                 .stream()
                 .map(this::mapToDto)
                 .toList();
+        System.out.println( " The Payslip Size Around here==="+currentPaySlips.size());
+        return currentPaySlips;
     }
     @Override
     public PaySlipDTO getCurrentPeriodPaySlipForEmployee(Long companyId, Long employeeId) {

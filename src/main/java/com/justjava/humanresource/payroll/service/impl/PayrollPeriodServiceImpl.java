@@ -160,11 +160,7 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
                 .findByCompanyIdAndStatus(
                         companyId,
                         PayrollPeriodStatus.OPEN
-                )
-                .orElseThrow(() ->
-                        new IllegalStateException(
-                                "No OPEN payroll period found for company."
-                        ));
+                ).orElse(null);
     }
 
     /* ============================================================
