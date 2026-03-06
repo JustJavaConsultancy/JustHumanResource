@@ -144,12 +144,13 @@ public class PaySlipServiceImpl implements PaySlipService {
 
     @Override
     public List<PaySlipDTO> getAllClosedPeriodPaySlips(Long companyId) {
-
+        System.out.println("Fetching all closed period payslips for companyId: " + companyId);
         return paySlipRepository
                 .findLatestForCompanyByPeriodStatus(companyId,PayrollPeriodStatus.CLOSED)
                 .stream()
                 .map(this::mapToDto)
                 .toList();
+        
     }
     @Override
     public PaySlipDTO getLatestClosedPeriodPaySlipForEmployee(Long companyId, Long employeeId) {
