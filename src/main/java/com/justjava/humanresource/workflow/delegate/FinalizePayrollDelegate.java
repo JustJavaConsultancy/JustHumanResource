@@ -1,9 +1,9 @@
 package com.justjava.humanresource.workflow.delegate;
 
+import com.justjava.humanresource.core.enums.PayrollRunStatus;
 import com.justjava.humanresource.core.exception.InvalidOperationException;
 import com.justjava.humanresource.payroll.entity.PayrollRun;
 import com.justjava.humanresource.payroll.repositories.PayrollRunRepository;
-import com.justjava.humanresource.payroll.service.PaySlipService;
 import com.justjava.humanresource.payroll.workflow.PayrollOrchestrationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,7 +18,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class FinalizePayrollDelegate implements JavaDelegate {
 
     private final PayrollOrchestrationService payrollService;
-    private final PaySlipService paySlipService;
     private final PayrollRunRepository payrollRunRepository;
 
     @Override
@@ -27,10 +26,12 @@ public class FinalizePayrollDelegate implements JavaDelegate {
 
         Long payrollRunId = getRequiredPayrollRunId(execution);
 
-        log.info("Finalizing payroll for payrollRunId={}, processInstanceId={}, businessKey={}",
+        log.info(
+                "Finalizing payroll for payrollRunId={}, processInstanceId={}, businessKey={}",
                 payrollRunId,
                 execution.getProcessInstanceId(),
-                execution.getProcessInstanceBusinessKey());
+                execution.getProcessInstanceBusinessKey()
+        );
 
         PayrollRun run = payrollRunRepository.findById(payrollRunId)
                 .orElseThrow(() ->
@@ -39,25 +40,21 @@ public class FinalizePayrollDelegate implements JavaDelegate {
                         ));
 
         /*
-         * Idempotency Guard:
-         * If already POSTED (async retry scenario),
-         * do NOT finalize or generate payslip again.
+         * Idempotency Guard
          */
-        if (run.getStatus().name().equals("POSTED")) {
-            log.warn("PayrollRun {} already POSTED. Skipping duplicate finalization.",
-                    payrollRunId);
+        if (run.getStatus() == PayrollRunStatus.POSTED) {
+
+            log.warn(
+                    "PayrollRun {} already POSTED. Skipping duplicate finalization.",
+                    payrollRunId
+            );
+
             return;
         }
 
         payrollService.finalizePayroll(payrollRunId);
 
-        /*
-         * Payslip generation should only happen
-         * after successful finalization.
-         */
-        paySlipService.generatePaySlip(payrollRunId);
-
-        log.info("PayrollRun {} finalized and payslip generated.", payrollRunId);
+        log.info("PayrollRun {} finalized successfully.", payrollRunId);
     }
 
     private Long getRequiredPayrollRunId(DelegateExecution execution) {
@@ -65,6 +62,7 @@ public class FinalizePayrollDelegate implements JavaDelegate {
         Object value = execution.getVariable("payrollRunId");
 
         if (!(value instanceof Long)) {
+
             throw new InvalidOperationException(
                     "Missing or invalid process variable: payrollRunId"
             );

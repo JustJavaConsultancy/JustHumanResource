@@ -137,4 +137,5 @@ public interface PaySlipRepository extends JpaRepository<PaySlip, Long> {
     BigDecimal sumLatestGrossByDepartment(
             @Param("departmentId") Long departmentId
     );
+    boolean existsByPayrollRunId(Long payrollRunId);
 }
