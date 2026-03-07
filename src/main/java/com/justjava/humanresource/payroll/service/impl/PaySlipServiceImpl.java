@@ -118,7 +118,7 @@ public class PaySlipServiceImpl implements PaySlipService {
         return payrollRunRepository
                 .findTopByEmployeeIdAndPayrollDateOrderByVersionNumberDesc(
                         employeeId,
-                        current.getPeriodStart()
+                        current.getPeriodEnd()
                 )
                 .orElse(null);
     }
