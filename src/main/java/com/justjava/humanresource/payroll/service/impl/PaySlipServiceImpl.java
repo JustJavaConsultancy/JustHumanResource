@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -103,7 +104,27 @@ public class PaySlipServiceImpl implements PaySlipService {
         return currentPaySlips;
     }
     @Override
+    public PayrollRun getEmployeeCurrentPayrollRun(Long companyId, Long employeeId) {
+        PayrollPeriod current =
+                payrollPeriodRepository
+                        .findByCompanyIdAndStatusIn(
+                                companyId,
+                                List.of(
+                                        PayrollPeriodStatus.OPEN,
+                                        PayrollPeriodStatus.LOCKED
+                                )
+                        )
+                        .orElse(null);
+        return payrollRunRepository
+                .findTopByEmployeeIdAndPayrollDateOrderByVersionNumberDesc(
+                        employeeId,
+                        current.getPeriodStart()
+                )
+                .orElse(null);
+    }
+    @Override
     public List<PayrollRun> getCurrentPeriodPayrollRuns(Long companyId) {
+
 
         PayrollPeriod current =
                 payrollPeriodRepository
@@ -129,6 +150,7 @@ public class PaySlipServiceImpl implements PaySlipService {
         System.out.println( " The Payroll Run Size Around here==="+currentPayrollRuns.size());
         return currentPayrollRuns;
     }
+
     @Override
     public PaySlipDTO getCurrentPeriodPaySlipForEmployee(Long companyId, Long employeeId) {
 
@@ -350,6 +372,11 @@ public class PaySlipServiceImpl implements PaySlipService {
                 .stream()
                 .map(this::mapToDto)
                 .toList();
+    }
+
+    @Override
+    public boolean existsForPayrollRun(Long payrollRunId) {
+        return paySlipRepository.existsByPayrollRunId(payrollRunId);
     }
     /* ============================================================
        INTERNAL DTO MAPPER
