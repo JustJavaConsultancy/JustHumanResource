@@ -126,7 +126,6 @@
     .custom-scrollbar::-webkit-scrollbar-track { background: #f0f2f5; border-radius: 3px; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #b6c1cf; border-radius: 3px; }
 
-    /* Fallback / empty states */
     .empty-state { padding: 3rem; text-align: center; color: #95a3b3; }
     .empty-state i { font-size: 2.5rem; margin-bottom: 0.75rem; display: block; }
     .empty-state p { margin: 0; font-size: 0.875rem; }
@@ -138,7 +137,6 @@
     }
     .model-fallback i { font-size: 1.25rem; flex-shrink: 0; }
 
-    /* Lock banner */
     .lock-period-message {
       background: #e8f0fe; border: 1px solid #a0c0e4; border-radius: 8px;
       padding: 12px 20px; margin-bottom: 20px;
@@ -153,7 +151,6 @@
     }
     .lock-period-message .btn-lock:hover { background: #15306b; }
 
-    /* Modal */
     .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1000; align-items: center; justify-content: center; }
     .modal.show { display: flex; }
     .modal-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); }
@@ -191,17 +188,16 @@
   </div>
 
   <!-- ==============================================================
-       CURRENT PERIOD   model: paySlips  (List<PaySlipDTO>)
+       CURRENT PERIOD   model: payrollRuns  (List<PayrollRun>)
        ============================================================== -->
   <div class="period-label">Current Payroll Period</div>
 
-  <!-- Fallback: controller did not add the model at all -->
-  <div th:if="${paySlips == null}" class="model-fallback">
+  <div th:if="${payrollRuns == null}" class="model-fallback">
     <i class="bi bi-exclamation-triangle-fill"></i>
     <span>Current payroll data is unavailable. Please refresh the page or contact support.</span>
   </div>
 
-  <th:block th:if="${paySlips != null}">
+  <th:block th:if="${payrollRuns != null}">
 
     <div class="lock-period-message">
       <i class="bi bi-lock"></i>
@@ -219,7 +215,7 @@
         </div>
         <div class="flex items-center gap-3 flex-wrap">
           <div class="header-stat">
-            <div th:text="${#lists.size(paySlips)}" class="stat-val">0</div>
+            <div th:text="${#lists.size(payrollRuns)}" class="stat-val">0</div>
             <div class="stat-lbl">Employees</div>
           </div>
         </div>
@@ -242,39 +238,51 @@
           <thead>
           <tr>
             <th>Employee</th>
-            <th>Pay Day</th>
-            <th>Basic Salary</th>
+            <th>Payroll Date</th>
+            <th>Period</th>
             <th>Gross Pay</th>
             <th>Total Deductions</th>
             <th>Net Pay</th>
-            <th>Bank</th>
+            <th>Status</th>
             <th>Actions</th>
           </tr>
           </thead>
 
           <!-- Has records -->
-          <tbody th:if="${not #lists.isEmpty(paySlips)}" id="currentPayrollBody">
-          <tr th:each="paySlip : ${paySlips}">
+          <tbody th:if="${not #lists.isEmpty(payrollRuns)}" id="currentPayrollBody">
+          <tr th:each="run : ${payrollRuns}">
             <td>
               <div class="flex items-center gap-3">
                 <div class="emp-avatar"
-                     th:text="${paySlip.employeeName != null and #strings.length(paySlip.employeeName) >= 2
-                                ? #strings.toUpperCase(#strings.substring(paySlip.employeeName, 0, 2))
+                     th:with="fullName=${run.employee.firstName + ' ' + run.employee.lastName}"
+                     th:text="${fullName != null and #strings.length(fullName) >= 2
+                                ? #strings.toUpperCase(#strings.substring(fullName, 0, 2))
                                 : 'NA'}">AA</div>
                 <div>
-                  <div th:text="${paySlip.employeeName}" class="font-semibold text-slate-800 text-sm">—</div>
-                  <div th:text="'ID · ' + ${paySlip.employeeId}" class="text-xs text-slate-400">—</div>
+                  <div th:text="${run.employee.firstName + ' ' + run.employee.lastName}"
+                       class="font-semibold text-slate-800 text-sm">—</div>
+                  <div th:text="'ID · ' + ${run.employee.id}" class="text-xs text-slate-400">—</div>
                 </div>
               </div>
             </td>
-            <td th:text="${paySlip.payDate}" class="mono">—</td>
-            <td th:text="${paySlip.basicSalary}" class="mono amount-positive">—</td>
-            <td th:text="${paySlip.grossPay}" class="mono amount-positive">—</td>
-            <td th:text="${paySlip.totalDeductions}" class="mono amount-deduct">—</td>
-            <td th:text="${paySlip.netPay}" class="mono amount-positive">—</td>
+            <td th:text="${run.payrollDate}" class="mono">—</td>
+            <td class="mono text-xs text-slate-500">
+              <span th:if="${run.periodStart != null}"
+                    th:text="${run.periodStart + ' – ' + run.periodEnd}">—</span>
+              <span th:if="${run.periodStart == null}" class="text-slate-400">—</span>
+            </td>
+            <td th:text="${run.grossPay}" class="mono amount-positive">—</td>
+            <td th:text="${run.totalDeductions}" class="mono amount-deduct">—</td>
+            <td th:text="${run.netPay}" class="mono amount-positive">—</td>
             <td>
-              <div th:text="${paySlip.bankName}" class="text-sm text-slate-700">—</div>
-              <div th:text="${paySlip.bankAccountNumber}" class="text-xs text-slate-400 mono">—</div>
+              <span th:with="s=${run.status.name()}"
+                    th:classappend="${s == 'PROCESSED'} ? 'status-processed' :
+                                   (${s == 'PENDING'}   ? 'status-pending'   :
+                                   (${s == 'FAILED'}    ? 'status-failed'    : 'status-draft'))"
+                    class="status-badge">
+                <span class="dot"></span>
+                <span th:text="${run.status}">—</span>
+              </span>
             </td>
             <td>
               <button class="dl-btn" onclick="downloadPayslip(this)">
@@ -285,9 +293,9 @@
           </tbody>
 
           <!-- Empty list -->
-          <tbody th:if="${#lists.isEmpty(paySlips)}">
+          <tbody th:if="${#lists.isEmpty(payrollRuns)}">
           <tr>
-            <td colspan="9">
+            <td colspan="8">
               <div class="empty-state">
                 <i class="bi bi-inbox"></i>
                 <p>No payroll records found for this period.</p>
@@ -304,7 +312,7 @@
 
 
   <!-- ==============================================================
-       PAST RECORDS   model: previousPaySlips  (List<PaySlipDTO>)
+       PAST RECORDS   model: previousPeriods  (List<PaySlipDTO>)
        ============================================================== -->
   <div class="period-label" style="margin-top:2.5rem;">Past Payroll Records</div>
 
@@ -390,12 +398,12 @@
           <div style="font-weight:600;color:#1e293b;" id="ps-name"></div>
         </div>
         <div>
-          <div style="font-size:0.65rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#94a3b8;margin-bottom:4px;">Pay Day</div>
+          <div style="font-size:0.65rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#94a3b8;margin-bottom:4px;">Payroll Date</div>
           <div style="font-weight:600;color:#1e293b;" id="ps-payday"></div>
         </div>
         <div>
-          <div style="font-size:0.65rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#94a3b8;margin-bottom:4px;">Bank</div>
-          <div style="font-weight:600;color:#1e293b;" id="ps-bank"></div>
+          <div style="font-size:0.65rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#94a3b8;margin-bottom:4px;">Period</div>
+          <div style="font-weight:600;color:#1e293b;" id="ps-period"></div>
         </div>
       </div>
       <table style="width:100%;border-collapse:collapse;margin-bottom:1.5rem;">
@@ -406,10 +414,6 @@
         </tr>
         </thead>
         <tbody>
-        <tr style="border-bottom:1px solid #f1f5f9;">
-          <td style="padding:0.85rem 1rem;color:#334155;">Basic Salary</td>
-          <td style="padding:0.85rem 1rem;text-align:right;font-weight:600;font-family:ui-monospace,Consolas,monospace;color:#1e293b;" id="ps-basic"></td>
-        </tr>
         <tr style="border-bottom:1px solid #f1f5f9;">
           <td style="padding:0.85rem 1rem;color:#334155;">Gross Pay</td>
           <td style="padding:0.85rem 1rem;text-align:right;font-weight:600;font-family:ui-monospace,Consolas,monospace;color:#1e293b;" id="ps-gross"></td>
@@ -460,34 +464,24 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <script>
     /*
-      Column index map (0-based):
-
-      Current period table (9 cols):
-        0 Employee | 1 PayDay | 2 Basic | 3 Gross | 4 Deductions | 5 Net | 6 Bank | 7 Status | 8 Actions
-
-      Past period table (11 cols):
-        0 Employee | 1 PayDay | 2 Basic | 3 Gross | 4 Deductions | 5 Net | 6 Pension | 7 TaxBand | 8 Bank | 9 Status | 10 Actions
+      Column index map (0-based) — 8 cols both tables:
+        0 Employee | 1 Payroll Date | 2 Period | 3 Gross | 4 Deductions | 5 Net | 6 Status | 7 Actions
     */
     function downloadPayslip(btn) {
-      const row   = btn.closest('tr');
+      const row = btn.closest('tr');
       if (!row) return;
-      const c     = row.cells;
-      const isPast = c.length >= 11;
+      const c = row.cells;
 
-      const name  = c[0]?.querySelector('.font-semibold')?.textContent.trim() || 'N/A';
-      const payday = c[1]?.textContent.trim() || '—';
-      const basic  = c[2]?.textContent.trim() || '—';
-      const gross  = c[3]?.textContent.trim() || '—';
-      const deduct = c[4]?.textContent.trim() || '—';
-      const net    = c[5]?.textContent.trim() || '—';
-      // Bank cell contains two divs; grab the first (bankName)
-      const bankCell = isPast ? c[8] : c[6];
-      const bank  = bankCell?.querySelector('div')?.textContent.trim() || '—';
+      const name    = c[0]?.querySelector('.font-semibold')?.textContent.trim() || 'N/A';
+      const payday  = c[1]?.textContent.trim() || '—';
+      const period  = c[2]?.textContent.trim() || '—';
+      const gross   = c[3]?.textContent.trim() || '—';
+      const deduct  = c[4]?.textContent.trim() || '—';
+      const net     = c[5]?.textContent.trim() || '—';
 
       document.getElementById('ps-name').textContent       = name;
       document.getElementById('ps-payday').textContent     = payday;
-      document.getElementById('ps-bank').textContent       = bank;
-      document.getElementById('ps-basic').textContent      = basic;
+      document.getElementById('ps-period').textContent     = period;
       document.getElementById('ps-gross').textContent      = gross;
       document.getElementById('ps-deductions').textContent = deduct;
       document.getElementById('ps-net').textContent        = net;

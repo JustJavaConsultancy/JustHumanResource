@@ -1,6 +1,7 @@
 package com.justjava.humanresource.payroll.service;
 
 import com.justjava.humanresource.payroll.entity.PaySlipDTO;
+import com.justjava.humanresource.payroll.entity.PayrollRun;
 
 import java.time.YearMonth;
 import java.util.List;
@@ -27,6 +28,7 @@ public interface PaySlipService {
             Long periodId
     );
     public List<PaySlipDTO> getCurrentPeriodPaySlips(Long companyId);
+    public List<PayrollRun> getCurrentPeriodPayrollRuns(Long companyId);
     List<PaySlipDTO> getAllClosedPeriodPaySlips(Long companyId);
     //public List<PaySlipDTO> getEmployeePaySlips(Long employeeId);
     PaySlipDTO getCurrentPeriodPaySlipForEmployee(Long companyId, Long employeeId);

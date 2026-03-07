@@ -103,6 +103,33 @@ public class PaySlipServiceImpl implements PaySlipService {
         return currentPaySlips;
     }
     @Override
+    public List<PayrollRun> getCurrentPeriodPayrollRuns(Long companyId) {
+
+        PayrollPeriod current =
+                payrollPeriodRepository
+                        .findByCompanyIdAndStatusIn(
+                                companyId,
+                                List.of(
+                                        PayrollPeriodStatus.OPEN,
+                                        PayrollPeriodStatus.LOCKED
+                                )
+                        )
+                        .orElse(null);
+
+        if(current==null)
+            return new ArrayList<>();
+
+        System.out.println( " The Period Here====="+current);
+        List<PayrollRun> currentPayrollRuns=payrollRunRepository
+                .findByEmployee_Department_Company_IdAndPayrollDateBetween(
+                        companyId,
+                        current.getPeriodStart(),
+                        current.getPeriodEnd()
+                );
+        System.out.println( " The Payroll Run Size Around here==="+currentPayrollRuns.size());
+        return currentPayrollRuns;
+    }
+    @Override
     public PaySlipDTO getCurrentPeriodPaySlipForEmployee(Long companyId, Long employeeId) {
 
         PayrollPeriod current =

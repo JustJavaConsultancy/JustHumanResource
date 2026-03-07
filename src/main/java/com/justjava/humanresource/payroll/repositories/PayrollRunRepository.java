@@ -196,4 +196,5 @@ AND pr.status = 'POSTED'
             Integer payrollYear,
             PayrollRunStatus status
     );
+
 }

@@ -203,21 +203,16 @@ public class PayrollController {
 
     @GetMapping("/payroll/employee-payroll")
     public String getEmployeePayroll(Model model) {
-        List<PaySlipDTO> paySlips = paySlipService.getCurrentPeriodPaySlips(1L);
+        List<PayrollRun> payrollRuns = paySlipService.getCurrentPeriodPayrollRuns(1L);
         List<PaySlipDTO> previousPaySlips = paySlipService.getAllClosedPeriodPaySlips(1L);
-        previousPaySlips.forEach(
-                paySlip -> System.out.println(" Pay Slip for Employee ==="+paySlip.getEmployeeName()
-                        +" the Pay Period ==="+paySlip.getPayDate()
-                        +" the Gross Pay ==="+paySlip.getGrossPay()
-                        +" the Basic Salary ==="+paySlip.getGrossPay()
-                        +" the Total Deductions ==="+paySlip.getTotalDeductions()
-        ));
-        model.addAttribute("paySlips", paySlips);
+        System.out.println("The payroll runs for the current period are " + payrollRuns.size());
+        model.addAttribute("payrollRuns", payrollRuns);
         model.addAttribute("previousPeriods",previousPaySlips);
         model.addAttribute("title", "Payroll Management");
         model.addAttribute("subTitle", "Manage employee payroll, salary details, and payment history");
         return "payroll/fragments/employee-payroll";
     }
+
     @PostMapping("/createPayGroup")
     public String createPayGroup(CreatePayGroupCommand command) {
         setupService.createPayGroup(command);
