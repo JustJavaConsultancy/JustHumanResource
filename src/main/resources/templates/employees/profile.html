@@ -293,27 +293,14 @@
             justify-content: center;
             flex-direction: column;
             gap: 4px;
-            position: relative;
             box-shadow: 0 0 0 3px #fff, 0 0 0 5px #c7d7fe, 0 4px 20px rgba(37,99,235,0.10);
             border: 2.5px dashed #93c5fd;
-            cursor: pointer;
-            transition: box-shadow 0.2s, border-color 0.2s, background 0.2s;
         }
 
         .dark .avatar-placeholder {
             background: linear-gradient(135deg, #1e3a8a33 0%, #1e293b 100%);
             border-color: #3b82f6;
             box-shadow: 0 0 0 3px #0f172a, 0 0 0 5px #1e3a8a, 0 4px 20px rgba(37,99,235,0.2);
-        }
-
-        .avatar-placeholder:hover {
-            border-color: #2563eb;
-            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-            box-shadow: 0 0 0 3px #fff, 0 0 0 5px #2563eb, 0 8px 24px rgba(37,99,235,0.18);
-        }
-
-        .dark .avatar-placeholder:hover {
-            background: linear-gradient(135deg, #1e3a8a55 0%, #1e293b 100%);
         }
 
         .avatar-initials {
@@ -326,27 +313,7 @@
 
         .dark .avatar-initials { color: #93c5fd; }
 
-        .avatar-upload-hint {
-            font-size: 0.58rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.06em;
-            color: #60a5fa;
-            opacity: 0.9;
-        }
-
-        .dark .avatar-upload-hint { color: #93c5fd; }
-
-        @keyframes dashPulse {
-            0%, 100% { border-color: #93c5fd; }
-            50% { border-color: #2563eb; }
-        }
-
-        .avatar-placeholder.pulse-dash {
-            animation: dashPulse 2.5s ease-in-out infinite;
-        }
-
-        /* Modal placeholder (larger) */
+        /* Modal placeholder (larger) - not used anymore, but kept for consistency */
         .avatar-placeholder-lg {
             width: 7rem;
             height: 7rem;
@@ -616,30 +583,12 @@
     <!-- ── PROFILE HEADER CARD ────────────────────────────────────── -->
     <div class="card p-5 md:p-6 mb-6 animate-fadeup delay-1">
         <div class="flex flex-col md:flex-row md:items-start gap-5">
-            <!-- Avatar -->
+            <!-- Avatar (non‑interactive) -->
             <div class="flex-shrink-0">
-                <div class="relative" id="avatarWrapper">
-
-                    <!-- PLACEHOLDER shown when no photo is uploaded -->
-                    <div id="avatarPlaceholder"
-                         class="avatar-placeholder pulse-dash w-24 h-24 md:w-28 md:h-28"
-                         title="Click to upload your profile photo">
-                        <span th:text="${employee.firstName.substring(0,1) + employee.lastName.substring(0,1)}" class="avatar-initials" style="font-size:1.65rem">JO</span>
-                        <span class="avatar-upload-hint" style="font-size:0.6rem;margin-top:2px">Add photo</span>
-                    </div>
-
-                    <!-- ACTUAL PHOTO — hidden until an image is uploaded -->
-                    <img id="avatarImage"
-                         src=""
-                         alt="Profile photo"
-                         class="w-24 h-24 md:w-28 md:h-28 avatar-ring"
-                         style="display:none">
-
-                    <!-- Camera button — always visible -->
-                    <button id="editPhotoBtn"
-                            class="absolute -bottom-1 -right-1 w-8 h-8 bg-white dark:bg-gray-800 rounded-full shadow-lg border border-gray-200 dark:border-gray-700 flex items-center justify-center hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors z-10">
-                        <span class="material-icons-round text-blue-600 dark:text-blue-400" style="font-size:0.9rem">camera_alt</span>
-                    </button>
+                <div id="avatarPlaceholder"
+                     class="avatar-placeholder w-24 h-24 md:w-28 md:h-28"
+                     style="pointer-events: none;">
+                    <span th:text="${employee.firstName.substring(0,1) + employee.lastName.substring(0,1)}" class="avatar-initials" style="font-size:1.65rem">JO</span>
                 </div>
             </div>
 
@@ -1130,47 +1079,7 @@
         </div>
     </div>
 
-    <!-- ========== MODALS ========== -->
-
-    <!-- Modal: Edit Photo (unchanged) -->
-    <div id="editPhotoModal" class="modal-overlay">
-        <div class="modal-container">
-            <div class="modal-header">
-                <div>
-                    <p class="modal-title">Update Profile Photo</p>
-                    <p class="modal-subtitle">JPG, PNG or GIF · max 5MB</p>
-                </div>
-                <button class="close-btn close-modal"><span class="material-icons-round" style="font-size:1rem">close</span></button>
-            </div>
-            <div class="modal-body space-y-5">
-                <div class="flex justify-center">
-                    <div class="relative flex flex-col items-center gap-3">
-                        <div id="modalAvatarPlaceholder"
-                             class="avatar-placeholder avatar-placeholder-lg w-28 h-28">
-                            <span class="material-icons-round" style="font-size:2rem;color:#2563eb;opacity:0.5">person</span>
-                            <span id="modalAvatarInitials" class="avatar-initials" style="font-size:1.8rem">JO</span>
-                            <span class="avatar-upload-hint">No photo yet</span>
-                        </div>
-                        <img id="modalAvatarImage"
-                             src=""
-                             alt="Profile preview"
-                             class="w-28 h-28 avatar-ring"
-                             style="display:none">
-                        <span id="photoFilename" class="text-xs font-medium" style="color:var(--text-muted);display:none"></span>
-                    </div>
-                </div>
-                <label class="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold cursor-pointer transition-colors">
-                    <span class="material-icons-round" style="font-size:1rem">upload</span>
-                    Choose New Photo
-                    <input type="file" accept="image/*" class="hidden">
-                </label>
-            </div>
-            <div class="modal-footer">
-                <button class="edit-btn edit-btn-ghost close-modal">Cancel</button>
-                <button class="edit-btn edit-btn-primary">Save Photo</button>
-            </div>
-        </div>
-    </div>
+    <!-- ========== MODALS (photo upload modal completely removed) ========== -->
 
     <!-- Modal: Edit Profile Header (unchanged) -->
     <div id="editProfileModal" class="modal-overlay">
@@ -1464,7 +1373,6 @@
 
         // ── MODAL ENGINE ─────────────────────────────────────────
         const modals = {
-            editPhoto: document.getElementById('editPhotoModal'),
             editProfile: document.getElementById('editProfileModal'),
             editPersonalInfo: document.getElementById('editPersonalInfoModal'),
             editEmergency: document.getElementById('editEmergencyModal'),
@@ -1482,7 +1390,6 @@
         }
 
         // Open triggers
-        document.getElementById('editPhotoBtn').addEventListener('click', () => openModal(modals.editPhoto));
         document.getElementById('editProfileBtn').addEventListener('click', () => openModal(modals.editProfile));
         document.getElementById('editPersonalInfoBtn').addEventListener('click', () => openModal(modals.editPersonalInfo));
         document.getElementById('editEmergencyBtn').addEventListener('click', () => openModal(modals.editEmergency));
@@ -1506,84 +1413,6 @@
         document.addEventListener('keydown', e => {
             if (e.key === 'Escape') Object.values(modals).forEach(m => closeModal(m));
         });
-
-        // ── AVATAR INITIALS ──────────────────────────────────────
-        function getInitials(fullName) {
-            const parts = (fullName || '').trim().split(/\s+/);
-            if (parts.length === 0 || !parts[0]) return '?';
-            if (parts.length === 1) return parts[0][0].toUpperCase();
-            return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-        }
-
-        const nameEl = document.querySelector('h2');
-        const employeeName = nameEl ? nameEl.textContent.trim() : 'Jane Okafor';
-        const initials = getInitials(employeeName);
-
-        const modalInitialsEl = document.getElementById('modalAvatarInitials');
-        if (modalInitialsEl) modalInitialsEl.textContent = initials;
-
-        // ── PHOTO UPLOAD PREVIEW ─────────────────────────────────
-        const photoInput = document.querySelector('#editPhotoModal input[type="file"]');
-        const avatarPlaceholder = document.getElementById('avatarPlaceholder');
-        const avatarImage = document.getElementById('avatarImage');
-        const modalPlaceholder = document.getElementById('modalAvatarPlaceholder');
-        const modalImage = document.getElementById('modalAvatarImage');
-        const filenameLabel = document.getElementById('photoFilename');
-
-        if (photoInput) {
-            photoInput.addEventListener('change', function () {
-                const file = this.files[0];
-                if (!file) return;
-
-                const reader = new FileReader();
-                reader.onload = function (e) {
-                    const src = e.target.result;
-
-                    if (modalImage) {
-                        modalImage.src = src;
-                        modalImage.style.display = '';
-                    }
-                    if (modalPlaceholder) modalPlaceholder.style.display = 'none';
-                    if (filenameLabel) {
-                        filenameLabel.textContent = file.name;
-                        filenameLabel.style.display = '';
-                    }
-
-                    photoInput._pendingSrc = src;
-                };
-                reader.readAsDataURL(file);
-            });
-        }
-
-        const savePhotoBtn = document.querySelector('#editPhotoModal .edit-btn-primary');
-        if (savePhotoBtn) {
-            savePhotoBtn.addEventListener('click', () => {
-                const src = photoInput && photoInput._pendingSrc;
-                if (!src) {
-                    alert('Please choose a photo first.');
-                    return;
-                }
-
-                if (avatarImage) {
-                    avatarImage.src = src;
-                    avatarImage.style.display = '';
-                }
-                if (avatarPlaceholder) {
-                    avatarPlaceholder.style.display = 'none';
-                }
-
-                closeModal(modals.editPhoto);
-
-                if (modalImage) { modalImage.src = ''; modalImage.style.display = 'none'; }
-                if (modalPlaceholder) modalPlaceholder.style.display = '';
-                if (filenameLabel) { filenameLabel.style.display = 'none'; filenameLabel.textContent = ''; }
-                if (photoInput) { photoInput.value = ''; delete photoInput._pendingSrc; }
-            });
-        }
-
-        if (avatarPlaceholder) {
-            avatarPlaceholder.addEventListener('click', () => openModal(modals.editPhoto));
-        }
 
         // ── THEME TOGGLE ─────────────────────────────────────────
         const themeToggle = document.getElementById('themeToggle');

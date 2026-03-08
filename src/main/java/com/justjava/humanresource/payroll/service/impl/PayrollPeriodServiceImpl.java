@@ -13,12 +13,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
 public class PayrollPeriodServiceImpl implements PayrollPeriodService {
 
+    private final PayrollPeriodRepository payrollPeriodRepository;
     private final PayrollPeriodRepository repository;
     private final PayrollRunRepository payrollRunRepository;
     private final RuntimeService runtimeService;
@@ -215,6 +217,21 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
                 )
                 .map(PayrollPeriod::getStatus)
                 .orElse(null);
+    }
+    @Override
+    public PayrollPeriodStatus getCurrentPeriodStatus(Long companyId) {
+        PayrollPeriod current =
+                payrollPeriodRepository
+                        .findByCompanyIdAndStatusIn(
+                                companyId,
+                                List.of(
+                                        PayrollPeriodStatus.OPEN,
+                                        PayrollPeriodStatus.LOCKED
+                                )
+                        )
+                        .orElse(null);
+        PayrollPeriodStatus status = current != null ? current.getStatus() : null;
+        return status;
     }
 
     /* ============================================================

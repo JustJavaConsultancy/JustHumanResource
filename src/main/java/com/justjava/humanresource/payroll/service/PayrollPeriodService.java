@@ -71,6 +71,7 @@ public interface PayrollPeriodService {
             Long companyId,
             LocalDate payrollDate
     );
+    PayrollPeriodStatus getCurrentPeriodStatus(Long companyId);
 
     /* ============================================================
        APPROVAL WORKFLOW

@@ -205,6 +205,7 @@ public class PayrollController {
     public String getEmployeePayroll(Model model) {
         List<PayrollRun> payrollRuns = paySlipService.getCurrentPeriodPayrollRuns(1L);
         List<PaySlipDTO> previousPaySlips = paySlipService.getAllClosedPeriodPaySlips(1L);
+        System.out.println("This is the current period " + payrollPeriodService.getCurrentPeriodStatus(1L));
         System.out.println("The payroll runs for the current period are " + payrollRuns.size());
         model.addAttribute("payrollRuns", payrollRuns);
         model.addAttribute("previousPeriods",previousPaySlips);
