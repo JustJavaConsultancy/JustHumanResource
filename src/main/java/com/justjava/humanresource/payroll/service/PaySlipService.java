@@ -31,8 +31,8 @@ public interface PaySlipService {
     public List<PayrollRun> getCurrentPeriodPayrollRuns(Long companyId);
     List<PaySlipDTO> getAllClosedPeriodPaySlips(Long companyId);
     //public List<PaySlipDTO> getEmployeePaySlips(Long employeeId);
-    PaySlipDTO getCurrentPeriodPaySlipForEmployee(Long companyId, Long employeeId);
     PaySlipDTO getLatestClosedPeriodPaySlipForEmployee(Long companyId, Long employeeId);
     boolean existsForPayrollRun(Long payrollRunId);
+    public PaySlipDTO getCurrentPeriodPaySlipForEmployee(Long companyId, Long employeeId);
     public PayrollRun getEmployeeCurrentPayrollRun(Long companyId, Long employeeId);
 }

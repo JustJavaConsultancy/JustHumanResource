@@ -118,6 +118,7 @@ public class PayrollRunServiceImpl implements PayrollRunService {
                         .map(this::mapItem)
                         .collect(Collectors.toList());
 
+
         List<PayrollItemDTO> deductions =
                 items.stream()
                         .filter(i -> i.getComponentType() == PayComponentType.DEDUCTION)
@@ -156,6 +157,7 @@ public class PayrollRunServiceImpl implements PayrollRunService {
                 .allowances(allowances)
                 .deductions(deductions)
                 .build();
+
     }
 
     private PayrollItemDTO mapItem(PayrollLineItem item) {

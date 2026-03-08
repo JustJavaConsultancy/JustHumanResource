@@ -19,8 +19,11 @@ import com.justjava.humanresource.kpi.service.KpiDefinitionService;
 import com.justjava.humanresource.kpi.service.KpiMeasurementService;
 import com.justjava.humanresource.onboarding.dto.StartEmployeeOnboardingCommand;
 import com.justjava.humanresource.onboarding.service.EmployeeOnboardingService;
+import com.justjava.humanresource.payroll.dto.PayrollRunDTO;
 import com.justjava.humanresource.payroll.entity.PaySlipDTO;
+import com.justjava.humanresource.payroll.entity.PayrollRun;
 import com.justjava.humanresource.payroll.service.PaySlipService;
+import com.justjava.humanresource.payroll.service.PayrollRunService;
 import com.justjava.humanresource.payroll.service.PayrollSetupService;
 import com.justjava.humanresource.workflow.dto.FlowableTaskDTO;
 import com.justjava.humanresource.workflow.service.FlowableTaskService;
@@ -55,6 +58,9 @@ public class EmployeeController {
 
     @Autowired
     AppraisalService appraisalService;
+
+    @Autowired
+    private PayrollRunService payrollRunService;
 
     @Autowired
     private FlowableTaskService flowableTaskService;
@@ -111,8 +117,8 @@ public class EmployeeController {
         // implement your own logic
         Employee loginEmployee = employeeService.getByEmail(email);
         Employee employee = employeeService.getEmployeeWithBankDetails(loginEmployee.getId());
-        PaySlipDTO latestPaySlip = paySlipService.getCurrentPeriodPaySlipForEmployee(1l,loginEmployee.getId());
-        System.out.println("Latest Pay Slip: " + latestPaySlip);
+        PayrollRunDTO currentPayrollRun = payrollRunService.getEmployeePayrollRun(1L, loginEmployee.getId());
+        System.out.println("Latest Pay Slip: " + currentPayrollRun);
         System.out.println("Logged in employee: " + loginEmployee);
         List<PaySlipDTO> previousPaySlip = paySlipService.getPaySlipsByEmployee(loginEmployee.getId());
         // 🔹 COMPLETED PROCESSES
@@ -160,7 +166,7 @@ public class EmployeeController {
         );
         model.addAttribute("previousPaySlip", previousPaySlip);
         model.addAttribute("employee", employee);
-        model.addAttribute("latestPaySlip", latestPaySlip);
+        model.addAttribute("latestPaySlip", currentPayrollRun);
         model.addAttribute("title", "Employee Dashboard");
         model.addAttribute("subTitle", "View your profile, performance metrics, and payroll information");
         return "employees/dashboard";
@@ -171,11 +177,11 @@ public class EmployeeController {
         // implement your own logic
         Employee loginEmployee = employeeService.getByEmail(email);
         Employee employee = employeeService.getEmployeeWithBankDetails(loginEmployee.getId());
-        PaySlipDTO latestPaySlip = paySlipService.getCurrentPeriodPaySlipForEmployee(1l,loginEmployee.getId());
-        System.out.println("Latest Pay Slip: " + latestPaySlip);
+        PayrollRun currentPayrollRun = paySlipService.getEmployeeCurrentPayrollRun(1L, loginEmployee.getId());
+        System.out.println("Latest Pay Slip: " + currentPayrollRun);
         System.out.println("Logged in employee: " + loginEmployee);
         model.addAttribute("employee", employee);
-        model.addAttribute("latestPaySlip", latestPaySlip);
+        model.addAttribute("latestPaySlip", currentPayrollRun);
         model.addAttribute("title", "Employee Profile");
         model.addAttribute("subTitle", "View and update your personal information, job details, and performance data");
         return "employees/profile";
@@ -191,7 +197,7 @@ public class EmployeeController {
         String email = (String) authenticationManager.get("email");
         // implement your own logic
         Employee loginEmployee = employeeService.getByEmail(email);
-        PaySlipDTO latestPaySlip = paySlipService.getCurrentPeriodPaySlipForEmployee(1l,loginEmployee.getId());
+        PayrollRunDTO latestPaySlip = payrollRunService.getEmployeePayrollRun(1L, loginEmployee.getId());
 
         List<PaySlipDTO> previousPaySlip = paySlipService.getPaySlipsByEmployee(loginEmployee.getId());
         Employee employee = employeeService.getEmployeeWithBankDetails(loginEmployee.getId());

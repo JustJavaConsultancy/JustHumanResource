@@ -50,7 +50,7 @@ public class PayrollRunDTO {
 
     private BigDecimal paye = BigDecimal.ZERO;
     private BigDecimal pension = BigDecimal.ZERO;
-
+    private BigDecimal basicSalary = BigDecimal.ZERO;
     private String pensionScheme;
 
     /* =========================

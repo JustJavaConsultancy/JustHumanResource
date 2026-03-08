@@ -203,7 +203,7 @@ public class PaySlipServiceImpl implements PaySlipService {
                 .stream()
                 .map(this::mapToDto)
                 .toList();
-        
+
     }
     @Override
     public PaySlipDTO getLatestClosedPeriodPaySlipForEmployee(Long companyId, Long employeeId) {
