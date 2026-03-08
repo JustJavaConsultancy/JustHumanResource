@@ -1,6 +1,7 @@
 package com.justjava.humanresource.payroll.repositories;
 
 import com.justjava.humanresource.core.enums.PayrollRunStatus;
+import com.justjava.humanresource.payroll.dto.PayrollRunDTO;
 import com.justjava.humanresource.payroll.entity.PayrollRun;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -196,5 +197,34 @@ AND pr.status = 'POSTED'
             Integer payrollYear,
             PayrollRunStatus status
     );
-
+    @Query("""
+SELECT new com.justjava.humanresource.payroll.dto.PayrollRunDTO(
+    pr.id,
+    e.id,
+    e.employeeNumber,
+    CONCAT(e.firstName,' ',e.lastName),
+    pr.payrollDate,
+    pr.periodStart,
+    pr.periodEnd,
+    pr.grossPay,
+    pr.totalDeductions,
+    pr.netPay
+)
+FROM PayrollRun pr
+JOIN pr.employee e
+WHERE e.department.company.id = :companyId
+AND pr.periodStart = :periodStart
+AND pr.periodEnd = :periodEnd
+AND pr.versionNumber = (
+        SELECT MAX(pr2.versionNumber)
+        FROM PayrollRun pr2
+        WHERE pr2.employee.id = pr.employee.id
+        AND pr2.payrollDate = pr.payrollDate
+)
+""")
+    List<PayrollRunDTO> findLatestPayrollRunsForPeriod(
+            Long companyId,
+            LocalDate periodStart,
+            LocalDate periodEnd
+    );
 }
