@@ -38,12 +38,25 @@ public class PayrollRunServiceImpl implements PayrollRunService {
     }
 
     @Override
-    public PayrollRunDTO getEmployeePayrollRun(Long employeeId, LocalDate payrollDate) {
+    public PayrollRunDTO getEmployeePayrollRun(Long employeeId,Long companyId) {
+        PayrollPeriod current =
+                payrollPeriodRepository
+                        .findByCompanyIdAndStatusIn(
+                                companyId,
+                                List.of(
+                                        PayrollPeriodStatus.OPEN,
+                                        PayrollPeriodStatus.LOCKED
+                                )
+                        )
+                        .orElse(null);
 
+/*        if (current == null) {
+            return Collections.emptyList();
+        }*/
         PayrollRun run = payrollRunRepository
                 .findTopByEmployeeIdAndPayrollDateOrderByVersionNumberDesc(
                         employeeId,
-                        payrollDate
+                        current.getPeriodEnd()
                 )
                 .orElseThrow(() -> new IllegalStateException("PayrollRun not found"));
 

@@ -10,7 +10,7 @@ public interface PayrollRunService {
 
     PayrollRunDTO getPayrollRun(Long payrollRunId);
 
-    PayrollRunDTO getEmployeePayrollRun(Long employeeId, LocalDate payrollDate);
+    PayrollRunDTO getEmployeePayrollRun(Long employeeId,Long companyId);
 
     List<PayrollRunDTO> getPayrollRunsForPeriod(
             Long companyId,
