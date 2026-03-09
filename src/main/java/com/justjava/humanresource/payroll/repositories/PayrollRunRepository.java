@@ -160,7 +160,7 @@ SELECT
     :newPeriodEnd,
     :newPeriodStart,
     :newPeriodEnd,
-    'IN_PROGRESS',
+    'POSTED',
     pr.flowable_process_instance_id,
     pr.payroll_year,
     'ORIGINAL',
