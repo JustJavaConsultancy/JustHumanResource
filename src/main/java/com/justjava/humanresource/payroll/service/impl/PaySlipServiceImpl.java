@@ -163,9 +163,10 @@ public class PaySlipServiceImpl implements PaySlipService {
                                         PayrollPeriodStatus.LOCKED
                                 )
                         )
-                        .orElseThrow(() ->
+                        .orElse(null);
+/*                        .orElseThrow(() ->
                                 new IllegalStateException(
-                                        "No active payroll period found."));
+                                        "No active payroll period found."));*/
 
         PaySlip slip = paySlipRepository
                 .findLatestByEmployeeAndPeriod(
@@ -173,10 +174,11 @@ public class PaySlipServiceImpl implements PaySlipService {
                         current.getPeriodStart(),
                         current.getPeriodEnd()
                 )
-                .orElseThrow(() ->
+                .orElse(null);
+/*                .orElseThrow(() ->
                         new IllegalStateException(
                                 "No payslip found for employee in current period.")
-                );
+                );*/
 
 /*        if (!slip.getEmployee()
                 .getDepartment()
@@ -187,6 +189,9 @@ public class PaySlipServiceImpl implements PaySlipService {
             throw new IllegalStateException(
                     "Employee does not belong to specified company.");
         }*/
+
+        if(slip==null)
+            return null;
 
         return mapToDto(slip);
     }
