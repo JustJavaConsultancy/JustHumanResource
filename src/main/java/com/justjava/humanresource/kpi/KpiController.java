@@ -317,7 +317,7 @@ public class KpiController {
         kpiMeasurementService.recordBulkMeasurements(request);
         System.out.println("Successfully recorded KPI measurements for employee ID: " + request.getEmployeeId());
 
-        List<KpiMeasurementResponseDTO> measurements = kpiMeasurementService.getAllEffectiveMeasurements(YearMonth.now());
+        List<KpiMeasurementResponseDTO> measurements = kpiMeasurementService.getAllEffectiveMeasurements(YearMonth.now().minusMonths(1));
         model.addAttribute("measurements", measurements);
         return "kpi/fragment/kpi-measurements-table";
     }
