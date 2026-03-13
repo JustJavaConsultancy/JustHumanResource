@@ -21,7 +21,7 @@ public interface PayrollRunRepository
        ============================================================ */
 
     Optional<PayrollRun>
-    findTopByEmployeeIdAndPayrollDateOrderByVersionNumberDesc(
+    findTopByEmployeeIdAndPeriodEndOrderByVersionNumberDesc(
             Long employeeId,
             LocalDate payrollDate
     );

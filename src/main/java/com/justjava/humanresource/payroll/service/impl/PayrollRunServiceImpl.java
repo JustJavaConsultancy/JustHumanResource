@@ -54,7 +54,7 @@ public class PayrollRunServiceImpl implements PayrollRunService {
             return Collections.emptyList();
         }*/
         PayrollRun run = payrollRunRepository
-                .findTopByEmployeeIdAndPayrollDateOrderByVersionNumberDesc(
+                .findTopByEmployeeIdAndPeriodEndOrderByVersionNumberDesc(
                         employeeId,
                         current.getPeriodEnd()
                 )

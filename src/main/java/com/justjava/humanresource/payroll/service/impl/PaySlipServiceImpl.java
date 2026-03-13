@@ -116,7 +116,7 @@ public class PaySlipServiceImpl implements PaySlipService {
                         )
                         .orElse(null);
         return payrollRunRepository
-                .findTopByEmployeeIdAndPayrollDateOrderByVersionNumberDesc(
+                .findTopByEmployeeIdAndPeriodEndOrderByVersionNumberDesc(
                         employeeId,
                         current.getPeriodEnd()
                 )
@@ -284,7 +284,7 @@ public class PaySlipServiceImpl implements PaySlipService {
         }
 
         Employee employee = payrollRunRepository
-                .findTopByEmployeeIdAndPayrollDateOrderByVersionNumberDesc(
+                .findTopByEmployeeIdAndPeriodEndOrderByVersionNumberDesc(
                         employeeId,
                         period.getPeriodStart()
                 )

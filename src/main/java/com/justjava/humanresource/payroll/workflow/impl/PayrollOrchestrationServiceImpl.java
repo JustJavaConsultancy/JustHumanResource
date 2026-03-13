@@ -76,7 +76,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
 
         Optional<PayrollRun> existingOpt =
                 payrollRunRepository
-                        .findTopByEmployeeIdAndPayrollDateOrderByVersionNumberDesc(
+                        .findTopByEmployeeIdAndPeriodEndOrderByVersionNumberDesc(
                                 employeeId,
                                 payrollDate
                         );
