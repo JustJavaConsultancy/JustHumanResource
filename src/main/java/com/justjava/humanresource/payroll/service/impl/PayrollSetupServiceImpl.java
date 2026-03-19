@@ -20,7 +20,9 @@ import com.justjava.humanresource.payroll.statutory.entity.PayeTaxBand;
 import com.justjava.humanresource.payroll.statutory.entity.PensionScheme;
 import com.justjava.humanresource.payroll.statutory.repositories.PayeTaxBandRepository;
 import com.justjava.humanresource.payroll.statutory.repositories.PensionSchemeRepository;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -69,6 +71,31 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
     public PayeTaxBand createPayeTaxBand(PayeTaxBand band) {
         band.setStatus(RecordStatus.ACTIVE);
         return payeTaxBandRepository.save(band);
+    }
+    @Override
+    @Transactional
+    public PayeTaxBand updateTax(Long id, PayeTaxBand incoming) {
+        // 1. Fetch existing
+        PayeTaxBand existing = payeTaxBandRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("PayeTaxBand not found"));
+
+        // 3. Determine new values (use existing if null in incoming)
+        BigDecimal newLower = incoming.getLowerBound() != null ? incoming.getLowerBound() : existing.getLowerBound();
+        BigDecimal newUpper = incoming.getUpperBound() != null ? incoming.getUpperBound() : existing.getUpperBound();
+        LocalDate newEffectiveFrom = incoming.getEffectiveFrom() != null ? incoming.getEffectiveFrom() : existing.getEffectiveFrom();
+        LocalDate newEffectiveTo = incoming.getEffectiveTo() != null ? incoming.getEffectiveTo() : existing.getEffectiveTo();
+
+        // 7. Apply updates (copy only mutable fields)
+        existing.setLowerBound(newLower);
+        existing.setUpperBound(newUpper);
+        if (incoming.getRate() != null) existing.setRate(incoming.getRate());
+        existing.setEffectiveFrom(newEffectiveFrom);
+        existing.setEffectiveTo(newEffectiveTo);
+        if (incoming.getStatus() != null) existing.setStatus(incoming.getStatus());
+        if (incoming.getRegimeCode() != null) existing.setRegimeCode(incoming.getRegimeCode());
+
+        // 8. Save and return
+        return payeTaxBandRepository.save(existing);
     }
 
     @Override

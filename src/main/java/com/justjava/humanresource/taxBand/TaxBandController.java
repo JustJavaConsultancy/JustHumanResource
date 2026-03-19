@@ -5,8 +5,7 @@ import com.justjava.humanresource.payroll.statutory.entity.PayeTaxBand;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -84,6 +83,12 @@ public class TaxBandController {
         System.out.println("Adding Tax Band");
         payrollSetupService.createPayeTaxBand(band);
         System.out.println("Tax Band added successfully: " + band.getRegimeCode());
+        return "redirect:/tax-band";
+    }
+    @PutMapping("/update/tax-band/{id}")
+    public String updatePayeTaxBand(@PathVariable Long id,
+                                                         @RequestBody PayeTaxBand band) {
+        payrollSetupService.updateTax(id, band);
         return "redirect:/tax-band";
     }
 }

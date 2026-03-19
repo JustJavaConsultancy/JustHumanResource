@@ -89,7 +89,6 @@
         .sidebar-container.open { transform: translateX(0); }
         .main-content { margin-left: 0; width: 100%; }
     }
-    /* Modal animation */
     .modal-enter {
         transition: opacity 0.2s ease;
     }
@@ -122,7 +121,7 @@
       <p class="text-gray-600 dark:text-gray-400 text-sm">Primary Tax Year</p>
       <div class="mt-3">
      <span class="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded"
-          th:text="${earliestFrom != null ? 'Effective from ' + earliestFrom : 'No bands'}">—</span>
+           th:text="${earliestFrom != null ? 'Effective from ' + earliestFrom : 'No bands'}">—</span>
       </div>
     </div>
     <div class="stat-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6">
@@ -178,7 +177,7 @@
       </div>
     </div>
 
-    <!-- Table - every row now has complete action buttons -->
+    <!-- Table - every row now has complete action buttons and data attributes -->
     <div class="overflow-x-auto">
       <table class="w-full min-w-[1100px]">
         <thead>
@@ -193,15 +192,25 @@
           <th class="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
         </tr>
         </thead>
-        <!-- Table body with active bands (gets id for pagination) -->
+        <!-- Table body with active bands and data attributes for editing -->
         <tbody th:if="${not #lists.isEmpty(activeBands)}" id="activeBandsBody" class="divide-y divide-gray-200 dark:divide-gray-700">
-        <tr th:each="activeBand : ${activeBands}" class="hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors data-row">
+        <tr th:each="activeBand : ${activeBands}" class="hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors data-row"
+            th:attr="
+                data-id=${activeBand.id},
+                data-lower-bound=${activeBand.lowerBound},
+                data-upper-bound=${activeBand.upperBound},
+                data-rate=${activeBand.rate},
+                data-effective-from=${activeBand.effectiveFrom},
+                data-effective-to=${activeBand.effectiveTo},
+                data-regime-code=${activeBand.regimeCode},
+                data-status=${activeBand.status}
+            ">
           <td th:text="${#numbers.formatDecimal(activeBand.lowerBound, 1, 'COMMA', 2, 'POINT')}"
               class="px-4 md:px-6 py-4 font-mono text-sm">
             0.00
           </td>
 
-          <td th:text="${#numbers.formatDecimal(activeBand.upperBound, 1, 'COMMA', 2, 'POINT')}"
+          <td th:text="${activeBand.upperBound == null ? '∞' : #numbers.formatDecimal(activeBand.upperBound, 1, 'COMMA', 2, 'POINT')}"
               class="px-4 md:px-6 py-4 font-mono text-sm">
             11,600.00
           </td>
@@ -213,7 +222,9 @@
           <td th:text="${activeBand.status}" class="px-4 md:px-6 py-4"><span class="badge badge-success">ACTIVE</span></td>
           <td class="px-4 md:px-6 py-4">
             <div class="flex items-center space-x-2">
-              <button class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700" title="Edit"><span class="material-icons-round text-sm text-gray-600 dark:text-gray-400">edit</span></button>
+              <button class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700" title="Edit" th:onclick="'editTaxBand(this)'">
+                <span class="material-icons-round text-sm text-gray-600 dark:text-gray-400">edit</span>
+              </button>
               <button class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700" title="Copy"><span class="material-icons-round text-sm text-gray-600 dark:text-gray-400">content_copy</span></button>
               <button class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700" title="Deactivate"><span class="material-icons-round text-sm text-red-500">delete_outline</span></button>
             </div>
@@ -340,7 +351,7 @@
     PayeTaxBand entity · BigDecimal bounds, percentage rate, effective dating, RecordStatus
   </div>
 
-  <!-- MODAL: scrollable panel (unchanged) -->
+  <!-- MODAL: Add New Tax Band (unchanged) -->
   <div id="newTaxBandModal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
     <!-- Backdrop -->
     <div class="absolute inset-0 bg-black bg-opacity-50 backdrop-blur-sm" id="modalBackdrop"></div>
@@ -412,10 +423,79 @@
     </div>
   </div>
 
-  <!-- Combined JavaScript: Modal + Pagination + action button fix -->
+  <!-- ========== EDIT MODAL ========== -->
+  <div id="editTaxBandModal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+    <div class="absolute inset-0 bg-black bg-opacity-50 backdrop-blur-sm" id="editModalBackdrop"></div>
+    <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-lg w-full mx-4 p-6 border border-gray-200 dark:border-gray-700 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-xl font-bold text-gray-900 dark:text-white">Edit Tax Band</h3>
+        <button id="closeEditModalBtn" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+          <span class="material-icons-round">close</span>
+        </button>
+      </div>
+      <form id="editTaxBandForm" onsubmit="return false;">
+        <input type="hidden" name="id" id="editBandId" />
+
+        <div class="space-y-4">
+          <!-- Lower Bound -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Lower Bound (₦) *</label>
+            <input name="lowerBound" type="number" step="0.01" min="0" id="editLowerBound" required
+                   class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+          </div>
+          <!-- Upper Bound (optional) -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Upper Bound (₦) <span class="text-xs text-gray-500">(leave empty for open‑ended)</span></label>
+            <input name="upperBound" type="number" step="0.01" min="0" id="editUpperBound"
+                   class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+          </div>
+          <!-- Rate (%) -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Rate (%) *</label>
+            <input name="rate" type="number" step="0.01" min="0" max="100" id="editRate" required
+                   class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+          </div>
+          <!-- Effective From -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Effective From *</label>
+            <input name="effectiveFrom" type="date" id="editEffectiveFrom" required
+                   class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+          </div>
+          <!-- Effective To (optional) -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Effective To <span class="text-xs text-gray-500">(leave empty if ongoing)</span></label>
+            <input type="date" name="effectiveTo" id="editEffectiveTo"
+                   class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+          </div>
+          <!-- Regime Code -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Regime Code *</label>
+            <input name="regimeCode" type="text" id="editRegimeCode" required
+                   class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+          </div>
+          <!-- Status -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status *</label>
+            <select name="status" id="editStatus" required
+                    class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+              <option value="ACTIVE">ACTIVE</option>
+              <option value="INACTIVE">INACTIVE</option>
+              <option value="PENDING">PENDING</option>
+            </select>
+          </div>
+        </div>
+        <div class="mt-6 flex justify-end space-x-3">
+          <button type="button" id="cancelEditModalBtn" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700">Cancel</button>
+          <button type="submit" id="editSubmitBtn" class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700">Update Tax Band</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Combined JavaScript: Modal + Pagination + action button fix + Edit Modal -->
   <script>
     (function() {
-      // -------------------- MODAL code (unchanged) --------------------
+      // -------------------- ADD MODAL code (unchanged) --------------------
       const modal = document.getElementById('newTaxBandModal');
       const openBtn = document.getElementById('openNewTaxBandModal');
       const closeBtn = document.getElementById('closeModalBtn');
@@ -460,6 +540,100 @@
           return true;
       };
 
+      // -------------------- EDIT MODAL --------------------
+      const editModal = document.getElementById('editTaxBandModal');
+      const closeEditBtn = document.getElementById('closeEditModalBtn');
+      const cancelEditBtn = document.getElementById('cancelEditModalBtn');
+      const editBackdrop = document.getElementById('editModalBackdrop');
+      const editForm = document.getElementById('editTaxBandForm');
+      const editSubmitBtn = document.getElementById('editSubmitBtn');
+
+      function closeEditModal() {
+        editModal.classList.add('hidden');
+        document.body.style.overflow = 'auto';
+        editForm.reset();
+        editSubmitBtn.disabled = false;
+        editSubmitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        editSubmitBtn.innerHTML = 'Update Tax Band';
+      }
+
+      if (closeEditBtn) closeEditBtn.addEventListener('click', closeEditModal);
+      if (cancelEditBtn) cancelEditBtn.addEventListener('click', closeEditModal);
+      if (editBackdrop) editBackdrop.addEventListener('click', closeEditModal);
+
+      // Handle edit form submission
+      editForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        editSubmitBtn.disabled = true;
+        editSubmitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        editSubmitBtn.innerHTML = 'Updating...';
+
+        const id = document.getElementById('editBandId').value;
+        const formData = {
+          lowerBound: parseFloat(document.getElementById('editLowerBound').value),
+          upperBound: document.getElementById('editUpperBound').value
+                      ? parseFloat(document.getElementById('editUpperBound').value)
+                      : null,
+          rate: parseFloat(document.getElementById('editRate').value),
+          effectiveFrom: document.getElementById('editEffectiveFrom').value,
+          effectiveTo: document.getElementById('editEffectiveTo').value || null,
+          regimeCode: document.getElementById('editRegimeCode').value,
+          status: document.getElementById('editStatus').value
+        };
+
+        fetch('/update/tax-band/' + id, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData)
+        })
+        .then(response => {
+          if (!response.ok) {
+            return response.text().then(text => { throw new Error(text || 'Update failed'); });
+          }
+          // Backend returns redirect, but we just need to reload
+          closeEditModal();
+          window.location.reload();
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('Failed to update tax band: ' + error.message);
+          editSubmitBtn.disabled = false;
+          editSubmitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+          editSubmitBtn.innerHTML = 'Update Tax Band';
+        });
+      });
+
+      // Global function called by edit buttons
+      window.editTaxBand = function(button) {
+        const row = button.closest('tr');
+        if (!row) return;
+
+        // Extract data attributes
+        const id = row.dataset.id;
+        const lowerBound = row.dataset.lowerBound;
+        const upperBound = row.dataset.upperBound === '' ? null : row.dataset.upperBound;
+        const rate = row.dataset.rate;
+        const effectiveFrom = row.dataset.effectiveFrom;
+        const effectiveTo = row.dataset.effectiveTo === '' ? null : row.dataset.effectiveTo;
+        const regimeCode = row.dataset.regimeCode;
+        const status = row.dataset.status;
+
+        // Populate form fields
+        document.getElementById('editBandId').value = id;
+        document.getElementById('editLowerBound').value = lowerBound;
+        document.getElementById('editUpperBound').value = upperBound !== null ? upperBound : '';
+        document.getElementById('editRate').value = rate;
+        document.getElementById('editEffectiveFrom').value = effectiveFrom;
+        document.getElementById('editEffectiveTo').value = effectiveTo !== null ? effectiveTo : '';
+        document.getElementById('editRegimeCode').value = regimeCode;
+        document.getElementById('editStatus').value = status;
+
+        // Open modal
+        editModal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+      };
+
       // -------------------- FIX for action cells (keep) --------------------
       function fixActionCells() {
           const firstRowActions = document.querySelector('#activeBandsBody tr:first-child td:last-child .flex');
@@ -475,10 +649,10 @@
           });
       }
 
-      // -------------------- PAGINATION LOGIC --------------------
+      // -------------------- PAGINATION LOGIC (unchanged) --------------------
       function initPagination() {
         const tbody = document.getElementById('activeBandsBody');
-        if (!tbody) return; // no bands, pagination container hidden already
+        if (!tbody) return;
 
         const rows = Array.from(tbody.querySelectorAll('tr.data-row'));
         const totalRows = rows.length;
@@ -489,10 +663,8 @@
         const nextBtn = document.getElementById('nextPage');
         const pageNumbersDiv = document.getElementById('pageNumbers');
 
-        // If no pagination controls (shouldn't happen) or only one page, hide next/prev appropriately
         if (!prevBtn || !nextBtn || !pageNumbersDiv) return;
 
-        // If totalPages <= 1, hide pagination controls (optional) or just disable buttons
         if (totalPages <= 1) {
           prevBtn.disabled = true;
           nextBtn.disabled = true;
@@ -503,24 +675,16 @@
         let currentPage = 1;
 
         function renderPage(page) {
-          // show/hide rows
           rows.forEach((row, index) => {
             const start = (page - 1) * rowsPerPage;
             const end = page * rowsPerPage;
-            if (index >= start && index < end) {
-              row.style.display = '';
-            } else {
-              row.style.display = 'none';
-            }
+            row.style.display = (index >= start && index < end) ? '' : 'none';
           });
 
-          // update button states
           prevBtn.disabled = (page === 1);
           nextBtn.disabled = (page === totalPages);
 
-          // generate page numbers
           let htmlStr = '';
-          // simple: show page numbers 1..totalPages, highlight current
           for (let i = 1; i <= totalPages; i++) {
             if (i === currentPage) {
               htmlStr += `<span class="text-xs text-gray-700 dark:text-gray-300 px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">${i}</span>`;
@@ -530,7 +694,6 @@
           }
           pageNumbersDiv.innerHTML = htmlStr;
 
-          // attach click handlers to page buttons
           document.querySelectorAll('.page-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
               e.preventDefault();
@@ -543,10 +706,8 @@
           });
         }
 
-        // initial render
         renderPage(1);
 
-        // prev / next listeners
         prevBtn.addEventListener('click', () => {
           if (currentPage > 1) {
             currentPage--;
@@ -564,8 +725,8 @@
 
       // Run everything after DOM is ready
       window.addEventListener('DOMContentLoaded', function() {
-        fixActionCells();     // ensure all rows have proper action buttons
-        initPagination();     // activate pagination
+        fixActionCells();
+        initPagination();
       });
 
     })();
