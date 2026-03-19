@@ -6,6 +6,8 @@
 <head>
     <meta charset="UTF-8">
     <title>Employee Management</title>
+
+
     <style>
         .status-badge {
             padding: 2px 8px;
@@ -41,7 +43,7 @@
 </head>
 <body>
 <main layout:fragment="content">
-    <!-- Stats Cards (static values for demo) -->
+    <!-- Stats Cards -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6">
             <div class="flex items-center justify-between mb-4">
@@ -92,7 +94,7 @@
         </button>
     </div>
 
-    <!-- Filters (static – do nothing) -->
+    <!-- Filters -->
     <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6 mb-6">
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div class="flex flex-wrap gap-3">
@@ -127,6 +129,7 @@
         </div>
     </div>
 
+    <!-- Main Table -->
     <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
         <div class="overflow-x-auto custom-scrollbar">
             <table class="w-full">
@@ -143,10 +146,21 @@
                 </thead>
                 <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
 
-                <!-- Employee Rows -->
                 <tr th:each="employee : ${employees}"
                     th:if="${employees != null and !#lists.isEmpty(employees)}"
-                    class="hover:bg-gray-50 dark:hover:bg-gray-750 cursor-pointer"
+                    class="hover:bg-gray-50 dark:hover:bg-gray-750 cursor-pointer employee-row"
+                    th:attr="
+                        data-id=${employee.id},
+                        data-first-name=${employee.firstName},
+                        data-last-name=${employee.lastName},
+                        data-email=${employee.email},
+                        data-phone=${employee.phoneNumber},
+                        data-department-id=${employee.department != null ? employee.department.id : ''},
+                        data-job-grade-id=${employee.jobStep != null ? employee.jobStep.jobGrade.id : ''},
+                        data-job-step-id=${employee.jobStep != null ? employee.jobStep.id : ''},
+                        data-pay-group-id=${employee.payGroup != null ? employee.payGroup.id : ''},
+                        data-employment-status=${employee.employmentStatus}
+                    "
                     th:onclick="'viewEmployee(' + ${employee.id} + ')'">
 
                     <td class="px-4 md:px-6 py-4">
@@ -178,9 +192,7 @@
                         class="px-4 md:px-6 py-4"></td>
 
                     <td class="px-4 md:px-6 py-4">
-        <span class="status-badge status-active">
-            Active
-        </span>
+                        <span class="status-badge status-active">Active</span>
                     </td>
 
                     <td class="px-4 md:px-6 py-4">
@@ -198,8 +210,6 @@
                 <tr th:if="${employees == null or #lists.isEmpty(employees)}">
                     <td colspan="7" class="px-6 py-16 text-center">
                         <div class="flex flex-col items-center justify-center space-y-4">
-
-                            <!-- Icon -->
                             <div class="w-16 h-16 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700">
                                 <svg xmlns="http://www.w3.org/2000/svg"
                                      class="h-8 w-8 text-gray-400"
@@ -212,27 +222,22 @@
                                           d="M17 20h5V4H2v16h5m10 0V10m0 10l-4-4m4 4l4-4"/>
                                 </svg>
                             </div>
-
-                            <!-- Title -->
                             <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-200">
                                 No Employees Found
                             </h3>
-
-                            <!-- Description -->
                             <p class="text-sm text-gray-500 dark:text-gray-400 max-w-sm">
                                 There are currently no employees in the system.
                                 Start by adding a new employee to begin managing payroll.
                             </p>
-
                         </div>
                     </td>
                 </tr>
 
                 </tbody>
-
             </table>
         </div>
-        <!-- Pagination (static) -->
+
+        <!-- Pagination -->
         <div class="px-4 md:px-6 py-4 border-t border-gray-200 dark:border-gray-700">
             <div class="flex items-center justify-between">
                 <div class="text-sm text-gray-500 dark:text-gray-400">
@@ -270,7 +275,6 @@
 
                 <div class="p-6">
                     <form th:action="@{/onboarding}" method="post" onsubmit="disableSubmitButton(this)">
-                        <!-- Personal Information -->
                         <div class="mb-6">
                             <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4 flex items-center">
                                 <span class="material-icons-round text-sm mr-2">person</span>
@@ -302,7 +306,6 @@
                             </div>
                         </div>
 
-                        <!-- Contact Information -->
                         <div class="mb-6">
                             <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4 flex items-center">
                                 <span class="material-icons-round text-sm mr-2">contact_mail</span>
@@ -334,7 +337,6 @@
                             </div>
                         </div>
 
-                        <!-- Employment Details -->
                         <div class="mb-6">
                             <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4 flex items-center">
                                 <span class="material-icons-round text-sm mr-2">work</span>
@@ -362,7 +364,6 @@
                                         <option th:each="dept : ${departments}" th:value="${dept.id}" th:text="${dept.name}">Engineering</option>
                                     </select>
                                 </div>
-                                <!-- Job Grade -->
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                         Job Grade <span class="text-red-500">*</span>
@@ -377,8 +378,6 @@
                                         </select>
                                     </div>
                                 </div>
-
-                                <!-- Job Step (dynamically populated via JavaScript) -->
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                         Job Step <span class="text-red-500">*</span>
@@ -395,7 +394,6 @@
                                         Select a job grade first to see available steps
                                     </p>
                                 </div>
-
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                         Pay Group <span class="text-red-500">*</span>
@@ -415,6 +413,176 @@
                             <button type="submit" class="px-5 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors shadow-sm hover:shadow flex items-center space-x-1">
                                 <span class="material-icons-round text-sm">save</span>
                                 <span>Add Employee</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== EDIT EMPLOYEE MODAL ========== -->
+    <div id="editEmployeeModal" class="fixed inset-0 z-50 hidden modal-transition" onclick="if(event.target === this) closeModal('editEmployeeModal')">
+        <div class="modal-backdrop fixed inset-0 bg-black bg-opacity-50"></div>
+        <div class="fixed inset-0 flex items-center justify-center p-4">
+            <div class="modal-content bg-white dark:bg-gray-800 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
+                <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2 bg-green-100 dark:bg-green-900/30 rounded-full">
+                            <span class="material-icons-round text-green-600 dark:text-green-400 text-2xl">edit</span>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-900 dark:text-white">Edit Employee</h3>
+                    </div>
+                    <button onclick="closeModal('editEmployeeModal')" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+                        <span class="material-icons-round text-2xl">close</span>
+                    </button>
+                </div>
+
+                <div class="p-6">
+                    <form id="editEmployeeForm" onsubmit="return false;">
+                        <input type="hidden" id="editEmployeeId" name="id">
+
+                        <!-- Personal Information -->
+                        <div class="mb-6">
+                            <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4 flex items-center">
+                                <span class="material-icons-round text-sm mr-2">person</span>
+                                Personal Information
+                            </h4>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        First Name <span class="text-red-500">*</span>
+                                    </label>
+                                    <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                                            <span class="material-icons-round text-sm">badge</span>
+                                        </span>
+                                        <input type="text" id="editFirstName" name="firstName" class="form-input pl-10" placeholder="John" required>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        Last Name <span class="text-red-500">*</span>
+                                    </label>
+                                    <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                                            <span class="material-icons-round text-sm">badge</span>
+                                        </span>
+                                        <input type="text" id="editLastName" name="lastName" class="form-input pl-10" placeholder="Doe" required>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Contact Information -->
+                        <div class="mb-6">
+                            <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4 flex items-center">
+                                <span class="material-icons-round text-sm mr-2">contact_mail</span>
+                                Contact Information
+                            </h4>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        Email Address <span class="text-red-500">*</span>
+                                    </label>
+                                    <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                                            <span class="material-icons-round text-sm">email</span>
+                                        </span>
+                                        <input type="email" id="editEmail" name="email" class="form-input pl-10" placeholder="john.doe@company.com" required>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        Phone Number
+                                    </label>
+                                    <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                                            <span class="material-icons-round text-sm">phone</span>
+                                        </span>
+                                        <input type="text" id="editPhoneNumber" name="phoneNumber" class="form-input pl-10" placeholder="+1 (555) 000-0000">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Employment Details -->
+                        <div class="mb-6">
+                            <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4 flex items-center">
+                                <span class="material-icons-round text-sm mr-2">work</span>
+                                Employment Details
+                            </h4>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        Employment Status <span class="text-red-500">*</span>
+                                    </label>
+                                    <select id="editEmploymentStatus" name="employmentStatus" class="form-input" required>
+                                        <option value="ONBOARDING">Onboarding</option>
+                                        <option value="ACTIVE">Active</option>
+                                        <option value="PROBATION">Probation</option>
+                                        <option value="ON_LEAVE">On Leave</option>
+                                        <option value="TERMINATED">Terminated</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        Department <span class="text-red-500">*</span>
+                                    </label>
+                                    <select id="editDepartmentId" name="departmentId" class="form-input" required>
+                                        <option value="">Select Department</option>
+                                        <option th:each="dept : ${departments}" th:value="${dept.id}" th:text="${dept.name}">Engineering</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        Job Grade <span class="text-red-500">*</span>
+                                    </label>
+                                    <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                                            <span class="material-icons-round text-sm">layers</span>
+                                        </span>
+                                        <select id="editJobGradeId" class="form-input pl-10">
+                                            <option value="">Select Job Grade</option>
+                                            <option th:each="grade : ${jobGrades}" th:value="${grade.id}" th:text="${grade.name}">Grade 1</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        Job Step <span class="text-red-500">*</span>
+                                    </label>
+                                    <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                                            <span class="material-icons-round text-sm">trending_up</span>
+                                        </span>
+                                        <select name="jobStepId" id="editJobStepId" class="form-input pl-10" required disabled>
+                                            <option value="">Select Job Step</option>
+                                        </select>
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-1">
+                                        Select a job grade first to see available steps
+                                    </p>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        Pay Group <span class="text-red-500">*</span>
+                                    </label>
+                                    <select id="editPayGroupId" name="payGroupId" class="form-input" required>
+                                        <option value="">Select Pay Group</option>
+                                        <option th:each="pg : ${payGroups}" th:value="${pg.id}" th:text="${pg.name}">Executive</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                            <button type="button" onclick="closeModal('editEmployeeModal')" class="px-5 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                                Cancel
+                            </button>
+                            <button type="submit" id="editSubmitBtn" class="px-5 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm hover:shadow flex items-center space-x-1">
+                                <span class="material-icons-round text-sm">save</span>
+                                <span>Update Employee</span>
                             </button>
                         </div>
                     </form>
@@ -453,7 +621,10 @@
 
     <script th:inline="javascript">
         /*<![CDATA[*/
-        // ---------- Manually constructed data (no lazy-loading issues) ----------
+
+
+
+        // ---------- Data arrays from server ----------
         const jobGrades = [
             /*[# th:each="grade : ${jobGrades}"]*/
             {
@@ -483,7 +654,7 @@
             /*[/]*/
         ];
 
-        // Build jobSteps array from jobGrades (same logic as before)
+        // Build flat jobSteps array
         let jobSteps = [];
         if (Array.isArray(jobGrades) && jobGrades.length > 0) {
             jobGrades.forEach(grade => {
@@ -500,72 +671,65 @@
             });
         }
 
-        // Helper functions (keep them for reference, though not directly used for step population)
-        function getStepDisplay(stepId) {
-            const step = jobSteps.find(s => s.id == stepId);
-            return step ? step.display : 'Unknown';
-        }
+        // Populate job steps dropdown helper
+        function populateJobSteps(gradeSelect, stepSelect) {
+            const selectedGradeId = gradeSelect.value;
+            stepSelect.innerHTML = '<option value="">Select Job Step</option>';
+            stepSelect.disabled = true;
 
-        function getDepartmentName(id) {
-            const dept = departments.find(d => d.id == id);
-            return dept ? dept.name : '?';
-        }
+            if (!selectedGradeId) return;
 
-        function getPayGroupName(id) {
-            const pg = payGroups.find(p => p.id == id);
-            return pg ? pg.name : '?';
-        }
+            const filteredSteps = jobSteps.filter(step => String(step.gradeId) === String(selectedGradeId));
 
-        // Initialize everything after DOM is ready
-        document.addEventListener('DOMContentLoaded', function() {
-            // Attach event listener for job grade -> job step population
-            const gradeSelect = document.getElementById('addJobGradeId');
-            const stepSelect = document.getElementById('addJobStepId');
-
-            if (gradeSelect && stepSelect) {
-                gradeSelect.addEventListener('change', function() {
-                    const selectedGradeId = this.value;
-
-                    stepSelect.innerHTML = '<option value="">Select Job Step</option>';
-                    stepSelect.disabled = true;
-
-                    if (!selectedGradeId) return;
-
-                    const filteredSteps = jobSteps.filter(step => String(step.gradeId) === String(selectedGradeId));
-
-                    if (filteredSteps.length === 0) {
-                        const option = document.createElement('option');
-                        option.value = '';
-                        option.textContent = 'No steps available for this grade';
-                        option.disabled = true;
-                        stepSelect.appendChild(option);
-                    } else {
-                        filteredSteps.forEach(step => {
-                            const option = document.createElement('option');
-                            option.value = step.id;
-                            option.textContent = step.display;
-                            stepSelect.appendChild(option);
-                        });
-                        stepSelect.disabled = false;
-                    }
-                });
-
-                if (gradeSelect.value) {
-                    gradeSelect.dispatchEvent(new Event('change'));
-                }
+            if (filteredSteps.length === 0) {
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = 'No steps available for this grade';
+                option.disabled = true;
+                stepSelect.appendChild(option);
             } else {
-                console.warn('Job grade or step select elements not found');
+                filteredSteps.forEach(step => {
+                    const option = document.createElement('option');
+                    option.value = step.id;
+                    option.textContent = step.display;
+                    stepSelect.appendChild(option);
+                });
+                stepSelect.disabled = false;
+            }
+        }
+
+        // ---------- DOMContentLoaded setup ----------
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add modal grade/step wiring
+            const addGradeSelect = document.getElementById('addJobGradeId');
+            const addStepSelect = document.getElementById('addJobStepId');
+            if (addGradeSelect && addStepSelect) {
+                addGradeSelect.addEventListener('change', function() {
+                    populateJobSteps(addGradeSelect, addStepSelect);
+                });
+                if (addGradeSelect.value) {
+                    addGradeSelect.dispatchEvent(new Event('change'));
+                }
+            }
+
+            // Edit modal grade/step wiring
+            const editGradeSelect = document.getElementById('editJobGradeId');
+            const editStepSelect = document.getElementById('editJobStepId');
+            if (editGradeSelect && editStepSelect) {
+                editGradeSelect.addEventListener('change', function() {
+                    populateJobSteps(editGradeSelect, editStepSelect);
+                });
             }
         });
 
-        // Disable submit button on form submit to prevent double posting
+        // Disable submit button on add form submit
         function disableSubmitButton(form) {
             const submitButton = form.querySelector('button[type="submit"]');
             if (submitButton) {
                 submitButton.disabled = true;
                 submitButton.classList.add('opacity-50', 'cursor-not-allowed');
             }
-            return true; // Allow form submission
+            return true;
         }
 
         // Modal helpers
@@ -584,14 +748,81 @@
             }
         };
 
-        // Dummy viewEmployee function (if needed)
+        // View employee (placeholder)
         window.viewEmployee = function(id) {
             console.log('View employee', id);
         };
 
+        // ---------- EDIT EMPLOYEE ----------
         window.editEmployee = function(id) {
-            console.log('Edit employee', id);
+            const row = document.querySelector(`tr[data-id="${id}"]`);
+            if (!row) return;
+
+            document.getElementById('editEmployeeId').value = row.dataset.id;
+            document.getElementById('editFirstName').value = row.dataset.firstName;
+            document.getElementById('editLastName').value = row.dataset.lastName;
+            document.getElementById('editEmail').value = row.dataset.email;
+            document.getElementById('editPhoneNumber').value = row.dataset.phone || '';
+            document.getElementById('editEmploymentStatus').value = row.dataset.employmentStatus;
+            document.getElementById('editDepartmentId').value = row.dataset.departmentId || '';
+            document.getElementById('editPayGroupId').value = row.dataset.payGroupId || '';
+
+            const gradeId = row.dataset.jobGradeId;
+            const stepId = row.dataset.jobStepId;
+
+            const gradeSelect = document.getElementById('editJobGradeId');
+            gradeSelect.value = gradeId || '';
+            gradeSelect.dispatchEvent(new Event('change'));
+
+            setTimeout(() => {
+                document.getElementById('editJobStepId').value = stepId || '';
+            }, 50);
+
+            openModal('editEmployeeModal');
         };
+
+        // ---------- EDIT FORM SUBMISSION (POST) ----------
+        document.getElementById('editEmployeeForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const submitBtn = document.getElementById('editSubmitBtn');
+            submitBtn.disabled = true;
+            submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            submitBtn.innerHTML = 'Updating...';
+
+            const id = document.getElementById('editEmployeeId').value;
+            const payload = {
+                firstName:        document.getElementById('editFirstName').value,
+                lastName:         document.getElementById('editLastName').value,
+                email:            document.getElementById('editEmail').value,
+                phoneNumber:      document.getElementById('editPhoneNumber').value,
+                employmentStatus: document.getElementById('editEmploymentStatus').value,
+                departmentId:     parseInt(document.getElementById('editDepartmentId').value, 10),
+                jobStepId:        parseInt(document.getElementById('editJobStepId').value, 10),
+                payGroupId:       parseInt(document.getElementById('editPayGroupId').value, 10)
+            };
+
+            // ✅ Changed from PUT to POST, added CSRF header
+            fetch('/employees/' + id, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },   // Add this
+                body: JSON.stringify(payload)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.text().then(text => { throw new Error(text || 'Update failed'); });
+                }
+                closeModal('editEmployeeModal');
+                window.location.reload();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to update employee: ' + error.message);
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                submitBtn.innerHTML = '<span class="material-icons-round text-sm">save</span><span>Update Employee</span>';
+            });
+        });
         /*]]>*/
     </script>
 </main>

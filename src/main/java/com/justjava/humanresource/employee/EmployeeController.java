@@ -29,6 +29,7 @@ import com.justjava.humanresource.workflow.dto.FlowableTaskDTO;
 import com.justjava.humanresource.workflow.service.FlowableTaskService;
 import org.flowable.engine.history.HistoricProcessInstance;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -40,6 +41,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Controller
+
 public class EmployeeController {
     @Autowired
     AuthenticationManager authenticationManager;
@@ -110,6 +112,14 @@ public class EmployeeController {
                 EmploymentStatus.ACTIVE, LocalDate.now());
 
         return "redirect:/employees";
+    }
+    @PostMapping("/employees/{id}")
+    @ResponseBody  // ← add this
+    public ResponseEntity<Void> updateEmployee(@PathVariable Long id, @RequestBody EmployeeDTO incomingEmployee) {
+        System.out.println("Received update for employee ID: " + id + " with data: " + incomingEmployee);
+        employeeOnboardingService.updateEmployee(id, incomingEmployee);
+        System.out.println("Employee updated successfully for ID: " + id);
+        return ResponseEntity.ok().build(); // ← return 200 OK, let JS handle the reload
     }
     @GetMapping("/employee/dashboard")
     public String getEmployeeDashboard(Model model) {

@@ -2,14 +2,20 @@ package com.justjava.humanresource.onboarding.service;
 
 import com.justjava.humanresource.core.enums.EmploymentStatus;
 import com.justjava.humanresource.core.enums.RecordStatus;
+import com.justjava.humanresource.core.exception.ResourceNotFoundException;
 import com.justjava.humanresource.hr.dto.EmployeeDTO;
 import com.justjava.humanresource.hr.dto.EmployeeOnboardingResponseDTO;
-import com.justjava.humanresource.hr.entity.Employee;
+import com.justjava.humanresource.hr.entity.*;
+import com.justjava.humanresource.hr.repository.EmployeeRepository;
 import com.justjava.humanresource.hr.service.EmployeeService;
+import com.justjava.humanresource.hr.repository.DepartmentRepository;
+import com.justjava.humanresource.hr.repository.JobStepRepository;
+import com.justjava.humanresource.hr.repository.PayGroupRepository;
 import com.justjava.humanresource.onboarding.dto.StartEmployeeOnboardingCommand;
 import com.justjava.humanresource.onboarding.entity.EmployeeOnboarding;
 import com.justjava.humanresource.onboarding.enums.OnboardingStatus;
 import com.justjava.humanresource.onboarding.repositories.EmployeeOnboardingRepository;
+
 import lombok.RequiredArgsConstructor;
 import org.flowable.engine.RuntimeService;
 import org.flowable.engine.runtime.ProcessInstance;
@@ -26,9 +32,13 @@ import java.util.UUID;
 @Transactional
 public class EmployeeOnboardingService {
 
+    private final EmployeeRepository employeeRepository;
     private final RuntimeService runtimeService;
-    private final EmployeeService employeeService;   // ✅ use domain service
+    private final EmployeeService employeeService;   // domain service
     private final EmployeeOnboardingRepository onboardingRepository;
+    private final DepartmentRepository departmentRepository;
+    private final JobStepRepository jobStepRepository;
+    private final PayGroupRepository payGroupRepository;
 
     @Transactional
     public EmployeeOnboardingResponseDTO startOnboarding(
@@ -89,13 +99,47 @@ public class EmployeeOnboardingService {
                 .initiatedBy(saved.getInitiatedBy())
                 .build();
     }
+
     @Transactional
     public List<Employee> getAllOnboardings() {
         List<EmployeeOnboarding> onboardings = onboardingRepository.findAll();
         return onboardings.stream()
                 .map(EmployeeOnboarding::getEmployee)
                 .toList();
-
     }
 
+
+    @Transactional
+    public void updateEmployee(Long id, EmployeeDTO dto) {
+        Employee employee = employeeRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Employee not found",id));
+
+        if (dto.getFirstName() != null) employee.setFirstName(dto.getFirstName());
+        if (dto.getLastName() != null) employee.setLastName(dto.getLastName());
+        if (dto.getEmail() != null) employee.setEmail(dto.getEmail());
+        if (dto.getPhoneNumber() != null) employee.setPhoneNumber(dto.getPhoneNumber());
+        if (dto.getEmploymentStatus() != null) {
+            employee.setEmploymentStatus(
+                    EmploymentStatus.valueOf(dto.getEmploymentStatus().toUpperCase())
+            );
+        }
+
+        if (dto.getDepartmentId() != null) {
+            Department dept = departmentRepository.findById(dto.getDepartmentId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Department not found", dto.getDepartmentId()));
+            employee.setDepartment(dept);
+        }
+        if (dto.getJobStepId() != null) {
+            JobStep step = jobStepRepository.findById(dto.getJobStepId())
+                    .orElseThrow(() -> new ResourceNotFoundException("JobStep not found", dto.getJobStepId()));
+            employee.setJobStep(step);
+        }
+        if (dto.getPayGroupId() != null) {
+            PayGroup payGroup = payGroupRepository.findById(dto.getPayGroupId())
+                    .orElseThrow(() -> new ResourceNotFoundException("PayGroup not found", dto.getPayGroupId()));
+            employee.setPayGroup(payGroup);
+        }
+
+        employeeRepository.save(employee); // explicit save
+    }
 }
