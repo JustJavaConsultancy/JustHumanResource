@@ -33,6 +33,7 @@
         };
     </script>
     <style>
+        /* (all styles unchanged) */
         * { font-family: 'Inter', sans-serif; }
         body { overflow-x: hidden; }
         .sidebar-item {
@@ -96,9 +97,9 @@
 </head>
 <body>
 <main layout:fragment="content">
-    <!-- Stats Cards (updated with entity-aware insights) -->
+    <!-- Stats Cards (unchanged) -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
-        <!-- Total active schemes (unchanged) -->
+        <!-- ... exactly as in your original ... -->
         <div class="stat-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6">
             <div class="flex items-center justify-between mb-4">
                 <div class="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
@@ -113,7 +114,6 @@
                 <span th:text="${#lists.size(schemes) + ' scheme(s) currently active'}"></span>
             </div>
         </div>
-        <!-- Average employee rate (unchanged) -->
         <div class="stat-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6">
             <div class="flex items-center justify-between mb-4">
                 <div class="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
@@ -127,7 +127,6 @@
                 <span class="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded" th:text="'min ' + ${minEmployeeRate} + '% · max ' + ${maxEmployeeRate} + '%'"></span>
             </div>
         </div>
-        <!-- Average employer rate (unchanged) -->
         <div class="stat-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6">
             <div class="flex items-center justify-between mb-4">
                 <div class="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
@@ -142,7 +141,6 @@
 
             </div>
         </div>
-        <!-- Schemes with pensionable cap (new stat) -->
         <div class="stat-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6">
             <div class="flex items-center justify-between mb-4">
                 <div class="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
@@ -161,7 +159,7 @@
         </div>
     </div>
 
-    <!-- Main Pension Schemes Table (now with full fields) -->
+    <!-- Main Pension Schemes Table -->
     <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 mb-6 md:mb-8">
         <div class="p-4 md:p-6 border-b border-gray-200 dark:border-gray-700 flex flex-wrap items-center justify-between gap-4">
             <div class="flex items-center space-x-3">
@@ -196,9 +194,22 @@
                     <th class="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
                 </tr>
                 </thead>
-                <!-- Table body with populated schemes (now with id and row class for pagination) -->
+                <!-- Table body with data attributes -->
                 <tbody th:if="${not #lists.isEmpty(schemes)}" id="pensionSchemesBody" class="divide-y divide-gray-200 dark:divide-gray-700">
-                <tr th:each="scheme : ${schemes}" class="hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors scheme-row">
+                <tr th:each="scheme : ${schemes}"
+                    class="hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors scheme-row"
+                    th:attr="
+                        data-id=${scheme.id},
+                        data-code=${scheme.code},
+                        data-name=${scheme.name},
+                        data-employee-rate=${scheme.employeeRate},
+                        data-employer-rate=${scheme.employerRate},
+                        data-pensionable-on-basic-only=${scheme.pensionableOnBasicOnly},
+                        data-pensionable-cap=${scheme.pensionableCap},
+                        data-effective-from=${scheme.effectiveFrom},
+                        data-effective-to=${scheme.effectiveTo},
+                        data-status=${scheme.status}
+                    ">
                     <td th:text="${scheme.code}" class="px-4 md:px-6 py-4 font-mono text-sm font-medium">PEN-STD</td>
                     <td th:text="${scheme.name}" class="px-4 md:px-6 py-4 text-sm">Standard Auto‑Enrolment</td>
                     <td th:text="${scheme.employeeRate}" class="px-4 md:px-6 py-4 text-sm">5.00%</td>
@@ -221,14 +232,14 @@
                     <td class="px-4 md:px-6 py-4"><span class="badge badge-success" th:text="${scheme.status}">ACTIVE</span></td>
                     <td class="px-4 md:px-6 py-4">
                         <div class="flex items-center space-x-2">
-                            <button class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700" title="Edit"><span class="material-icons-round text-sm text-gray-600 dark:text-gray-400">edit</span></button>
-                            <button class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700" title="Copy"><span class="material-icons-round text-sm text-gray-600 dark:text-gray-400">content_copy</span></button>
-                            <button class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700" title="Deactivate"><span class="material-icons-round text-sm text-red-500">delete_outline</span></button>
+                            <button class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700" title="Edit" th:onclick="'editScheme(this)'">
+                                <span class="material-icons-round text-sm text-gray-600 dark:text-gray-400">edit</span>
+                            </button>
                         </div>
                     </td>
                 </tr>
                 </tbody>
-                <!-- Empty state when no schemes exist -->
+                <!-- Empty state -->
                 <tbody th:if="${#lists.isEmpty(schemes)}">
                 <tr>
                     <td colspan="8" class="px-4 md:px-6 py-12 text-center">
@@ -242,13 +253,12 @@
                 </tbody>
             </table>
         </div>
-        <!-- Table footer with dynamic pagination controls -->
+        <!-- Table footer with pagination (unchanged) -->
         <div class="px-4 md:px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
         <span class="text-xs text-gray-500 dark:text-gray-400 flex items-center">
             <span class="material-icons-round text-xs mr-1">info</span>
             PensionScheme entity · code (unique), name, employeeRate, employerRate, pensionableOnBasicOnly, pensionableCap, effectiveFrom, effectiveTo, status
         </span>
-            <!-- Pagination container – only shown when schemes exist -->
             <div th:if="${not #lists.isEmpty(schemes)}" class="flex items-center space-x-2" id="paginationContainer">
                 <button id="prevPage" class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:pointer-events-none" disabled>
                     <span class="material-icons-round text-sm">chevron_left</span>
@@ -261,9 +271,8 @@
         </div>
     </div>
 
-    <!-- Bottom two cards: now including cap & effective date summary -->
+    <!-- Bottom two cards (unchanged) -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-        <!-- Contribution summary (unchanged) -->
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6">
             <div class="flex items-center justify-between mb-6">
                 <div class="flex items-center space-x-3">
@@ -304,7 +313,6 @@
                 </div>
             </div>
         </div>
-        <!-- Compliance & caps summary (updated) -->
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6">
             <div class="flex items-center justify-between mb-6">
                 <h3 class="text-lg font-bold">Scheme Compliance & Caps</h3>
@@ -354,13 +362,12 @@
             </div>
         </div>
     </div>
-    <!-- Footer hint (already updated in table footer) -->
     <div class="mt-6 text-xs text-gray-400 dark:text-gray-500 flex items-center justify-end">
         <span class="material-icons-round text-xs mr-1">database</span>
         Full PensionScheme entity with pensionable base, caps, and effective dating
     </div>
 
-    <!-- MODAL: Add New Pension Scheme (includes all fields) -->
+    <!-- MODAL: Add New Pension Scheme (unchanged) -->
     <div id="newPensionModal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
         <div class="absolute inset-0 bg-black bg-opacity-50 backdrop-blur-sm" id="modalBackdrop"></div>
         <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-lg w-full mx-4 p-6 border border-gray-200 dark:border-gray-700 max-h-[90vh] overflow-y-auto">
@@ -370,61 +377,52 @@
                     <span class="material-icons-round">close</span>
                 </button>
             </div>
-            <!-- Added onsubmit to disable submit button -->
             <form th:action="@{/setup/pension-scheme}" method="post" id="pensionForm" onsubmit="disableSubmitButton(this)">
+                <!-- fields exactly as in your original -->
                 <div class="space-y-4">
-                    <!-- Code (unique) with id for random generation -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Code * <span class="text-xs text-gray-500">(unique identifier)</span></label>
                         <input name="code" type="text" id="pensionCodeInput" required maxlength="20" placeholder="e.g. PEN-STD"
                                class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
                     </div>
-                    <!-- Name -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name *</label>
                         <input name="name" type="text" required placeholder="e.g. Standard Auto‑Enrolment"
                                class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
                     </div>
-                    <!-- Employee Rate (%) -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Employee Rate (%) *</label>
                         <input name="employeeRate" type="number" step="0.01" min="0" max="100" required
                                class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
                     </div>
-                    <!-- Employer Rate (%) -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Employer Rate (%) *</label>
                         <input name="employerRate" type="number" step="0.01" min="0" max="100" required
                                class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
                     </div>
-                    <!-- Pensionable on basic only? (checkbox) -->
                     <div class="flex items-center">
                         <input name="pensionableOnBasicOnly" type="checkbox" id="pensionableBasic" checked
                                class="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 rounded focus:ring-primary-500 dark:bg-gray-700 dark:border-gray-600">
                         <label for="pensionableBasic" class="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300">Pensionable on basic only</label>
                         <span class="ml-2 text-xs text-gray-500">(if unchecked, applies to gross earnings)</span>
                     </div>
-                    <!-- Pensionable Cap (optional) -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Pensionable Cap (optional)</label>
                         <input name="pensionableCap" type="number" step="0.01" min="0" placeholder="e.g. 50000.00"
                                class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
                         <p class="text-xs text-gray-500 mt-1">Leave empty for no cap</p>
                     </div>
-                    <!-- Effective From (date) -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Effective From *</label>
                         <input name="effectiveFrom" type="date" required
                                class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
                     </div>
-                    <!-- Effective To (optional date) -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Effective To (optional)</label>
                         <input name="effectiveTo" type="date"
                                class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
                         <p class="text-xs text-gray-500 mt-1">Leave empty for indefinite</p>
                     </div>
-                    <!-- Status -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status *</label>
                         <select name="status" required
@@ -443,10 +441,87 @@
         </div>
     </div>
 
+    <!-- ========== EDIT MODAL (updated to handle backend redirect) ========== -->
+    <div id="editPensionModal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+        <div class="absolute inset-0 bg-black bg-opacity-50 backdrop-blur-sm" id="editModalBackdrop"></div>
+        <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-lg w-full mx-4 p-6 border border-gray-200 dark:border-gray-700 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-xl font-bold text-gray-900 dark:text-white">Edit Pension Scheme</h3>
+                <button id="closeEditModalBtn" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                    <span class="material-icons-round">close</span>
+                </button>
+            </div>
+            <!-- Form: no action, submission handled by JavaScript -->
+            <form id="editPensionForm" onsubmit="return false;">
+                <!-- Hidden ID field (still useful) -->
+                <input type="hidden" name="id" id="editSchemeId" />
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Code *</label>
+                        <input name="code" type="text" id="editCode" required maxlength="20"
+                               class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name *</label>
+                        <input name="name" type="text" id="editName" required
+                               class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Employee Rate (%) *</label>
+                        <input name="employeeRate" type="number" step="0.01" min="0" max="100" id="editEmployeeRate" required
+                               class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Employer Rate (%) *</label>
+                        <input name="employerRate" type="number" step="0.01" min="0" max="100" id="editEmployerRate" required
+                               class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+                    </div>
+                    <div class="flex items-center">
+                        <input name="pensionableOnBasicOnly" type="checkbox" id="editPensionableBasic"
+                               class="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 rounded focus:ring-primary-500 dark:bg-gray-700 dark:border-gray-600">
+                        <label for="editPensionableBasic" class="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300">Pensionable on basic only</label>
+                        <span class="ml-2 text-xs text-gray-500">(if unchecked, applies to gross earnings)</span>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Pensionable Cap</label>
+                        <input name="pensionableCap" type="number" step="0.01" min="0" id="editPensionableCap"
+                               class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+                        <p class="text-xs text-gray-500 mt-1">Leave empty for no cap</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Effective From *</label>
+                        <input name="effectiveFrom" type="date" id="editEffectiveFrom" required
+                               class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Effective To</label>
+                        <input name="effectiveTo" type="date" id="editEffectiveTo"
+                               class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+                        <p class="text-xs text-gray-500 mt-1">Leave empty for indefinite</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status *</label>
+                        <select name="status" id="editStatus" required
+                                class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+                            <option value="ACTIVE">ACTIVE</option>
+                            <option value="INACTIVE">INACTIVE</option>
+                            <option value="PENDING">PENDING</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="mt-6 flex justify-end space-x-3">
+                    <button type="button" id="cancelEditModalBtn" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700">Cancel</button>
+                    <button type="submit" id="editSubmitBtn" class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700">Update Scheme</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         (function() {
-            // ---------- MODAL code (unchanged, but using correct IDs) ----------
-            const modal = document.getElementById('newPensionModal');
+            // ---------- ADD MODAL CODE (unchanged) ----------
+            const addModal = document.getElementById('newPensionModal');
             const openBtn = document.getElementById('openNewPensionModal');
             const closeBtn = document.getElementById('closeModalBtn');
             const cancelBtn = document.getElementById('cancelModalBtn');
@@ -464,22 +539,133 @@
                 return prefix + '-' + suffix;
             }
 
-            function openModal() {
+            function openAddModal() {
                 codeInput.value = generateRandomPensionCode();
-                modal.classList.remove('hidden');
+                addModal.classList.remove('hidden');
                 document.body.style.overflow = 'hidden';
             }
-            function closeModal() {
-                modal.classList.add('hidden');
+            function closeAddModal() {
+                addModal.classList.add('hidden');
                 document.body.style.overflow = 'auto';
                 form.reset();
             }
 
-            if (openBtn) openBtn.addEventListener('click', openModal);
-            if (closeBtn) closeBtn.addEventListener('click', closeModal);
-            if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
-            if (backdrop) backdrop.addEventListener('click', closeModal);
+            if (openBtn) openBtn.addEventListener('click', openAddModal);
+            if (closeBtn) closeBtn.addEventListener('click', closeAddModal);
+            if (cancelBtn) cancelBtn.addEventListener('click', closeAddModal);
+            if (backdrop) backdrop.addEventListener('click', closeAddModal);
 
+            // ---------- EDIT MODAL CODE (updated to handle backend redirect) ----------
+            const editModal = document.getElementById('editPensionModal');
+            const closeEditBtn = document.getElementById('closeEditModalBtn');
+            const cancelEditBtn = document.getElementById('cancelEditModalBtn');
+            const editBackdrop = document.getElementById('editModalBackdrop');
+            const editForm = document.getElementById('editPensionForm');
+            const editSubmitBtn = document.getElementById('editSubmitBtn');
+
+            function closeEditModal() {
+                editModal.classList.add('hidden');
+                document.body.style.overflow = 'auto';
+                editForm.reset();
+                // re-enable submit button if it was disabled
+                editSubmitBtn.disabled = false;
+                editSubmitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                editSubmitBtn.innerHTML = 'Update Scheme';
+            }
+
+            if (closeEditBtn) closeEditBtn.addEventListener('click', closeEditModal);
+            if (cancelEditBtn) cancelEditBtn.addEventListener('click', closeEditModal);
+            if (editBackdrop) editBackdrop.addEventListener('click', closeEditModal);
+
+            // Handle form submission with fetch
+            editForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+
+                // Disable button to prevent double submission
+                editSubmitBtn.disabled = true;
+                editSubmitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                editSubmitBtn.innerHTML = 'Updating...';
+
+                // Collect form data
+                const id = document.getElementById('editSchemeId').value;
+                const formData = {
+                    code: document.getElementById('editCode').value,
+                    name: document.getElementById('editName').value,
+                    employeeRate: parseFloat(document.getElementById('editEmployeeRate').value),
+                    employerRate: parseFloat(document.getElementById('editEmployerRate').value),
+                    pensionableOnBasicOnly: document.getElementById('editPensionableBasic').checked,
+                    pensionableCap: document.getElementById('editPensionableCap').value
+                        ? parseFloat(document.getElementById('editPensionableCap').value)
+                        : null,
+                    effectiveFrom: document.getElementById('editEffectiveFrom').value,
+                    effectiveTo: document.getElementById('editEffectiveTo').value || null,
+                    status: document.getElementById('editStatus').value
+                };
+
+                // Send PUT request with JSON
+                fetch('/update/pension-scheme/' + id, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.text().then(text => { throw new Error(text || 'Update failed'); });
+                    }
+                    return response.text(); // response may be HTML (redirect) or empty
+                })
+                .then(data => {
+                    // Regardless of content, close modal and reload to show updated data
+                    closeEditModal();
+                    window.location.reload();
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Failed to update scheme: ' + error.message);
+                    // Re-enable button on error
+                    editSubmitBtn.disabled = false;
+                    editSubmitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    editSubmitBtn.innerHTML = 'Update Scheme';
+                });
+            });
+
+            // Global function called by edit buttons
+            window.editScheme = function(button) {
+                const row = button.closest('tr');
+                if (!row) return;
+
+                // Extract data attributes
+                const id = row.dataset.id;
+                const code = row.dataset.code;
+                const name = row.dataset.name;
+                const employeeRate = row.dataset.employeeRate;
+                const employerRate = row.dataset.employerRate;
+                const pensionableOnBasicOnly = row.dataset.pensionableOnBasicOnly === 'true';
+                const pensionableCap = row.dataset.pensionableCap === '' ? null : row.dataset.pensionableCap;
+                const effectiveFrom = row.dataset.effectiveFrom;
+                const effectiveTo = row.dataset.effectiveTo === '' ? null : row.dataset.effectiveTo;
+                const status = row.dataset.status;
+
+                // Populate form fields
+                document.getElementById('editSchemeId').value = id;
+                document.getElementById('editCode').value = code;
+                document.getElementById('editName').value = name;
+                document.getElementById('editEmployeeRate').value = employeeRate;
+                document.getElementById('editEmployerRate').value = employerRate;
+                document.getElementById('editPensionableBasic').checked = pensionableOnBasicOnly;
+                document.getElementById('editPensionableCap').value = pensionableCap !== null ? pensionableCap : '';
+                document.getElementById('editEffectiveFrom').value = effectiveFrom;
+                document.getElementById('editEffectiveTo').value = effectiveTo !== null ? effectiveTo : '';
+                document.getElementById('editStatus').value = status;
+
+                // Open modal
+                editModal.classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+            };
+
+            // ---------- DISABLE SUBMIT BUTTON for ADD FORM ----------
             window.disableSubmitButton = function(form) {
                 const submitButton = form.querySelector('button[type="submit"]');
                 if (submitButton) {
@@ -490,28 +676,10 @@
                 return true;
             };
 
-            // ---------- ACTION CELL FIX (copy first row actions if missing) ----------
-            function fixActionCells() {
-                const tbody = document.getElementById('pensionSchemesBody');
-                if (!tbody) return;
-                const firstRowActions = tbody.querySelector('tr:first-child td:last-child .flex');
-                if (!firstRowActions) return;
-                const clone = firstRowActions.cloneNode(true);
-                tbody.querySelectorAll('tr').forEach((row, index) => {
-                    if (index === 0) return;
-                    const actionCell = row.querySelector('td:last-child');
-                    // if the cell looks empty (like "...") replace; otherwise skip.
-                    if (actionCell && actionCell.textContent.includes('...')) {
-                        actionCell.innerHTML = '';
-                        actionCell.appendChild(clone.cloneNode(true));
-                    }
-                });
-            }
-
-            // ---------- PAGINATION LOGIC (exactly as in first file, adapted) ----------
+            // ---------- PAGINATION (unchanged) ----------
             function initPagination() {
                 const tbody = document.getElementById('pensionSchemesBody');
-                if (!tbody) return; // no schemes → pagination container hidden anyway
+                if (!tbody) return;
 
                 const rows = Array.from(tbody.querySelectorAll('tr.scheme-row'));
                 const totalRows = rows.length;
@@ -524,12 +692,10 @@
 
                 if (!prevBtn || !nextBtn || !pageNumbersDiv) return;
 
-                // If only one page, disable buttons and show simple page indicator
                 if (totalPages <= 1) {
                     prevBtn.disabled = true;
                     nextBtn.disabled = true;
                     pageNumbersDiv.innerHTML = `<span class="text-xs text-gray-700 dark:text-gray-300 px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">1</span>`;
-                    // ensure all rows visible (they are by default)
                     rows.forEach(row => row.style.display = '');
                     return;
                 }
@@ -537,7 +703,6 @@
                 let currentPage = 1;
 
                 function renderPage(page) {
-                    // show/hide rows
                     rows.forEach((row, index) => {
                         const start = (page - 1) * rowsPerPage;
                         const end = page * rowsPerPage;
@@ -547,7 +712,6 @@
                     prevBtn.disabled = (page === 1);
                     nextBtn.disabled = (page === totalPages);
 
-                    // generate page numbers
                     let htmlStr = '';
                     for (let i = 1; i <= totalPages; i++) {
                         if (i === page) {
@@ -558,7 +722,6 @@
                     }
                     pageNumbersDiv.innerHTML = htmlStr;
 
-                    // attach click handlers to page buttons
                     document.querySelectorAll('.page-btn').forEach(btn => {
                         btn.addEventListener('click', (e) => {
                             e.preventDefault();
@@ -571,7 +734,6 @@
                     });
                 }
 
-                // initial render
                 renderPage(1);
 
                 prevBtn.addEventListener('click', () => {
@@ -589,10 +751,8 @@
                 });
             }
 
-            // Run everything after DOM is fully loaded
             window.addEventListener('DOMContentLoaded', function() {
-                fixActionCells();   // ensure action buttons are consistent
-                initPagination();   // activate pagination
+                initPagination();
             });
 
         })();

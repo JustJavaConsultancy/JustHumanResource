@@ -22,6 +22,7 @@ public interface PayrollSetupService {
      * PENSION
      * ========================= */
     PensionScheme createPensionScheme(PensionScheme scheme);
+    PensionScheme update(Long id, PensionScheme incoming);
     List<PensionScheme> getActivePensionSchemes();
 
     /* =========================

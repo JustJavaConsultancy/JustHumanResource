@@ -113,6 +113,30 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
         return pensionSchemeRepository
                 .findEffectiveSchemes(LocalDate.now(),RecordStatus.ACTIVE);
     }
+    @Transactional
+    public PensionScheme update(Long id, PensionScheme incoming) {
+        PensionScheme existing = pensionSchemeRepository.findById(id).orElseThrow(
+                () -> new InvalidOperationException("Pension Scheme not found.")
+        );
+        // Copy allowed fields manually (or use something like BeanUtils.copyProperties ignoring nulls)
+        existing.setName(incoming.getName());
+        existing.setEmployeeRate(incoming.getEmployeeRate());
+        existing.setEmployerRate(incoming.getEmployerRate());
+        if (incoming.getPensionableOnBasicOnly() != null) {
+            existing.setPensionableOnBasicOnly(incoming.getPensionableOnBasicOnly());
+        }
+        if (incoming.getPensionableCap() != null) { // null is a valid value for "no cap"
+            existing.setPensionableCap(incoming.getPensionableCap());
+        }
+        if (incoming.getStatus() != null) {
+            existing.setStatus(incoming.getStatus());
+        }
+        existing.setEffectiveFrom(incoming.getEffectiveFrom());
+        existing.setEffectiveTo(incoming.getEffectiveTo());
+
+        // ... but careful: do NOT copy id, code, version, etc.
+        return pensionSchemeRepository.save(existing);
+    }
 
     /* =========================
      * ALLOWANCES

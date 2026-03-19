@@ -5,8 +5,7 @@ import com.justjava.humanresource.payroll.statutory.entity.PensionScheme;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -76,6 +75,11 @@ public class PensionController {
     @PostMapping("/setup/pension-scheme")
     public String createPensionScheme(PensionScheme scheme) {
         payrollSetupService.createPensionScheme(scheme);
+        return "redirect:/pension";
+    }
+    @PutMapping("/update/pension-scheme/{id}")
+    public String update(@PathVariable Long id, @RequestBody PensionScheme scheme) {
+        payrollSetupService.update(id, scheme);
         return "redirect:/pension";
     }
 }
