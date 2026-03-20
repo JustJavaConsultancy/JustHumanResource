@@ -127,7 +127,7 @@ public class EmployeeController {
         // implement your own logic
         Employee loginEmployee = employeeService.getByEmail(email);
         Employee employee = employeeService.getEmployeeWithBankDetails(loginEmployee.getId());
-        PayrollRunDTO currentPayrollRun = payrollRunService.getEmployeePayrollRun(1L, loginEmployee.getId());
+        PayrollRunDTO currentPayrollRun = payrollRunService.getEmployeePayrollRun(loginEmployee.getId(),1L);
         System.out.println("Latest Pay Slip: " + currentPayrollRun);
         System.out.println("Logged in employee: " + loginEmployee);
         List<PaySlipDTO> previousPaySlip = paySlipService.getPaySlipsByEmployee(loginEmployee.getId());
@@ -207,7 +207,7 @@ public class EmployeeController {
         String email = (String) authenticationManager.get("email");
         // implement your own logic
         Employee loginEmployee = employeeService.getByEmail(email);
-        PayrollRunDTO latestPaySlip = payrollRunService.getEmployeePayrollRun(1L, loginEmployee.getId());
+        PayrollRunDTO latestPaySlip = payrollRunService.getEmployeePayrollRun(loginEmployee.getId(),1L);
 
         List<PaySlipDTO> previousPaySlip = paySlipService.getPaySlipsByEmployee(loginEmployee.getId());
         Employee employee = employeeService.getEmployeeWithBankDetails(loginEmployee.getId());
