@@ -49,6 +49,7 @@ public class PayrollRunServiceImpl implements PayrollRunService {
                                 )
                         )
                         .orElse(null);
+        System.out.println("Current period for company " + companyId + ": " + (current != null ? current.getId() : "None"));
 
 /*        if (current == null) {
             return Collections.emptyList();
