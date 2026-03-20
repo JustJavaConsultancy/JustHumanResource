@@ -51,6 +51,8 @@ public class Oauth2SecurityConfig {
         return  (request, response, authentication) -> {
             if (request.getRequestURI().contains("keycloak-mobile")){
                 response.sendRedirect("/mobile/employee/dashboard");
+            }else if(request.getRequestURI().contains("keycloak-web")){
+                response.sendRedirect("/employee/dashboard");
             }else {
                 response.sendRedirect("/");
             }

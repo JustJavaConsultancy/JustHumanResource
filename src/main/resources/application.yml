@@ -42,6 +42,9 @@ spring:
           keycloak-mobile:
             issuer-uri: ${ISSUER_URI:https://ngcloak-production.up.railway.app/realms/mobile-auth-realm}
 
+          keycloak-web:
+            issuer-uri: ${ISSUER_URI:https://ngcloak-production.up.railway.app/realms/mobile-auth-realm}
+
         registration:
           keycloak:
             provider: keycloak
@@ -51,6 +54,13 @@ spring:
             scope: openid,profile,email
 
           keycloak-mobile:
+            provider: keycloak-mobile
+            client_id: ${KEYCLOAK_CLIENT_ID:auth-mobile}
+            client_secret: ${KEYCLOAK_CLIENT_SECRET:sTZZkB0OSJXpuot1QAOTTooPoG5lkElF}
+            authorization-grant-type: authorization_code
+            scope: openid,profile,email
+
+          keycloak-web:
             provider: keycloak-mobile
             client_id: ${KEYCLOAK_CLIENT_ID:auth-mobile}
             client_secret: ${KEYCLOAK_CLIENT_SECRET:sTZZkB0OSJXpuot1QAOTTooPoG5lkElF}
