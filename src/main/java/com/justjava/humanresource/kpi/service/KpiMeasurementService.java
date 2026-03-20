@@ -140,6 +140,7 @@ public class KpiMeasurementService {
         List<KpiAssignment> assignments =
                 assignmentRepository.findEffectiveAssignmentsForEmployee(
                         employeeId,
+                        employee.getJobStep().getId(),
                         referenceDate
                 );
 

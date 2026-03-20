@@ -29,21 +29,36 @@ public interface KpiAssignmentRepository
        VALIDITY-AWARE LOOKUP
        Used for appraisal calculation
        ========================================================= */
-
     @Query("""
-           SELECT a
-           FROM KpiAssignment a
-           WHERE a.active = true
-           AND (
-                (a.employee.id = :employeeId)
-           )
-           AND (a.validFrom IS NULL OR a.validFrom <= :referenceDate)
-           AND (a.validTo IS NULL OR a.validTo >= :referenceDate)
-           """)
+       SELECT a
+       FROM KpiAssignment a
+       WHERE a.active = true
+       AND (
+            (a.employee.id = :employeeId)
+            OR
+            (
+                a.employee IS NULL
+                AND a.jobStep.id = :jobStepId
+                AND NOT EXISTS (
+                    SELECT 1
+                    FROM KpiAssignment a2
+                    WHERE a2.active = true
+                    AND a2.kpi.id = a.kpi.id
+                    AND a2.employee.id = :employeeId
+                    AND (a2.validFrom IS NULL OR a2.validFrom <= :referenceDate)
+                    AND (a2.validTo IS NULL OR a2.validTo >= :referenceDate)
+                )
+            )
+       )
+       AND (a.validFrom IS NULL OR a.validFrom <= :referenceDate)
+       AND (a.validTo IS NULL OR a.validTo >= :referenceDate)
+       """)
     List<KpiAssignment> findEffectiveAssignmentsForEmployee(
             @Param("employeeId") Long employeeId,
+            @Param("jobStepId") Long jobStepId,
             @Param("referenceDate") LocalDate referenceDate
     );
+
     @Query("""
            SELECT a
            FROM KpiAssignment a
