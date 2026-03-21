@@ -347,4 +347,51 @@ public class KeycloakAdminService {
 
         return users(keycloak, realm).searchByAttributes(query);
     }
+    /* ============================================================
+   Group Listing
+   ============================================================ */
+
+    public List<GroupRepresentation> getAllGroups(String realm) {
+        Keycloak keycloak = realm.equals(realmName) ? adminKeycloak : baseKeycloak;
+        return groups(keycloak, realm).groups();
+    }
+
+/* ============================================================
+   Group Creation
+   ============================================================ */
+
+    public String createGroup(String realm, String groupName, String parentGroupId) {
+        Assert.hasText(groupName, "Group name must not be empty");
+
+        Keycloak keycloak = realm.equals(realmName) ? adminKeycloak : baseKeycloak;
+        GroupsResource groupsResource = groups(keycloak, realm);
+
+        GroupRepresentation group = new GroupRepresentation();
+        group.setName(groupName);
+
+        try (Response response = parentGroupId != null
+                ? groupsResource.group(parentGroupId).subGroup(group)
+                : groupsResource.add(group)) {
+
+            if (response.getStatus() != Response.Status.CREATED.getStatusCode()) {
+                throw new IllegalStateException(
+                        "Failed to create group. Status: "
+                                + response.getStatus()
+                                + " - "
+                                + response.getStatusInfo().getReasonPhrase()
+                );
+            }
+
+            return extractGroupId(response.getLocation());
+        }
+    }
+
+    private String extractGroupId(URI location) {
+        if (location == null) {
+            throw new IllegalStateException("Group created but no Location header returned.");
+        }
+        String path = location.getPath();
+        return path.substring(path.lastIndexOf('/') + 1);
+    }
+
 }
