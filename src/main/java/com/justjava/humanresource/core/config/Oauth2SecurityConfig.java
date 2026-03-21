@@ -8,8 +8,11 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AnonymousConfigurer;
 import org.springframework.security.config.annotation.web.configurers.CsrfConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.oauth2.client.oidc.web.logout.OidcClientInitiatedLogoutSuccessHandler;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
+import org.springframework.security.web.authentication.logout.LogoutSuccessHandler;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.web.servlet.handler.HandlerMappingIntrospector;
 
@@ -18,7 +21,7 @@ import org.springframework.web.servlet.handler.HandlerMappingIntrospector;
 public class Oauth2SecurityConfig {
 
     @Bean
-    protected SecurityFilterChain configure(HttpSecurity http, HandlerMappingIntrospector introspector) throws Exception {
+    protected SecurityFilterChain configure(HttpSecurity http, HandlerMappingIntrospector introspector,ClientRegistrationRepository repo) throws Exception {
         log.debug("Configuring security");
 
         http.securityMatcher("/**")
@@ -42,9 +45,22 @@ public class Oauth2SecurityConfig {
                         }
                 )
                 .logout(logout -> logout
-                        .invalidateHttpSession(false)
-                        .logoutUrl("/users/logout"));
+                        .logoutSuccessHandler(oidcLogoutSuccessHandler(repo))
+                        .invalidateHttpSession(true)
+                        .clearAuthentication(true)
+                        .deleteCookies("JSESSIONID")
+                        .logoutUrl("/users/logout")
+                );
         return http.build();
+    }
+
+
+
+    private LogoutSuccessHandler oidcLogoutSuccessHandler(ClientRegistrationRepository repository) {
+        OidcClientInitiatedLogoutSuccessHandler logoutSuccessHandler =
+                new OidcClientInitiatedLogoutSuccessHandler(repository);
+        logoutSuccessHandler.setPostLogoutRedirectUri("{baseUrl}");
+        return logoutSuccessHandler;
     }
 
     private AuthenticationSuccessHandler authenticationSuccessHandler(){

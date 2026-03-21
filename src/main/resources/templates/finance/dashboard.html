@@ -424,60 +424,6 @@
       </div>
     </div>
   </div>
-
-
-  <script>
-    const menuToggle    = document.getElementById('menuToggle');
-    const mobileOverlay = document.getElementById('mobileOverlay');
-    const sidebar       = document.querySelector('.sidebar-container');
-
-    menuToggle?.addEventListener('click', () => {
-        sidebar.classList.toggle('open');
-        mobileOverlay?.classList.toggle('hidden');
-        document.body.style.overflow = sidebar?.classList.contains('open') ? 'hidden' : 'auto';
-    });
-    mobileOverlay?.addEventListener('click', () => {
-        sidebar?.classList.remove('open');
-        mobileOverlay.classList.add('hidden');
-        document.body.style.overflow = 'auto';
-    });
-
-    const themeToggle = document.getElementById('themeToggle');
-    if (themeToggle) {
-        const themeIcon = themeToggle.querySelector('.material-icons-round');
-        themeToggle.addEventListener('click', () => {
-            const isDark = document.documentElement.classList.toggle('dark');
-            themeIcon.textContent = isDark ? 'light_mode' : 'dark_mode';
-            localStorage.setItem('theme', isDark ? 'dark' : 'light');
-        });
-        if (localStorage.getItem('theme') === 'dark' ||
-            (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-            document.documentElement.classList.add('dark');
-            themeIcon.textContent = 'light_mode';
-        }
-    }
-
-    document.querySelectorAll('.sidebar-item').forEach(item => {
-        item.addEventListener('click', function (e) {
-            if (this.getAttribute('href') === '#') e.preventDefault();
-            document.querySelectorAll('.sidebar-item').forEach(n => n.classList.remove('active'));
-            this.classList.add('active');
-            if (window.innerWidth < 1024 && sidebar) {
-                sidebar.classList.remove('open');
-                mobileOverlay?.classList.add('hidden');
-                document.body.style.overflow = 'auto';
-            }
-        });
-    });
-
-    window.addEventListener('resize', () => {
-        if (window.innerWidth >= 1024 && sidebar) {
-            sidebar.classList.remove('open');
-            mobileOverlay?.classList.add('hidden');
-            document.body.style.overflow = 'auto';
-        }
-    });
-  </script>
 </main>
 </body>
 </html>

@@ -398,11 +398,11 @@
                 <span class="material-icons-round text-gray-500 group-hover:text-primary-600 dark:text-gray-400">person</span>
                 <span class="font-medium">My Profile</span>
             </a>
-<!--            <a th:href="@{/employee/leave}"-->
-<!--               th:class="${currentPath.startsWith('/employee/leave')} ? 'sidebar-item active flex items-center space-x-3 px-3 py-3 rounded-lg' : 'sidebar-item flex items-center space-x-3 px-3 py-3 rounded-lg'">-->
-<!--                <span class="material-icons-round text-gray-500 group-hover:text-primary-600 dark:text-gray-400">calendar_today</span>-->
-<!--                <span class="font-medium">My Leaves</span>-->
-<!--            </a>-->
+            <!--            <a th:href="@{/employee/leave}"-->
+            <!--               th:class="${currentPath.startsWith('/employee/leave')} ? 'sidebar-item active flex items-center space-x-3 px-3 py-3 rounded-lg' : 'sidebar-item flex items-center space-x-3 px-3 py-3 rounded-lg'">-->
+            <!--                <span class="material-icons-round text-gray-500 group-hover:text-primary-600 dark:text-gray-400">calendar_today</span>-->
+            <!--                <span class="font-medium">My Leaves</span>-->
+            <!--            </a>-->
             <a th:href="@{/employee/performance}"
                th:class="${currentPath.startsWith('/employee/performance')} ? 'sidebar-item active flex items-center space-x-3 px-3 py-3 rounded-lg' : 'sidebar-item flex items-center space-x-3 px-3 py-3 rounded-lg'">
                 <span class="material-icons-round text-gray-500 group-hover:text-primary-600 dark:text-gray-400">assessment</span>
@@ -413,11 +413,11 @@
                 <span class="material-icons-round text-gray-500 group-hover:text-primary-600 dark:text-gray-400">payments</span>
                 <span class="font-medium">My Payroll</span>
             </a>
-<!--            <a th:href="@{/employee/promotions}"-->
-<!--               th:class="${currentPath.startsWith('/employee/promotions')} ? 'sidebar-item active flex items-center space-x-3 px-3 py-3 rounded-lg' : 'sidebar-item flex items-center space-x-3 px-3 py-3 rounded-lg'">-->
-<!--                <span class="material-icons-round text-gray-500 group-hover:text-primary-600 dark:text-gray-400">trending_up</span>-->
-<!--                <span class="font-medium">Promotions</span>-->
-<!--            </a>-->
+            <!--            <a th:href="@{/employee/promotions}"-->
+            <!--               th:class="${currentPath.startsWith('/employee/promotions')} ? 'sidebar-item active flex items-center space-x-3 px-3 py-3 rounded-lg' : 'sidebar-item flex items-center space-x-3 px-3 py-3 rounded-lg'">-->
+            <!--                <span class="material-icons-round text-gray-500 group-hover:text-primary-600 dark:text-gray-400">trending_up</span>-->
+            <!--                <span class="font-medium">Promotions</span>-->
+            <!--            </a>-->
             <a th:href="@{/employee/documents}"
                th:class="${currentPath.startsWith('/employee/documents')} ? 'sidebar-item active flex items-center space-x-3 px-3 py-3 rounded-lg' : 'sidebar-item flex items-center space-x-3 px-3 py-3 rounded-lg'">
                 <span class="material-icons-round text-gray-500 group-hover:text-primary-600 dark:text-gray-400">description</span>
@@ -432,7 +432,7 @@
             <span class="material-icons-round text-gray-500 group-hover:text-primary-600 dark:text-gray-400">settings</span>
             <span class="font-medium">Settings</span>
         </a>
-        <a href="#" class="sidebar-item flex items-center space-x-3 px-4 py-2.5 rounded-lg group text-red-600 dark:text-red-400">
+        <a id="logoutBtn" href="#" class="sidebar-item flex items-center space-x-3 px-4 py-2.5 rounded-lg group text-red-600 dark:text-red-400">
             <span class="material-icons-round">logout</span>
             <span class="font-medium">Logout</span>
         </a>
@@ -477,6 +477,31 @@
     </main>
 </div>
 
+<!-- Logout Confirmation Modal -->
+<div id="logoutModal" class="fixed inset-0 z-50 flex items-center justify-center hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <!-- Backdrop -->
+    <div class="fixed inset-0 bg-gray-900 bg-opacity-50 transition-opacity"></div>
+    <!-- Modal Panel -->
+    <div class="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 transform transition-all">
+        <div class="p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white" id="modal-title">Confirm Logout</h3>
+                <button id="closeModalBtn" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                    <span class="material-icons-round">close</span>
+                </button>
+            </div>
+            <p class="text-gray-600 dark:text-gray-300 mb-6">Are you sure you want to log out? You will need to sign in again to access your account.</p>
+            <div class="flex justify-end space-x-3">
+                <button id="cancelLogoutBtn" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition">Cancel</button>
+                <button id="confirmLogoutBtn" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition">Logout</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden logout form for POST request to /users/logout -->
+<form id="logoutForm" method="post" action="/users/logout" style="display: none;"></form>
+
 <script>
     // Mobile Sidebar Toggle
     const menuToggle = document.getElementById('menuToggle');
@@ -516,6 +541,11 @@
     // Sidebar active state
     document.querySelectorAll('.sidebar-item').forEach(item => {
         item.addEventListener('click', function(e) {
+            // Skip if it's the logout button, because its click is handled separately
+            if (this.id === 'logoutBtn') {
+                e.preventDefault();
+                return;
+            }
             if (this.getAttribute('href') === '#') {
                 e.preventDefault();
             }
@@ -540,6 +570,52 @@
             document.body.style.overflow = 'auto';
         }
     });
+
+    // ---------- LOGOUT MODAL LOGIC ----------
+    const logoutBtn = document.getElementById('logoutBtn');
+    const modal = document.getElementById('logoutModal');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+    const cancelBtn = document.getElementById('cancelLogoutBtn');
+    const confirmBtn = document.getElementById('confirmLogoutBtn');
+    const logoutForm = document.getElementById('logoutForm');
+
+    // Open modal on logout click
+    if (logoutBtn && modal) {
+        logoutBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            modal.classList.remove('hidden');
+            // Prevent body scrolling when modal is open
+            document.body.style.overflow = 'hidden';
+        });
+    }
+
+    // Function to close modal
+    function closeModal() {
+        if (modal) {
+            modal.classList.add('hidden');
+            document.body.style.overflow = 'auto';
+        }
+    }
+
+    // Close modal on X or cancel
+    if (closeModalBtn) closeModalBtn.addEventListener('click', closeModal);
+    if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+
+    // Confirm logout: submit the logout form
+    if (confirmBtn && logoutForm) {
+        confirmBtn.addEventListener('click', () => {
+            logoutForm.submit();
+        });
+    }
+
+    // Close modal if clicking outside the modal content
+    if (modal) {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                closeModal();
+            }
+        });
+    }
 </script>
 </body>
 </html>
