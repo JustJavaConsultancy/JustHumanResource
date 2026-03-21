@@ -86,6 +86,7 @@ public class KeycloakUserCreationDelegate implements JavaDelegate {
         try {
 
             String keycloakUserId = keycloakAdminService.createUser(
+                    "humanResources",
                     username,
                     email,
                     temporaryPassword,
@@ -93,7 +94,7 @@ public class KeycloakUserCreationDelegate implements JavaDelegate {
                     employee.getLastName(),
                     attributes
             );
-            keycloakAdminService.sendPasswordResetEmail(keycloakUserId);
+            keycloakAdminService.sendPasswordResetEmail("humanResources",keycloakUserId);
             System.out.println(" The Created User keycloakUserId===="+keycloakUserId);
             // =====================================================
             // 6️⃣ Persist Keycloak ID Back To Employee

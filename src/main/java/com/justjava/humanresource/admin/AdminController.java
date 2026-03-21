@@ -36,8 +36,8 @@ public class AdminController {
     ) {
         // ── Fetch ──────────────────────────────────────────────
         List<UserRepresentation> allUsers = (search == null || search.isBlank())
-                ? keycloakAdminService.listAllUsers()
-                : keycloakAdminService.searchUsers(search, 0, 500);
+                ? keycloakAdminService.listAllUsers("humanResources")
+                : keycloakAdminService.searchUsers("humanResources",search, 0, 500);
 
         // ── Aggregate stats ────────────────────────────────────
         int  totalUsers  = allUsers.size();
@@ -84,7 +84,7 @@ public class AdminController {
     ) {
         try {
             keycloakAdminService.createUser(
-                    username, email, password,
+                    "humanResources",username, email, password,
                     firstName, lastName,
                     parseAttributes(request)
             );
@@ -104,7 +104,7 @@ public class AdminController {
     @PostMapping("/enable-user")
     public String enableUser(@RequestParam String userId, RedirectAttributes ra) {
         try {
-            keycloakAdminService.enableUser(userId);
+            keycloakAdminService.enableUser("humanResources",userId);
             ra.addFlashAttribute("successMessage", "User account enabled.");
         } catch (Exception ex) {
             ra.addFlashAttribute("errorMessage", "Failed to enable user: " + sanitize(ex.getMessage()));
@@ -115,7 +115,7 @@ public class AdminController {
     @PostMapping("/disable-user")
     public String disableUser(@RequestParam String userId, RedirectAttributes ra) {
         try {
-            keycloakAdminService.disableUser(userId);
+            keycloakAdminService.disableUser("humanResources",userId);
             ra.addFlashAttribute("successMessage", "User account disabled.");
         } catch (Exception ex) {
             ra.addFlashAttribute("errorMessage", "Failed to disable user: " + sanitize(ex.getMessage()));
@@ -130,7 +130,7 @@ public class AdminController {
     @PostMapping("/delete-user")
     public String deleteUser(@RequestParam String userId, RedirectAttributes ra) {
         try {
-            keycloakAdminService.deleteUser(userId);
+            keycloakAdminService.deleteUser("humanResources",userId);
             ra.addFlashAttribute("successMessage", "User deleted successfully.");
         } catch (Exception ex) {
             ra.addFlashAttribute("errorMessage", "Failed to delete user: " + sanitize(ex.getMessage()));
@@ -145,7 +145,7 @@ public class AdminController {
     @PostMapping("/reset-password-email")
     public String sendPasswordResetEmail(@RequestParam String userId, RedirectAttributes ra) {
         try {
-            keycloakAdminService.sendPasswordResetEmail(userId);
+            keycloakAdminService.sendPasswordResetEmail("humanResources",userId);
             ra.addFlashAttribute("successMessage", "Password reset email sent.");
         } catch (Exception ex) {
             ra.addFlashAttribute("errorMessage", "Could not send reset email: " + sanitize(ex.getMessage()));
@@ -164,7 +164,7 @@ public class AdminController {
             RedirectAttributes ra
     ) {
         try {
-            keycloakAdminService.assignRealmRole(userId, roleName);
+            keycloakAdminService.assignRealmRole("humanResources",userId, roleName);
             ra.addFlashAttribute("successMessage", "Role \"" + roleName + "\" assigned.");
         } catch (Exception ex) {
             ra.addFlashAttribute("errorMessage", "Role assignment failed: " + sanitize(ex.getMessage()));
@@ -179,7 +179,7 @@ public class AdminController {
             RedirectAttributes ra
     ) {
         try {
-            keycloakAdminService.removeRealmRole(userId, roleName);
+            keycloakAdminService.removeRealmRole("humanResources",userId, roleName);
             ra.addFlashAttribute("successMessage", "Role \"" + roleName + "\" removed.");
         } catch (Exception ex) {
             ra.addFlashAttribute("errorMessage", "Role removal failed: " + sanitize(ex.getMessage()));
@@ -198,7 +198,7 @@ public class AdminController {
             RedirectAttributes ra
     ) {
         try {
-            keycloakAdminService.addUserToGroup(userId, groupName);
+            keycloakAdminService.addUserToGroup("humanResources",userId, groupName);
             ra.addFlashAttribute("successMessage", "User added to group \"" + groupName + "\".");
         } catch (Exception ex) {
             ra.addFlashAttribute("errorMessage", "Failed to add to group: " + sanitize(ex.getMessage()));
@@ -213,7 +213,7 @@ public class AdminController {
             RedirectAttributes ra
     ) {
         try {
-            keycloakAdminService.removeUserFromGroup(userId, groupName);
+            keycloakAdminService.removeUserFromGroup("humanResources",userId, groupName);
             ra.addFlashAttribute("successMessage", "User removed from group \"" + groupName + "\".");
         } catch (Exception ex) {
             ra.addFlashAttribute("errorMessage", "Failed to remove from group: " + sanitize(ex.getMessage()));
@@ -230,7 +230,7 @@ public class AdminController {
     @ResponseBody
     public ResponseEntity<List<String>> getUserGroups(@PathVariable String userId) {
         try {
-            return ResponseEntity.ok(keycloakAdminService.getUserGroups(userId));
+            return ResponseEntity.ok(keycloakAdminService.getUserGroups("humanResources",userId));
         } catch (Exception ex) {
             return ResponseEntity.ok(Collections.emptyList());
         }
@@ -241,7 +241,7 @@ public class AdminController {
     @ResponseBody
     public ResponseEntity<List<String>> getUserRoles(@PathVariable String userId) {
         try {
-            return ResponseEntity.ok(keycloakAdminService.getUserRealmRoles(userId));
+            return ResponseEntity.ok(keycloakAdminService.getUserRealmRoles("humanResources",userId));
         } catch (Exception ex) {
             return ResponseEntity.ok(Collections.emptyList());
         }

@@ -4,6 +4,7 @@ import jakarta.ws.rs.core.Response;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.resource.*;
 import org.keycloak.representations.idm.*;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
@@ -17,39 +18,45 @@ public class KeycloakAdminService {
 
     private static final int DEFAULT_PAGE_SIZE = 100;
 
-    private final Keycloak keycloak;
+    private final Keycloak adminKeycloak;
+    private final Keycloak baseKeycloak;
     private final String realmName;
+    private final String baseRealmName;
 
     public KeycloakAdminService(
-            Keycloak keycloak,
-            @Value("${keycloak.realm}") String realmName
+            @Qualifier("adminKeycloak") Keycloak adminKeycloak,
+            @Qualifier("baseKeycloak") Keycloak baseKeycloak,
+            @Value("${keycloak.realm}") String realmName,
+            @Value("${keycloak.base-realm}") String baseRealmName
     ) {
-        this.keycloak = keycloak;
+        this.adminKeycloak = adminKeycloak;
+        this.baseKeycloak = baseKeycloak;
         this.realmName = realmName;
+        this.baseRealmName = baseRealmName;
     }
 
     /* ============================================================
        Internal Helpers
        ============================================================ */
 
-    private RealmResource realm() {
-        return keycloak.realm(realmName);
+    private RealmResource realm(Keycloak keycloak, String realm) {
+        return keycloak.realm(realm);
     }
 
-    private UsersResource users() {
-        return realm().users();
+    private UsersResource users(Keycloak keycloak, String realm) {
+        return realm(keycloak, realm).users();
     }
 
-    private RolesResource roles() {
-        return realm().roles();
+    private RolesResource roles(Keycloak keycloak, String realm) {
+        return realm(keycloak, realm).roles();
     }
 
-    private GroupsResource groups() {
-        return realm().groups();
+    private GroupsResource groups(Keycloak keycloak, String realm) {
+        return realm(keycloak, realm).groups();
     }
 
-    private UserResource user(String userId) {
-        return users().get(userId);
+    private UserResource user(Keycloak keycloak, String realm, String userId) {
+        return users(keycloak, realm).get(userId);
     }
 
     /* ============================================================
@@ -57,6 +64,7 @@ public class KeycloakAdminService {
        ============================================================ */
 
     public String createUser(
+            String realm,
             String username,
             String email,
             String password,
@@ -64,13 +72,15 @@ public class KeycloakAdminService {
             String lastName,
             Map<String, List<String>> attributes
     ) {
-
         Assert.hasText(username, "Username must not be empty");
         Assert.hasText(password, "Password must not be empty");
 
-        // ✅ Step 1: Check if user already exists
+        Keycloak keycloak = realm.equals(realmName) ? adminKeycloak : baseKeycloak;
+
+        UsersResource usersResource = users(keycloak, realm);
+
         Optional<UserRepresentation> existingUser =
-                users().search(username, 0, 1)
+                usersResource.search(username, 0, 1)
                         .stream()
                         .filter(u -> u.getUsername().equalsIgnoreCase(username))
                         .findFirst();
@@ -93,12 +103,10 @@ public class KeycloakAdminService {
 
         user.setCredentials(Collections.singletonList(buildPasswordCredential(password)));
 
-        try (Response response = users().create(user)) {
+        try (Response response = usersResource.create(user)) {
 
             if (response.getStatus() == Response.Status.CONFLICT.getStatusCode()) {
-
-                // Another thread created it between check and create
-                return users().search(username, 0, 1)
+                return usersResource.search(username, 0, 1)
                         .stream()
                         .filter(u -> u.getUsername().equalsIgnoreCase(username))
                         .findFirst()
@@ -120,6 +128,7 @@ public class KeycloakAdminService {
             return extractUserId(response.getLocation());
         }
     }
+
     private CredentialRepresentation buildPasswordCredential(String password) {
         CredentialRepresentation credential = new CredentialRepresentation();
         credential.setType(CredentialRepresentation.PASSWORD);
@@ -140,29 +149,34 @@ public class KeycloakAdminService {
        User Management
        ============================================================ */
 
-    public void enableUser(String userId) {
-        UserRepresentation rep = user(userId).toRepresentation();
+    public void enableUser(String realm, String userId) {
+        Keycloak keycloak = realm.equals(realmName) ? adminKeycloak : baseKeycloak;
+        UserRepresentation rep = user(keycloak, realm, userId).toRepresentation();
         rep.setEnabled(true);
-        user(userId).update(rep);
+        user(keycloak, realm, userId).update(rep);
     }
 
-    public void disableUser(String userId) {
-        UserRepresentation rep = user(userId).toRepresentation();
+    public void disableUser(String realm, String userId) {
+        Keycloak keycloak = realm.equals(realmName) ? adminKeycloak : baseKeycloak;
+        UserRepresentation rep = user(keycloak, realm, userId).toRepresentation();
         rep.setEnabled(false);
-        user(userId).update(rep);
+        user(keycloak, realm, userId).update(rep);
     }
 
-    public void deleteUser(String userId) {
-        users().delete(userId);
+    public void deleteUser(String realm, String userId) {
+        Keycloak keycloak = realm.equals(realmName) ? adminKeycloak : baseKeycloak;
+        users(keycloak, realm).delete(userId);
     }
 
-    public Optional<UserRepresentation> findByUsername(String username) {
-        return users().search(username, 0, 1).stream().findFirst();
+    public Optional<UserRepresentation> findByUsername(String realm, String username) {
+        Keycloak keycloak = realm.equals(realmName) ? adminKeycloak : baseKeycloak;
+        return users(keycloak, realm).search(username, 0, 1).stream().findFirst();
     }
 
-    public Optional<UserRepresentation> findById(String userId) {
+    public Optional<UserRepresentation> findById(String realm, String userId) {
+        Keycloak keycloak = realm.equals(realmName) ? adminKeycloak : baseKeycloak;
         try {
-            return Optional.of(user(userId).toRepresentation());
+            return Optional.of(user(keycloak, realm, userId).toRepresentation());
         } catch (Exception ex) {
             return Optional.empty();
         }
@@ -172,45 +186,52 @@ public class KeycloakAdminService {
        Password & Email Actions
        ============================================================ */
 
-    public void sendPasswordResetEmail(String userId) {
+    public void sendPasswordResetEmail(String realm, String userId) {
         Assert.hasText(userId, "userId must not be empty");
-        user(userId).executeActionsEmail(List.of("UPDATE_PASSWORD"));
+        Keycloak keycloak = realm.equals(realmName) ? adminKeycloak : baseKeycloak;
+        user(keycloak, realm, userId).executeActionsEmail(List.of("UPDATE_PASSWORD"));
     }
 
-    public void sendVerifyEmail(String userId) {
+    public void sendVerifyEmail(String realm, String userId) {
         Assert.hasText(userId, "userId must not be empty");
-        user(userId).executeActionsEmail(List.of("VERIFY_EMAIL"));
+        Keycloak keycloak = realm.equals(realmName) ? adminKeycloak : baseKeycloak;
+        user(keycloak, realm, userId).executeActionsEmail(List.of("VERIFY_EMAIL"));
     }
 
-    public void sendVerifyAndResetPasswordEmail(String userId) {
+    public void sendVerifyAndResetPasswordEmail(String realm, String userId) {
         Assert.hasText(userId, "userId must not be empty");
-        user(userId).executeActionsEmail(List.of("VERIFY_EMAIL", "UPDATE_PASSWORD"));
+        Keycloak keycloak = realm.equals(realmName) ? adminKeycloak : baseKeycloak;
+        user(keycloak, realm, userId).executeActionsEmail(List.of("VERIFY_EMAIL", "UPDATE_PASSWORD"));
     }
 
-    public void resetPassword(String userId, String newPassword, boolean temporary) {
+    public void resetPassword(String realm, String userId, String newPassword, boolean temporary) {
+        Keycloak keycloak = realm.equals(realmName) ? adminKeycloak : baseKeycloak;
         CredentialRepresentation credential = new CredentialRepresentation();
         credential.setType(CredentialRepresentation.PASSWORD);
         credential.setValue(newPassword);
         credential.setTemporary(temporary);
-        user(userId).resetPassword(credential);
+        user(keycloak, realm, userId).resetPassword(credential);
     }
 
     /* ============================================================
        Role Management
        ============================================================ */
 
-    public void assignRealmRole(String userId, String roleName) {
-        RoleRepresentation role = roles().get(roleName).toRepresentation();
-        user(userId).roles().realmLevel().add(List.of(role));
+    public void assignRealmRole(String realm, String userId, String roleName) {
+        Keycloak keycloak = realm.equals(realmName) ? adminKeycloak : baseKeycloak;
+        RoleRepresentation role = roles(keycloak, realm).get(roleName).toRepresentation();
+        user(keycloak, realm, userId).roles().realmLevel().add(List.of(role));
     }
 
-    public void removeRealmRole(String userId, String roleName) {
-        RoleRepresentation role = roles().get(roleName).toRepresentation();
-        user(userId).roles().realmLevel().remove(List.of(role));
+    public void removeRealmRole(String realm, String userId, String roleName) {
+        Keycloak keycloak = realm.equals(realmName) ? adminKeycloak : baseKeycloak;
+        RoleRepresentation role = roles(keycloak, realm).get(roleName).toRepresentation();
+        user(keycloak, realm, userId).roles().realmLevel().remove(List.of(role));
     }
 
-    public List<String> getUserRealmRoles(String userId) {
-        return user(userId)
+    public List<String> getUserRealmRoles(String realm, String userId) {
+        Keycloak keycloak = realm.equals(realmName) ? adminKeycloak : baseKeycloak;
+        return user(keycloak, realm, userId)
                 .roles()
                 .realmLevel()
                 .listAll()
@@ -223,32 +244,31 @@ public class KeycloakAdminService {
        Group Management
        ============================================================ */
 
-    public void addUserToGroup(String userId, String groupName) {
-
-        GroupRepresentation group = groups().groups().stream()
+    public void addUserToGroup(String realm, String userId, String groupName) {
+        Keycloak keycloak = realm.equals(realmName) ? adminKeycloak : baseKeycloak;
+        GroupRepresentation group = groups(keycloak, realm).groups().stream()
                 .filter(g -> g.getName().equalsIgnoreCase(groupName))
                 .findFirst()
                 .orElseThrow(() ->
                         new IllegalStateException("Group not found: " + groupName)
                 );
-
-        user(userId).joinGroup(group.getId());
+        user(keycloak, realm, userId).joinGroup(group.getId());
     }
 
-    public void removeUserFromGroup(String userId, String groupName) {
-
-        GroupRepresentation group = groups().groups().stream()
+    public void removeUserFromGroup(String realm, String userId, String groupName) {
+        Keycloak keycloak = realm.equals(realmName) ? adminKeycloak : baseKeycloak;
+        GroupRepresentation group = groups(keycloak, realm).groups().stream()
                 .filter(g -> g.getName().equalsIgnoreCase(groupName))
                 .findFirst()
                 .orElseThrow(() ->
                         new IllegalStateException("Group not found: " + groupName)
                 );
-
-        user(userId).leaveGroup(group.getId());
+        user(keycloak, realm, userId).leaveGroup(group.getId());
     }
 
-    public List<String> getUserGroups(String userId) {
-        return user(userId)
+    public List<String> getUserGroups(String realm, String userId) {
+        Keycloak keycloak = realm.equals(realmName) ? adminKeycloak : baseKeycloak;
+        return user(keycloak, realm, userId)
                 .groups()
                 .stream()
                 .map(GroupRepresentation::getName)
@@ -259,17 +279,18 @@ public class KeycloakAdminService {
        Listing Users
        ============================================================ */
 
-    public List<UserRepresentation> listUsers(int firstResult, int maxResults) {
-        return users().list(firstResult, maxResults);
+    public List<UserRepresentation> listUsers(String realm, int firstResult, int maxResults) {
+        Keycloak keycloak = realm.equals(realmName) ? adminKeycloak : baseKeycloak;
+        return users(keycloak, realm).list(firstResult, maxResults);
     }
 
-    public List<UserRepresentation> listAllUsers() {
-
+    public List<UserRepresentation> listAllUsers(String realm) {
+        Keycloak keycloak = realm.equals(realmName) ? adminKeycloak : baseKeycloak;
         List<UserRepresentation> allUsers = new ArrayList<>();
         int first = 0;
 
         while (true) {
-            List<UserRepresentation> batch = users().list(first, DEFAULT_PAGE_SIZE);
+            List<UserRepresentation> batch = users(keycloak, realm).list(first, DEFAULT_PAGE_SIZE);
 
             if (batch.isEmpty()) break;
 
@@ -288,29 +309,35 @@ public class KeycloakAdminService {
        ============================================================ */
 
     public List<UserRepresentation> searchUsers(
+            String realm,
             String searchQuery,
             int firstResult,
             int maxResults
     ) {
-        return users().search(searchQuery, firstResult, maxResults);
+        Keycloak keycloak = realm.equals(realmName) ? adminKeycloak : baseKeycloak;
+        return users(keycloak, realm).search(searchQuery, firstResult, maxResults);
     }
 
     public List<UserRepresentation> searchUsersByAttribute(
+            String realm,
             String attributeKey,
             String attributeValue
     ) {
         Assert.hasText(attributeKey, "Attribute key must not be empty");
         Assert.hasText(attributeValue, "Attribute value must not be empty");
-
-        return users().searchByAttributes(attributeKey + ":" + attributeValue);
+        Keycloak keycloak = realm.equals(realmName) ? adminKeycloak : baseKeycloak;
+        return users(keycloak, realm).searchByAttributes(attributeKey + ":" + attributeValue);
     }
 
     public List<UserRepresentation> searchUsersByAttributes(
+            String realm,
             Map<String, String> attributes
     ) {
         if (attributes == null || attributes.isEmpty()) {
             return Collections.emptyList();
         }
+
+        Keycloak keycloak = realm.equals(realmName) ? adminKeycloak : baseKeycloak;
 
         String query = attributes.entrySet()
                 .stream()
@@ -318,6 +345,6 @@ public class KeycloakAdminService {
                 .reduce((a, b) -> a + " " + b)
                 .orElse("");
 
-        return users().searchByAttributes(query);
+        return users(keycloak, realm).searchByAttributes(query);
     }
 }
