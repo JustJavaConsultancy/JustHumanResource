@@ -86,7 +86,7 @@ public class KeycloakUserCreationDelegate implements JavaDelegate {
         try {
 
             String keycloakUserId = keycloakAdminService.createUser(
-                    "humanResources",
+                    "mobile-auth-realm",
                     username,
                     email,
                     temporaryPassword,
