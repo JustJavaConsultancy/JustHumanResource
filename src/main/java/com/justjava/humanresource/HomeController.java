@@ -21,6 +21,8 @@ public class HomeController {
             return "redirect:/employee/dashboard";
         } else if (authenticationManager.isFinancialOfficer()) {
             return "redirect:/finance/dashboard";
+        } else if (authenticationManager.isAdmin()) {
+            return "redirect:/admin/users";
         }
 
         model.addAttribute("title", "Welcome to JustJava HR");
