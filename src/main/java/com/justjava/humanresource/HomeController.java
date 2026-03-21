@@ -15,19 +15,25 @@ public class HomeController {
 
     @GetMapping("/")
     public String home(Model model) {
+
         System.out.println(authenticationManager.getAllAttributes()); // hypothetical method
-        System.out.println(" Is Employee ==="+authenticationManager.isEmployee());
-        if (authenticationManager.isEmployee()){
+        System.out.println(" Is Employee ===" + authenticationManager.isEmployee());
+
+        if (authenticationManager.isEmployee()) {
             return "redirect:/employee/dashboard";
         } else if (authenticationManager.isFinancialOfficer()) {
             return "redirect:/finance/dashboard";
         } else if (authenticationManager.isAdmin()) {
             return "redirect:/admin/users";
+        } else if (authenticationManager.isHumanResource()) {
+            return "redirect:/departments";
         }
 
+        // Default view if no role matches
         model.addAttribute("title", "Welcome to JustJava HR");
         model.addAttribute("subTitle", "Streamline your HR processes with ease");
-        return "redirect:/departments";
+
+        return "index"; // <-- IMPORTANT: return a view name
     }
 
 }

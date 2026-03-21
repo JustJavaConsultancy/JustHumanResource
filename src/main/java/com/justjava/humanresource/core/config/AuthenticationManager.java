@@ -38,6 +38,13 @@ public class AuthenticationManager {
         }
         return groups.contains("/admin");
     }
+    public boolean isHumanResource() {
+        List<String> groups = (List<String>) this.get("groups");
+        if (groups == null) {
+            return false;
+        }
+        return groups.contains("/humanResource");
+    }
 
     public Object getAllAttributes() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
