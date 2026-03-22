@@ -91,3 +91,16 @@ keycloak:
   realm: mobile-auth-realm
   admin-client-id: admin-cli-client
   admin-client-secret: nolXS4BpUfMbUjcevhyx1jAB51L9fxw9
+
+#  2026-03-22T22:37:40.419+01:00 ERROR 5664 --- [nio-9006-exec-5] o.h.engine.jdbc.spi.SqlExceptionHelper:
+#    ERROR: function year(date) does not exist
+#      Hint: No function matches the given name and argument types. You might need to add explicit type casts.
+#      Position: 9
+#  2026-03-22T22:37:40.430+01:00 ERROR 5664 --- [nio-9006-exec-5] c.j.h.c.config.GlobalControllerAdvice: Unhandled exception occurred
+#
+#  org.springframework.dao.InvalidDataAccessResourceUsageException:
+#    JDBC exception executing SQL [select (year(pr1_0.payroll_date)||'-'||lpad(month(pr1_0.payroll_date),2,'0')),pli1_0.component_code,sum(pli1_0.amount) from payroll_line_items pli1_0 join payroll_runs pr1_0 on pr1_0.id=pli1_0.payroll_run_id join employees e1_0 on e1_0.id=pr1_0.employee_id join departments d1_0 on d1_0.id=e1_0.department_id where d1_0.company_id=? group by year(pr1_0.payroll_date),month(pr1_0.payroll_date),pli1_0.component_code order by year(pr1_0.payroll_date),month(pr1_0.payroll_date)] [ERROR: function year(date) does not exist
+#      Hint: No function matches the given name and argument types. You might need to add explicit type casts.
+#      Position: 9] [n/a]; SQL [n/a]
+#      at org.springframework.orm.jpa.vendor.HibernateJpaDialect.convertHibernateAccessException(HibernateJpaDialect.java:281) ~[spring-orm-6.2.8.jar:6.2.8]
+#      at org.springframework.orm.jpa.vendor.HibernateJpaDialect.convertHibernateAccessException(HibernateJpaDialect.java:256) ~[spring-orm-6.2.8.jar:6.2.8]

@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Master Payroll Report</title>
+
+    <style>
+        /* ── Proportional bar helper ─────────────────────────────── */
+        .bar-track {
+            height: 6px;
+            background: #e2e8f0;
+            border-radius: 99px;
+            overflow: hidden;
+        }
+        .bar-fill {
+            height: 100%;
+            border-radius: 99px;
+            transition: width 0.6s ease;
+        }
+
+        /* ── Status / scheme badge ───────────────────────────────── */
+        .scheme-badge {
+            display: inline-block;
+            padding: 2px 9px;
+            border-radius: 6px;
+            font-size: 0.65rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            background-color: #dbeafe;
+            color: #1e40af;
+        }
+
+        /* ── Summary card hover ──────────────────────────────────── */
+        .summary-card {
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .summary-card:hover {
+            border-color: rgba(37, 99, 235, 0.25);
+            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.07);
+        }
+
+        /* ── Trend bar ───────────────────────────────────────────── */
+        .trend-bar {
+            width: 14px;
+            border-radius: 3px 3px 0 0;
+            transition: opacity 0.2s;
+        }
+        .trend-bar:hover { opacity: 0.75; }
+
+        /* ── Table row ───────────────────────────────────────────── */
+        .report-row { transition: background 0.15s; }
+        .report-row:hover { background-color: #f8fafc; }
+    </style>
+</head>
+<body>
+<main layout:fragment="content">
+
+    <!-- ═══════════════════════════════════════════════════════════
+         PAGE HEADER
+    ═══════════════════════════════════════════════════════════ -->
+    <div class="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <div>
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Master Payroll Report</h2>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                Consolidated payroll data &nbsp;·&nbsp;
+                <span th:text="'Jan 1 ' + ${reportYear} + ' – Dec 31 ' + ${reportYear}">Jan 1 2026 – Dec 31 2026</span>
+            </p>
+        </div>
+        <div class="flex items-center gap-3">
+            <span class="px-3 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                  th:text="${reportYear} + ' Payroll Year'">2026 Payroll Year</span>
+            <button onclick="window.print()"
+                    class="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                <span class="material-icons-round text-base">download</span>
+                Export
+            </button>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         SECTION 1 – SUMMARY BENTO CARDS (one per dept/group + grand total)
+    ═══════════════════════════════════════════════════════════ -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-8">
+
+        <!-- Department cards -->
+        <div th:each="summary, iterStat : ${payrollSummary}"
+             class="summary-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+            <div class="flex items-center justify-between mb-5">
+                <span class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300"
+                      th:text="${summary.groupName}">Finance</span>
+                <span class="material-icons-round text-gray-300 dark:text-gray-600 text-2xl">account_balance</span>
+            </div>
+            <div class="space-y-3">
+                <div>
+                    <p class="text-xs text-gray-400 font-semibold uppercase tracking-widest mb-0.5">Total Gross</p>
+                    <p class="text-2xl font-bold text-gray-900 dark:text-white"
+                       th:text="${#numbers.formatDecimal(summary.totalGross, 1, 'COMMA', 2, 'POINT')}">0.00</p>
+                </div>
+                <div class="grid grid-cols-3 gap-2 pt-3 border-t border-gray-100 dark:border-gray-700">
+                    <div>
+                        <p class="text-xs text-gray-400 uppercase font-semibold mb-0.5">Deductions</p>
+                        <p class="text-sm font-bold text-red-600 dark:text-red-400"
+                           th:text="'-' + ${#numbers.formatDecimal(summary.totalDeductions, 1, 'COMMA', 2, 'POINT')}">0.00</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-400 uppercase font-semibold mb-0.5">Net Pay</p>
+                        <p class="text-sm font-bold text-blue-700 dark:text-blue-300"
+                           th:text="${#numbers.formatDecimal(summary.totalNet, 1, 'COMMA', 2, 'POINT')}">0.00</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-400 uppercase font-semibold mb-0.5">PAYE</p>
+                        <p class="text-sm font-bold text-orange-600 dark:text-orange-400"
+                           th:text="${#numbers.formatDecimal(summary.totalPaye, 1, 'COMMA', 2, 'POINT')}">0.00</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Grand total card (highlighted) -->
+        <div class="summary-card bg-blue-700 dark:bg-blue-800 rounded-xl border border-transparent p-6 text-white flex flex-col justify-between
+                    md:col-span-2 lg:col-span-1">
+            <div>
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="material-icons-round text-blue-300 text-xl">insights</span>
+                    <span class="text-xs font-bold tracking-widest uppercase opacity-80">Total Payroll Value</span>
+                </div>
+                <p class="text-3xl font-extrabold"
+                   th:text="${#numbers.formatDecimal(grandTotalGross, 1, 'COMMA', 2, 'POINT')}">0.00</p>
+            </div>
+            <div class="grid grid-cols-2 gap-3 mt-5 pt-5 border-t border-white/20">
+                <div>
+                    <p class="text-xs opacity-70 uppercase font-semibold mb-0.5">Total Deductions</p>
+                    <p class="text-base font-bold text-red-300"
+                       th:text="'-' + ${#numbers.formatDecimal(grandTotalDeductions, 1, 'COMMA', 2, 'POINT')}">0.00</p>
+                </div>
+                <div>
+                    <p class="text-xs opacity-70 uppercase font-semibold mb-0.5">Total Net Pay</p>
+                    <p class="text-base font-bold text-green-300"
+                       th:text="${#numbers.formatDecimal(grandTotalNet, 1, 'COMMA', 2, 'POINT')}">0.00</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Empty state for summary -->
+        <div th:if="${payrollSummary == null or #lists.isEmpty(payrollSummary)}"
+             class="col-span-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-12 text-center">
+            <span class="material-icons-round text-gray-300 text-5xl block mb-3">bar_chart</span>
+            <p class="text-gray-500 dark:text-gray-400 text-sm">No payroll summary data available for this period.</p>
+        </div>
+
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         SECTION 2 – EARNINGS & DEDUCTIONS BREAKDOWN + TREND CHART
+    ═══════════════════════════════════════════════════════════ -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 mb-8">
+
+        <!-- 2a. Earnings Breakdown -->
+        <div class="lg:col-span-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+            <h3 class="text-base font-bold text-gray-900 dark:text-white mb-5 flex items-center gap-2">
+                <span class="material-icons-round text-blue-600 dark:text-blue-400">payments</span>
+                Earnings Breakdown
+            </h3>
+
+            <div th:if="${earningsBreakdown == null or #lists.isEmpty(earningsBreakdown)}"
+                 class="text-center py-8 text-gray-400 text-sm">No earnings data available.</div>
+
+            <div class="space-y-5"
+                 th:if="${earningsBreakdown != null and !#lists.isEmpty(earningsBreakdown)}">
+                <div th:each="item : ${earningsBreakdown}" class="flex items-center justify-between gap-4">
+                    <div class="flex-1 min-w-0">
+                        <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5 truncate"
+                           th:text="${item.componentName}">Component</p>
+                        <div class="bar-track">
+                            <div class="bar-fill bg-blue-600"
+                                 th:style="'width:' + ${#numbers.formatDecimal(item.totalAmount.doubleValue() / maxEarnings * 100, 1, 0)} + '%'">
+                            </div>
+                        </div>
+                    </div>
+                    <span class="text-sm font-bold text-gray-900 dark:text-white whitespace-nowrap"
+                          th:text="${#numbers.formatDecimal(item.totalAmount, 1, 'COMMA', 2, 'POINT')}">0.00</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2b. Deductions Breakdown -->
+        <div class="lg:col-span-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+            <h3 class="text-base font-bold text-gray-900 dark:text-white mb-5 flex items-center gap-2">
+                <span class="material-icons-round text-red-500">receipt_long</span>
+                Deductions Breakdown
+            </h3>
+
+            <div th:if="${deductionBreakdown == null or #lists.isEmpty(deductionBreakdown)}"
+                 class="text-center py-8 text-gray-400 text-sm">No deductions data available.</div>
+
+            <div class="space-y-3"
+                 th:if="${deductionBreakdown != null and !#lists.isEmpty(deductionBreakdown)}">
+                <div th:each="item : ${deductionBreakdown}"
+                     class="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-900/20 flex items-center justify-center">
+                            <span class="material-icons-round text-red-500 text-sm">remove_circle_outline</span>
+                        </div>
+                        <span class="text-xs font-semibold text-gray-700 dark:text-gray-300"
+                              th:text="${item.componentName}">Component</span>
+                    </div>
+                    <span class="text-sm font-bold text-red-600 dark:text-red-400"
+                          th:text="${#numbers.formatDecimal(item.totalAmount, 1, 'COMMA', 2, 'POINT')}">0.00</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2c. Component Trend Chart -->
+        <div class="lg:col-span-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 flex flex-col">
+            <div class="flex justify-between items-start mb-4">
+                <h3 class="text-base font-bold text-gray-900 dark:text-white">Trend Report</h3>
+                <span class="text-xs font-bold text-gray-400 uppercase tracking-wide"
+                      th:text="${reportYear}">2026</span>
+            </div>
+
+            <div th:if="${componentTrend == null or #lists.isEmpty(componentTrend)}"
+                 class="flex-1 flex items-center justify-center text-gray-400 text-sm">No trend data available.</div>
+
+            <!-- Chart area -->
+            <div th:if="${componentTrend != null and !#lists.isEmpty(componentTrend)}"
+                 class="flex-1 flex flex-col">
+                <div class="flex items-end gap-3 flex-1 min-h-[120px]">
+                    <div th:each="period : ${trendPeriods}" class="flex-1 flex flex-col items-center gap-1">
+                        <div class="w-full flex gap-0.5 items-end justify-center h-28">
+                            <!-- One bar per component code for this period -->
+                            <div th:each="code : ${trendComponents}"
+                                 th:with="amount=${#aggregates.sum(componentTrend.?[period == __${period}__ and componentCode == __${code}__].![totalAmount])}"
+                                 class="trend-bar flex-1"
+                                 th:classappend="${codeStat.index == 0} ? 'bg-blue-600' : (${codeStat.index == 1} ? 'bg-blue-300' : 'bg-indigo-400')"
+                                 th:style="'height:' + ${amount != null ? #numbers.formatDecimal(amount.doubleValue() / maxTrendAmount * 100, 1, 0) : 0} + '%'"
+                                 th:title="${code} + ': ' + ${amount}">
+                            </div>
+                        </div>
+                        <span class="text-[9px] font-bold text-gray-400 uppercase"
+                              th:text="${#strings.length(period) >= 7 ? period.substring(5,7) : period}">JAN</span>
+                    </div>
+                </div>
+                <!-- Legend -->
+                <div class="mt-4 flex flex-wrap gap-3 justify-center">
+                    <div th:each="code, cIdx : ${trendComponents}" class="flex items-center gap-1.5">
+                        <div class="w-2 h-2 rounded-full"
+                             th:classappend="${cIdx.index == 0} ? 'bg-blue-600' : (${cIdx.index == 1} ? 'bg-blue-300' : 'bg-indigo-400')"></div>
+                        <span class="text-[10px] font-semibold text-gray-500" th:text="${code}">CODE</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         SECTION 3 – PAYE TAX REPORT TABLE
+    ═══════════════════════════════════════════════════════════ -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden mb-8">
+        <div class="px-6 py-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3 border-b border-gray-100 dark:border-gray-700">
+            <div>
+                <h3 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <span class="material-icons-round text-orange-500">gavel</span>
+                    PAYE Tax Report
+                </h3>
+                <p class="text-xs text-gray-500 mt-0.5">Employee-level PAYE and taxable income for the payroll cycle</p>
+            </div>
+            <button onclick="alert('Export functionality coming soon')"
+                    class="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                <span class="material-icons-round text-sm">download</span>
+                Export CSV
+            </button>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50 dark:bg-gray-750">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Employee</th>
+                    <th class="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Taxable Income</th>
+                    <th class="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">PAYE</th>
+                    <th class="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">YTD PAYE</th>
+                </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+
+                <tr th:if="${payeReport == null or #lists.isEmpty(payeReport)}">
+                    <td colspan="4" class="px-6 py-14 text-center">
+                        <div class="flex flex-col items-center gap-3 text-gray-400">
+                            <span class="material-icons-round text-4xl">receipt_long</span>
+                            <p class="text-sm">No PAYE records found for this period.</p>
+                        </div>
+                    </td>
+                </tr>
+
+                <tr th:each="paye : ${payeReport}"
+                    class="report-row dark:hover:bg-gray-750">
+                    <td class="px-6 py-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-lg bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center
+                                        text-orange-600 dark:text-orange-400 font-bold text-sm"
+                                 th:text="${#strings.abbreviate(paye.employeeName, 2).substring(0,2).toUpperCase()}">JA</div>
+                            <div>
+                                <p class="text-sm font-semibold text-gray-900 dark:text-white"
+                                   th:text="${paye.employeeName}">John Adewale</p>
+                                <p class="text-xs text-gray-400" th:text="'ID: ' + ${paye.employeeId}">ID: 101</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 text-right text-sm font-medium text-gray-700 dark:text-gray-300"
+                        th:text="${#numbers.formatDecimal(paye.taxableIncome, 1, 'COMMA', 2, 'POINT')}">0.00</td>
+                    <td class="px-6 py-4 text-right text-sm font-bold text-red-600 dark:text-red-400"
+                        th:text="${#numbers.formatDecimal(paye.paye, 1, 'COMMA', 2, 'POINT')}">0.00</td>
+                    <td class="px-6 py-4 text-right text-sm font-medium text-gray-700 dark:text-gray-300"
+                        th:text="${#numbers.formatDecimal(paye.ytdPaye, 1, 'COMMA', 2, 'POINT')}">0.00</td>
+                </tr>
+
+                </tbody>
+            </table>
+        </div>
+
+        <div class="px-6 py-4 border-t border-gray-100 dark:border-gray-700">
+            <p class="text-xs text-gray-400"
+               th:text="'Showing ' + ${#lists.size(payeReport)} + ' employees'">Showing N employees</p>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         SECTION 4 – PENSION CONTRIBUTION REPORT TABLE
+    ═══════════════════════════════════════════════════════════ -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div class="px-6 py-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3 border-b border-gray-100 dark:border-gray-700">
+            <div>
+                <h3 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <span class="material-icons-round text-purple-600">savings</span>
+                    Pension Contribution Report
+                </h3>
+                <p class="text-xs text-gray-500 mt-0.5">Employee and employer pension contributions for the payroll cycle</p>
+            </div>
+            <button onclick="alert('Export functionality coming soon')"
+                    class="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                <span class="material-icons-round text-sm">download</span>
+                Export CSV
+            </button>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50 dark:bg-gray-750">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Employee</th>
+                    <th class="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Employee Contribution</th>
+                    <th class="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Employer Contribution</th>
+                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Pension Scheme</th>
+                </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+
+                <tr th:if="${pensionReport == null or #lists.isEmpty(pensionReport)}">
+                    <td colspan="4" class="px-6 py-14 text-center">
+                        <div class="flex flex-col items-center gap-3 text-gray-400">
+                            <span class="material-icons-round text-4xl">savings</span>
+                            <p class="text-sm">No pension records found for this period.</p>
+                        </div>
+                    </td>
+                </tr>
+
+                <tr th:each="pension : ${pensionReport}"
+                    class="report-row dark:hover:bg-gray-750">
+                    <td class="px-6 py-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-lg bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center
+                                        text-purple-600 dark:text-purple-400 font-bold text-sm"
+                                 th:text="${#strings.abbreviate(pension.employeeName, 2).substring(0,2).toUpperCase()}">JA</div>
+                            <div>
+                                <p class="text-sm font-semibold text-gray-900 dark:text-white"
+                                   th:text="${pension.employeeName}">John Adewale</p>
+                                <p class="text-xs text-gray-400" th:text="'ID: ' + ${pension.employeeId}">ID: 101</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 text-right text-sm font-medium text-gray-700 dark:text-gray-300"
+                        th:text="${#numbers.formatDecimal(pension.employeeContribution, 1, 'COMMA', 2, 'POINT')}">0.00</td>
+                    <td class="px-6 py-4 text-right text-sm font-medium text-gray-700 dark:text-gray-300"
+                        th:text="${#numbers.formatDecimal(pension.employerContribution, 1, 'COMMA', 2, 'POINT')}">0.00</td>
+                    <td class="px-6 py-4">
+                        <span class="scheme-badge" th:text="${pension.pensionScheme}">Scheme</span>
+                    </td>
+                </tr>
+
+                </tbody>
+            </table>
+        </div>
+
+        <div class="px-6 py-4 border-t border-gray-100 dark:border-gray-700">
+            <p class="text-xs text-gray-400"
+               th:text="'Showing ' + ${#lists.size(pensionReport)} + ' employees'">Showing N employees</p>
+        </div>
+    </div>
+
+</main>
+</body>
+</html>
