@@ -275,7 +275,11 @@ GROUP BY li.componentCode, li.description
     );
     @Query("""
 SELECT new com.justjava.humanresource.payroll.report.dto.ComponentTrendDTO(
-    FUNCTION('DATE_FORMAT', pr.payrollDate, '%Y-%m'),
+    CONCAT(
+        FUNCTION('YEAR', pr.payrollDate), 
+        '-', 
+        FUNCTION('LPAD', FUNCTION('MONTH', pr.payrollDate), 2, '0')
+    ),
     li.componentCode,
     SUM(li.amount)
 )
@@ -283,10 +287,14 @@ FROM PayrollLineItem li
 JOIN li.payrollRun pr
 JOIN pr.employee e
 WHERE e.department.company.id = :companyId
-GROUP BY FUNCTION('DATE_FORMAT', pr.payrollDate, '%Y-%m'), li.componentCode
-ORDER BY 1
-""")
-    List<ComponentTrendDTO> getComponentTrend(Long companyId);
+GROUP BY 
+    FUNCTION('YEAR', pr.payrollDate),
+    FUNCTION('MONTH', pr.payrollDate),
+    li.componentCode
+ORDER BY 
+    FUNCTION('YEAR', pr.payrollDate),
+    FUNCTION('MONTH', pr.payrollDate)
+""")    List<ComponentTrendDTO> getComponentTrend(Long companyId);
 
     @Query("""
 SELECT new com.justjava.humanresource.payroll.report.dto.PensionReportDTO(
