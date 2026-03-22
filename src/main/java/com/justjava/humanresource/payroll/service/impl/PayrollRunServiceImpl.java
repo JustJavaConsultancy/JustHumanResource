@@ -16,6 +16,7 @@ import com.justjava.humanresource.payroll.service.PayrollRunService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
@@ -198,10 +199,17 @@ public class PayrollRunServiceImpl implements PayrollRunService {
         return payrollRunRepository.getDeductionBreakdown(companyId, start, end);
     }
 
-    @Override
     public List<ComponentTrendDTO> getComponentTrend(Long companyId) {
 
-        return payrollRunRepository.getComponentTrend(companyId);
+        List<Object[]> rows = payrollRunRepository.getComponentTrendRaw(companyId);
+
+        return rows.stream()
+                .map(r -> new ComponentTrendDTO(
+                        (String) r[0],
+                        (String) r[1],
+                        (BigDecimal) r[2]
+                ))
+                .toList();
     }
 
     @Override

@@ -273,28 +273,23 @@ GROUP BY li.componentCode, li.description
             LocalDate start,
             LocalDate end
     );
-    @Query("""
-SELECT new com.justjava.humanresource.payroll.report.dto.ComponentTrendDTO(
-    CONCAT(
-        FUNCTION('YEAR', pr.payrollDate), 
-        '-', 
-        FUNCTION('LPAD', FUNCTION('MONTH', pr.payrollDate), 2, '0')
-    ),
-    li.componentCode,
-    SUM(li.amount)
-)
-FROM PayrollLineItem li
-JOIN li.payrollRun pr
-JOIN pr.employee e
-WHERE e.department.company.id = :companyId
+    @Query(value = """
+SELECT 
+    TO_CHAR(pr.payroll_date, 'YYYY-MM') AS period,
+    li.component_code,
+    SUM(li.amount) AS total_amount
+FROM payroll_line_items li
+JOIN payroll_runs pr ON pr.id = li.payroll_run_id
+JOIN employees e ON e.id = pr.employee_id
+JOIN departments d ON d.id = e.department_id
+WHERE d.company_id = :companyId
 GROUP BY 
-    FUNCTION('YEAR', pr.payrollDate),
-    FUNCTION('MONTH', pr.payrollDate),
-    li.componentCode
+    TO_CHAR(pr.payroll_date, 'YYYY-MM'),
+    li.component_code
 ORDER BY 
-    FUNCTION('YEAR', pr.payrollDate),
-    FUNCTION('MONTH', pr.payrollDate)
-""")    List<ComponentTrendDTO> getComponentTrend(Long companyId);
+    period
+""", nativeQuery = true)
+    List<Object[]> getComponentTrendRaw(Long companyId);
 
     @Query("""
 SELECT new com.justjava.humanresource.payroll.report.dto.PensionReportDTO(
