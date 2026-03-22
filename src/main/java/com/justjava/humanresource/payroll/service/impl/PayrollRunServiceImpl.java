@@ -8,6 +8,7 @@ import com.justjava.humanresource.payroll.entity.PayrollPeriod;
 import com.justjava.humanresource.payroll.entity.PayrollRun;
 import com.justjava.humanresource.payroll.enums.PayComponentType;
 import com.justjava.humanresource.payroll.enums.PayrollPeriodStatus;
+import com.justjava.humanresource.payroll.report.dto.*;
 import com.justjava.humanresource.payroll.repositories.PayrollLineItemRepository;
 import com.justjava.humanresource.payroll.repositories.PayrollPeriodRepository;
 import com.justjava.humanresource.payroll.repositories.PayrollRunRepository;
@@ -169,5 +170,55 @@ public class PayrollRunServiceImpl implements PayrollRunService {
                 .amount(item.getAmount())
                 .taxable(item.isTaxable())
                 .build();
+    }
+    @Override
+    public List<PayrollSummaryDTO> getPayrollSummary(
+            Long companyId,
+            LocalDate start,
+            LocalDate end) {
+
+        return payrollRunRepository.getPayrollSummary(companyId, start, end);
+    }
+
+    @Override
+    public List<ComponentBreakdownDTO> getEarningsBreakdown(
+            Long companyId,
+            LocalDate start,
+            LocalDate end) {
+
+        return payrollRunRepository.getEarningsBreakdown(companyId, start, end);
+    }
+
+    @Override
+    public List<ComponentBreakdownDTO> getDeductionBreakdown(
+            Long companyId,
+            LocalDate start,
+            LocalDate end) {
+
+        return payrollRunRepository.getDeductionBreakdown(companyId, start, end);
+    }
+
+    @Override
+    public List<ComponentTrendDTO> getComponentTrend(Long companyId) {
+
+        return payrollRunRepository.getComponentTrend(companyId);
+    }
+
+    @Override
+    public List<PayeReportDTO> getPayeReport(
+            Long companyId,
+            LocalDate start,
+            LocalDate end) {
+
+        return payrollRunRepository.getPayeReport(companyId, start, end);
+    }
+
+    @Override
+    public List<PensionReportDTO> getPensionReport(
+            Long companyId,
+            LocalDate start,
+            LocalDate end) {
+
+        return payrollRunRepository.getPensionReport(companyId, start, end);
     }
 }

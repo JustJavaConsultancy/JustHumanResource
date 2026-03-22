@@ -35,7 +35,8 @@ public class KeycloakAdminConfig {
     @Qualifier("adminKeycloak")
     @Primary
     public Keycloak keycloakAdminClient() {
-        return KeycloakBuilder.builder()
+        return KeycloakBuilder
+                .builder()
                 .serverUrl(serverUrl)
                 .realm(realm)
                 .grantType(OAuth2Constants.CLIENT_CREDENTIALS)

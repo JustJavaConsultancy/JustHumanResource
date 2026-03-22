@@ -3,6 +3,7 @@ package com.justjava.humanresource.payroll.repositories;
 import com.justjava.humanresource.core.enums.PayrollRunStatus;
 import com.justjava.humanresource.payroll.dto.PayrollRunDTO;
 import com.justjava.humanresource.payroll.entity.PayrollRun;
+import com.justjava.humanresource.payroll.report.dto.*;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -226,5 +227,127 @@ AND pr.versionNumber = (
             Long companyId,
             LocalDate periodStart,
             LocalDate periodEnd
+    );
+
+    @Query("""
+SELECT new com.justjava.humanresource.payroll.report.dto.PayrollSummaryDTO(
+    d.name,
+    SUM(pr.grossPay),
+    SUM(pr.totalDeductions),
+    SUM(pr.netPay),
+    SUM(CASE WHEN li.componentCode = 'PAYE' THEN li.amount END),
+    SUM(CASE WHEN li.componentCode = 'PENSION' THEN li.amount END)
+)
+FROM PayrollRun pr
+JOIN pr.employee e
+JOIN e.department d
+LEFT JOIN PayrollLineItem li ON li.payrollRun.id = pr.id
+WHERE d.company.id = :companyId
+AND pr.periodStart = :start
+AND pr.periodEnd = :end
+AND pr.status = com.justjava.humanresource.core.enums.PayrollRunStatus.POSTED
+GROUP BY d.name
+""")
+    List<PayrollSummaryDTO> getPayrollSummary(
+            Long companyId,
+            LocalDate start,
+            LocalDate end
+    );
+    @Query("""
+SELECT new com.justjava.humanresource.payroll.report.dto.ComponentBreakdownDTO(
+    li.componentCode,
+    li.description,
+    SUM(li.amount)
+)
+FROM PayrollLineItem li
+JOIN li.payrollRun pr
+JOIN pr.employee e
+WHERE e.department.company.id = :companyId
+AND pr.periodStart = :start
+AND pr.periodEnd = :end
+AND li.componentType = com.justjava.humanresource.payroll.enums.PayComponentType.EARNING
+GROUP BY li.componentCode, li.description
+""")
+    List<ComponentBreakdownDTO> getEarningsBreakdown(
+            Long companyId,
+            LocalDate start,
+            LocalDate end
+    );
+    @Query("""
+SELECT new com.justjava.humanresource.payroll.report.dto.ComponentTrendDTO(
+    FUNCTION('DATE_FORMAT', pr.payrollDate, '%Y-%m'),
+    li.componentCode,
+    SUM(li.amount)
+)
+FROM PayrollLineItem li
+JOIN li.payrollRun pr
+JOIN pr.employee e
+WHERE e.department.company.id = :companyId
+GROUP BY FUNCTION('DATE_FORMAT', pr.payrollDate, '%Y-%m'), li.componentCode
+ORDER BY 1
+""")
+    List<ComponentTrendDTO> getComponentTrend(Long companyId);
+
+    @Query("""
+SELECT new com.justjava.humanresource.payroll.report.dto.PensionReportDTO(
+    e.id,
+    CONCAT(e.firstName,' ',e.lastName),
+    SUM(CASE WHEN li.componentCode = 'PENSION_EMP' THEN li.amount END),
+    SUM(CASE WHEN li.componentCode = 'PENSION_EMPLOYER' THEN li.amount END),
+    pr.appliedPensionSchemeName
+)
+FROM PayrollLineItem li
+JOIN li.payrollRun pr
+JOIN pr.employee e
+WHERE e.department.company.id = :companyId
+AND pr.periodStart = :start
+AND pr.periodEnd = :end
+GROUP BY e.id, e.firstName, e.lastName, pr.appliedPensionSchemeName
+""")
+    List<PensionReportDTO> getPensionReport(
+            Long companyId,
+            LocalDate start,
+            LocalDate end
+    );
+    @Query("""
+SELECT new com.justjava.humanresource.payroll.report.dto.ComponentBreakdownDTO(
+    li.componentCode,
+    li.description,
+    SUM(li.amount)
+)
+FROM PayrollLineItem li
+JOIN li.payrollRun pr
+JOIN pr.employee e
+WHERE e.department.company.id = :companyId
+AND pr.periodStart = :start
+AND pr.periodEnd = :end
+AND li.componentType = com.justjava.humanresource.payroll.enums.PayComponentType.DEDUCTION
+GROUP BY li.componentCode, li.description
+""")
+    List<ComponentBreakdownDTO> getDeductionBreakdown(
+            Long companyId,
+            LocalDate start,
+            LocalDate end
+    );
+    @Query("""
+SELECT new com.justjava.humanresource.payroll.report.dto.PayeReportDTO(
+    e.id,
+    CONCAT(e.firstName,' ',e.lastName),
+    SUM(CASE WHEN li.taxable = true THEN li.amount END),
+    SUM(CASE WHEN li.componentCode = 'PAYE' THEN li.amount END),
+    MAX(pr.ytdPaye)
+)
+FROM PayrollLineItem li
+JOIN li.payrollRun pr
+JOIN pr.employee e
+WHERE e.department.company.id = :companyId
+AND pr.periodStart = :start
+AND pr.periodEnd = :end
+GROUP BY e.id, e.firstName, e.lastName
+""")
+    List<PayeReportDTO> getPayeReport(
+            Long companyId,
+            LocalDate start,
+            LocalDate end
     );
 }
