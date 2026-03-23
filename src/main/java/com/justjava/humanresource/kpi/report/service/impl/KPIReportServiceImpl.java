@@ -294,8 +294,8 @@ public class KPIReportServiceImpl implements KPIReportService {
        DISTRIBUTION
        ============================= */
         Object[] dist =
-                measurementRepository.getScoreDistribution(period);
-
+                measurementRepository.getScoreDistribution(String.valueOf(period));
+        System.out.println(" ");
         KpiDistributionDTO distribution =
                 KpiDistributionDTO.builder()
                         .excellent(getLong(dist[0]))

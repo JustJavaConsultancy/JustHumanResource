@@ -103,14 +103,14 @@ public interface KpiMeasurementRepository
             Pageable pageable
     );
 
-    @Query("""
+    @Query(value = """
        SELECT
-           SUM(CASE WHEN m.score >= 85 THEN 1 ELSE 0 END),
-           SUM(CASE WHEN m.score >= 70 AND m.score < 85 THEN 1 ELSE 0 END),
-           SUM(CASE WHEN m.score >= 50 AND m.score < 70 THEN 1 ELSE 0 END),
-           SUM(CASE WHEN m.score < 50 THEN 1 ELSE 0 END)
-       FROM KpiMeasurement m
-       WHERE m.period = :period
-       """)
-    Object[] getScoreDistribution(@Param("period") YearMonth period);
+           COALESCE(SUM(CASE WHEN score >= 85 THEN 1 ELSE 0 END),0) AS excellent,
+           COALESCE(SUM(CASE WHEN score >= 70 AND score < 85 THEN 1 ELSE 0 END),0) AS good,
+           COALESCE(SUM(CASE WHEN score >= 50 AND score < 70 THEN 1 ELSE 0 END),0) AS average,
+           COALESCE(SUM(CASE WHEN score < 50 THEN 1 ELSE 0 END),0) AS poor
+       FROM kpi_measurement
+       WHERE period = :period
+       """, nativeQuery = true)
+    Object[] getScoreDistribution(@Param("period") String period);
 }
