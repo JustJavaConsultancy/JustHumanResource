@@ -1,10 +1,386 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
 <head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
+  <meta charset="UTF-8"/>
+  <title>KPI Dashboard</title>
+  <style>
+    @keyframes fadeUp {
+        from { opacity: 0; transform: translateY(16px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+    .fade-up  { animation: fadeUp 0.4s ease both; }
+    .delay-1  { animation-delay: 0.05s; }
+    .delay-2  { animation-delay: 0.10s; }
+    .delay-3  { animation-delay: 0.15s; }
+    .delay-4  { animation-delay: 0.20s; }
+
+    /* Nav card hover */
+    .nav-card { transition: transform 0.2s cubic-bezier(.22,1,.36,1), box-shadow 0.2s ease; }
+    .nav-card:hover { transform: translateY(-3px); box-shadow: 0 12px 32px rgba(0,45,129,.10); }
+    .nav-card:hover .nav-arrow { transform: translateX(4px); }
+    .nav-arrow { transition: transform 0.18s ease; }
+
+    /* Distribution bar segments */
+    .dist-bar { height: 10px; border-radius: 99px; transition: width 0.7s ease; }
+
+    /* Score ring (CSS only) */
+    .score-ring {
+        width: 80px; height: 80px;
+        border-radius: 50%;
+        background: conic-gradient(#1d4ed8 var(--pct), #e2e8f0 var(--pct));
+        display: flex; align-items: center; justify-content: center;
+    }
+    .score-ring-inner {
+        width: 60px; height: 60px;
+        border-radius: 50%;
+        background: white;
+        display: flex; align-items: center; justify-content: center;
+    }
+
+    .dept-row:hover { background: #f8fafc; }
+    .dept-row { transition: background 0.15s; }
+
+    .hero-stripe {
+        background: repeating-linear-gradient(-55deg, transparent, transparent 6px,
+            rgba(255,255,255,.04) 6px, rgba(255,255,255,.04) 12px);
+    }
+  </style>
 </head>
 <body>
-<h1>hiiii</h1>
+<main layout:fragment="content">
+
+  <!-- ═══ HERO HEADER ══════════════════════════════════════════════════════ -->
+  <div class="relative bg-blue-900 rounded-2xl overflow-hidden mb-10 fade-up">
+    <div class="hero-stripe absolute inset-0 pointer-events-none"></div>
+    <div class="absolute -right-10 -top-10 w-64 h-64 bg-white/5 rounded-full pointer-events-none"></div>
+    <div class="absolute -right-4 -bottom-16 w-40 h-40 bg-blue-700/40 rounded-full blur-2xl pointer-events-none"></div>
+
+    <div class="relative z-10 px-10 py-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
+      <div>
+        <nav class="flex items-center gap-2 text-xs font-semibold text-blue-300 mb-3 uppercase tracking-wider">
+          <span>KPI</span>
+          <span class="material-icons-round text-xs">chevron_right</span>
+          <span class="text-white">Dashboard</span>
+        </nav>
+        <h1 class="text-4xl font-extrabold text-white tracking-tight leading-none mb-2">
+          KPI & Performance Dashboard
+        </h1>
+        <p class="text-blue-200 text-sm font-medium max-w-lg">
+          Organisation-wide KPI scores, performance distribution, and top performer rankings.
+        </p>
+        <div class="flex items-center gap-3 mt-4 flex-wrap">
+                    <span class="flex items-center gap-1.5 text-xs font-bold bg-white/10 text-white px-3 py-1.5 rounded-full">
+                        <span class="material-icons-round text-xs">calendar_month</span>
+                        <span th:text="${periodLabel}">Month Year</span>
+                    </span>
+          <span class="flex items-center gap-1.5 text-xs font-bold bg-white/10 text-white px-3 py-1.5 rounded-full">
+                        <span class="material-icons-round text-xs">groups</span>
+                        <span th:text="${departmentCount} + ' departments'">0 departments</span>
+                    </span>
+          <span class="flex items-center gap-1.5 text-xs font-bold bg-white/10 text-white px-3 py-1.5 rounded-full">
+                        <span class="material-icons-round text-xs">person</span>
+                        <span th:text="${totalEmployees} + ' employees'">0 employees</span>
+                    </span>
+        </div>
+      </div>
+      <!-- Avg KPI score pill -->
+      <div class="flex-shrink-0 bg-white/10 rounded-2xl px-8 py-5 text-center">
+        <p class="text-[10px] font-black uppercase tracking-widest text-blue-200 mb-1">Avg KPI Score</p>
+        <p class="text-4xl font-extrabold text-white" th:text="${#numbers.formatDecimal(avgKpiScore, 1, 2)}">0.00</p>
+        <p class="text-[10px] text-blue-300 mt-1">Organisation average</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ STAT CARDS ══════════════════════════════════════════════════════ -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-10 fade-up delay-1">
+    <!-- Excellent -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-5 shadow-sm">
+      <div class="flex items-center justify-between mb-3">
+        <div class="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center">
+          <span class="material-icons-round text-emerald-600 dark:text-emerald-400 text-lg">star</span>
+        </div>
+        <span class="text-[10px] font-black uppercase tracking-wider text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 rounded-full">Excellent</span>
+      </div>
+      <p class="text-3xl font-extrabold text-blue-900 dark:text-white" th:text="${distExcellent}">0</p>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 font-medium">Score ≥ 90</p>
+    </div>
+    <!-- Good -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-5 shadow-sm">
+      <div class="flex items-center justify-between mb-3">
+        <div class="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
+          <span class="material-icons-round text-blue-600 dark:text-blue-400 text-lg">thumb_up</span>
+        </div>
+        <span class="text-[10px] font-black uppercase tracking-wider text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded-full">Good</span>
+      </div>
+      <p class="text-3xl font-extrabold text-blue-900 dark:text-white" th:text="${distGood}">0</p>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 font-medium">Score 70 – 89</p>
+    </div>
+    <!-- Average -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-5 shadow-sm">
+      <div class="flex items-center justify-between mb-3">
+        <div class="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center">
+          <span class="material-icons-round text-amber-600 dark:text-amber-400 text-lg">remove</span>
+        </div>
+        <span class="text-[10px] font-black uppercase tracking-wider text-amber-600 bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 rounded-full">Average</span>
+      </div>
+      <p class="text-3xl font-extrabold text-blue-900 dark:text-white" th:text="${distAverage}">0</p>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 font-medium">Score 50 – 69</p>
+    </div>
+    <!-- Poor -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-5 shadow-sm">
+      <div class="flex items-center justify-between mb-3">
+        <div class="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-900/20 flex items-center justify-center">
+          <span class="material-icons-round text-red-500 dark:text-red-400 text-lg">trending_down</span>
+        </div>
+        <span class="text-[10px] font-black uppercase tracking-wider text-red-500 bg-red-50 dark:bg-red-900/20 px-2 py-0.5 rounded-full">Poor</span>
+      </div>
+      <p class="text-3xl font-extrabold text-blue-900 dark:text-white" th:text="${distPoor}">0</p>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 font-medium">Score &lt; 50</p>
+    </div>
+  </div>
+
+  <!-- ═══ MAIN GRID: Distribution + Dept Table + Navigation ══════════════ -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-10">
+
+    <!-- LEFT: Distribution visual + Top/Bottom performers (8 cols) -->
+    <div class="lg:col-span-8 space-y-6">
+
+      <!-- Score Distribution Bar -->
+      <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-8 shadow-sm fade-up delay-2">
+        <h3 class="text-base font-bold text-blue-900 dark:text-white mb-2">Score Distribution</h3>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-6">Employee performance spread across scoring bands</p>
+
+        <!-- Stacked bar -->
+        <div class="flex gap-1 h-4 rounded-full overflow-hidden mb-4"
+             th:if="${distTotal > 1}">
+          <div class="bg-emerald-500 rounded-l-full"
+               th:style="'width:' + ${#numbers.formatDecimal(distExcellent * 100.0 / distTotal, 1, 1)} + '%'"></div>
+          <div class="bg-blue-500"
+               th:style="'width:' + ${#numbers.formatDecimal(distGood * 100.0 / distTotal, 1, 1)} + '%'"></div>
+          <div class="bg-amber-400"
+               th:style="'width:' + ${#numbers.formatDecimal(distAverage * 100.0 / distTotal, 1, 1)} + '%'"></div>
+          <div class="bg-red-400 rounded-r-full"
+               th:style="'width:' + ${#numbers.formatDecimal(distPoor * 100.0 / distTotal, 1, 1)} + '%'"></div>
+        </div>
+        <!-- No data state -->
+        <div th:if="${distTotal <= 1}"
+             class="h-4 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+          <span class="text-[10px] text-gray-400">No distribution data yet</span>
+        </div>
+
+        <!-- Legend row -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+          <div class="flex items-center gap-2">
+            <div class="w-3 h-3 rounded-full bg-emerald-500 flex-shrink-0"></div>
+            <span class="text-xs font-semibold text-gray-600 dark:text-gray-300">
+                            Excellent (<span th:text="${distExcellent}">0</span>)
+                        </span>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="w-3 h-3 rounded-full bg-blue-500 flex-shrink-0"></div>
+            <span class="text-xs font-semibold text-gray-600 dark:text-gray-300">
+                            Good (<span th:text="${distGood}">0</span>)
+                        </span>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="w-3 h-3 rounded-full bg-amber-400 flex-shrink-0"></div>
+            <span class="text-xs font-semibold text-gray-600 dark:text-gray-300">
+                            Average (<span th:text="${distAverage}">0</span>)
+                        </span>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="w-3 h-3 rounded-full bg-red-400 flex-shrink-0"></div>
+            <span class="text-xs font-semibold text-gray-600 dark:text-gray-300">
+                            Poor (<span th:text="${distPoor}">0</span>)
+                        </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Two-column: Top performers / Bottom performers -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+        <!-- Top Performers -->
+        <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden shadow-sm fade-up delay-3">
+          <div class="px-6 py-4 border-b border-gray-50 dark:border-gray-700 flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center">
+              <span class="material-icons-round text-emerald-600 text-sm">emoji_events</span>
+            </div>
+            <h4 class="text-sm font-bold text-blue-900 dark:text-white">Top Performers</h4>
+          </div>
+          <div class="divide-y divide-gray-50 dark:divide-gray-700">
+            <div th:if="${dashboard == null or dashboard.topPerformers == null or #lists.isEmpty(dashboard.topPerformers)}"
+                 class="px-6 py-10 text-center text-gray-400 text-xs">
+              No top performer data available.
+            </div>
+            <div th:each="p : ${dashboard?.topPerformers}"
+                 class="px-6 py-3 flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                                <span class="text-[10px] font-black text-gray-400 w-4"
+                                      th:text="${p.rank != null ? '#' + p.rank : '—'}">#1</span>
+                <span class="text-sm font-semibold text-blue-900 dark:text-white"
+                      th:text="${p.employeeName != null ? p.employeeName : 'Unknown'}">Name</span>
+              </div>
+              <span class="text-sm font-extrabold text-emerald-600 dark:text-emerald-400"
+                    th:text="${p.score != null ? #numbers.formatDecimal(p.score, 1, 2) : '—'}">0.00</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bottom Performers -->
+        <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden shadow-sm fade-up delay-3">
+          <div class="px-6 py-4 border-b border-gray-50 dark:border-gray-700 flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-900/20 flex items-center justify-center">
+              <span class="material-icons-round text-red-500 text-sm">trending_down</span>
+            </div>
+            <h4 class="text-sm font-bold text-blue-900 dark:text-white">Needs Attention</h4>
+          </div>
+          <div class="divide-y divide-gray-50 dark:divide-gray-700">
+            <div th:if="${dashboard == null or dashboard.bottomPerformers == null or #lists.isEmpty(dashboard.bottomPerformers)}"
+                 class="px-6 py-10 text-center text-gray-400 text-xs">
+              No data available.
+            </div>
+            <div th:each="p : ${dashboard?.bottomPerformers}"
+                 class="px-6 py-3 flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                                <span class="text-[10px] font-black text-gray-400 w-4"
+                                      th:text="${p.rank != null ? '#' + p.rank : '—'}">#1</span>
+                <span class="text-sm font-semibold text-blue-900 dark:text-white"
+                      th:text="${p.employeeName != null ? p.employeeName : 'Unknown'}">Name</span>
+              </div>
+              <span class="text-sm font-extrabold text-red-500 dark:text-red-400"
+                    th:text="${p.score != null ? #numbers.formatDecimal(p.score, 1, 2) : '—'}">0.00</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Department KPI table -->
+      <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden shadow-sm fade-up delay-4">
+        <div class="px-6 py-5 border-b border-gray-50 dark:border-gray-700 flex items-center justify-between">
+          <h4 class="text-base font-bold text-blue-900 dark:text-white">Department Overview</h4>
+          <a th:href="@{/kpi-report/scorecard}"
+             class="text-xs font-bold text-blue-700 dark:text-blue-400 hover:underline flex items-center gap-1">
+            Full Scorecard <span class="material-icons-round text-sm">arrow_forward</span>
+          </a>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left">
+            <thead class="bg-gray-50 dark:bg-gray-750">
+            <tr>
+              <th class="px-6 py-3 text-[10px] font-black uppercase tracking-widest text-gray-400">Department</th>
+              <th class="px-6 py-3 text-[10px] font-black uppercase tracking-widest text-gray-400 text-right">Employees</th>
+              <th class="px-6 py-3 text-[10px] font-black uppercase tracking-widest text-gray-400 text-right">Avg KPI Score</th>
+              <th class="px-6 py-3 text-[10px] font-black uppercase tracking-widest text-gray-400">Performance</th>
+            </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-50 dark:divide-gray-700">
+            <tr th:if="${departments == null or #lists.isEmpty(departments)}">
+              <td colspan="4" class="px-6 py-10 text-center text-gray-400 text-sm">
+                No department data available.
+              </td>
+            </tr>
+            <tr th:each="dept : ${departments}" class="dept-row">
+              <td class="px-6 py-4 text-sm font-bold text-blue-900 dark:text-white"
+                  th:text="${dept.departmentName != null ? dept.departmentName : 'Unknown'}">Dept</td>
+              <td class="px-6 py-4 text-sm font-medium text-gray-600 dark:text-gray-300 text-right"
+                  th:text="${dept.totalEmployees != null ? dept.totalEmployees : 0}">0</td>
+              <td class="px-6 py-4 text-sm font-extrabold text-right"
+                  th:classappend="${dept.averageKpiScore != null and dept.averageKpiScore.doubleValue() >= 70} ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'"
+                  th:text="${dept.averageKpiScore != null ? #numbers.formatDecimal(dept.averageKpiScore, 1, 2) : '—'}">0.00</td>
+              <td class="px-6 py-4">
+                <div class="flex items-center gap-2">
+                  <div class="flex-1 h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden max-w-[100px]">
+                    <div class="h-full rounded-full"
+                         th:classappend="${dept.averageKpiScore != null and dept.averageKpiScore.doubleValue() >= 70} ? 'bg-emerald-500' : 'bg-amber-400'"
+                         th:style="${dept.averageKpiScore != null} ? 'width:' + ${#numbers.formatDecimal(dept.averageKpiScore.doubleValue().compareTo(100.0) > 0 ? 100.0 : dept.averageKpiScore.doubleValue(), 1, 0)} + '%' : 'width:0%'"></div>
+                  </div>
+                </div>
+              </td>
+            </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Navigation cards (4 cols) -->
+    <div class="lg:col-span-4 space-y-4 fade-up delay-2">
+      <h4 class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2">Report Sections</h4>
+
+      <a th:href="@{/kpi-report/top-performers}"
+         class="nav-card flex items-center gap-4 p-5 bg-white dark:bg-gray-800
+                      border border-gray-100 dark:border-gray-700 rounded-2xl shadow-sm group">
+        <div class="w-11 h-11 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 flex items-center justify-center flex-shrink-0">
+          <span class="material-icons-round">emoji_events</span>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-bold text-blue-900 dark:text-white">Top Performers</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400">By KPI score &amp; appraisal</p>
+        </div>
+        <span class="material-icons-round text-gray-300 nav-arrow">chevron_right</span>
+      </a>
+
+      <a th:href="@{/kpi-report/scorecard}"
+         class="nav-card flex items-center gap-4 p-5 bg-white dark:bg-gray-800
+                      border border-gray-100 dark:border-gray-700 rounded-2xl shadow-sm group">
+        <div class="w-11 h-11 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 flex items-center justify-center flex-shrink-0">
+          <span class="material-icons-round">fact_check</span>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-bold text-blue-900 dark:text-white">Employee Scorecard</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400">All employees KPI breakdown</p>
+        </div>
+        <span class="material-icons-round text-gray-300 nav-arrow">chevron_right</span>
+      </a>
+
+      <a th:href="@{/kpi-report/appraisal}"
+         class="nav-card flex items-center gap-4 p-5 bg-white dark:bg-gray-800
+                      border border-gray-100 dark:border-gray-700 rounded-2xl shadow-sm group">
+        <div class="w-11 h-11 rounded-xl bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-400 flex items-center justify-center flex-shrink-0">
+          <span class="material-icons-round">rate_review</span>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-bold text-blue-900 dark:text-white">Appraisal Summary</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400">Cycle results &amp; outcomes</p>
+        </div>
+        <span class="material-icons-round text-gray-300 nav-arrow">chevron_right</span>
+      </a>
+
+      <!-- Compliance / status info card -->
+      <div class="relative bg-blue-900 rounded-2xl p-6 overflow-hidden mt-2">
+        <div class="hero-stripe absolute inset-0 pointer-events-none opacity-40"></div>
+        <div class="absolute -bottom-6 -right-6 w-28 h-28 bg-white/5 rounded-full blur-2xl pointer-events-none"></div>
+        <div class="relative z-10">
+          <div class="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center mb-4">
+            <span class="material-icons-round text-white">verified</span>
+          </div>
+          <h4 class="text-sm font-bold text-white mb-1">Period Status</h4>
+          <p class="text-blue-200 text-xs leading-relaxed mb-4"
+             th:text="'Reporting period: ' + ${periodLabel}">Reporting period</p>
+          <div class="space-y-2">
+            <div class="flex justify-between text-[10px]">
+              <span class="text-blue-300 font-semibold uppercase tracking-wider">Departments assessed</span>
+              <span class="text-white font-extrabold" th:text="${departmentCount}">0</span>
+            </div>
+            <div class="h-1 bg-white/10 rounded-full overflow-hidden">
+              <div class="h-full bg-white rounded-full w-full"></div>
+            </div>
+            <div class="flex justify-between text-[10px]">
+              <span class="text-blue-300 font-semibold uppercase tracking-wider">Employees evaluated</span>
+              <span class="text-white font-extrabold" th:text="${totalEmployees}">0</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
 </body>
 </html>

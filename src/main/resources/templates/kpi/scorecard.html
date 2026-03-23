@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Employee KPI Scorecard</title>
+  <style>
+    @keyframes fadeUp {
+        from { opacity: 0; transform: translateY(14px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+    .fade-up { animation: fadeUp 0.4s ease both; }
+    .delay-1 { animation-delay: 0.06s; }
+    .delay-2 { animation-delay: 0.12s; }
+
+    .tbl-row { transition: background 0.15s; }
+    .tbl-row:hover { background: #f8fafc; }
+
+    /* Achievement bar */
+    .ach-track { height: 5px; background: #f1f5f9; border-radius: 99px; overflow: hidden; }
+    .ach-fill  { height: 100%; border-radius: 99px; background: #1d4ed8; }
+    .ach-fill.over { background: #10b981; }
+    .ach-fill.under { background: #f59e0b; }
+
+    .hero-stripe {
+        background: repeating-linear-gradient(-55deg, transparent, transparent 6px,
+            rgba(255,255,255,.04) 6px, rgba(255,255,255,.04) 12px);
+    }
+
+    /* Avatar colour cycling */
+    .av-0 { background:#dbeafe; color:#1d4ed8; }
+    .av-1 { background:#ede9fe; color:#6d28d9; }
+    .av-2 { background:#dcfce7; color:#15803d; }
+    .av-3 { background:#fef3c7; color:#b45309; }
+    .av-4 { background:#fce7f3; color:#be185d; }
+  </style>
+</head>
+<body>
+<main layout:fragment="content">
+
+  <!-- ═══ HEADER ══════════════════════════════════════════════════════════ -->
+  <div class="relative bg-blue-900 rounded-2xl overflow-hidden mb-10 fade-up">
+    <div class="hero-stripe absolute inset-0 pointer-events-none"></div>
+    <div class="absolute -right-10 -top-10 w-56 h-56 bg-white/5 rounded-full pointer-events-none"></div>
+    <div class="relative z-10 px-10 py-9 flex flex-col md:flex-row md:items-end justify-between gap-6">
+      <div>
+        <nav class="flex items-center gap-2 text-xs font-semibold text-blue-300 mb-3 uppercase tracking-wider">
+          <a th:href="@{/kpi-report/dashboard}" class="hover:text-white transition-colors">KPI</a>
+          <span class="material-icons-round text-xs">chevron_right</span>
+          <span class="text-white">Employee Scorecard</span>
+        </nav>
+        <h1 class="text-3xl font-extrabold text-white tracking-tight mb-2">Employee KPI Scorecard</h1>
+        <p class="text-blue-200 text-sm font-medium">
+          Full KPI line-item breakdown for all employees ·
+          <span th:text="${periodLabel}">Month Year</span>
+        </p>
+      </div>
+      <a th:href="@{/kpi-report/dashboard}"
+         class="flex items-center gap-2 px-5 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-sm font-bold transition-colors">
+        <span class="material-icons-round text-sm">arrow_back</span>
+        Back to Dashboard
+      </a>
+    </div>
+  </div>
+
+  <!-- ═══ SUMMARY STAT CARDS ══════════════════════════════════════════════ -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8 fade-up delay-1">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-6 shadow-sm">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
+          <span class="material-icons-round text-blue-600 dark:text-blue-400">groups</span>
+        </div>
+        <p class="text-xs font-black uppercase tracking-widest text-gray-400">Employees</p>
+      </div>
+      <p class="text-3xl font-extrabold text-blue-900 dark:text-white" th:text="${employeesWithData}">0</p>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">With scorecard data</p>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-6 shadow-sm">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center">
+          <span class="material-icons-round text-indigo-600 dark:text-indigo-400">list_alt</span>
+        </div>
+        <p class="text-xs font-black uppercase tracking-widest text-gray-400">KPI Lines</p>
+      </div>
+      <p class="text-3xl font-extrabold text-blue-900 dark:text-white" th:text="${lineCount}">0</p>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Total KPI entries</p>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-6 shadow-sm">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center">
+          <span class="material-icons-round text-emerald-600 dark:text-emerald-400">bar_chart</span>
+        </div>
+        <p class="text-xs font-black uppercase tracking-widest text-gray-400">Avg Weighted Score</p>
+      </div>
+      <p class="text-3xl font-extrabold text-blue-900 dark:text-white"
+         th:text="${#numbers.formatDecimal(avgWeightedScore, 1, 2)}">0.00</p>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Across all KPI lines</p>
+    </div>
+  </div>
+
+  <!-- ═══ SCORECARD TABLE ══════════════════════════════════════════════════ -->
+  <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden shadow-sm fade-up delay-2">
+
+    <div class="px-8 py-5 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+      <h2 class="text-base font-bold text-blue-900 dark:text-white">Full Scorecard</h2>
+      <span class="text-xs text-gray-400 font-medium"
+            th:text="'Showing ' + ${lineCount} + ' KPI entries'">Showing 0 entries</span>
+    </div>
+
+    <!-- Empty state -->
+    <div th:if="${scorecard == null or #lists.isEmpty(scorecard)}"
+         class="px-8 py-20 text-center">
+      <div class="flex flex-col items-center gap-3 text-gray-400">
+        <span class="material-icons-round text-5xl">fact_check</span>
+        <p class="text-sm font-medium">No scorecard data available for this period.</p>
+        <p class="text-xs">Ensure KPI runs have been completed for <span th:text="${periodLabel}">this period</span>.</p>
+      </div>
+    </div>
+
+    <div class="overflow-x-auto" th:if="${scorecard != null and !#lists.isEmpty(scorecard)}">
+      <table class="w-full text-left">
+        <thead class="bg-gray-50 dark:bg-gray-750">
+        <tr>
+          <th class="px-8 py-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Employee</th>
+          <th class="px-8 py-4 text-[10px] font-black uppercase tracking-widest text-gray-400">KPI</th>
+          <th class="px-8 py-4 text-[10px] font-black uppercase tracking-widest text-gray-400 text-right">Target</th>
+          <th class="px-8 py-4 text-[10px] font-black uppercase tracking-widest text-gray-400 text-right">Actual</th>
+          <th class="px-8 py-4 text-[10px] font-black uppercase tracking-widest text-gray-400 text-right">Score</th>
+          <th class="px-8 py-4 text-[10px] font-black uppercase tracking-widest text-gray-400 text-right">Weight</th>
+          <th class="px-8 py-4 text-[10px] font-black uppercase tracking-widest text-gray-400 text-right">Weighted</th>
+          <th class="px-8 py-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Achievement</th>
+        </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50 dark:divide-gray-700">
+        <tr th:each="line, lStat : ${scorecard}" class="tbl-row dark:hover:bg-gray-750">
+
+          <!-- Employee name + avatar (null-safe) -->
+          <td class="px-8 py-4">
+            <div class="flex items-center gap-3"
+                 th:with="safeName=${line.employeeName != null ? line.employeeName : '?'},
+                                      spaceIdx=${#strings.contains(safeName,' ') ? safeName.lastIndexOf(' ') : -1}">
+              <div class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-[10px] flex-shrink-0"
+                   th:classappend="'av-' + ${lStat.index % 5}"
+                   th:text="${spaceIdx > 0}
+                                           ? ${safeName.substring(0,1).toUpperCase() + safeName.substring(spaceIdx+1,spaceIdx+2).toUpperCase()}
+                                           : ${safeName.substring(0,1).toUpperCase()}">JA</div>
+              <div>
+                <p class="text-sm font-semibold text-blue-900 dark:text-white"
+                   th:text="${line.employeeName != null ? line.employeeName : 'Unknown'}">Name</p>
+                <p class="text-[10px] text-gray-400"
+                   th:text="${line.employeeId != null ? 'ID: ' + line.employeeId : ''}"></p>
+              </div>
+            </div>
+          </td>
+
+          <!-- KPI name + code -->
+          <td class="px-8 py-4">
+            <p class="text-sm font-semibold text-blue-900 dark:text-white"
+               th:text="${line.kpiName != null ? line.kpiName : '—'}">KPI Name</p>
+            <span class="text-[10px] font-mono font-bold text-gray-400"
+                  th:text="${line.kpiCode != null ? line.kpiCode : ''}"></span>
+          </td>
+
+          <!-- Target (null-safe) -->
+          <td class="px-8 py-4 text-right text-sm font-medium text-gray-600 dark:text-gray-300"
+              th:text="${line.targetValue != null ? #numbers.formatDecimal(line.targetValue, 1, 2) : '—'}">—</td>
+
+          <!-- Actual (null-safe) -->
+          <td class="px-8 py-4 text-right text-sm font-semibold text-blue-900 dark:text-white"
+              th:text="${line.actualValue != null ? #numbers.formatDecimal(line.actualValue, 1, 2) : '—'}">—</td>
+
+          <!-- Score (null-safe, colour-coded) -->
+          <td class="px-8 py-4 text-right text-sm font-extrabold"
+              th:classappend="${line.score != null and line.score.doubleValue() >= 70} ? 'text-emerald-600 dark:text-emerald-400' : (${line.score != null} ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400')"
+              th:text="${line.score != null ? #numbers.formatDecimal(line.score, 1, 2) : '—'}">—</td>
+
+          <!-- Weight (null-safe) -->
+          <td class="px-8 py-4 text-right text-sm font-medium text-gray-500 dark:text-gray-400"
+              th:text="${line.weight != null ? #numbers.formatDecimal(line.weight, 1, 2) + '%' : '—'}">—</td>
+
+          <!-- Weighted Score (null-safe) -->
+          <td class="px-8 py-4 text-right text-sm font-extrabold text-blue-900 dark:text-white"
+              th:text="${line.weightedScore != null ? #numbers.formatDecimal(line.weightedScore, 1, 2) : '—'}">—</td>
+
+          <!-- Achievement bar (actual / target ratio, null-safe) -->
+          <td class="px-8 py-4">
+            <div th:if="${line.actualValue != null and line.targetValue != null and line.targetValue.doubleValue() > 0}"
+                 th:with="pct=${line.actualValue.doubleValue() / line.targetValue.doubleValue() * 100}">
+              <div class="ach-track w-20">
+                <div th:classappend="${pct >= 100} ? 'ach-fill over' : 'ach-fill under'"
+                     th:style="'width:' + ${#numbers.formatDecimal(pct > 100 ? 100 : pct, 1, 0)} + '%'"></div>
+              </div>
+              <p class="text-[9px] font-bold mt-1"
+                 th:classappend="${pct >= 100} ? 'text-emerald-600' : 'text-amber-500'"
+                 th:text="${#numbers.formatDecimal(pct, 1, 1)} + '%'">0%</p>
+            </div>
+            <span th:if="${line.actualValue == null or line.targetValue == null or line.targetValue.doubleValue() <= 0}"
+                  class="text-[10px] text-gray-400">—</span>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="px-8 py-4 border-t border-gray-50 dark:border-gray-700 text-xs text-gray-400"
+         th:if="${scorecard != null and !#lists.isEmpty(scorecard)}">
+      <span th:text="${employeesWithData} + ' employees · ' + ${lineCount} + ' KPI entries'">0 employees · 0 entries</span>
+    </div>
+  </div>
+
+</main>
+</body>
+</html>
