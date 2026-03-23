@@ -243,8 +243,8 @@ JOIN pr.employee e
 JOIN e.department d
 LEFT JOIN PayrollLineItem li ON li.payrollRun.id = pr.id
 WHERE d.company.id = :companyId
-AND pr.periodStart = :start
-AND pr.periodEnd = :end
+AND pr.periodStart >= :start
+AND pr.periodEnd <= :end
 AND pr.status = com.justjava.humanresource.core.enums.PayrollRunStatus.POSTED
 GROUP BY d.name
 """)
@@ -263,8 +263,8 @@ FROM PayrollLineItem li
 JOIN li.payrollRun pr
 JOIN pr.employee e
 WHERE e.department.company.id = :companyId
-AND pr.periodStart = :start
-AND pr.periodEnd = :end
+AND pr.periodStart >= :start
+AND pr.periodEnd <= :end
 AND li.componentType = com.justjava.humanresource.payroll.enums.PayComponentType.EARNING
 GROUP BY li.componentCode, li.description
 """)
@@ -303,8 +303,8 @@ FROM PayrollLineItem li
 JOIN li.payrollRun pr
 JOIN pr.employee e
 WHERE e.department.company.id = :companyId
-AND pr.periodStart = :start
-AND pr.periodEnd = :end
+AND pr.periodStart >= :start
+AND pr.periodEnd <= :end
 GROUP BY e.id, e.firstName, e.lastName, pr.appliedPensionSchemeName
 """)
     List<PensionReportDTO> getPensionReport(
@@ -322,8 +322,8 @@ FROM PayrollLineItem li
 JOIN li.payrollRun pr
 JOIN pr.employee e
 WHERE e.department.company.id = :companyId
-AND pr.periodStart = :start
-AND pr.periodEnd = :end
+AND pr.periodStart >= :start
+AND pr.periodEnd <= :end
 AND li.componentType = com.justjava.humanresource.payroll.enums.PayComponentType.DEDUCTION
 GROUP BY li.componentCode, li.description
 """)
@@ -344,8 +344,8 @@ FROM PayrollLineItem li
 JOIN li.payrollRun pr
 JOIN pr.employee e
 WHERE e.department.company.id = :companyId
-AND pr.periodStart = :start
-AND pr.periodEnd = :end
+AND pr.periodStart >= :start
+AND pr.periodEnd <= :end
 GROUP BY e.id, e.firstName, e.lastName
 """)
     List<PayeReportDTO> getPayeReport(

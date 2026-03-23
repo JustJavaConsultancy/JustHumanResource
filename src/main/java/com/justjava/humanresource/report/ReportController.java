@@ -29,6 +29,13 @@ public class ReportController {
     @GetMapping("/master-report")
     public String masterPayrollReport(Model model) {
 
+        System.out.println("This is the component trend " + payrollRunService.getComponentTrend(COMPANY_ID));
+        System.out.println("This is the payroll summary " + payrollRunService.getPayrollSummary(COMPANY_ID, START_DATE, END_DATE));
+        System.out.println("This is the earnings breakdown " + payrollRunService.getEarningsBreakdown(COMPANY_ID, START_DATE, END_DATE));
+        System.out.println("This is the deduction breakdown " + payrollRunService.getDeductionBreakdown(COMPANY_ID, START_DATE, END_DATE));
+        System.out.println("This is the PAYE report " + payrollRunService.getPayeReport(COMPANY_ID, START_DATE, END_DATE));
+        System.out.println("This is the pension report " + payrollRunService.getPensionReport(COMPANY_ID, START_DATE, END_DATE));
+
         // ── 1. Department / Group Summary Cards ──────────────────────────────────
         List<PayrollSummaryDTO> payrollSummary =
                 payrollRunService.getPayrollSummary(COMPANY_ID, START_DATE, END_DATE);

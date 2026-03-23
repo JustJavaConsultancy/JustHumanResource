@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Pension Contribution Report</title>
+    <style>
+        /* Avatar colours – 5 colours, loops by index mod 5 */
+        .av-0 { background-color: #dbeafe; color: #1d4ed8; }
+        .av-1 { background-color: #ede9fe; color: #7c3aed; }
+        .av-2 { background-color: #dcfce7; color: #15803d; }
+        .av-3 { background-color: #fef3c7; color: #b45309; }
+        .av-4 { background-color: #fce7f3; color: #be185d; }
+
+        .row-hover { transition: background-color 0.2s ease; }
+        .row-hover:hover { background-color: #f9fafb; } /* light gray on hover */
+
+        /* Ensure table header stays sticky */
+        .sticky-header th {
+            position: sticky;
+            top: 0;
+            background-color: inherit;
+            z-index: 10;
+        }
+
+        /* Improve card shadows and hover */
+        .summary-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .summary-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.02);
+        }
+
+        /* Better focus styles for buttons */
+        button:focus-visible, select:focus-visible {
+            outline: 2px solid #3b82f6;
+            outline-offset: 2px;
+        }
+    </style>
+</head>
+<body>
+<main layout:fragment="content">
+
+    <!-- ═══════════════════════════════════════════════════════════
+         PAGE HEADER
+    ═══════════════════════════════════════════════════════════ -->
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
+        <div>
+            <!-- Breadcrumb -->
+            <nav class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mb-2">
+                <a th:href="@{/reporting}" class="hover:text-primary transition-colors flex items-center gap-1">
+                    <span class="material-icons-round">arrow_back</span>
+                    Back to reports
+                </a>
+                <span class="mx-2">/</span>
+                <span class="font-medium text-slate-900 dark:text-white">Pension Reports</span>
+            </nav>
+            <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">
+                Detailed breakdown of organizational pension liabilities &nbsp;·&nbsp;
+                <span th:text="'Jan 1, ' + ${reportYear} + ' – Dec 31, ' + ${reportYear}">Jan 1, 2026 – Dec 31, 2026</span>
+            </p>
+        </div>
+
+        <!-- Filter controls + export -->
+        <div class="flex flex-wrap items-end gap-3">
+            <div class="flex flex-col gap-1">
+                <label class="text-[10px] font-bold uppercase tracking-wider text-gray-500 ml-1">Pension Scheme</label>
+                <select class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm px-4 py-2.5 focus:ring-2 focus:ring-blue-500/20 min-w-[160px]">
+                    <option>All Schemes</option>
+                </select>
+            </div>
+            <button onclick="window.print()"
+                    class="flex items-center gap-2 px-5 py-2.5 bg-blue-900 dark:bg-blue-700 text-white rounded-lg font-bold text-sm hover:bg-blue-800 dark:hover:bg-blue-600 transition-all shadow-sm">
+                <span class="material-icons-round text-sm">file_download</span>
+                Export PDF
+            </button>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         SUMMARY BENTO CARDS
+    ═══════════════════════════════════════════════════════════ -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <!-- Employee Total -->
+        <div class="summary-card bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-6 shadow-sm hover:shadow-md transition-all">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                    <span class="material-icons-round">payments</span>
+                </div>
+                <span class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Employee Total</span>
+            </div>
+            <h3 class="text-2xl font-extrabold text-gray-900 dark:text-white"
+                th:text="${#numbers.formatDecimal(totalEmployeeContribution, 1, 'COMMA', 2, 'POINT')}">0.00</h3>
+            <p class="text-[10px] text-green-600 dark:text-green-400 font-bold flex items-center gap-1 mt-1">
+                <span class="material-icons-round text-xs">trending_up</span>
+                Current payroll cycle
+            </p>
+        </div>
+
+        <!-- Employer Total -->
+        <div class="summary-card bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-6 shadow-sm hover:shadow-md transition-all">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                    <span class="material-icons-round">account_balance</span>
+                </div>
+                <span class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Employer Total</span>
+            </div>
+            <h3 class="text-2xl font-extrabold text-gray-900 dark:text-white"
+                th:text="${#numbers.formatDecimal(totalEmployerContribution, 1, 'COMMA', 2, 'POINT')}">0.00</h3>
+            <p class="text-[10px] text-green-600 dark:text-green-400 font-bold flex items-center gap-1 mt-1">
+                <span class="material-icons-round text-xs">trending_up</span>
+                Current payroll cycle
+            </p>
+        </div>
+
+        <!-- Grand Total Liability (spans 2 cols) -->
+        <div class="summary-card bg-blue-900 text-white rounded-xl shadow-lg md:col-span-2 p-6 relative overflow-hidden hover:shadow-xl transition-all">
+            <div class="relative z-10">
+                <div class="flex items-center gap-3 mb-4">
+                    <span class="text-xs font-bold text-white/70 uppercase tracking-widest">Total Liability</span>
+                </div>
+
+                <div class="flex items-end justify-between flex-wrap gap-4">
+                    <div>
+                        <h3 class="text-4xl font-extrabold"
+                            th:text="${#numbers.formatDecimal(totalLiability, 1, 'COMMA', 2, 'POINT')}">0.00</h3>
+                        <p class="text-xs text-white/80 mt-1">
+                            Net pension payable for the selected period
+                        </p>
+                    </div>
+
+                    <div class="text-right flex flex-col items-end gap-2">
+                <span class="text-[10px] bg-white/20 px-2 py-1 rounded font-bold uppercase">
+                    <span th:text="${totalRecords} + ' employees'">0 employees</span>
+                </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Decorative background icon -->
+            <div class="absolute right-0 bottom-0 opacity-10 pointer-events-none translate-x-4 translate-y-4">
+                <span class="material-icons-round text-white" style="font-size: 160px;">pie_chart</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         CONTRIBUTIONS TABLE
+    ═══════════════════════════════════════════════════════════ -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden shadow-sm">
+        <!-- Table header bar -->
+        <div class="px-8 py-5 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between flex-wrap gap-3">
+            <h4 class="font-bold text-gray-900 dark:text-white">Employee Contributions</h4>
+            <div class="flex items-center gap-3">
+                <span class="text-xs text-gray-400"
+                      th:text="'Showing ' + ${totalRecords} + ' records'">Showing 0 records</span>
+                <div class="flex border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                    <button class="p-1.5 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
+                            :disabled="${currentPage == 1}">
+                        <span class="material-icons-round text-sm">chevron_left</span>
+                    </button>
+                    <button class="p-1.5 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-l border-gray-200 dark:border-gray-700 disabled:opacity-50"
+                            :disabled="${currentPage == totalPages}">
+                        <span class="material-icons-round text-sm">chevron_right</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Table -->
+        <div class="overflow-x-auto">
+            <table class="w-full text-left">
+                <thead class="bg-gray-50 dark:bg-gray-750 sticky-header">
+                <tr>
+                    <th class="px-8 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-500">Employee ID</th>
+                    <th class="px-8 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-500">Employee Name</th>
+                    <th class="px-8 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-500 text-right">Employee Contribution</th>
+                    <th class="px-8 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-500 text-right">Employer Contribution</th>
+                    <th class="px-8 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-500">Pension Scheme</th>
+                    <th class="px-8 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-500">Status</th>
+                </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                <!-- Empty state -->
+                <tr th:if="${pensionReport == null or #lists.isEmpty(pensionReport)}">
+                    <td colspan="6" class="px-8 py-16 text-center">
+                        <div class="flex flex-col items-center gap-3 text-gray-400">
+                            <span class="material-icons-round text-5xl">savings</span>
+                            <p class="text-sm font-medium">No pension contribution records found for this period.</p>
+                        </div>
+                    </td>
+                </tr>
+
+                <!-- Data rows -->
+                <tr th:each="pension, pStat : ${pensionReport}"
+                    class="row-hover dark:hover:bg-gray-750 transition-colors">
+                    <!-- Employee ID -->
+                    <td class="px-8 py-5">
+                        <span class="text-xs font-mono font-bold text-blue-700 dark:text-blue-400
+                                     bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded"
+                              th:text="'EMP-' + ${pension.employeeId}">
+                            EMP-0000
+                        </span>
+                    </td>
+
+                    <!-- Name + avatar -->
+                    <td class="px-8 py-5">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-full flex items-center justify-center font-bold text-[11px] flex-shrink-0"
+                                 th:classappend="'av-' + ${pStat.index % 5}"
+                                 th:with="safeName=${pension.employeeName != null ? pension.employeeName : '?'},
+                                          spaceIdx=${#strings.contains(safeName,' ') ? safeName.lastIndexOf(' ') : -1}"
+                                 th:text="${spaceIdx > 0}
+                                           ? ${safeName.substring(0,1).toUpperCase() + safeName.substring(spaceIdx+1,spaceIdx+2).toUpperCase()}
+                                           : ${safeName.substring(0,1).toUpperCase()}">
+                                JA
+                            </div>
+                            <p class="text-sm font-bold text-gray-900 dark:text-white"
+                               th:text="${pension.employeeName}">John Adewale</p>
+                        </div>
+                    </td>
+
+                    <!-- Employee contribution -->
+                    <td class="px-8 py-5 text-right">
+                        <p class="text-sm font-bold text-gray-900 dark:text-white"
+                           th:text="${pension.employeeContribution != null}
+                                    ? ${#numbers.formatDecimal(pension.employeeContribution, 1, 'COMMA', 2, 'POINT')}
+                                    : '—'">0.00</p>
+                        <p class="text-[10px] text-gray-400"
+                           th:text="${pension.employeeContribution != null} ? 'Employee share' : 'Pending'">Employee share</p>
+                    </td>
+
+                    <!-- Employer contribution -->
+                    <td class="px-8 py-5 text-right">
+                        <p class="text-sm font-bold text-blue-900 dark:text-blue-300"
+                           th:text="${pension.employerContribution != null}
+                                    ? ${#numbers.formatDecimal(pension.employerContribution, 1, 'COMMA', 2, 'POINT')}
+                                    : '—'">0.00</p>
+                        <p class="text-[10px] text-gray-400"
+                           th:text="${pension.employerContribution != null} ? 'Employer match' : 'Pending'">Employer match</p>
+                    </td>
+
+                    <!-- Pension scheme -->
+                    <td class="px-8 py-5">
+                        <div class="flex items-center gap-2">
+                            <span class="material-icons-round text-sm"
+                                  th:classappend="${pension.pensionScheme != null} ? 'text-gray-400' : 'text-amber-400'"
+                                  th:text="${pension.pensionScheme != null} ? 'verified' : 'pending'"></span>
+                            <span class="text-xs font-medium"
+                                  th:classappend="${pension.pensionScheme != null} ? 'text-gray-600 dark:text-gray-300' : 'text-amber-600 dark:text-amber-400'"
+                                  th:text="${pension.pensionScheme != null} ? ${pension.pensionScheme} : 'Not Assigned'">
+                                Scheme
+                            </span>
+                        </div>
+                    </td>
+
+                    <!-- Status (using actual data if available, else fallback) -->
+                    <td class="px-8 py-5">
+                        <span th:if="${pension.employeeContribution != null and pension.employerContribution != null}"
+                              class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-[10px] font-bold rounded uppercase">
+                            <span class="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                            Reconciled
+                        </span>
+                        <span th:unless="${pension.employeeContribution != null and pension.employerContribution != null}"
+                              class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 text-[10px] font-bold rounded uppercase">
+                            <span class="w-1.5 h-1.5 bg-amber-500 rounded-full"></span>
+                            Pending
+                        </span>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Table footer actions -->
+        <div class="px-8 py-5 bg-gray-50/50 dark:bg-gray-750/50 flex justify-end gap-3 border-t border-gray-100 dark:border-gray-700">
+            <button class="px-4 py-2 text-xs font-bold text-gray-600 dark:text-gray-400 hover:text-blue-700 dark:hover:text-blue-400 transition-colors">
+                View All Transactions
+            </button>
+            <button class="px-4 py-2 text-xs font-bold bg-white dark:bg-gray-800 text-blue-900 dark:text-white
+                           border border-gray-200 dark:border-gray-600 rounded-lg shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                Schedule Remittance
+            </button>
+        </div>
+    </div>
+
+</main>
+</body>
+</html>
