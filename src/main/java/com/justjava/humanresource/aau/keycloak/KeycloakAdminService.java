@@ -94,6 +94,7 @@ public class KeycloakAdminService {
         user.setEmail(email);
         user.setEnabled(true);
         user.setFirstName(firstName);
+
         user.setLastName(lastName);
         user.setEmailVerified(true);
 
@@ -133,7 +134,7 @@ public class KeycloakAdminService {
         CredentialRepresentation credential = new CredentialRepresentation();
         credential.setType(CredentialRepresentation.PASSWORD);
         credential.setValue(password);
-        credential.setTemporary(false);
+        credential.setTemporary(true);
         return credential;
     }
 
