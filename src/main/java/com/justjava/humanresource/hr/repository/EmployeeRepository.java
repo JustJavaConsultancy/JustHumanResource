@@ -65,5 +65,10 @@ public interface EmployeeRepository extends JpaRepository<Employee,Long> {
             "LEFT JOIN FETCH e.bankDetails " +
             "WHERE e.id = :id")
     Optional<Employee> findByIdWithBankDetails(@Param("id") Long id);
-
+    @Query("""
+       SELECT e.department.id, COUNT(e)
+       FROM Employee e
+       GROUP BY e.department.id
+       """)
+    List<Object[]> countEmployeesByDepartmentGroup();
 }

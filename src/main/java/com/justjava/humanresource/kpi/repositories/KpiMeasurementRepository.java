@@ -1,6 +1,7 @@
 package com.justjava.humanresource.kpi.repositories;
 
 import com.justjava.humanresource.kpi.entity.KpiMeasurement;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -57,5 +58,59 @@ public interface KpiMeasurementRepository
             @Param("period") YearMonth period,
             @Param("referenceDate") LocalDate referenceDate
     );
+    @Query("""
+       SELECT m
+       FROM KpiMeasurement m
+       JOIN FETCH m.kpi k
+       JOIN FETCH m.employee e
+       WHERE e.id = :employeeId
+       AND m.period = :period
+       """)
+    List<KpiMeasurement> findDetailedByEmployeeAndPeriod(
+            @Param("employeeId") Long employeeId,
+            @Param("period") YearMonth period
+    );
+    @Query("""
+       SELECT m
+       FROM KpiMeasurement m
+       JOIN FETCH m.employee e
+       JOIN FETCH m.kpi k
+       WHERE m.period = :period
+       """)
+    List<KpiMeasurement> findAllDetailedByPeriod(
+            @Param("period") YearMonth period
+    );
+    @Query("""
+       SELECT m.employee.id, m.employee.lastName, AVG(m.score)
+       FROM KpiMeasurement m
+       WHERE m.period = :period
+       GROUP BY m.employee.id, m.employee.lastName
+       ORDER BY AVG(m.score) DESC
+       """)
+    List<Object[]> findTopPerformersByKpi(
+            @Param("period") YearMonth period,
+            Pageable pageable
+    );
+    @Query("""
+       SELECT m.employee.id, m.employee.lastName, AVG(m.score)
+       FROM KpiMeasurement m
+       WHERE m.period = :period
+       GROUP BY m.employee.id, m.employee.lastName
+       ORDER BY AVG(m.score) ASC
+       """)
+    List<Object[]> findBottomPerformersByKpi(
+            @Param("period") YearMonth period,
+            Pageable pageable
+    );
 
+    @Query("""
+       SELECT
+           SUM(CASE WHEN m.score >= 85 THEN 1 ELSE 0 END),
+           SUM(CASE WHEN m.score >= 70 AND m.score < 85 THEN 1 ELSE 0 END),
+           SUM(CASE WHEN m.score >= 50 AND m.score < 70 THEN 1 ELSE 0 END),
+           SUM(CASE WHEN m.score < 50 THEN 1 ELSE 0 END)
+       FROM KpiMeasurement m
+       WHERE m.period = :period
+       """)
+    Object[] getScoreDistribution(@Param("period") YearMonth period);
 }

@@ -1,6 +1,7 @@
 package com.justjava.humanresource.kpi.repositories;
 
 import com.justjava.humanresource.kpi.entity.EmployeeAppraisal;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -58,5 +59,25 @@ public interface EmployeeAppraisalRepository
        AND a.completedAt IS NULL
        """)
     List<EmployeeAppraisal> findAllActiveAppraisals();
-
+    @Query("""
+       SELECT a
+       FROM EmployeeAppraisal a
+       JOIN FETCH a.employee e
+       JOIN FETCH a.cycle c
+       WHERE a.cycle.id = :cycleId
+       """)
+    List<EmployeeAppraisal> findByCycleWithDetails(
+            @Param("cycleId") Long cycleId
+    );
+    @Query("""
+       SELECT a.employee.id, a.employee.lastName, a.finalScore
+       FROM EmployeeAppraisal a
+       WHERE a.cycle.id = :cycleId
+       AND a.finalScore IS NOT NULL
+       ORDER BY a.finalScore DESC
+       """)
+    List<Object[]> findTopPerformersByAppraisal(
+            @Param("cycleId") Long cycleId,
+            Pageable pageable
+    );
 }
