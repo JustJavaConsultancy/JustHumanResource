@@ -293,15 +293,27 @@ public class KPIReportServiceImpl implements KPIReportService {
     /* =============================
        DISTRIBUTION
        ============================= */
-        Object[] dist =
-                measurementRepository.getScoreDistribution(String.valueOf(period));
+/*        Object[] dist =
+                measurementRepository.getScoreDistribution(String.valueOf(period));*/
+
+        Object[] raw = measurementRepository.getScoreDistribution(period.toString());
+
+        Object[] dist;
+
+// 🔥 unwrap if nested
+        if (raw.length == 1 && raw[0] instanceof Object[]) {
+            dist = (Object[]) raw[0];
+        } else {
+            dist = raw;
+        }
+
         System.out.println(" ");
         KpiDistributionDTO distribution =
                 KpiDistributionDTO.builder()
-                        .excellent(getLong(dist[0]))
-                        .good(getLong(dist[1]))
-                        .average(getLong(dist[2]))
-                        .poor(getLong(dist[3]))
+                        .excellent(getLong(dist, 0))
+                        .good(getLong(dist, 1))
+                        .average(getLong(dist, 2))
+                        .poor(getLong(dist, 3))
                         .build();
 
         return KpiDashboardDTO.builder()
@@ -332,5 +344,20 @@ public class KPIReportServiceImpl implements KPIReportService {
 
     private long getLong(Object value) {
         return value == null ? 0L : ((Number) value).longValue();
+    }
+    private long getLong(Object[] arr, int index) {
+
+        if (arr == null || arr.length <= index || arr[index] == null) {
+            return 0L;
+        }
+
+        Object value = arr[index];
+
+        if (value instanceof Number number) {
+            return number.longValue();
+        }
+
+        // 🔥 Defensive fallback
+        return Long.parseLong(value.toString());
     }
 }
