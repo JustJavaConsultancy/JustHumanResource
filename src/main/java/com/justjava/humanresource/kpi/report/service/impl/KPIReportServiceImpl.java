@@ -40,7 +40,6 @@ public class KPIReportServiceImpl implements KPIReportService {
             Long employeeId,
             YearMonth period
     ) {
-
         List<KpiMeasurement> measurements =
                 measurementRepository.findDetailedByEmployeeAndPeriod(
                         employeeId, period
@@ -61,22 +60,26 @@ public class KPIReportServiceImpl implements KPIReportService {
                                     .map(KpiAssignment::getWeight)
                                     .orElse(BigDecimal.ZERO);
 
-                    BigDecimal weightedScore =
-                            m.getScore().multiply(weight);
-
-                    return EmployeeKpiScorecardDTO.builder()
-                            .employeeId(m.getEmployee().getId())
-                            .employeeName(m.getEmployee().getFullName())
-                            .kpiCode(m.getKpi().getCode())
-                            .kpiName(m.getKpi().getName())
-                            .targetValue(m.getKpi().getTargetValue())
-                            .actualValue(m.getActualValue())
-                            .score(m.getScore())
-                            .weight(weight)
-                            .weightedScore(weightedScore)
-                            .build();
+                    return getEmployeeKpiScorecardDTO(m, weight);
                 })
                 .toList();
+    }
+
+    private EmployeeKpiScorecardDTO getEmployeeKpiScorecardDTO(KpiMeasurement m, BigDecimal weight) {
+        BigDecimal weightedScore =
+                m.getScore().multiply(weight);
+
+        return EmployeeKpiScorecardDTO.builder()
+                .employeeId(m.getEmployee().getId())
+                .employeeName(m.getEmployee().getFullName())
+                .kpiCode(m.getKpi().getCode())
+                .kpiName(m.getKpi().getName())
+                .targetValue(m.getKpi().getTargetValue())
+                .actualValue(m.getActualValue())
+                .score(m.getScore())
+                .weight(weight)
+                .weightedScore(weightedScore)
+                .build();
     }
 
     /* =========================================================
@@ -184,20 +187,7 @@ public class KPIReportServiceImpl implements KPIReportService {
                                     .map(KpiAssignment::getWeight)
                                     .orElse(BigDecimal.ZERO);
 
-                    BigDecimal weightedScore =
-                            m.getScore().multiply(weight);
-
-                    return EmployeeKpiScorecardDTO.builder()
-                            .employeeId(m.getEmployee().getId())
-                            .employeeName(m.getEmployee().getFullName())
-                            .kpiCode(m.getKpi().getCode())
-                            .kpiName(m.getKpi().getName())
-                            .targetValue(m.getKpi().getTargetValue())
-                            .actualValue(m.getActualValue())
-                            .score(m.getScore())
-                            .weight(weight)
-                            .weightedScore(weightedScore)
-                            .build();
+                    return getEmployeeKpiScorecardDTO(m, weight);
                 })
                 .toList();
     }
@@ -206,7 +196,6 @@ public class KPIReportServiceImpl implements KPIReportService {
             YearMonth period,
             int limit
     ) {
-
         List<Object[]> results =
                 measurementRepository.findTopPerformersByKpi(
                         period,
