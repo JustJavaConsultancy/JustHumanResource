@@ -20,7 +20,7 @@ public class EmployeeDTO {
     private boolean payrollEnabled;
     private boolean kpiEnabled;
 
-    // Compulsory
+    // Identity
     private String ninNumber;
     private String bvnNumber;
 

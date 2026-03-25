@@ -56,11 +56,11 @@ public class Employee extends BaseEntity {
     @JoinColumn(name = "pay_group_id")
     private PayGroup payGroup;
 
-    // --- Personal Information (Compulsory) ---
-    @Column(nullable = false, length = 11)
+    // --- Personal Information  ---
+    @Column(nullable = true, length = 11)
     private String ninNumber;
 
-    @Column(nullable = false, length = 11)
+    @Column(nullable = true, length = 11)
     private String bvnNumber;
 
     // --- Next of Kin (Optional) ---
