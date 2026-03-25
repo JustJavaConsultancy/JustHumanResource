@@ -47,12 +47,14 @@ public class PayGroupResolutionServiceImpl implements PayGroupResolutionService 
                             RecordStatus.ACTIVE
                     );
 
+
+
             for (PayGroupAllowance mapping : groupAllowances) {
 
                 Allowance allowance = mapping.getAllowance();
 
                 // Respect override amount if present
-                if (mapping.getOverrideAmount() != null) {
+                if (mapping.getOverrideAmount() != null && mapping.getOverrideAmount().intValue()!=0) {
                     allowance = cloneWithOverride(
                             allowance,
                             mapping.getOverrideAmount()
@@ -96,7 +98,7 @@ public class PayGroupResolutionServiceImpl implements PayGroupResolutionService 
             Allowance allowance = mapping.getAllowance();
 
             if (mapping.isOverridden()
-                    && mapping.getOverrideAmount() != null) {
+                    && mapping.getOverrideAmount() != null  && mapping.getOverrideAmount() != null) {
 
                 allowance = cloneWithOverride(
                         allowance,

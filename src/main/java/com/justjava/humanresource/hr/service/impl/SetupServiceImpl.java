@@ -22,6 +22,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -99,9 +100,9 @@ public class SetupServiceImpl implements SetupService {
                     JobStep step = new JobStep();
                     step.setName(stepCommand.getStepName());
                     step.setBasicSalary(stepCommand.getBasicSalary());
+                    step.setGrossSalary(new BigDecimal(100000.00));
                     step.setDepartment(department);
                     step.setJobGrade(savedGrade);
-
                     return jobStepRepository.save(step);
                 })
                 .toList();

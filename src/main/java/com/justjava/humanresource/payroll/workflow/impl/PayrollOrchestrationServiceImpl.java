@@ -2,6 +2,7 @@ package com.justjava.humanresource.payroll.workflow.impl;
 
 import com.justjava.humanresource.core.enums.PayrollRunStatus;
 
+import com.justjava.humanresource.core.enums.RecordStatus;
 import com.justjava.humanresource.core.exception.ResourceNotFoundException;
 import com.justjava.humanresource.hr.entity.Employee;
 import com.justjava.humanresource.hr.entity.EmployeePositionHistory;
@@ -130,6 +131,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
        CALCULATE EARNINGS
        ============================================================ */
 
+
     @Override
     @Transactional
     public void calculateEarnings(Long payrollRunId) {
@@ -152,18 +154,61 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
                         PayComponentType.EARNING
                 );
 
+    /* ============================================================
+       DETERMINE PAY MODEL (BASIC vs GROSS)
+       ============================================================ */
+
+        boolean isGrossBased =
+                jobStep.getGrossSalary() != null
+                        && jobStep.getGrossSalary().compareTo(BigDecimal.ZERO) > 0;
+
         BigDecimal grossPay = BigDecimal.ZERO;
-        BigDecimal basicSalary = jobStep.getBasicSalary();
+        BigDecimal basicSalary;
 
-        grossPay = grossPay.add(basicSalary);
+        if (isGrossBased) {
 
-        saveLine(run, employee, "BASIC",
+        /* --------------------------------------------------------
+           GROSS-BASED PAYROLL
+           -------------------------------------------------------- */
+
+            BigDecimal configuredGross = jobStep.getGrossSalary();
+
+            grossPay = configuredGross;
+
+            // Derive BASIC (e.g. 40% of gross)
+            BigDecimal basicPercentage =
+                    Optional.ofNullable(jobStep.getBasicPercentage())
+                            .orElse(BigDecimal.valueOf(40));
+
+            basicSalary = configuredGross
+                    .multiply(basicPercentage)
+                    .divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
+
+        } else {
+
+        /* --------------------------------------------------------
+           BASIC-BASED PAYROLL (EXISTING LOGIC)
+           -------------------------------------------------------- */
+
+            basicSalary = jobStep.getBasicSalary();
+            grossPay = basicSalary;
+        }
+
+        basicSalary = basicSalary.setScale(2, RoundingMode.HALF_UP);
+
+        saveLine(run, employee,
+                "BASIC",
                 "Basic Salary",
                 basicSalary,
                 true,
                 PayComponentType.EARNING);
 
+        BigDecimal computedAllowancesTotal = BigDecimal.ZERO;
         BigDecimal taxableIncome = basicSalary;
+
+    /* ============================================================
+       RESOLVE ALLOWANCES
+       ============================================================ */
 
         ResolvedPayComponents resolved =
                 payGroupResolutionService.resolve(
@@ -177,12 +222,11 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
             BigDecimal amount = computeAllowanceAmount(
                     allowance,
                     basicSalary,
-                    grossPay,
+                    isGrossBased ? grossPay : grossPay.add(computedAllowancesTotal),
                     taxableIncome
             );
 
-            if (amount == null
-                    || amount.compareTo(BigDecimal.ZERO) <= 0)
+            if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0)
                 continue;
 
             if (allowance.isProratable()) {
@@ -202,16 +246,38 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
                     allowance.isTaxable(),
                     PayComponentType.EARNING);
 
-            grossPay = grossPay.add(amount);
+            computedAllowancesTotal = computedAllowancesTotal.add(amount);
 
-            if (allowance.isTaxable())
+            if (allowance.isTaxable()) {
                 taxableIncome = taxableIncome.add(amount);
+            }
+        }
+
+    /* ============================================================
+       FINAL GROSS HANDLING
+       ============================================================ */
+
+        if (!isGrossBased) {
+            grossPay = grossPay.add(computedAllowancesTotal);
+        } else {
+            /*
+             * IMPORTANT:
+             * In gross-based payroll,
+             * allowances MUST NOT exceed gross.
+             */
+            BigDecimal derivedTotal = basicSalary.add(computedAllowancesTotal);
+
+            if (derivedTotal.compareTo(grossPay) > 0) {
+                throw new IllegalStateException(
+                        "Derived earnings exceed configured gross salary."
+                );
+            }
         }
 
         run.setGrossPay(grossPay.setScale(2, RoundingMode.HALF_UP));
+
         payrollRunRepository.save(run);
     }
-
     /* ============================================================
        APPLY DEDUCTIONS
        ============================================================ */
@@ -231,32 +297,116 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
 
         BigDecimal totalDeductions = BigDecimal.ZERO;
 
-        List<PayrollLineItem> taxableLines =
+    /* ============================================================
+       FETCH EARNINGS
+       ============================================================ */
+
+        List<PayrollLineItem> earningLines =
                 payrollLineItemRepository
-                        .findByPayrollRunIdAndComponentTypeAndTaxableTrue(
+                        .findByPayrollRunIdAndComponentType(
                                 payrollRunId,
                                 PayComponentType.EARNING
                         );
 
-        BigDecimal taxableIncome =
-                taxableLines.stream()
-                        .map(PayrollLineItem::getAmount)
-                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal taxableIncome = earningLines.stream()
+                .filter(PayrollLineItem::isTaxable)
+                .map(PayrollLineItem::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+    /* ============================================================
+       PENSION CALCULATION
+       ============================================================ */
+
+        PensionScheme scheme =
+                pensionSchemeRepository
+                        .findEffectiveScheme(
+                                LocalDate.now(),
+                                RecordStatus.ACTIVE
+                        )
+                        .orElse(null);
+
+        BigDecimal employeePension = BigDecimal.ZERO;
+        BigDecimal employerPension = BigDecimal.ZERO;
+
+        if (scheme != null) {
+
+            // Pensionable earnings (BASIC + HOUSING + TRANSPORT)
+            BigDecimal pensionableEarnings = earningLines.stream()
+                    .filter(line -> line.getComponentType()==PayComponentType.EARNING)
+                    .map(PayrollLineItem::getAmount)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            employeePension =
+                    pensionCalculatorService.calculateEmployeeContribution(
+                            pensionableEarnings,
+                            scheme.getEmployeeRate()
+                    ).setScale(2, RoundingMode.HALF_UP);
+
+            employerPension =
+                    pensionCalculatorService.calculateEmployerContribution(
+                            pensionableEarnings,
+                            scheme.getEmployerRate()
+                    ).setScale(2, RoundingMode.HALF_UP);
+
+            if (employeePension.compareTo(BigDecimal.ZERO) > 0) {
+
+                saveLine(run, employee,
+                        "PENSION_EMP",
+                        "Employee Pension",
+                        employeePension,
+                        false,
+                        PayComponentType.DEDUCTION);
+
+                totalDeductions = totalDeductions.add(employeePension);
+            }
+
+            // Employer pension (not deducted from net pay)
+            if (employerPension.compareTo(BigDecimal.ZERO) > 0) {
+
+                saveLine(run, employee,
+                        "PENSION_EMPLOYER",
+                        "Employer Pension",
+                        employerPension,
+                        false,
+                        PayComponentType.EMPLOYER_COST);
+            }
+
+            // Save snapshot
+            run.setAppliedPensionSchemeName(scheme.getName());
+
+            /*
+             * IMPORTANT:
+             * Pension reduces taxable income
+             */
+            taxableIncome = taxableIncome.subtract(employeePension);
+        }
+
+    /* ============================================================
+       PAYE CALCULATION
+       ============================================================ */
 
         BigDecimal paye =
                 payeCalculatorService.calculateTax(taxableIncome)
                         .setScale(2, RoundingMode.HALF_UP);
 
         if (paye.compareTo(BigDecimal.ZERO) > 0) {
-            saveLine(run, employee, "PAYE",
+
+            saveLine(run, employee,
+                    "PAYE",
                     "PAYE Tax",
                     paye,
                     false,
                     PayComponentType.DEDUCTION);
+
             totalDeductions = totalDeductions.add(paye);
         }
 
+    /* ============================================================
+       FINALIZE
+       ============================================================ */
+
         run.setTotalDeductions(totalDeductions);
+
         run.setNetPay(
                 run.getGrossPay()
                         .subtract(totalDeductions)
@@ -265,7 +415,6 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
 
         payrollRunRepository.save(run);
     }
-
     /* ============================================================
        FINALIZE
        ============================================================ */

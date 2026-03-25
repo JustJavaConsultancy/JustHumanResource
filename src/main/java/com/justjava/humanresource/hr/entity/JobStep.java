@@ -21,7 +21,11 @@ public class JobStep {
 
     private String name;
 
-    private BigDecimal basicSalary;
+/*    private BigDecimal basicSalary;*/
+
+    private BigDecimal grossSalary; // NEW
+    private BigDecimal basicSalary; // optional / derived
+    private BigDecimal basicPercentage; // e.g. 40% of gross
 
     @ManyToOne
     private Department department;
