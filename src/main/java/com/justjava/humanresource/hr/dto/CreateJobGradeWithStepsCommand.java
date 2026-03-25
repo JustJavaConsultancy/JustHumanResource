@@ -21,5 +21,6 @@ public class CreateJobGradeWithStepsCommand {
     public static class JobStepCommand {
         private String stepName;
         private BigDecimal basicSalary;
+        private BigDecimal grossSalary;
     }
 }
