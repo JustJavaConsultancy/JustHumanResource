@@ -265,7 +265,7 @@
 
     <!-- ==================== MODALS ==================== -->
 
-    <!-- Add Allowance Modal (updated with new fields) -->
+    <!-- Add Allowance Modal (updated: amount moved below calc type & hidden unless fixed) -->
     <div id="addAllowanceModal" class="fixed inset-0 z-50 hidden">
         <div class="modal-backdrop fixed inset-0"></div>
         <div class="fixed inset-0 flex items-center justify-center p-4">
@@ -277,7 +277,7 @@
                     </button>
                 </div>
                 <form th:action="@{/setup/allowance}" method="post" id="addAllowanceForm" class="space-y-4" onsubmit="disableSubmitButton(this)">
-                    <input type="hidden" name="id" value="" /> <!-- for edit, but add has no id -->
+                    <input type="hidden" name="id" value="" />
                     <div>
                         <label class="block text-sm font-medium mb-2">Code * <span class="text-xs text-gray-500">(unique)</span></label>
                         <input name="code" type="text" id="addAllowanceCode" class="form-input" placeholder="e.g., ALL-HOUSING" required>
@@ -286,11 +286,7 @@
                         <label class="block text-sm font-medium mb-2">Name *</label>
                         <input name="name" type="text" class="form-input" placeholder="e.g., Housing Allowance" required>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-2">Amount *</label>
-                        <input name="amount" type="number" step="0.01" min="0" class="form-input" placeholder="0.00" required>
-                    </div>
-                    <!-- NEW: Calculation Type -->
+                    <!-- NEW: Calculation Type (now above Amount) -->
                     <div>
                         <label class="block text-sm font-medium mb-2">Calculation Type</label>
                         <select name="calculationType" class="form-input" required onchange="toggleCalculationFields(this, 'addAllowance')">
@@ -301,17 +297,21 @@
                             <option value="FORMULA">Formula</option>
                         </select>
                     </div>
-                    <!-- NEW: Percentage Rate (hidden by default) -->
+                    <!-- Amount field container (moved here, will be hidden unless Fixed Amount) -->
+                    <div id="addAllowanceAmountField" class="field-dependent">
+                        <label class="block text-sm font-medium mb-2">Amount *</label>
+                        <input name="amount" type="number" step="0.01" min="0" class="form-input" placeholder="0.00" required>
+                    </div>
+                    <!-- Percentage Rate field (hidden by default) -->
                     <div id="addAllowancePercentageField" class="field-dependent hidden">
                         <label class="block text-sm font-medium mb-2">Percentage Rate (%)</label>
                         <input name="percentageRate" type="number" step="0.0001" min="0" max="100" class="form-input" placeholder="e.g., 10.5">
                     </div>
-                    <!-- NEW: Formula Expression (hidden by default) -->
+                    <!-- Formula Expression field (hidden by default) -->
                     <div id="addAllowanceFormulaField" class="field-dependent hidden">
                         <label class="block text-sm font-medium mb-2">Formula Expression</label>
                         <textarea name="formulaExpression" rows="3" class="form-input" placeholder="e.g., 20% of BASIC"></textarea>
                     </div>
-                    <!-- NEW: Proratable Checkbox -->
                     <div>
                         <label class="flex items-center space-x-2">
                             <input type="checkbox" name="proratable" value="true" class="text-primary-600">
@@ -340,7 +340,7 @@
         </div>
     </div>
 
-    <!-- Edit Allowance Modal (similar to add but with populated data) -->
+    <!-- Edit Allowance Modal (updated: amount moved below calc type & hidden unless fixed) -->
     <div id="editAllowanceModal" class="fixed inset-0 z-50 hidden">
         <div class="modal-backdrop fixed inset-0"></div>
         <div class="fixed inset-0 flex items-center justify-center p-4">
@@ -362,10 +362,6 @@
                         <input name="name" type="text" id="editAllowanceName" class="form-input" required>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium mb-2">Amount *</label>
-                        <input name="amount" type="number" step="0.01" min="0" id="editAllowanceAmount" class="form-input" required>
-                    </div>
-                    <div>
                         <label class="block text-sm font-medium mb-2">Calculation Type</label>
                         <select name="calculationType" id="editAllowanceCalcType" class="form-input" required onchange="toggleCalculationFields(this, 'editAllowance')">
                             <option value="FIXED_AMOUNT">Fixed Amount</option>
@@ -374,6 +370,10 @@
                             <option value="PERCENTAGE_OF_TAXABLE">Percentage of Taxable</option>
                             <option value="FORMULA">Formula</option>
                         </select>
+                    </div>
+                    <div id="editAllowanceAmountField">
+                        <label class="block text-sm font-medium mb-2">Amount *</label>
+                        <input name="amount" type="number" step="0.01" min="0" id="editAllowanceAmount" class="form-input" required>
                     </div>
                     <div id="editAllowancePercentageField" class="field-dependent hidden">
                         <label class="block text-sm font-medium mb-2">Percentage Rate (%)</label>
@@ -411,7 +411,7 @@
         </div>
     </div>
 
-    <!-- Add Deduction Modal (updated) -->
+    <!-- Add Deduction Modal (updated: amount moved below calc type & hidden unless fixed) -->
     <div id="addDeductionModal" class="fixed inset-0 z-50 hidden">
         <div class="modal-backdrop fixed inset-0"></div>
         <div class="fixed inset-0 flex items-center justify-center p-4">
@@ -433,10 +433,6 @@
                         <input name="name" type="text" class="form-input" placeholder="e.g., Health Insurance" required>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium mb-2">Amount *</label>
-                        <input name="amount" type="number" step="0.01" min="0" class="form-input" placeholder="0.00" required>
-                    </div>
-                    <div>
                         <label class="block text-sm font-medium mb-2">Calculation Type</label>
                         <select name="calculationType" class="form-input" required onchange="toggleCalculationFields(this, 'addDeduction')">
                             <option value="FIXED_AMOUNT">Fixed Amount</option>
@@ -445,6 +441,10 @@
                             <option value="PERCENTAGE_OF_TAXABLE">Percentage of Taxable</option>
                             <option value="FORMULA">Formula</option>
                         </select>
+                    </div>
+                    <div id="addDeductionAmountField">
+                        <label class="block text-sm font-medium mb-2">Amount *</label>
+                        <input name="amount" type="number" step="0.01" min="0" class="form-input" placeholder="0.00" required>
                     </div>
                     <div id="addDeductionPercentageField" class="field-dependent hidden">
                         <label class="block text-sm font-medium mb-2">Percentage Rate (%)</label>
@@ -482,7 +482,7 @@
         </div>
     </div>
 
-    <!-- Edit Deduction Modal -->
+    <!-- Edit Deduction Modal (updated: amount moved below calc type & hidden unless fixed) -->
     <div id="editDeductionModal" class="fixed inset-0 z-50 hidden">
         <div class="modal-backdrop fixed inset-0"></div>
         <div class="fixed inset-0 flex items-center justify-center p-4">
@@ -504,10 +504,6 @@
                         <input name="name" type="text" id="editDeductionName" class="form-input" required>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium mb-2">Amount *</label>
-                        <input name="amount" type="number" step="0.01" min="0" id="editDeductionAmount" class="form-input" required>
-                    </div>
-                    <div>
                         <label class="block text-sm font-medium mb-2">Calculation Type</label>
                         <select name="calculationType" id="editDeductionCalcType" class="form-input" required onchange="toggleCalculationFields(this, 'editDeduction')">
                             <option value="FIXED_AMOUNT">Fixed Amount</option>
@@ -516,6 +512,10 @@
                             <option value="PERCENTAGE_OF_TAXABLE">Percentage of Taxable</option>
                             <option value="FORMULA">Formula</option>
                         </select>
+                    </div>
+                    <div id="editDeductionAmountField">
+                        <label class="block text-sm font-medium mb-2">Amount *</label>
+                        <input name="amount" type="number" step="0.01" min="0" id="editDeductionAmount" class="form-input" required>
                     </div>
                     <div id="editDeductionPercentageField" class="field-dependent hidden">
                         <label class="block text-sm font-medium mb-2">Percentage Rate (%)</label>
@@ -553,15 +553,12 @@
         </div>
     </div>
 
-    <!-- Modal JavaScript functions (updated) -->
+    <!-- Modal JavaScript functions (updated to control amount field visibility) -->
     <script>
-        // Open modal (existing, but also ensure fields are reset for add modals)
         function openModal(modalId) {
             document.getElementById(modalId).classList.remove('hidden');
-            // If it's an add modal, generate code and reset conditional fields
             if (modalId === 'addAllowanceModal') {
                 generateAndSetCode('addAllowanceCode', 'ALL');
-                // Reset calculation type to default FIXED_AMOUNT and hide conditional fields
                 const select = document.querySelector('#addAllowanceModal select[name="calculationType"]');
                 if (select) {
                     select.value = 'FIXED_AMOUNT';
@@ -590,7 +587,6 @@
             return true;
         }
 
-        // Generate random code for add modals
         function generateAndSetCode(inputId, prefix) {
             const input = document.getElementById(inputId);
             if (input) {
@@ -599,30 +595,44 @@
             }
         }
 
-        // Toggle percentage/formula fields based on calculation type
+        // Enhanced toggle: controls amount field, percentage field, formula field
         function toggleCalculationFields(select, prefix) {
             const value = select.value;
+            const amountField = document.getElementById(prefix + 'AmountField');
             const percentageField = document.getElementById(prefix + 'PercentageField');
             const formulaField = document.getElementById(prefix + 'FormulaField');
 
-            // Hide both first
+            // Hide all conditional fields first
             if (percentageField) percentageField.classList.add('hidden');
             if (formulaField) formulaField.classList.add('hidden');
 
-            // Show relevant field
-            if (value.startsWith('PERCENTAGE')) {
-                if (percentageField) percentageField.classList.remove('hidden');
-            } else if (value === 'FORMULA') {
-                if (formulaField) formulaField.classList.remove('hidden');
+            if (value === 'FIXED_AMOUNT') {
+                // Show amount field, ensure input is required
+                if (amountField) {
+                    amountField.classList.remove('hidden');
+                    const amountInput = amountField.querySelector('input');
+                    if (amountInput) amountInput.required = true;
+                }
+                // Percentage & formula remain hidden
+            } else {
+                // Hide amount field, remove required attribute if present
+                if (amountField) {
+                    amountField.classList.add('hidden');
+                    const amountInput = amountField.querySelector('input');
+                    if (amountInput) amountInput.required = false;
+                }
+                // Show appropriate field for percentage or formula
+                if (value.startsWith('PERCENTAGE')) {
+                    if (percentageField) percentageField.classList.remove('hidden');
+                } else if (value === 'FORMULA') {
+                    if (formulaField) formulaField.classList.remove('hidden');
+                }
             }
         }
 
-        // Edit functions: populate modal from the globally available arrays
         function editAllowance(id) {
             const allowance = allowances.find(a => a.id === id);
             if (!allowance) return;
-
-            // Populate fields
             document.getElementById('editAllowanceId').value = allowance.id;
             document.getElementById('editAllowanceCode').value = allowance.code;
             document.getElementById('editAllowanceName').value = allowance.name;
@@ -633,19 +643,14 @@
             document.getElementById('editAllowanceProratable').checked = allowance.proratable || false;
             document.getElementById('editAllowanceTaxable').checked = allowance.taxable || false;
             document.getElementById('editAllowanceStatus').value = allowance.status || 'ACTIVE';
-
-            // Trigger toggle to show correct conditional fields
             const select = document.getElementById('editAllowanceCalcType');
             toggleCalculationFields(select, 'editAllowance');
-
-            // Open modal
             openModal('editAllowanceModal');
         }
 
         function editDeduction(id) {
             const deduction = deductions.find(d => d.id === id);
             if (!deduction) return;
-
             document.getElementById('editDeductionId').value = deduction.id;
             document.getElementById('editDeductionCode').value = deduction.code;
             document.getElementById('editDeductionName').value = deduction.name;
@@ -656,16 +661,12 @@
             document.getElementById('editDeductionProratable').checked = deduction.proratable || false;
             document.getElementById('editDeductionStatutory').checked = deduction.statutory || false;
             document.getElementById('editDeductionStatus').value = deduction.status || 'ACTIVE';
-
             const select = document.getElementById('editDeductionCalcType');
             toggleCalculationFields(select, 'editDeduction');
-
             openModal('editDeductionModal');
         }
 
-        // Dummy toggle functions for status (to be implemented)
         function toggleAllowanceStatus(id) {
-            // You can implement AJAX call or form submission
             alert('Toggle allowance status for ID: ' + id);
         }
 

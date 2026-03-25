@@ -100,7 +100,7 @@ public class SetupServiceImpl implements SetupService {
                     JobStep step = new JobStep();
                     step.setName(stepCommand.getStepName());
                     step.setBasicSalary(stepCommand.getBasicSalary());
-                    step.setGrossSalary(new BigDecimal(100000.00));
+                    step.setGrossSalary(stepCommand.getGrossSalary());
                     step.setDepartment(department);
                     step.setJobGrade(savedGrade);
                     return jobStepRepository.save(step);
@@ -146,6 +146,7 @@ public class SetupServiceImpl implements SetupService {
                                                                 .id(step.getId())
                                                                 .name(step.getName())
                                                                 .basicSalary(step.getBasicSalary())
+                                                                .grossSalary(step.getGrossSalary())
                                                                 .build()
                                                 )
                                                 .toList()

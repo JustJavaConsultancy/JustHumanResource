@@ -24,5 +24,6 @@ public class JobGradeResponseDTO {
         private Long id;
         private String name;
         private BigDecimal basicSalary;
+        private BigDecimal grossSalary;
     }
 }
