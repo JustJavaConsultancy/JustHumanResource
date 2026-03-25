@@ -180,6 +180,10 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
     public List<Allowance> getActiveAllowances() {
         return allowanceRepository.findByStatus(RecordStatus.ACTIVE);
     }
+//    @Override
+//    public List<Allowance> findAllowanceByID(){
+//        return allowanceRepository.findByStatus(RecordStatus.ACTIVE);
+//    }
 
     /* =========================
      * DEDUCTIONS
@@ -321,6 +325,16 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
         }
 
         return response;
+    }
+    @Override
+    public List<EmployeeAllowanceResponse> getAllowancesForEmployee(Long employeeId) {
+        List<EmployeeAllowance> allowances = employeeAllowanceRepository.findByEmployeeId(employeeId);
+        return employeeAllowanceMapper.toResponseList(allowances);
+    }
+    @Override
+    public List<EmployeeDeductionResponse> getDeductionsForEmployee(Long employeeId){
+        List<EmployeeDeduction> deductions = employeeDeductionRepository.findByEmployeeId(employeeId);
+        return employeeDeductionMapper.toResponseList(deductions);
     }
     @Override
     @Transactional

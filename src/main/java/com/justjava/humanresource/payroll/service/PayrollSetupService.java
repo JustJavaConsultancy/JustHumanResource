@@ -60,11 +60,12 @@ public interface PayrollSetupService {
             Long employeeId,
             List<AllowanceAttachmentRequest> requests
     );
-
+    List<EmployeeAllowanceResponse> getAllowancesForEmployee(Long employeeId);
     List<EmployeeDeductionResponse> addDeductionsToEmployee(
             Long employeeId,
             List<DeductionAttachmentRequest> requests
     );
+    List<EmployeeDeductionResponse> getDeductionsForEmployee(Long employeeId);
 
     List<PayGroup>getAllPayGroups();
 

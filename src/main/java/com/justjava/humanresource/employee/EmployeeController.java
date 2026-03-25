@@ -20,8 +20,7 @@ import com.justjava.humanresource.kpi.service.KpiMeasurementService;
 import com.justjava.humanresource.onboarding.dto.StartEmployeeOnboardingCommand;
 import com.justjava.humanresource.onboarding.service.EmployeeOnboardingService;
 import com.justjava.humanresource.payroll.dto.PayrollRunDTO;
-import com.justjava.humanresource.payroll.entity.PaySlipDTO;
-import com.justjava.humanresource.payroll.entity.PayrollRun;
+import com.justjava.humanresource.payroll.entity.*;
 import com.justjava.humanresource.payroll.service.PaySlipService;
 import com.justjava.humanresource.payroll.service.PayrollRunService;
 import com.justjava.humanresource.payroll.service.PayrollSetupService;
@@ -41,8 +40,8 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Controller
-
 public class EmployeeController {
+
     @Autowired
     AuthenticationManager authenticationManager;
 
@@ -79,230 +78,312 @@ public class EmployeeController {
     @Autowired
     PaySlipService paySlipService;
 
+    // ─────────────────────────────────────────────────────────────────────────
+    //  EMPLOYEES PAGE
+    // ─────────────────────────────────────────────────────────────────────────
+
     @GetMapping("/employees")
     public String getEmployees(Model model) {
         List<Department> departments = setupService.getAllDepartments();
         List<PayGroup> payGroups = payrollSetupService.getAllPayGroups();
         List<JobGradeResponseDTO> jobGrades = setupService.getAllJobGrades();
-        jobGrades.forEach(
-                jobGrade -> System.out.println("Job Grade: " + jobGrade.getSteps() + ", Description: " + jobGrade.getId())
-        );
+        jobGrades.forEach(g ->
+                System.out.println("Job Grade: " + g.getSteps() + ", Description: " + g.getId()));
+
         List<Employee> employees = employeeOnboardingService.getAllOnboardings();
-        employees.forEach(
-                employee -> System.out.println("Employee: " + employee.getFirstName() + " " + employee.getEmploymentStatus() + ", Department: " + employee.getDepartment().getName())
-        );
-        model.addAttribute("employees", employees);
-        model.addAttribute("jobGrades", jobGrades);
+        employees.forEach(e ->
+                System.out.println("Employee: " + e.getFirstName() + " " + e.getEmploymentStatus()
+                        + ", Department: " + e.getDepartment().getName()));
+
+        List<Deduction> deductions = payrollSetupService.getActiveDeductions();
+        List<Allowance> allowances  = payrollSetupService.getActiveAllowances();
+
+        model.addAttribute("deductions",  deductions);
+        model.addAttribute("allowances",  allowances);
+        model.addAttribute("employees",   employees);
+        model.addAttribute("jobGrades",   jobGrades);
         model.addAttribute("departments", departments);
-        model.addAttribute("payGroups", payGroups);
-        model.addAttribute("title","Employee Management");
-        model.addAttribute("subTitle","Manage employee records, payroll, and performance data");
+        model.addAttribute("payGroups",   payGroups);
+        model.addAttribute("title",       "Employee Management");
+        model.addAttribute("subTitle",    "Manage employee records, payroll, and performance data");
         return "employees/main";
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  ONBOARDING / CREATE
+    // ─────────────────────────────────────────────────────────────────────────
+
     @PostMapping("/onboarding")
     public String startOnboarding(
             StartEmployeeOnboardingCommand command,
             @RequestParam(defaultValue = "humanResource") String initiatedBy) {
-        EmployeeOnboardingResponseDTO employeeOnboardingResponseDTO=employeeOnboardingService.startOnboarding(
-                command,
-                initiatedBy
-        );
-        employeeService.changeEmploymentStatus(
-                employeeOnboardingResponseDTO.getId(),
-                EmploymentStatus.ACTIVE, LocalDate.now());
 
+        EmployeeOnboardingResponseDTO dto =
+                employeeOnboardingService.startOnboarding(command, initiatedBy);
+
+        employeeService.changeEmploymentStatus(dto.getId(), EmploymentStatus.ACTIVE, LocalDate.now());
         return "redirect:/employees";
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  UPDATE EMPLOYEE
+    // ─────────────────────────────────────────────────────────────────────────
+
     @PostMapping("/employees/{id}")
-    @ResponseBody  // ← add this
-    public ResponseEntity<Void> updateEmployee(@PathVariable Long id, @RequestBody EmployeeDTO incomingEmployee) {
+    @ResponseBody
+    public ResponseEntity<Void> updateEmployee(@PathVariable Long id,
+                                               @RequestBody EmployeeDTO incomingEmployee) {
         System.out.println("Received update for employee ID: " + id + " with data: " + incomingEmployee);
         employeeOnboardingService.updateEmployee(id, incomingEmployee);
         System.out.println("Employee updated successfully for ID: " + id);
-        return ResponseEntity.ok().build(); // ← return 200 OK, let JS handle the reload
+        return ResponseEntity.ok().build();
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  PAY ITEMS  – GET existing assignments for one employee
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Returns the allowances and deductions currently assigned to an employee
+     * so the Pay-Items modal can pre-tick the right rows.
+     *
+     * Response shape:
+     * {
+     *   "allowances": [ ... EmployeeAllowanceResponse objects ... ],
+     *   "deductions": [ ... EmployeeDeductionResponse objects ... ]
+     * }
+     */
+    @GetMapping("/employees/{id}/pay-items")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> getEmployeePayItems(@PathVariable Long id) {
+        List<EmployeeAllowanceResponse> allowances =
+                payrollSetupService.getAllowancesForEmployee(id);
+        List<EmployeeDeductionResponse> deductions =
+                payrollSetupService.getDeductionsForEmployee(id);
+
+        return ResponseEntity.ok(Map.of(
+                "allowances", allowances,
+                "deductions", deductions
+        ));
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  PAY ITEMS  – Attach allowances to an employee
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Replaces / adds the allowance assignments for an employee.
+     *
+     * Request body: List of { "allowanceId": <Long>, ... }
+     */
+    @PostMapping("/setup/employee/{employeeId}/allowances")
+    @ResponseBody
+    public ResponseEntity<List<EmployeeAllowanceResponse>> attachAllowancesToEmployee(
+            @PathVariable Long employeeId,
+            @RequestBody List<AllowanceAttachmentRequest> requests) {
+
+        List<EmployeeAllowanceResponse> result =
+                payrollSetupService.addAllowancesToEmployee(employeeId, requests);
+        return ResponseEntity.ok(result);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  PAY ITEMS  – Attach deductions to an employee
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Replaces / adds the deduction assignments for an employee.
+     *
+     * Request body: List of { "deductionId": <Long>, ... }
+     */
+    @PostMapping("/setup/employee/{employeeId}/deductions")
+    @ResponseBody
+    public ResponseEntity<List<EmployeeDeductionResponse>> attachDeductionsToEmployee(
+            @PathVariable Long employeeId,
+            @RequestBody List<DeductionAttachmentRequest> requests) {
+        System.out.println("Received request to attach deductions to employee ID: " + employeeId);
+        List<EmployeeDeductionResponse> result =
+                payrollSetupService.addDeductionsToEmployee(employeeId, requests);
+        return ResponseEntity.ok(result);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  EMPLOYEE DASHBOARD
+    // ─────────────────────────────────────────────────────────────────────────
+
     @GetMapping("/employee/dashboard")
     public String getEmployeeDashboard(Model model) {
         String email = (String) authenticationManager.get("email");
-        // implement your own logic
         Employee loginEmployee = employeeService.getByEmail(email);
         Employee employee = employeeService.getEmployeeWithBankDetails(loginEmployee.getId());
-        PayrollRunDTO currentPayrollRun = payrollRunService.getEmployeePayrollRun(loginEmployee.getId(),1L);
+        PayrollRunDTO currentPayrollRun =
+                payrollRunService.getEmployeePayrollRun(loginEmployee.getId(), 1L);
+
         System.out.println("Latest Pay Slip: " + currentPayrollRun);
         System.out.println("Logged in employee: " + loginEmployee);
-        List<PaySlipDTO> previousPaySlip = paySlipService.getPaySlipsByEmployee(loginEmployee.getId());
-        // 🔹 COMPLETED PROCESSES
+
+        List<PaySlipDTO> previousPaySlip =
+                paySlipService.getPaySlipsByEmployee(loginEmployee.getId());
+
         List<HistoricProcessInstance> completedProcesses =
-                flowableTaskService.getCompletedProcessInstancesForAssignee(
-                        "employeeAppraisalProcess"
-                );
+                flowableTaskService.getCompletedProcessInstancesForAssignee("employeeAppraisalProcess");
 
-        // 🔹 ACTIVE TASKS
-        List<FlowableTaskDTO> tasks =
-                flowableTaskService.getTasksForAssignee(
-                        String.valueOf(loginEmployee.getId()),
-                        "employeeAppraisalProcess"
-                );
+        List<FlowableTaskDTO> tasks = flowableTaskService.getTasksForAssignee(
+                String.valueOf(loginEmployee.getId()), "employeeAppraisalProcess");
+
         List<AppraisalTaskViewDTO> enrichedAppraisals = new ArrayList<>();
-
         for (FlowableTaskDTO task : tasks) {
-
             Map<String, Object> variables = task.getVariables();
-
             if (variables.containsKey("appraisalId")) {
-
-                Long appraisalId =
-                        Long.valueOf(variables.get("appraisalId").toString());
-
-                EmployeeAppraisal appraisal =
-                        appraisalService.findAppraisalById(appraisalId);
-                enrichedAppraisals.add(
-                        new AppraisalTaskViewDTO(task, appraisal)
-                );
+                Long appraisalId = Long.valueOf(variables.get("appraisalId").toString());
+                EmployeeAppraisal appraisal = appraisalService.findAppraisalById(appraisalId);
+                enrichedAppraisals.add(new AppraisalTaskViewDTO(task, appraisal));
             }
         }
-        enrichedAppraisals.forEach(
-                appraisal -> System.out.println("Task: " + appraisal.getTask()+ ", Appraisal: " + appraisal.getAppraisal())
-        );
-        List<EmployeeAppraisal> employeeAppraisals = appraisalService.findAppraisalByEmployeeID(loginEmployee.getId());
-        // existing
-        model.addAttribute("tasks", tasks);
-        model.addAttribute("employeeAppraisals", employeeAppraisals);
+        enrichedAppraisals.forEach(a ->
+                System.out.println("Task: " + a.getTask() + ", Appraisal: " + a.getAppraisal()));
 
-// add this
+        List<EmployeeAppraisal> employeeAppraisals =
+                appraisalService.findAppraisalByEmployeeID(loginEmployee.getId());
+
+        model.addAttribute("tasks",            tasks);
+        model.addAttribute("employeeAppraisals", employeeAppraisals);
         model.addAttribute("appraisalMap",
                 employeeAppraisals.stream()
-                        .collect(Collectors.toMap(EmployeeAppraisal::getId, ea -> ea))
-        );
+                        .collect(Collectors.toMap(EmployeeAppraisal::getId, ea -> ea)));
         model.addAttribute("previousPaySlip", previousPaySlip);
-        model.addAttribute("employee", employee);
-        model.addAttribute("latestPaySlip", currentPayrollRun);
-        model.addAttribute("title", "Employee Dashboard");
-        model.addAttribute("subTitle", "View your profile, performance metrics, and payroll information");
+        model.addAttribute("employee",        employee);
+        model.addAttribute("latestPaySlip",   currentPayrollRun);
+        model.addAttribute("title",           "Employee Dashboard");
+        model.addAttribute("subTitle",
+                "View your profile, performance metrics, and payroll information");
         return "employees/dashboard";
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  EMPLOYEE PROFILE
+    // ─────────────────────────────────────────────────────────────────────────
+
     @GetMapping("employee/profile")
     public String getEmployeeProfile(Model model) {
         String email = (String) authenticationManager.get("email");
-        // implement your own logic
         Employee loginEmployee = employeeService.getByEmail(email);
         Employee employee = employeeService.getEmployeeWithBankDetails(loginEmployee.getId());
-        PayrollRun currentPayrollRun = paySlipService.getEmployeeCurrentPayrollRun(1L, loginEmployee.getId());
-        System.out.println("Latest Pay Slip: " + currentPayrollRun);
-        System.out.println("Logged in employee: " + loginEmployee);
-        model.addAttribute("employee", employee);
+        PayrollRun currentPayrollRun =
+                paySlipService.getEmployeeCurrentPayrollRun(1L, loginEmployee.getId());
+
+        model.addAttribute("employee",     employee);
         model.addAttribute("latestPaySlip", currentPayrollRun);
-        model.addAttribute("title", "Employee Profile");
-        model.addAttribute("subTitle", "View and update your personal information, job details, and performance data");
+        model.addAttribute("title",        "Employee Profile");
+        model.addAttribute("subTitle",
+                "View and update your personal information, job details, and performance data");
         return "employees/profile";
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  MISC EMPLOYEE PAGES
+    // ─────────────────────────────────────────────────────────────────────────
+
     @GetMapping("employee/promotions")
-    public String getPromotions(Model model){
-        model.addAttribute("title", "Promotions");
+    public String getPromotions(Model model) {
+        model.addAttribute("title",    "Promotions");
         model.addAttribute("subTitle", "View your promotion history and upcoming opportunities");
         return "employees/promotions";
     }
+
     @GetMapping("employee/payroll")
-    public String getPayroll(Model model){
+    public String getPayroll(Model model) {
         String email = (String) authenticationManager.get("email");
-        // implement your own logic
         Employee loginEmployee = employeeService.getByEmail(email);
-        PayrollRunDTO latestPaySlip = payrollRunService.getEmployeePayrollRun(loginEmployee.getId(),1L);
-
-        List<PaySlipDTO> previousPaySlip = paySlipService.getPaySlipsByEmployee(loginEmployee.getId());
+        PayrollRunDTO latestPaySlip =
+                payrollRunService.getEmployeePayrollRun(loginEmployee.getId(), 1L);
+        List<PaySlipDTO> previousPaySlip =
+                paySlipService.getPaySlipsByEmployee(loginEmployee.getId());
         Employee employee = employeeService.getEmployeeWithBankDetails(loginEmployee.getId());
-        System.out.println("Latest Pay Slip: " );
-        model.addAttribute("previousPaySlip", previousPaySlip);
-        model.addAttribute("latestPaySlip", latestPaySlip);
-        model.addAttribute("employee", employee);
-        model.addAttribute("title", "Payroll");
-        model.addAttribute("subTitle", "View your pay stubs, tax information, and benefits");
 
+        model.addAttribute("previousPaySlip", previousPaySlip);
+        model.addAttribute("latestPaySlip",   latestPaySlip);
+        model.addAttribute("employee",        employee);
+        model.addAttribute("title",           "Payroll");
+        model.addAttribute("subTitle",        "View your pay stubs, tax information, and benefits");
         return "employees/payroll";
     }
+
     @GetMapping("employee/leave")
-    public String getLeave(Model model){
-        model.addAttribute("title", "Leave Management");
-        model.addAttribute("subTitle", "View your leave balance, request time off, and track your leave history");
+    public String getLeave(Model model) {
+        model.addAttribute("title",    "Leave Management");
+        model.addAttribute("subTitle",
+                "View your leave balance, request time off, and track your leave history");
         return "employees/leave";
     }
+
     @GetMapping("employee/performance")
-    public String getPerformance(Model model){
+    public String getPerformance(Model model) {
         String email = (String) authenticationManager.get("email");
         Employee loginEmployee = employeeService.getByEmail(email);
-        // 🔹 COMPLETED PROCESSES
+
         List<HistoricProcessInstance> completedProcesses =
-                flowableTaskService.getCompletedProcessInstancesForAssignee(
-                        "employeeAppraisalProcess"
-                );
+                flowableTaskService.getCompletedProcessInstancesForAssignee("employeeAppraisalProcess");
 
-        // 🔹 ACTIVE TASKS
-        List<FlowableTaskDTO> tasks =
-                flowableTaskService.getTasksForAssignee(
-                        String.valueOf(loginEmployee.getId()),
-                        "employeeAppraisalProcess"
-                );
+        List<FlowableTaskDTO> tasks = flowableTaskService.getTasksForAssignee(
+                String.valueOf(loginEmployee.getId()), "employeeAppraisalProcess");
+
         List<AppraisalTaskViewDTO> enrichedAppraisals = new ArrayList<>();
-
         for (FlowableTaskDTO task : tasks) {
-
             Map<String, Object> variables = task.getVariables();
-
             if (variables.containsKey("appraisalId")) {
-
-                Long appraisalId =
-                        Long.valueOf(variables.get("appraisalId").toString());
-
-                EmployeeAppraisal appraisal =
-                        appraisalService.findAppraisalById(appraisalId);
-                enrichedAppraisals.add(
-                        new AppraisalTaskViewDTO(task, appraisal)
-                );
+                Long appraisalId = Long.valueOf(variables.get("appraisalId").toString());
+                EmployeeAppraisal appraisal = appraisalService.findAppraisalById(appraisalId);
+                enrichedAppraisals.add(new AppraisalTaskViewDTO(task, appraisal));
             }
         }
-        enrichedAppraisals.forEach(
-                appraisal -> System.out.println("Task: " + appraisal.getTask()+ ", Appraisal: " + appraisal.getAppraisal())
-        );
-        List<EmployeeAppraisal> employeeAppraisals = appraisalService.findAppraisalByEmployeeID(loginEmployee.getId());
-        // existing
-        model.addAttribute("tasks", tasks);
-        model.addAttribute("employeeAppraisals", employeeAppraisals);
+        enrichedAppraisals.forEach(a ->
+                System.out.println("Task: " + a.getTask() + ", Appraisal: " + a.getAppraisal()));
 
-// add this
+        List<EmployeeAppraisal> employeeAppraisals =
+                appraisalService.findAppraisalByEmployeeID(loginEmployee.getId());
+
+        model.addAttribute("tasks",            tasks);
+        model.addAttribute("employeeAppraisals", employeeAppraisals);
         model.addAttribute("appraisalMap",
                 employeeAppraisals.stream()
-                        .collect(Collectors.toMap(EmployeeAppraisal::getId, ea -> ea))
-        );
-        model.addAttribute("title", "Performance Management");
-        model.addAttribute("subTitle", "View your performance reviews, set goals, and track your progress");
+                        .collect(Collectors.toMap(EmployeeAppraisal::getId, ea -> ea)));
+        model.addAttribute("title",    "Performance Management");
+        model.addAttribute("subTitle",
+                "View your performance reviews, set goals, and track your progress");
         return "employees/kpi";
     }
+
     @PostMapping("/employee/self-review")
     public String submitSelfReview(@RequestParam String taskId,
                                    @RequestParam Map<String, Object> formParams) {
-        System.out.println("Finalizing appraisal with ID: " + taskId + " and form parameters: " + formParams);
+        System.out.println("Finalizing appraisal with ID: " + taskId
+                + " and form parameters: " + formParams);
         formParams.put("selfComplete", true);
-
-        flowableTaskService.completeTask(taskId,formParams);
-
+        flowableTaskService.completeTask(taskId, formParams);
         return "redirect:/employee/performance";
     }
+
     @GetMapping("employee/documents")
-    public String getDocuments(Model model){
-        model.addAttribute("title", "Document Management");
-        model.addAttribute("subTitle", "View and manage your important documents such as contracts, certifications, and performance reviews");
+    public String getDocuments(Model model) {
+        model.addAttribute("title",    "Document Management");
+        model.addAttribute("subTitle",
+                "View and manage your important documents such as contracts, certifications, and performance reviews");
         return "employees/documents";
     }
+
     @PostMapping("/add-emergency-contact")
     public String saveEmployee(EmployeeDTO dto) {
         employeeService.updateEmployee(dto.getId(), dto);
         return "redirect:/employee/profile";
     }
+
     @PostMapping("/update-personal-info")
     public String updatePersonalInfo(@ModelAttribute EmployeeDTO dto) {
         employeeService.updatePersonalInfo(dto.getId(), dto);
         return "redirect:/employee/profile";
     }
+
     @PostMapping("/update/bank-info")
     public String updateBankInfo(@ModelAttribute EmployeeDTO dto) {
         employeeService.updateBankDetails(dto.getId(), dto);

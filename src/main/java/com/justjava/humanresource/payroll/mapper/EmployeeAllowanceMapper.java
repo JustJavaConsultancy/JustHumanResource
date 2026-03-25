@@ -6,10 +6,14 @@ import com.justjava.humanresource.payroll.entity.EmployeeAllowanceResponse;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
+import java.util.List;
+
 @Mapper(componentModel = "spring")
 public interface EmployeeAllowanceMapper {
 
     @Mapping(source = "employee.id", target = "employeeId")
     @Mapping(source = "allowance.id", target = "allowanceId")
     EmployeeAllowanceResponse toResponse(EmployeeAllowance entity);
+
+    List<EmployeeAllowanceResponse> toResponseList(List<EmployeeAllowance> allowances);
 }
