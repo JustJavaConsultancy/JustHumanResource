@@ -7,7 +7,6 @@
     <meta charset="UTF-8">
     <title>Employee Management</title>
 
-
     <style>
         .status-badge {
             padding: 2px 8px;
@@ -16,33 +15,115 @@
             font-weight: 500;
         }
         .status-onboarding { background-color: #fef3c7; color: #92400e; }
-        .status-active { background-color: #dcfce7; color: #166534; }
-        .status-probation { background-color: #dbeafe; color: #1e40af; }
-        .status-on-leave { background-color: #f1f5f9; color: #64748b; }
+        .status-active     { background-color: #dcfce7; color: #166534; }
+        .status-probation  { background-color: #dbeafe; color: #1e40af; }
+        .status-on-leave   { background-color: #f1f5f9; color: #64748b; }
         .status-terminated { background-color: #fee2e2; color: #b91c1c; }
+
         .avatar-placeholder {
             width: 40px; height: 40px; border-radius: 50%;
             display: flex; align-items: center; justify-content: center;
             font-weight: bold; font-size: 14px;
         }
-        .modal-transition {
-            transition: opacity 0.2s ease-in-out;
-        }
+
+        .modal-transition { transition: opacity 0.2s ease-in-out; }
         .modal-content {
             transform: scale(0.95);
             transition: transform 0.2s ease-in-out;
         }
-        .modal.show .modal-content {
-            transform: scale(1);
-        }
+        .modal.show .modal-content { transform: scale(1); }
+
         .form-input:focus {
             border-color: #2563eb;
             box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
         }
+
+        /* ── TAB STYLES ─────────────────────────────── */
+        .tab-bar {
+            display: flex;
+            border-bottom: 2px solid #e5e7eb;
+            margin-bottom: 1.5rem;
+            gap: 0;
+        }
+
+        .dark .tab-bar { border-bottom-color: #374151; }
+
+        .tab-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 16px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #6b7280;
+            cursor: pointer;
+            border: none;
+            background: transparent;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            transition: color 0.15s, border-color 0.15s;
+            white-space: nowrap;
+        }
+
+        .tab-btn:hover { color: #2563eb; }
+
+        .tab-btn.active {
+            color: #2563eb;
+            border-bottom-color: #2563eb;
+        }
+
+        .dark .tab-btn { color: #9ca3af; }
+        .dark .tab-btn:hover { color: #60a5fa; }
+        .dark .tab-btn.active { color: #60a5fa; border-bottom-color: #60a5fa; }
+
+        .tab-btn .tab-icon {
+            width: 22px; height: 22px;
+            border-radius: 6px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.75rem;
+            background: #f3f4f6;
+            color: #6b7280;
+            transition: background 0.15s, color 0.15s;
+        }
+
+        .tab-btn.active .tab-icon {
+            background: #dbeafe;
+            color: #2563eb;
+        }
+
+        .dark .tab-btn .tab-icon { background: #374151; color: #9ca3af; }
+        .dark .tab-btn.active .tab-icon { background: #1e3a8a; color: #60a5fa; }
+
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+
+        /* ── SECTION DIVIDER ────────────────────────── */
+        .form-section-title {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #9ca3af;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .form-section-title::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #e5e7eb;
+        }
+
+        .dark .form-section-title { color: #6b7280; }
+        .dark .form-section-title::after { background: #374151; }
     </style>
 </head>
 <body>
 <main layout:fragment="content">
+
     <!-- Stats Cards -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6">
@@ -138,7 +219,7 @@
                     <th class="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee</th>
                     <th class="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email / Phone</th>
                     <th class="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
-                    <th class="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Job Grade & Step</th>
+                    <th class="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Job Grade &amp; Step</th>
                     <th class="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pay Group</th>
                     <th class="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                     <th class="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
@@ -160,52 +241,40 @@
                         data-job-step-id=${employee.jobStep != null ? employee.jobStep.id : ''},
                         data-pay-group-id=${employee.payGroup != null ? employee.payGroup.id : ''},
                         data-employment-status=${employee.employmentStatus},
-        data-nin-number=${employee.ninNumber},
-        data-bvn-number=${employee.bvnNumber},
-        data-nok-name=${employee.nextOfKinName},
-        data-nok-phone=${employee.nextOfKinPhoneNumber},
-        data-nok-email=${employee.nextOfKinEmail},
-        data-nok-address=${employee.nextOfKinAddress},
-        data-guarantor-name=${employee.guarantorName},
-        data-guarantor-phone=${employee.guarantorPhoneNumber},
-        data-guarantor-email=${employee.guarantorEmail},
-        data-guarantor-address=${employee.guarantorAddress},
-        data-guarantor-nin=${employee.guarantorNinNumber}
+                        data-nin-number=${employee.ninNumber},
+                        data-bvn-number=${employee.bvnNumber},
+                        data-nok-name=${employee.nextOfKinName},
+                        data-nok-phone=${employee.nextOfKinPhoneNumber},
+                        data-nok-email=${employee.nextOfKinEmail},
+                        data-nok-address=${employee.nextOfKinAddress},
+                        data-guarantor-name=${employee.guarantorName},
+                        data-guarantor-phone=${employee.guarantorPhoneNumber},
+                        data-guarantor-email=${employee.guarantorEmail},
+                        data-guarantor-address=${employee.guarantorAddress},
+                        data-guarantor-nin=${employee.guarantorNinNumber}
                     "
                     th:onclick="'viewEmployee(' + ${employee.id} + ')'">
 
                     <td class="px-4 md:px-6 py-4">
                         <div class="flex items-center">
                             <div class="avatar-placeholder bg-blue-100 text-blue-600"
-                                 th:text="${employee.firstName.substring(0,1) + employee.lastName.substring(0,1)}">
-                            </div>
+                                 th:text="${employee.firstName.substring(0,1) + employee.lastName.substring(0,1)}"></div>
                             <div class="ml-4">
-                                <div th:text="${employee.firstName + ' ' + employee.lastName}"
-                                     class="text-sm font-medium"></div>
-                                <div th:text="${'ID: ' + employee.id}"
-                                     class="text-xs text-gray-500"></div>
+                                <div th:text="${employee.firstName + ' ' + employee.lastName}" class="text-sm font-medium"></div>
+                                <div th:text="${'ID: ' + employee.id}" class="text-xs text-gray-500"></div>
                             </div>
                         </div>
                     </td>
-
                     <td class="px-4 md:px-6 py-4">
                         <div th:text="${employee.email}" class="text-sm"></div>
                         <div th:text="${employee.phoneNumber}" class="text-xs text-gray-500"></div>
                     </td>
-
-                    <td th:text="${employee.department != null ? employee.department.name : 'No Department'}"
-                        class="px-4 md:px-6 py-4"></td>
-
-                    <td th:text="${employee.jobStep != null ? employee.jobStep.jobGrade.name + ' - ' + employee.jobStep.name : 'Not Assigned'}"
-                        class="px-4 md:px-6 py-4"></td>
-
-                    <td th:text="${employee.payGroup != null ? employee.payGroup.name : 'Not Assigned'}"
-                        class="px-4 md:px-6 py-4"></td>
-
+                    <td th:text="${employee.department != null ? employee.department.name : 'No Department'}" class="px-4 md:px-6 py-4"></td>
+                    <td th:text="${employee.jobStep != null ? employee.jobStep.jobGrade.name + ' - ' + employee.jobStep.name : 'Not Assigned'}" class="px-4 md:px-6 py-4"></td>
+                    <td th:text="${employee.payGroup != null ? employee.payGroup.name : 'Not Assigned'}" class="px-4 md:px-6 py-4"></td>
                     <td class="px-4 md:px-6 py-4">
                         <span class="status-badge status-active">Active</span>
                     </td>
-
                     <td class="px-4 md:px-6 py-4">
                         <div class="flex space-x-2">
                             <button type="button"
@@ -222,28 +291,17 @@
                     <td colspan="7" class="px-6 py-16 text-center">
                         <div class="flex flex-col items-center justify-center space-y-4">
                             <div class="w-16 h-16 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700">
-                                <svg xmlns="http://www.w3.org/2000/svg"
-                                     class="h-8 w-8 text-gray-400"
-                                     fill="none"
-                                     viewBox="0 0 24 24"
-                                     stroke="currentColor">
-                                    <path stroke-linecap="round"
-                                          stroke-linejoin="round"
-                                          stroke-width="1.5"
-                                          d="M17 20h5V4H2v16h5m10 0V10m0 10l-4-4m4 4l4-4"/>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5V4H2v16h5m10 0V10m0 10l-4-4m4 4l4-4"/>
                                 </svg>
                             </div>
-                            <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-200">
-                                No Employees Found
-                            </h3>
+                            <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-200">No Employees Found</h3>
                             <p class="text-sm text-gray-500 dark:text-gray-400 max-w-sm">
-                                There are currently no employees in the system.
-                                Start by adding a new employee to begin managing payroll.
+                                There are currently no employees in the system. Start by adding a new employee to begin managing payroll.
                             </p>
                         </div>
                     </td>
                 </tr>
-
                 </tbody>
             </table>
         </div>
@@ -267,11 +325,14 @@
         </div>
     </div>
 
-    <!-- Add Employee Modal -->
+
+    <!-- ========== ADD EMPLOYEE MODAL ========== -->
     <div id="addEmployeeModal" class="fixed inset-0 z-50 hidden modal-transition" onclick="if(event.target === this) closeModal('addEmployeeModal')">
         <div class="modal-backdrop fixed inset-0 bg-black bg-opacity-50"></div>
         <div class="fixed inset-0 flex items-center justify-center p-4">
             <div class="modal-content bg-white dark:bg-gray-800 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
+
+                <!-- Modal Header -->
                 <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
                     <div class="flex items-center space-x-3">
                         <div class="p-2 bg-primary-100 dark:bg-primary-900/30 rounded-full">
@@ -287,20 +348,34 @@
                 <div class="p-6">
                     <form th:action="@{/onboarding}" method="post" onsubmit="disableSubmitButton(this)">
 
-                        <div class="mb-6">
-                            <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4 flex items-center">
-                                <span class="material-icons-round text-sm mr-2">person</span>
-                                Personal Information
-                            </h4>
+                        <!-- Tab Bar -->
+                        <div class="tab-bar">
+                            <button type="button" class="tab-btn active" onclick="switchTab('add', 'general', this)">
+                                <span class="tab-icon"><span class="material-icons-round" style="font-size:0.85rem">person</span></span>
+                                General
+                            </button>
+                            <button type="button" class="tab-btn" onclick="switchTab('add', 'identity', this)">
+                                <span class="tab-icon"><span class="material-icons-round" style="font-size:0.85rem">fingerprint</span></span>
+                                Identity
+                            </button>
+                            <button type="button" class="tab-btn" onclick="switchTab('add', 'kin', this)">
+                                <span class="tab-icon"><span class="material-icons-round" style="font-size:0.85rem">group</span></span>
+                                Next of Kin &amp; Guarantor
+                            </button>
+                        </div>
+
+                        <!-- TAB 1: General -->
+                        <div id="add-tab-general" class="tab-panel active">
+                            <p class="form-section-title">Personal</p>
                             <div class="grid grid-cols-2 gap-4 mb-4">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                         First Name <span class="text-red-500">*</span>
                                     </label>
                                     <div class="relative">
-                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
-                    <span class="material-icons-round text-sm">badge</span>
-                </span>
+                                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                                            <span class="material-icons-round text-sm">badge</span>
+                                        </span>
                                         <input type="text" name="firstName" class="form-input pl-10" placeholder="John" required>
                                     </div>
                                 </div>
@@ -309,45 +384,16 @@
                                         Last Name <span class="text-red-500">*</span>
                                     </label>
                                     <div class="relative">
-                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
-                    <span class="material-icons-round text-sm">badge</span>
-                </span>
+                                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                                            <span class="material-icons-round text-sm">badge</span>
+                                        </span>
                                         <input type="text" name="lastName" class="form-input pl-10" placeholder="Doe" required>
                                     </div>
                                 </div>
                             </div>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                        NIN Number
-                                    </label>
-                                    <div class="relative">
-                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
-                    <span class="material-icons-round text-sm">fingerprint</span>
-                </span>
-                                        <input type="text" name="ninNumber" class="form-input pl-10" placeholder="11 digits" pattern="\d{11}" maxlength="11">
-                                    </div>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                        BVN Number
-                                    </label>
-                                    <div class="relative">
-                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
-                    <span class="material-icons-round text-sm">account_balance_wallet</span>
-                </span>
-                                        <input type="text" name="bvnNumber" class="form-input pl-10" placeholder="11 digits" pattern="\d{11}" maxlength="11">
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
 
-                        <div class="mb-6">
-                            <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4 flex items-center">
-                                <span class="material-icons-round text-sm mr-2">contact_mail</span>
-                                Contact Information
-                            </h4>
-                            <div class="space-y-4">
+                            <p class="form-section-title">Contact</p>
+                            <div class="space-y-4 mb-4">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                         Email Address <span class="text-red-500">*</span>
@@ -360,93 +406,17 @@
                                     </div>
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                        Phone Number
-                                    </label>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone Number</label>
                                     <div class="relative">
                                         <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
                                             <span class="material-icons-round text-sm">phone</span>
                                         </span>
-                                        <input type="text" name="phoneNumber" class="form-input pl-10" placeholder="+1 (555) 000-0000">
+                                        <input type="text" name="phoneNumber" class="form-input pl-10" placeholder="+234 800 000 0000">
                                     </div>
                                 </div>
                             </div>
-                        </div>
 
-
-                        <div class="mb-6">
-                            <button type="button" onclick="toggleSection('nokFields')" class="w-full flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 transition-colors">
-        <span class="text-sm font-bold text-gray-700 dark:text-gray-300 flex items-center">
-            <span class="material-icons-round text-sm mr-2">family_restroom</span>
-            NEXT OF KIN DETAILS
-        </span>
-                                <span id="nokFieldsIcon" class="material-icons-round text-gray-400 transition-transform">expand_more</span>
-                            </button>
-
-                            <div id="nokFields" class="hidden mt-4 space-y-4 px-1">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
-                                    <input type="text" name="nextOfKinName" class="form-input" placeholder="Next of Kin Full Name">
-                                </div>
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone Number</label>
-                                        <input type="text" name="nextOfKinPhoneNumber" class="form-input" placeholder="Phone Number">
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email Address</label>
-                                        <input type="email" name="nextOfKinEmail" class="form-input" placeholder="Email Address">
-                                    </div>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Residential Address</label>
-                                    <input type="text" name="nextOfKinAddress" class="form-input" placeholder="Residential Address">
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="mb-6">
-                            <button type="button" onclick="toggleSection('guarantorFields')" class="w-full flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 transition-colors">
-        <span class="text-sm font-bold text-gray-700 dark:text-gray-300 flex items-center">
-            <span class="material-icons-round text-sm mr-2">verified_user</span>
-            GUARANTOR DETAILS
-        </span>
-                                <span id="guarantorFieldsIcon" class="material-icons-round text-gray-400 transition-transform">expand_more</span>
-                            </button>
-
-                            <div id="guarantorFields" class="hidden mt-4 space-y-4 px-1">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
-                                    <input type="text" name="guarantorName" class="form-input" placeholder="Guarantor Full Name">
-                                </div>
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone Number</label>
-                                        <input type="text" name="guarantorPhoneNumber" class="form-input" placeholder="Phone Number">
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email Address</label>
-                                        <input type="email" name="guarantorEmail" class="form-input" placeholder="Email Address">
-                                    </div>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Residential Address</label>
-                                    <input type="text" name="guarantorAddress" class="form-input" placeholder="Guarantor Address">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">NIN Number</label>
-                                    <input type="text" name="guarantorNinNumber" class="form-input" placeholder="Guarantor NIN (11 digits)" pattern="\d{11}" maxlength="11">
-                                </div>
-                            </div>
-                        </div>
-
-
-
-                        <div class="mb-6">
-                            <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4 flex items-center">
-                                <span class="material-icons-round text-sm mr-2">work</span>
-                                Employment Details
-                            </h4>
+                            <p class="form-section-title">Employment</p>
                             <div class="space-y-4">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -495,9 +465,7 @@
                                             <option value="">Select Job Step</option>
                                         </select>
                                     </div>
-                                    <p class="text-xs text-gray-500 mt-1">
-                                        Select a job grade first to see available steps
-                                    </p>
+                                    <p class="text-xs text-gray-500 mt-1">Select a job grade first to see available steps</p>
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -511,11 +479,98 @@
                             </div>
                         </div>
 
-                        <div class="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-                            <button type="button" onclick="closeModal('addEmployeeModal')" class="px-5 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                        <!-- TAB 2: Identity -->
+                        <div id="add-tab-identity" class="tab-panel">
+                            <p class="form-section-title">Identity Numbers</p>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">NIN Number</label>
+                                    <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                                            <span class="material-icons-round text-sm">fingerprint</span>
+                                        </span>
+                                        <input type="text" name="ninNumber" class="form-input pl-10" placeholder="11 digits"
+                                               pattern="\d{11}" maxlength="11"
+                                               oninput="this.value=this.value.replace(/\D/g,'').slice(0,11)">
+                                    </div>
+                                    <p class="text-xs text-gray-400 mt-1">National Identification Number</p>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">BVN Number</label>
+                                    <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                                            <span class="material-icons-round text-sm">account_balance_wallet</span>
+                                        </span>
+                                        <input type="text" name="bvnNumber" class="form-input pl-10" placeholder="11 digits"
+                                               pattern="\d{11}" maxlength="11"
+                                               oninput="this.value=this.value.replace(/\D/g,'').slice(0,11)">
+                                    </div>
+                                    <p class="text-xs text-gray-400 mt-1">Bank Verification Number</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- TAB 3: Next of Kin & Guarantor -->
+                        <div id="add-tab-kin" class="tab-panel">
+                            <p class="form-section-title">Next of Kin</p>
+                            <div class="space-y-4 mb-6">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
+                                    <input type="text" name="nextOfKinName" class="form-input" placeholder="Full Name">
+                                </div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone Number</label>
+                                        <input type="text" name="nextOfKinPhoneNumber" class="form-input" placeholder="Phone Number">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email Address</label>
+                                        <input type="email" name="nextOfKinEmail" class="form-input" placeholder="Email Address">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Residential Address</label>
+                                    <input type="text" name="nextOfKinAddress" class="form-input" placeholder="Residential Address">
+                                </div>
+                            </div>
+
+                            <p class="form-section-title">Guarantor</p>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
+                                    <input type="text" name="guarantorName" class="form-input" placeholder="Guarantor Full Name">
+                                </div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone Number</label>
+                                        <input type="text" name="guarantorPhoneNumber" class="form-input" placeholder="Phone Number">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email Address</label>
+                                        <input type="email" name="guarantorEmail" class="form-input" placeholder="Email Address">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Residential Address</label>
+                                    <input type="text" name="guarantorAddress" class="form-input" placeholder="Guarantor Address">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">NIN Number</label>
+                                    <input type="text" name="guarantorNinNumber" class="form-input"
+                                           placeholder="Guarantor NIN (11 digits)" pattern="\d{11}" maxlength="11"
+                                           oninput="this.value=this.value.replace(/\D/g,'').slice(0,11)">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Footer Buttons (always visible) -->
+                        <div class="flex justify-end space-x-3 pt-5 mt-5 border-t border-gray-200 dark:border-gray-700">
+                            <button type="button" onclick="closeModal('addEmployeeModal')"
+                                    class="px-5 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                                 Cancel
                             </button>
-                            <button type="submit" class="px-5 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors shadow-sm hover:shadow flex items-center space-x-1">
+                            <button type="submit"
+                                    class="px-5 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors shadow-sm hover:shadow flex items-center space-x-1">
                                 <span class="material-icons-round text-sm">save</span>
                                 <span>Add Employee</span>
                             </button>
@@ -526,11 +581,14 @@
         </div>
     </div>
 
+
     <!-- ========== EDIT EMPLOYEE MODAL ========== -->
     <div id="editEmployeeModal" class="fixed inset-0 z-50 hidden modal-transition" onclick="if(event.target === this) closeModal('editEmployeeModal')">
         <div class="modal-backdrop fixed inset-0 bg-black bg-opacity-50"></div>
         <div class="fixed inset-0 flex items-center justify-center p-4">
             <div class="modal-content bg-white dark:bg-gray-800 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
+
+                <!-- Modal Header -->
                 <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
                     <div class="flex items-center space-x-3">
                         <div class="p-2 bg-green-100 dark:bg-green-900/30 rounded-full">
@@ -547,13 +605,26 @@
                     <form id="editEmployeeForm" onsubmit="return false;">
                         <input type="hidden" id="editEmployeeId" name="id">
 
-                        <!-- Personal Information -->
-                        <div class="mb-6">
-                            <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4 flex items-center">
-                                <span class="material-icons-round text-sm mr-2">person</span>
-                                Personal Information
-                            </h4>
-                            <div class="grid grid-cols-2 gap-4">
+                        <!-- Tab Bar -->
+                        <div class="tab-bar">
+                            <button type="button" class="tab-btn active" onclick="switchTab('edit', 'general', this)">
+                                <span class="tab-icon"><span class="material-icons-round" style="font-size:0.85rem">person</span></span>
+                                General
+                            </button>
+                            <button type="button" class="tab-btn" onclick="switchTab('edit', 'identity', this)">
+                                <span class="tab-icon"><span class="material-icons-round" style="font-size:0.85rem">fingerprint</span></span>
+                                Identity
+                            </button>
+                            <button type="button" class="tab-btn" onclick="switchTab('edit', 'kin', this)">
+                                <span class="tab-icon"><span class="material-icons-round" style="font-size:0.85rem">group</span></span>
+                                Next of Kin &amp; Guarantor
+                            </button>
+                        </div>
+
+                        <!-- TAB 1: General -->
+                        <div id="edit-tab-general" class="tab-panel active">
+                            <p class="form-section-title">Personal</p>
+                            <div class="grid grid-cols-2 gap-4 mb-4">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                         First Name <span class="text-red-500">*</span>
@@ -578,30 +649,8 @@
                                 </div>
                             </div>
 
-                            <div class="grid grid-cols-2 gap-4 mt-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">NIN Number</label>
-                                    <input type="text" id="editNinNumber" name="ninNumber" class="form-input"
-                                           placeholder="11 digits" pattern="\d{11}" maxlength="11"
-                                           oninput="this.value=this.value.replace(/\D/g,'').slice(0,11)">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">BVN Number</label>
-                                    <input type="text" id="editBvnNumber" name="bvnNumber" class="form-input"
-                                           placeholder="11 digits" pattern="\d{11}" maxlength="11"
-                                           oninput="this.value=this.value.replace(/\D/g,'').slice(0,11)">
-                                </div>
-                            </div>
-
-                        </div>
-
-                        <!-- Contact Information -->
-                        <div class="mb-6">
-                            <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4 flex items-center">
-                                <span class="material-icons-round text-sm mr-2">contact_mail</span>
-                                Contact Information
-                            </h4>
-                            <div class="space-y-4">
+                            <p class="form-section-title">Contact</p>
+                            <div class="space-y-4 mb-4">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                         Email Address <span class="text-red-500">*</span>
@@ -614,85 +663,17 @@
                                     </div>
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                        Phone Number
-                                    </label>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone Number</label>
                                     <div class="relative">
                                         <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
                                             <span class="material-icons-round text-sm">phone</span>
                                         </span>
-                                        <input type="text" id="editPhoneNumber" name="phoneNumber" class="form-input pl-10" placeholder="+1 (555) 000-0000">
+                                        <input type="text" id="editPhoneNumber" name="phoneNumber" class="form-input pl-10" placeholder="+234 800 000 0000">
                                     </div>
                                 </div>
                             </div>
-                        </div>
 
-
-                        <div class="mb-6 mt-6">
-                            <button type="button" onclick="toggleSection('editNokFields')" class="w-full flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                                <span class="text-sm font-bold text-gray-700 dark:text-gray-300">NEXT OF KIN DETAILS</span>
-                                <span id="editNokFieldsIcon" class="material-icons-round text-gray-400">expand_more</span>
-                            </button>
-                            <div id="editNokFields" class="hidden mt-4 space-y-4 px-1">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
-                                    <input type="text" id="editNextOfKinName" class="form-input" placeholder="Full Name">
-                                </div>
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone Number</label>
-                                        <input type="text" id="editNextOfKinPhoneNumber" class="form-input" placeholder="Phone">
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email Address</label>
-                                        <input type="email" id="editNextOfKinEmail" class="form-input" placeholder="Email">
-                                    </div>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Residential Address</label>
-                                    <input type="text" id="editNextOfKinAddress" class="form-input" placeholder="Address">
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="mb-6">
-                            <button type="button" onclick="toggleSection('editGuarantorFields')" class="w-full flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                                <span class="text-sm font-bold text-gray-700 dark:text-gray-300">GUARANTOR DETAILS</span>
-                                <span id="editGuarantorFieldsIcon" class="material-icons-round text-gray-400">expand_more</span>
-                            </button>
-                            <div id="editGuarantorFields" class="hidden mt-4 space-y-4 px-1">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
-                                    <input type="text" id="editGuarantorName" class="form-input" placeholder="Full Name">
-                                </div>
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone Number</label>
-                                        <input type="text" id="editGuarantorPhoneNumber" class="form-input" placeholder="Phone">
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email Address</label>
-                                        <input type="email" id="editGuarantorEmail" class="form-input" placeholder="Email">
-                                    </div>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Residential Address</label>
-                                    <input type="text" id="editGuarantorAddress" class="form-input" placeholder="Address">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">NIN Number</label>
-                                    <input type="text" id="editGuarantorNinNumber" class="form-input" placeholder="Guarantor NIN (11 digits)" pattern="\d{11}" maxlength="11" oninput="this.value=this.value.replace(/\D/g,'').slice(0,11)">
-                                </div>
-                            </div>
-                        </div>
-
-
-                        <!-- Employment Details -->
-                        <div class="mb-6">
-                            <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4 flex items-center">
-                                <span class="material-icons-round text-sm mr-2">work</span>
-                                Employment Details
-                            </h4>
+                            <p class="form-section-title">Employment</p>
                             <div class="space-y-4">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -741,9 +722,7 @@
                                             <option value="">Select Job Step</option>
                                         </select>
                                     </div>
-                                    <p class="text-xs text-gray-500 mt-1">
-                                        Select a job grade first to see available steps
-                                    </p>
+                                    <p class="text-xs text-gray-500 mt-1">Select a job grade first to see available steps</p>
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -757,11 +736,98 @@
                             </div>
                         </div>
 
-                        <div class="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-                            <button type="button" onclick="closeModal('editEmployeeModal')" class="px-5 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                        <!-- TAB 2: Identity -->
+                        <div id="edit-tab-identity" class="tab-panel">
+                            <p class="form-section-title">Identity Numbers</p>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">NIN Number</label>
+                                    <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                                            <span class="material-icons-round text-sm">fingerprint</span>
+                                        </span>
+                                        <input type="text" id="editNinNumber" name="ninNumber" class="form-input pl-10"
+                                               placeholder="11 digits" pattern="\d{11}" maxlength="11"
+                                               oninput="this.value=this.value.replace(/\D/g,'').slice(0,11)">
+                                    </div>
+                                    <p class="text-xs text-gray-400 mt-1">National Identification Number</p>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">BVN Number</label>
+                                    <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                                            <span class="material-icons-round text-sm">account_balance_wallet</span>
+                                        </span>
+                                        <input type="text" id="editBvnNumber" name="bvnNumber" class="form-input pl-10"
+                                               placeholder="11 digits" pattern="\d{11}" maxlength="11"
+                                               oninput="this.value=this.value.replace(/\D/g,'').slice(0,11)">
+                                    </div>
+                                    <p class="text-xs text-gray-400 mt-1">Bank Verification Number</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- TAB 3: Next of Kin & Guarantor -->
+                        <div id="edit-tab-kin" class="tab-panel">
+                            <p class="form-section-title">Next of Kin</p>
+                            <div class="space-y-4 mb-6">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
+                                    <input type="text" id="editNextOfKinName" class="form-input" placeholder="Full Name">
+                                </div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone Number</label>
+                                        <input type="text" id="editNextOfKinPhoneNumber" class="form-input" placeholder="Phone">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email Address</label>
+                                        <input type="email" id="editNextOfKinEmail" class="form-input" placeholder="Email">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Residential Address</label>
+                                    <input type="text" id="editNextOfKinAddress" class="form-input" placeholder="Address">
+                                </div>
+                            </div>
+
+                            <p class="form-section-title">Guarantor</p>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
+                                    <input type="text" id="editGuarantorName" class="form-input" placeholder="Full Name">
+                                </div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone Number</label>
+                                        <input type="text" id="editGuarantorPhoneNumber" class="form-input" placeholder="Phone">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email Address</label>
+                                        <input type="email" id="editGuarantorEmail" class="form-input" placeholder="Email">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Residential Address</label>
+                                    <input type="text" id="editGuarantorAddress" class="form-input" placeholder="Address">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">NIN Number</label>
+                                    <input type="text" id="editGuarantorNinNumber" class="form-input"
+                                           placeholder="Guarantor NIN (11 digits)" pattern="\d{11}" maxlength="11"
+                                           oninput="this.value=this.value.replace(/\D/g,'').slice(0,11)">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Footer Buttons (always visible) -->
+                        <div class="flex justify-end space-x-3 pt-5 mt-5 border-t border-gray-200 dark:border-gray-700">
+                            <button type="button" onclick="closeModal('editEmployeeModal')"
+                                    class="px-5 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                                 Cancel
                             </button>
-                            <button type="submit" id="editSubmitBtn" class="px-5 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm hover:shadow flex items-center space-x-1">
+                            <button type="submit" id="editSubmitBtn"
+                                    class="px-5 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm hover:shadow flex items-center space-x-1">
                                 <span class="material-icons-round text-sm">save</span>
                                 <span>Update Employee</span>
                             </button>
@@ -771,6 +837,7 @@
             </div>
         </div>
     </div>
+
 
     <!-- View Employee Modal -->
     <div id="viewEmployeeModal" class="fixed inset-0 z-50 hidden modal-transition" onclick="if(event.target === this) closeModal('viewEmployeeModal')">
@@ -800,10 +867,9 @@
         </div>
     </div>
 
+
     <script th:inline="javascript">
         /*<![CDATA[*/
-
-
 
         // ---------- Data arrays from server ----------
         const jobGrades = [
@@ -852,21 +918,40 @@
             });
         }
 
-        // Populate job steps dropdown helper
+        // ── TAB SWITCHER ─────────────────────────────────────────────
+        function switchTab(modal, tab, clickedBtn) {
+            // Deactivate all panels and buttons in this modal
+            document.querySelectorAll('#' + modal + 'EmployeeModal .tab-panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('#' + modal + 'EmployeeModal .tab-btn').forEach(b => b.classList.remove('active'));
+
+            // Activate selected
+            const panel = document.getElementById(modal + '-tab-' + tab);
+            if (panel) panel.classList.add('active');
+            if (clickedBtn) clickedBtn.classList.add('active');
+        }
+
+        // Reset tabs to General when a modal opens
+        function resetTabs(modalId) {
+            const prefix = modalId === 'addEmployeeModal' ? 'add' : 'edit';
+            document.querySelectorAll('#' + modalId + ' .tab-panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('#' + modalId + ' .tab-btn').forEach(b => b.classList.remove('active'));
+            const generalPanel = document.getElementById(prefix + '-tab-general');
+            if (generalPanel) generalPanel.classList.add('active');
+            const firstBtn = document.querySelector('#' + modalId + ' .tab-btn');
+            if (firstBtn) firstBtn.classList.add('active');
+        }
+
+        // ── JOB STEPS HELPER ─────────────────────────────────────────
         function populateJobSteps(gradeSelect, stepSelect) {
             const selectedGradeId = gradeSelect.value;
             stepSelect.innerHTML = '<option value="">Select Job Step</option>';
             stepSelect.disabled = true;
-
             if (!selectedGradeId) return;
 
             const filteredSteps = jobSteps.filter(step => String(step.gradeId) === String(selectedGradeId));
-
             if (filteredSteps.length === 0) {
                 const option = document.createElement('option');
-                option.value = '';
-                option.textContent = 'No steps available for this grade';
-                option.disabled = true;
+                option.value = ''; option.textContent = 'No steps available'; option.disabled = true;
                 stepSelect.appendChild(option);
             } else {
                 filteredSteps.forEach(step => {
@@ -879,109 +964,91 @@
             }
         }
 
-        // ---------- DOMContentLoaded setup ----------
-        document.addEventListener('DOMContentLoaded', function() {
+        // ── DOM READY ─────────────────────────────────────────────────
+        document.addEventListener('DOMContentLoaded', function () {
             // Add modal grade/step wiring
             const addGradeSelect = document.getElementById('addJobGradeId');
-            const addStepSelect = document.getElementById('addJobStepId');
+            const addStepSelect  = document.getElementById('addJobStepId');
             if (addGradeSelect && addStepSelect) {
-                addGradeSelect.addEventListener('change', function() {
-                    populateJobSteps(addGradeSelect, addStepSelect);
-                });
-                if (addGradeSelect.value) {
-                    addGradeSelect.dispatchEvent(new Event('change'));
-                }
+                addGradeSelect.addEventListener('change', () => populateJobSteps(addGradeSelect, addStepSelect));
+                if (addGradeSelect.value) addGradeSelect.dispatchEvent(new Event('change'));
             }
 
             // Edit modal grade/step wiring
             const editGradeSelect = document.getElementById('editJobGradeId');
-            const editStepSelect = document.getElementById('editJobStepId');
+            const editStepSelect  = document.getElementById('editJobStepId');
             if (editGradeSelect && editStepSelect) {
-                editGradeSelect.addEventListener('change', function() {
-                    populateJobSteps(editGradeSelect, editStepSelect);
-                });
+                editGradeSelect.addEventListener('change', () => populateJobSteps(editGradeSelect, editStepSelect));
             }
         });
 
-        // Disable submit button on add form submit
+        // ── MODAL HELPERS ─────────────────────────────────────────────
         function disableSubmitButton(form) {
-            const submitButton = form.querySelector('button[type="submit"]');
-            if (submitButton) {
-                submitButton.disabled = true;
-                submitButton.classList.add('opacity-50', 'cursor-not-allowed');
-            }
+            const btn = form.querySelector('button[type="submit"]');
+            if (btn) { btn.disabled = true; btn.classList.add('opacity-50', 'cursor-not-allowed'); }
             return true;
         }
 
-        // Modal helpers
-        window.openModal = function(id) {
+        window.openModal = function (id) {
             const modal = document.getElementById(id);
             if (modal) {
                 modal.classList.remove('hidden');
                 document.body.style.overflow = 'hidden';
+                resetTabs(id);
             }
         };
-        window.closeModal = function(id) {
+
+        window.closeModal = function (id) {
             const modal = document.getElementById(id);
-            if (modal) {
-                modal.classList.add('hidden');
-                document.body.style.overflow = 'auto';
-            }
+            if (modal) { modal.classList.add('hidden'); document.body.style.overflow = 'auto'; }
         };
 
-        // View employee (placeholder)
-        window.viewEmployee = function(id) {
-            console.log('View employee', id);
-        };
+        window.viewEmployee = function (id) { console.log('View employee', id); };
 
-        // ---------- EDIT EMPLOYEE ----------
-        window.editEmployee = function(id) {
+        // ── EDIT EMPLOYEE — populate modal ───────────────────────────
+        window.editEmployee = function (id) {
             const row = document.querySelector(`tr[data-id="${id}"]`);
             if (!row) return;
 
-            document.getElementById('editEmployeeId').value = row.dataset.id;
-            document.getElementById('editFirstName').value = row.dataset.firstName;
-            document.getElementById('editLastName').value = row.dataset.lastName;
-            document.getElementById('editEmail').value = row.dataset.email;
-            document.getElementById('editPhoneNumber').value = row.dataset.phone || '';
-            document.getElementById('editEmploymentStatus').value = row.dataset.employmentStatus;
-            document.getElementById('editDepartmentId').value = row.dataset.departmentId || '';
-            document.getElementById('editPayGroupId').value = row.dataset.payGroupId || '';
+            document.getElementById('editEmployeeId').value       = row.dataset.id;
+            document.getElementById('editFirstName').value         = row.dataset.firstName;
+            document.getElementById('editLastName').value          = row.dataset.lastName;
+            document.getElementById('editEmail').value             = row.dataset.email;
+            document.getElementById('editPhoneNumber').value       = row.dataset.phone || '';
+            document.getElementById('editEmploymentStatus').value  = row.dataset.employmentStatus;
+            document.getElementById('editDepartmentId').value      = row.dataset.departmentId || '';
+            document.getElementById('editPayGroupId').value        = row.dataset.payGroupId || '';
 
-            // --- NEW: Populate Personal & Identity Fields ---
-    document.getElementById('editNinNumber').value = row.dataset.ninNumber || '';
-    document.getElementById('editBvnNumber').value = row.dataset.bvnNumber || '';
+            // Identity
+            document.getElementById('editNinNumber').value = row.dataset.ninNumber || '';
+            document.getElementById('editBvnNumber').value = row.dataset.bvnNumber || '';
 
-    // --- NEW: Populate Next of Kin Fields ---
-    document.getElementById('editNextOfKinName').value = row.dataset.nokName || '';
-    document.getElementById('editNextOfKinPhoneNumber').value = row.dataset.nokPhone || '';
-    document.getElementById('editNextOfKinEmail').value = row.dataset.nokEmail || '';
-    document.getElementById('editNextOfKinAddress').value = row.dataset.nokAddress || '';
+            // Next of Kin
+            document.getElementById('editNextOfKinName').value        = row.dataset.nokName || '';
+            document.getElementById('editNextOfKinPhoneNumber').value  = row.dataset.nokPhone || '';
+            document.getElementById('editNextOfKinEmail').value        = row.dataset.nokEmail || '';
+            document.getElementById('editNextOfKinAddress').value      = row.dataset.nokAddress || '';
 
-    // --- NEW: Populate Guarantor Fields ---
-    document.getElementById('editGuarantorName').value = row.dataset.guarantorName || '';
-    document.getElementById('editGuarantorPhoneNumber').value = row.dataset.guarantorPhone || '';
-    document.getElementById('editGuarantorEmail').value = row.dataset.guarantorEmail || '';
-    document.getElementById('editGuarantorAddress').value = row.dataset.guarantorAddress || '';
-    document.getElementById('editGuarantorNinNumber').value = row.dataset.guarantorNin || '';
+            // Guarantor
+            document.getElementById('editGuarantorName').value        = row.dataset.guarantorName || '';
+            document.getElementById('editGuarantorPhoneNumber').value  = row.dataset.guarantorPhone || '';
+            document.getElementById('editGuarantorEmail').value        = row.dataset.guarantorEmail || '';
+            document.getElementById('editGuarantorAddress').value      = row.dataset.guarantorAddress || '';
+            document.getElementById('editGuarantorNinNumber').value    = row.dataset.guarantorNin || '';
 
-
-            const gradeId = row.dataset.jobGradeId;
-            const stepId = row.dataset.jobStepId;
-
+            // Grade / Step
             const gradeSelect = document.getElementById('editJobGradeId');
-            gradeSelect.value = gradeId || '';
+            gradeSelect.value = row.dataset.jobGradeId || '';
             gradeSelect.dispatchEvent(new Event('change'));
-
             setTimeout(() => {
-                document.getElementById('editJobStepId').value = stepId || '';
+                document.getElementById('editJobStepId').value = row.dataset.jobStepId || '';
             }, 50);
 
             openModal('editEmployeeModal');
         };
 
-        // ---------- EDIT FORM SUBMISSION (POST) ----------
-        document.getElementById('editEmployeeForm').addEventListener('submit', function(e) {
+        // ── EDIT FORM SUBMISSION ──────────────────────────────────────
+        document.getElementById('editEmployeeForm').addEventListener('submit', function (e) {
             e.preventDefault();
 
             const submitBtn = document.getElementById('editSubmitBtn');
@@ -991,37 +1058,34 @@
 
             const id = document.getElementById('editEmployeeId').value;
             const payload = {
-                firstName:        document.getElementById('editFirstName').value,
-                lastName:         document.getElementById('editLastName').value,
-                email:            document.getElementById('editEmail').value,
-                phoneNumber:      document.getElementById('editPhoneNumber').value,
-                employmentStatus: document.getElementById('editEmploymentStatus').value,
-                departmentId:     parseInt(document.getElementById('editDepartmentId').value, 10),
-                jobStepId:        parseInt(document.getElementById('editJobStepId').value, 10),
-                payGroupId:       parseInt(document.getElementById('editPayGroupId').value, 10),
-    ninNumber:        document.getElementById('editNinNumber').value,
-    bvnNumber:        document.getElementById('editBvnNumber').value,
-    nextOfKinName:    document.getElementById('editNextOfKinName').value,
-    nextOfKinPhoneNumber: document.getElementById('editNextOfKinPhoneNumber').value,
-    nextOfKinEmail:   document.getElementById('editNextOfKinEmail').value,
-    nextOfKinAddress: document.getElementById('editNextOfKinAddress').value,
-    guarantorName:    document.getElementById('editGuarantorName').value,
-    guarantorPhoneNumber: document.getElementById('editGuarantorPhoneNumber').value,
-    guarantorEmail:   document.getElementById('editGuarantorEmail').value,
-    guarantorAddress: document.getElementById('editGuarantorAddress').value,
-    guarantorNinNumber: document.getElementById('editGuarantorNinNumber').value
+                firstName:            document.getElementById('editFirstName').value,
+                lastName:             document.getElementById('editLastName').value,
+                email:                document.getElementById('editEmail').value,
+                phoneNumber:          document.getElementById('editPhoneNumber').value,
+                employmentStatus:     document.getElementById('editEmploymentStatus').value,
+                departmentId:         parseInt(document.getElementById('editDepartmentId').value, 10),
+                jobStepId:            parseInt(document.getElementById('editJobStepId').value, 10),
+                payGroupId:           parseInt(document.getElementById('editPayGroupId').value, 10),
+                ninNumber:            document.getElementById('editNinNumber').value,
+                bvnNumber:            document.getElementById('editBvnNumber').value,
+                nextOfKinName:        document.getElementById('editNextOfKinName').value,
+                nextOfKinPhoneNumber: document.getElementById('editNextOfKinPhoneNumber').value,
+                nextOfKinEmail:       document.getElementById('editNextOfKinEmail').value,
+                nextOfKinAddress:     document.getElementById('editNextOfKinAddress').value,
+                guarantorName:        document.getElementById('editGuarantorName').value,
+                guarantorPhoneNumber: document.getElementById('editGuarantorPhoneNumber').value,
+                guarantorEmail:       document.getElementById('editGuarantorEmail').value,
+                guarantorAddress:     document.getElementById('editGuarantorAddress').value,
+                guarantorNinNumber:   document.getElementById('editGuarantorNinNumber').value
             };
 
-            // ✅ Changed from PUT to POST, added CSRF header
             fetch('/employees/' + id, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },   // Add this
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             })
             .then(response => {
-                if (!response.ok) {
-                    return response.text().then(text => { throw new Error(text || 'Update failed'); });
-                }
+                if (!response.ok) return response.text().then(text => { throw new Error(text || 'Update failed'); });
                 closeModal('editEmployeeModal');
                 window.location.reload();
             })
@@ -1033,23 +1097,8 @@
                 submitBtn.innerHTML = '<span class="material-icons-round text-sm">save</span><span>Update Employee</span>';
             });
         });
+
         /*]]>*/
-
-        function toggleSection(sectionId) {
-    const section = document.getElementById(sectionId);
-    const icon = document.getElementById(sectionId + 'Icon');
-
-    const isHidden = section.classList.contains('hidden');
-
-    if (isHidden) {
-        section.classList.remove('hidden');
-        icon.style.transform = 'rotate(180deg)';
-    } else {
-        section.classList.add('hidden');
-        icon.style.transform = 'rotate(0deg)';
-    }
-}
-
     </script>
 </main>
 </body>
