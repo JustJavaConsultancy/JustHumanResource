@@ -56,6 +56,28 @@ public class Employee extends BaseEntity {
     @JoinColumn(name = "pay_group_id")
     private PayGroup payGroup;
 
+    // --- Personal Information (Compulsory) ---
+    @Column(nullable = false, length = 11)
+    private String ninNumber;
+
+    @Column(nullable = false, length = 11)
+    private String bvnNumber;
+
+    // --- Next of Kin (Optional) ---
+    private String nextOfKinName;
+    private String nextOfKinPhoneNumber;
+    private String nextOfKinEmail;
+    private String nextOfKinAddress;
+
+    // --- Guarantor Details (Optional) ---
+    private String guarantorName;
+    private String guarantorPhoneNumber;
+    private String guarantorEmail;
+    private String guarantorAddress;
+    @Column(length = 11)
+    private String guarantorNinNumber;
+
+
     @OneToMany(mappedBy = "employee", fetch = FetchType.EAGER)
     private List<EmployeeBankDetail> bankDetails;
 

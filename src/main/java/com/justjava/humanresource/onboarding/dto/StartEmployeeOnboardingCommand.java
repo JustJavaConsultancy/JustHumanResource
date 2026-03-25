@@ -13,5 +13,18 @@ public class StartEmployeeOnboardingCommand {
     private Long departmentId;
     private Long jobStepId;
     private Long payGroupId;
+
+    // NEW
+    private String ninNumber;
+    private String bvnNumber;
+    private String nextOfKinName;
+    private String nextOfKinPhoneNumber;
+    private String nextOfKinEmail;
+    private String nextOfKinAddress;
+    private String guarantorName;
+    private String guarantorPhoneNumber;
+    private String guarantorEmail;
+    private String guarantorAddress;
+    private String guarantorNinNumber;
 }
 

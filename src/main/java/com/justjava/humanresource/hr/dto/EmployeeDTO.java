@@ -20,6 +20,23 @@ public class EmployeeDTO {
     private boolean payrollEnabled;
     private boolean kpiEnabled;
 
+    // Compulsory
+    private String ninNumber;
+    private String bvnNumber;
+
+    // Next of Kin
+    private String nextOfKinName;
+    private String nextOfKinPhoneNumber;
+    private String nextOfKinEmail;
+    private String nextOfKinAddress;
+
+    // Guarantor
+    private String guarantorName;
+    private String guarantorPhoneNumber;
+    private String guarantorEmail;
+    private String guarantorAddress;
+    private String guarantorNinNumber;
+
     // Emergency contact fields (flat)
     private String emergencyContactName;
     private String emergencyRelationship;

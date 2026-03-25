@@ -159,7 +159,18 @@
                         data-job-grade-id=${employee.jobStep != null ? employee.jobStep.jobGrade.id : ''},
                         data-job-step-id=${employee.jobStep != null ? employee.jobStep.id : ''},
                         data-pay-group-id=${employee.payGroup != null ? employee.payGroup.id : ''},
-                        data-employment-status=${employee.employmentStatus}
+                        data-employment-status=${employee.employmentStatus},
+        data-nin-number=${employee.ninNumber},
+        data-bvn-number=${employee.bvnNumber},
+        data-nok-name=${employee.nextOfKinName},
+        data-nok-phone=${employee.nextOfKinPhoneNumber},
+        data-nok-email=${employee.nextOfKinEmail},
+        data-nok-address=${employee.nextOfKinAddress},
+        data-guarantor-name=${employee.guarantorName},
+        data-guarantor-phone=${employee.guarantorPhoneNumber},
+        data-guarantor-email=${employee.guarantorEmail},
+        data-guarantor-address=${employee.guarantorAddress},
+        data-guarantor-nin=${employee.guarantorNinNumber}
                     "
                     th:onclick="'viewEmployee(' + ${employee.id} + ')'">
 
@@ -275,20 +286,21 @@
 
                 <div class="p-6">
                     <form th:action="@{/onboarding}" method="post" onsubmit="disableSubmitButton(this)">
+
                         <div class="mb-6">
                             <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4 flex items-center">
                                 <span class="material-icons-round text-sm mr-2">person</span>
                                 Personal Information
                             </h4>
-                            <div class="grid grid-cols-2 gap-4">
+                            <div class="grid grid-cols-2 gap-4 mb-4">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                         First Name <span class="text-red-500">*</span>
                                     </label>
                                     <div class="relative">
-                                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
-                                            <span class="material-icons-round text-sm">badge</span>
-                                        </span>
+                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                    <span class="material-icons-round text-sm">badge</span>
+                </span>
                                         <input type="text" name="firstName" class="form-input pl-10" placeholder="John" required>
                                     </div>
                                 </div>
@@ -297,10 +309,34 @@
                                         Last Name <span class="text-red-500">*</span>
                                     </label>
                                     <div class="relative">
-                                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
-                                            <span class="material-icons-round text-sm">badge</span>
-                                        </span>
+                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                    <span class="material-icons-round text-sm">badge</span>
+                </span>
                                         <input type="text" name="lastName" class="form-input pl-10" placeholder="Doe" required>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        NIN Number <span class="text-red-500">*</span>
+                                    </label>
+                                    <div class="relative">
+                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                    <span class="material-icons-round text-sm">fingerprint</span>
+                </span>
+                                        <input type="text" name="ninNumber" class="form-input pl-10" placeholder="11 digits" required pattern="\d{11}" maxlength="11">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        BVN Number <span class="text-red-500">*</span>
+                                    </label>
+                                    <div class="relative">
+                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                    <span class="material-icons-round text-sm">account_balance_wallet</span>
+                </span>
+                                        <input type="text" name="bvnNumber" class="form-input pl-10" placeholder="11 digits" required pattern="\d{11}" maxlength="11">
                                     </div>
                                 </div>
                             </div>
@@ -336,6 +372,75 @@
                                 </div>
                             </div>
                         </div>
+
+
+                        <div class="mb-6">
+                            <button type="button" onclick="toggleSection('nokFields')" class="w-full flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 transition-colors">
+        <span class="text-sm font-bold text-gray-700 dark:text-gray-300 flex items-center">
+            <span class="material-icons-round text-sm mr-2">family_restroom</span>
+            NEXT OF KIN DETAILS
+        </span>
+                                <span id="nokFieldsIcon" class="material-icons-round text-gray-400 transition-transform">expand_more</span>
+                            </button>
+
+                            <div id="nokFields" class="hidden mt-4 space-y-4 px-1">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
+                                    <input type="text" name="nextOfKinName" class="form-input" placeholder="Next of Kin Full Name">
+                                </div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone Number</label>
+                                        <input type="text" name="nextOfKinPhoneNumber" class="form-input" placeholder="Phone Number">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email Address</label>
+                                        <input type="email" name="nextOfKinEmail" class="form-input" placeholder="Email Address">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Residential Address</label>
+                                    <input type="text" name="nextOfKinAddress" class="form-input" placeholder="Residential Address">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-6">
+                            <button type="button" onclick="toggleSection('guarantorFields')" class="w-full flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 transition-colors">
+        <span class="text-sm font-bold text-gray-700 dark:text-gray-300 flex items-center">
+            <span class="material-icons-round text-sm mr-2">verified_user</span>
+            GUARANTOR DETAILS
+        </span>
+                                <span id="guarantorFieldsIcon" class="material-icons-round text-gray-400 transition-transform">expand_more</span>
+                            </button>
+
+                            <div id="guarantorFields" class="hidden mt-4 space-y-4 px-1">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
+                                    <input type="text" name="guarantorName" class="form-input" placeholder="Guarantor Full Name">
+                                </div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone Number</label>
+                                        <input type="text" name="guarantorPhoneNumber" class="form-input" placeholder="Phone Number">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email Address</label>
+                                        <input type="email" name="guarantorEmail" class="form-input" placeholder="Email Address">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Residential Address</label>
+                                    <input type="text" name="guarantorAddress" class="form-input" placeholder="Guarantor Address">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">NIN Number</label>
+                                    <input type="text" name="guarantorNinNumber" class="form-input" placeholder="Guarantor NIN (11 digits)" pattern="\d{11}" maxlength="11">
+                                </div>
+                            </div>
+                        </div>
+
+
 
                         <div class="mb-6">
                             <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4 flex items-center">
@@ -472,6 +577,22 @@
                                     </div>
                                 </div>
                             </div>
+
+                            <div class="grid grid-cols-2 gap-4 mt-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">NIN Number</label>
+                                    <input type="text" id="editNinNumber" name="ninNumber" class="form-input"
+                                           placeholder="11 digits" pattern="\d{11}" maxlength="11"
+                                           oninput="this.value=this.value.replace(/\D/g,'').slice(0,11)">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">BVN Number</label>
+                                    <input type="text" id="editBvnNumber" name="bvnNumber" class="form-input"
+                                           placeholder="11 digits" pattern="\d{11}" maxlength="11"
+                                           oninput="this.value=this.value.replace(/\D/g,'').slice(0,11)">
+                                </div>
+                            </div>
+
                         </div>
 
                         <!-- Contact Information -->
@@ -505,6 +626,66 @@
                                 </div>
                             </div>
                         </div>
+
+
+                        <div class="mb-6 mt-6">
+                            <button type="button" onclick="toggleSection('editNokFields')" class="w-full flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                                <span class="text-sm font-bold text-gray-700 dark:text-gray-300">NEXT OF KIN DETAILS</span>
+                                <span id="editNokFieldsIcon" class="material-icons-round text-gray-400">expand_more</span>
+                            </button>
+                            <div id="editNokFields" class="hidden mt-4 space-y-4 px-1">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
+                                    <input type="text" id="editNextOfKinName" class="form-input" placeholder="Full Name">
+                                </div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone Number</label>
+                                        <input type="text" id="editNextOfKinPhoneNumber" class="form-input" placeholder="Phone">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email Address</label>
+                                        <input type="email" id="editNextOfKinEmail" class="form-input" placeholder="Email">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Residential Address</label>
+                                    <input type="text" id="editNextOfKinAddress" class="form-input" placeholder="Address">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-6">
+                            <button type="button" onclick="toggleSection('editGuarantorFields')" class="w-full flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                                <span class="text-sm font-bold text-gray-700 dark:text-gray-300">GUARANTOR DETAILS</span>
+                                <span id="editGuarantorFieldsIcon" class="material-icons-round text-gray-400">expand_more</span>
+                            </button>
+                            <div id="editGuarantorFields" class="hidden mt-4 space-y-4 px-1">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
+                                    <input type="text" id="editGuarantorName" class="form-input" placeholder="Full Name">
+                                </div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone Number</label>
+                                        <input type="text" id="editGuarantorPhoneNumber" class="form-input" placeholder="Phone">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email Address</label>
+                                        <input type="email" id="editGuarantorEmail" class="form-input" placeholder="Email">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Residential Address</label>
+                                    <input type="text" id="editGuarantorAddress" class="form-input" placeholder="Address">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">NIN Number</label>
+                                    <input type="text" id="editGuarantorNinNumber" class="form-input" placeholder="Guarantor NIN (11 digits)" pattern="\d{11}" maxlength="11" oninput="this.value=this.value.replace(/\D/g,'').slice(0,11)">
+                                </div>
+                            </div>
+                        </div>
+
 
                         <!-- Employment Details -->
                         <div class="mb-6">
@@ -767,6 +948,24 @@
             document.getElementById('editDepartmentId').value = row.dataset.departmentId || '';
             document.getElementById('editPayGroupId').value = row.dataset.payGroupId || '';
 
+            // --- NEW: Populate Personal & Identity Fields ---
+    document.getElementById('editNinNumber').value = row.dataset.ninNumber || '';
+    document.getElementById('editBvnNumber').value = row.dataset.bvnNumber || '';
+
+    // --- NEW: Populate Next of Kin Fields ---
+    document.getElementById('editNextOfKinName').value = row.dataset.nokName || '';
+    document.getElementById('editNextOfKinPhoneNumber').value = row.dataset.nokPhone || '';
+    document.getElementById('editNextOfKinEmail').value = row.dataset.nokEmail || '';
+    document.getElementById('editNextOfKinAddress').value = row.dataset.nokAddress || '';
+
+    // --- NEW: Populate Guarantor Fields ---
+    document.getElementById('editGuarantorName').value = row.dataset.guarantorName || '';
+    document.getElementById('editGuarantorPhoneNumber').value = row.dataset.guarantorPhone || '';
+    document.getElementById('editGuarantorEmail').value = row.dataset.guarantorEmail || '';
+    document.getElementById('editGuarantorAddress').value = row.dataset.guarantorAddress || '';
+    document.getElementById('editGuarantorNinNumber').value = row.dataset.guarantorNin || '';
+
+
             const gradeId = row.dataset.jobGradeId;
             const stepId = row.dataset.jobStepId;
 
@@ -799,7 +998,18 @@
                 employmentStatus: document.getElementById('editEmploymentStatus').value,
                 departmentId:     parseInt(document.getElementById('editDepartmentId').value, 10),
                 jobStepId:        parseInt(document.getElementById('editJobStepId').value, 10),
-                payGroupId:       parseInt(document.getElementById('editPayGroupId').value, 10)
+                payGroupId:       parseInt(document.getElementById('editPayGroupId').value, 10),
+    ninNumber:        document.getElementById('editNinNumber').value,
+    bvnNumber:        document.getElementById('editBvnNumber').value,
+    nextOfKinName:    document.getElementById('editNextOfKinName').value,
+    nextOfKinPhoneNumber: document.getElementById('editNextOfKinPhoneNumber').value,
+    nextOfKinEmail:   document.getElementById('editNextOfKinEmail').value,
+    nextOfKinAddress: document.getElementById('editNextOfKinAddress').value,
+    guarantorName:    document.getElementById('editGuarantorName').value,
+    guarantorPhoneNumber: document.getElementById('editGuarantorPhoneNumber').value,
+    guarantorEmail:   document.getElementById('editGuarantorEmail').value,
+    guarantorAddress: document.getElementById('editGuarantorAddress').value,
+    guarantorNinNumber: document.getElementById('editGuarantorNinNumber').value
             };
 
             // ✅ Changed from PUT to POST, added CSRF header
@@ -824,6 +1034,22 @@
             });
         });
         /*]]>*/
+
+        function toggleSection(sectionId) {
+    const section = document.getElementById(sectionId);
+    const icon = document.getElementById(sectionId + 'Icon');
+
+    const isHidden = section.classList.contains('hidden');
+
+    if (isHidden) {
+        section.classList.remove('hidden');
+        icon.style.transform = 'rotate(180deg)';
+    } else {
+        section.classList.add('hidden');
+        icon.style.transform = 'rotate(0deg)';
+    }
+}
+
     </script>
 </main>
 </body>

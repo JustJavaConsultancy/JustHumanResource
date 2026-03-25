@@ -54,6 +54,19 @@ public class EmployeeOnboardingService {
         dto.setLastName(command.getLastName());
         dto.setEmail(command.getEmail());
         dto.setPhoneNumber(command.getPhoneNumber());
+
+        dto.setNinNumber(command.getNinNumber());
+        dto.setBvnNumber(command.getBvnNumber());
+        dto.setNextOfKinName(command.getNextOfKinName());
+        dto.setNextOfKinPhoneNumber(command.getNextOfKinPhoneNumber());
+        dto.setNextOfKinEmail(command.getNextOfKinEmail());
+        dto.setNextOfKinAddress(command.getNextOfKinAddress());
+        dto.setGuarantorName(command.getGuarantorName());
+        dto.setGuarantorPhoneNumber(command.getGuarantorPhoneNumber());
+        dto.setGuarantorEmail(command.getGuarantorEmail());
+        dto.setGuarantorAddress(command.getGuarantorAddress());
+        dto.setGuarantorNinNumber(command.getGuarantorNinNumber());
+
         dto.setEmploymentStatus(String.valueOf(EmploymentStatus.ONBOARDING));
         dto.setJobStepId(command.getJobStepId());
         dto.setPayGroupId(command.getPayGroupId());
@@ -139,6 +152,24 @@ public class EmployeeOnboardingService {
                     .orElseThrow(() -> new ResourceNotFoundException("PayGroup not found", dto.getPayGroupId()));
             employee.setPayGroup(payGroup);
         }
+
+        // identity fields
+        if (dto.getNinNumber() != null) employee.setNinNumber(dto.getNinNumber());
+        if (dto.getBvnNumber() != null) employee.setBvnNumber(dto.getBvnNumber());
+
+        // next of kin fields
+        if (dto.getNextOfKinName() != null) employee.setNextOfKinName(dto.getNextOfKinName());
+        if (dto.getNextOfKinPhoneNumber() != null) employee.setNextOfKinPhoneNumber(dto.getNextOfKinPhoneNumber());
+        if (dto.getNextOfKinEmail() != null) employee.setNextOfKinEmail(dto.getNextOfKinEmail());
+        if (dto.getNextOfKinAddress() != null) employee.setNextOfKinAddress(dto.getNextOfKinAddress());
+
+        // guarantor fields
+        if (dto.getGuarantorName() != null) employee.setGuarantorName(dto.getGuarantorName());
+        if (dto.getGuarantorPhoneNumber() != null) employee.setGuarantorPhoneNumber(dto.getGuarantorPhoneNumber());
+        if (dto.getGuarantorEmail() != null) employee.setGuarantorEmail(dto.getGuarantorEmail());
+        if (dto.getGuarantorAddress() != null) employee.setGuarantorAddress(dto.getGuarantorAddress());
+        if (dto.getGuarantorNinNumber() != null) employee.setGuarantorNinNumber(dto.getGuarantorNinNumber());
+
 
         employeeRepository.save(employee); // explicit save
     }
