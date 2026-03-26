@@ -8,6 +8,7 @@
     <title>Employee Management</title>
 
     <style>
+        /* (existing styles unchanged) */
         .status-badge {
             padding: 2px 8px;
             border-radius: 6px;
@@ -38,16 +39,14 @@
             box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
         }
 
-        /* ── TAB STYLES ─────────────────────────────── */
+        /* TAB STYLES */
         .tab-bar {
             display: flex;
             border-bottom: 2px solid #e5e7eb;
             margin-bottom: 1.5rem;
             gap: 0;
         }
-
         .dark .tab-bar { border-bottom-color: #374151; }
-
         .tab-btn {
             display: flex;
             align-items: center;
@@ -64,18 +63,14 @@
             transition: color 0.15s, border-color 0.15s;
             white-space: nowrap;
         }
-
         .tab-btn:hover { color: #2563eb; }
-
         .tab-btn.active {
             color: #2563eb;
             border-bottom-color: #2563eb;
         }
-
         .dark .tab-btn { color: #9ca3af; }
         .dark .tab-btn:hover { color: #60a5fa; }
         .dark .tab-btn.active { color: #60a5fa; border-bottom-color: #60a5fa; }
-
         .tab-btn .tab-icon {
             width: 22px; height: 22px;
             border-radius: 6px;
@@ -85,19 +80,15 @@
             color: #6b7280;
             transition: background 0.15s, color 0.15s;
         }
-
         .tab-btn.active .tab-icon {
             background: #dbeafe;
             color: #2563eb;
         }
-
         .dark .tab-btn .tab-icon { background: #374151; color: #9ca3af; }
         .dark .tab-btn.active .tab-icon { background: #1e3a8a; color: #60a5fa; }
-
         .tab-panel { display: none; }
         .tab-panel.active { display: block; }
 
-        /* ── SECTION DIVIDER ────────────────────────── */
         .form-section-title {
             font-size: 0.7rem;
             font-weight: 700;
@@ -109,22 +100,433 @@
             align-items: center;
             gap: 8px;
         }
-
         .form-section-title::after {
             content: '';
             flex: 1;
             height: 1px;
             background: #e5e7eb;
         }
-
         .dark .form-section-title { color: #6b7280; }
         .dark .form-section-title::after { background: #374151; }
+
+        /* Additional styles for pay items modal - kept only for reference, replaced by new styles below */
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1.5rem;
+        }
+        .items-table th,
+        .items-table td {
+            padding: 0.5rem;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .items-table th {
+            font-weight: 600;
+            color: #6b7280;
+        }
+        .add-item-section {
+            margin-top: 1.5rem;
+            border-top: 1px solid #e5e7eb;
+            padding-top: 1.5rem;
+        }
+        .loading-spinner {
+            display: inline-block;
+            width: 1rem;
+            height: 1rem;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.6s linear infinite;
+            margin-right: 0.5rem;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .btn-loading {
+            pointer-events: none;
+            opacity: 0.7;
+        }
+
+        /* ── NEW PAY ITEMS MODAL STYLES ───────────────────────────────────────── */
+        :root {
+            --pi-radius:   12px;
+            --pi-shadow:   0 4px 24px rgba(0,0,0,.08);
+            --pi-green:    #16a34a;
+            --pi-red:      #dc2626;
+            --pi-blue:     #2563eb;
+            --pi-amber:    #d97706;
+            --pi-surface:  #f8fafc;
+            --pi-border:   #e2e8f0;
+            --pi-text:     #0f172a;
+            --pi-muted:    #64748b;
+        }
+        .dark {
+            --pi-surface: #1e293b;
+            --pi-border:  #334155;
+            --pi-text:    #f1f5f9;
+            --pi-muted:   #94a3b8;
+        }
+
+        /* ── Modal shell (overrides existing modal-content) ── */
+        #payItemsModal .pi-shell {
+            background: white;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 860px;
+            max-height: 92vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 25px 60px rgba(0,0,0,.18);
+        }
+        .dark #payItemsModal .pi-shell { background: #1a2332; }
+
+        /* ── Header ── */
+        .pi-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--pi-border);
+            flex-shrink: 0;
+        }
+        .pi-header-left { display: flex; align-items: center; gap: 14px; }
+        .pi-header-icon {
+            width: 44px; height: 44px;
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .dark .pi-header-icon { background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%); }
+        .pi-header-icon .material-icons-round { color: #2563eb; font-size: 22px; }
+        .dark .pi-header-icon .material-icons-round { color: #93c5fd; }
+        .pi-header-title { font-size: 1.1rem; font-weight: 700; color: var(--pi-text); }
+        .pi-header-sub  {
+            font-size: 0.72rem; color: var(--pi-muted);
+            margin-top: 1px;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .pi-emp-badge {
+            background: #eff6ff;
+            color: #2563eb;
+            border-radius: 20px;
+            padding: 1px 8px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+        .dark .pi-emp-badge { background: #1e3a8a; color: #93c5fd; }
+        .pi-close-btn {
+            width: 34px; height: 34px; border-radius: 8px;
+            border: none; background: var(--pi-surface);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; color: var(--pi-muted);
+            transition: background .15s, color .15s;
+        }
+        .pi-close-btn:hover { background: #fee2e2; color: #dc2626; }
+
+        /* ── Tabs ── */
+        .pi-tabs {
+            display: flex;
+            gap: 0;
+            padding: 16px 24px 0;
+            border-bottom: 1px solid var(--pi-border);
+            flex-shrink: 0;
+        }
+        .pi-tab {
+            display: flex; align-items: center; gap: 8px;
+            padding: 10px 18px;
+            font-size: 0.82rem; font-weight: 600;
+            color: var(--pi-muted);
+            border: none; background: transparent;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -1px;
+            cursor: pointer;
+            transition: color .15s, border-color .15s;
+            white-space: nowrap;
+        }
+        .pi-tab:hover { color: var(--pi-blue); }
+        .pi-tab.active { color: var(--pi-blue); border-bottom-color: var(--pi-blue); }
+        .pi-tab-dot {
+            min-width: 20px; height: 20px;
+            border-radius: 6px;
+            font-size: 0.7rem; font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+            background: #f1f5f9;
+            color: var(--pi-muted);
+            transition: background .15s, color .15s;
+        }
+        .pi-tab.active .pi-tab-dot { background: #dbeafe; color: var(--pi-blue); }
+        .dark .pi-tab-dot { background: #334155; }
+        .dark .pi-tab.active .pi-tab-dot { background: #1e3a8a; color: #93c5fd; }
+
+        /* ── Body ── */
+        .pi-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        /* ── Section cards ── */
+        .pi-section {
+            border: 1px solid var(--pi-border);
+            border-radius: var(--pi-radius);
+            overflow: hidden;
+        }
+        .pi-section-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 18px;
+            background: var(--pi-surface);
+            border-bottom: 1px solid var(--pi-border);
+        }
+        .pi-section-head-left { display: flex; align-items: center; gap: 8px; }
+        .pi-section-label {
+            font-size: 0.78rem; font-weight: 700;
+            text-transform: uppercase; letter-spacing: .06em;
+            color: var(--pi-muted);
+        }
+        .pi-count-badge {
+            background: #e0f2fe; color: #0369a1;
+            border-radius: 20px; padding: 2px 8px;
+            font-size: 0.68rem; font-weight: 700;
+        }
+        .dark .pi-count-badge { background: #0c4a6e; color: #7dd3fc; }
+
+        /* ── Items list ── */
+        .pi-items-list { padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+        .pi-empty {
+            padding: 28px;
+            text-align: center;
+            color: var(--pi-muted);
+            font-size: 0.82rem;
+            display: flex; flex-direction: column; align-items: center; gap: 8px;
+        }
+        .pi-empty-icon {
+            width: 40px; height: 40px; border-radius: 50%;
+            background: var(--pi-surface);
+            display: flex; align-items: center; justify-content: center;
+        }
+        .pi-empty-icon .material-icons-round { color: var(--pi-muted); font-size: 20px; }
+
+        /* ── Individual item card ── */
+        .pi-item-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 14px;
+            background: white;
+            border: 1px solid var(--pi-border);
+            border-radius: 10px;
+            gap: 12px;
+            transition: box-shadow .15s;
+            animation: piSlideIn .2s ease both;
+        }
+        @keyframes piSlideIn {
+            from { opacity: 0; transform: translateY(-6px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .dark .pi-item-card { background: #0f172a; }
+        .pi-item-card:hover { box-shadow: var(--pi-shadow); }
+        .pi-item-left { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
+        .pi-item-icon {
+            width: 36px; height: 36px; border-radius: 8px; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.7rem; font-weight: 800;
+        }
+        .pi-item-icon.allowance { background: #dcfce7; color: #16a34a; }
+        .pi-item-icon.deduction { background: #fee2e2; color: #dc2626; }
+        .pi-item-icon .material-icons-round { font-size: 18px; }
+        .pi-item-name {
+            font-size: 0.85rem; font-weight: 600;
+            color: var(--pi-text);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .pi-item-meta {
+            display: flex; flex-wrap: wrap; gap: 6px;
+            margin-top: 3px;
+        }
+        .pi-chip {
+            display: inline-flex; align-items: center; gap: 3px;
+            padding: 1px 8px; border-radius: 20px;
+            font-size: 0.65rem; font-weight: 600;
+            border: 1px solid transparent;
+        }
+        .pi-chip.override { background: #fef3c7; color: #92400e; border-color: #fde68a; }
+        .pi-chip.date     { background: #f0f9ff; color: #0369a1; border-color: #bae6fd; }
+        .dark .pi-chip.date { background: #0c4a6e; color: #7dd3fc; border-color: #0369a1; }
+        .dark .pi-chip.override { background: #451a03; color: #fde68a; border-color: #92400e; }
+
+        .pi-item-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+        .pi-amount {
+            font-size: 0.9rem; font-weight: 700;
+            color: var(--pi-text);
+            white-space: nowrap;
+        }
+        .pi-amount.allowance-amt { color: #16a34a; }
+        .pi-amount.deduction-amt { color: #dc2626; }
+
+        .pi-remove-btn {
+            width: 28px; height: 28px; border-radius: 6px;
+            border: none; background: transparent;
+            color: #cbd5e1; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: background .15s, color .15s;
+        }
+        .pi-remove-btn:hover { background: #fee2e2; color: #dc2626; }
+        .pi-remove-btn .material-icons-round { font-size: 16px; }
+
+        /* ── Add form ── */
+        .pi-add-form {
+            padding: 18px;
+            border-top: 1px dashed var(--pi-border);
+            background: var(--pi-surface);
+        }
+        .pi-add-form-title {
+            font-size: 0.72rem; font-weight: 700;
+            text-transform: uppercase; letter-spacing: .06em;
+            color: var(--pi-muted);
+            margin-bottom: 14px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .pi-add-form-title::after {
+            content: ''; flex: 1; height: 1px; background: var(--pi-border);
+        }
+        .pi-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+        @media (max-width: 600px) { .pi-form-row { grid-template-columns: 1fr; } }
+        .pi-form-row.triple { grid-template-columns: 1fr 1fr 1fr; }
+        @media (max-width: 700px) { .pi-form-row.triple { grid-template-columns: 1fr 1fr; } }
+        .pi-field-label {
+            font-size: 0.75rem; font-weight: 600;
+            color: var(--pi-muted); margin-bottom: 5px;
+            display: flex; align-items: center; gap: 5px;
+        }
+        .pi-field-label .req { color: #ef4444; }
+        .pi-input {
+            width: 100%; padding: 9px 12px;
+            border: 1px solid var(--pi-border);
+            border-radius: 8px;
+            font-size: 0.82rem;
+            color: var(--pi-text);
+            background: white;
+            transition: border-color .15s, box-shadow .15s;
+            outline: none;
+        }
+        .dark .pi-input { background: #0f172a; color: #f1f5f9; border-color: #334155; }
+        .pi-input:focus { border-color: var(--pi-blue); box-shadow: 0 0 0 3px rgba(37,99,235,.1); }
+        .pi-input:disabled { opacity: .45; cursor: not-allowed; background: #f8fafc; }
+        .dark .pi-input:disabled { background: #1e293b; }
+        .pi-select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 32px; }
+
+        /* Override toggle row */
+        .pi-override-row {
+            display: flex; align-items: center;
+            gap: 14px;
+            background: white;
+            border: 1px solid var(--pi-border);
+            border-radius: 8px;
+            padding: 9px 12px;
+        }
+        .dark .pi-override-row { background: #0f172a; }
+        .pi-toggle-label {
+            display: flex; align-items: center; gap: 8px;
+            cursor: pointer; flex: 1;
+            font-size: 0.78rem; color: var(--pi-muted);
+            user-select: none;
+        }
+        /* Custom toggle switch */
+        .pi-toggle {
+            position: relative; width: 36px; height: 20px; flex-shrink: 0;
+        }
+        .pi-toggle input { opacity: 0; width: 0; height: 0; }
+        .pi-toggle-track {
+            position: absolute; inset: 0;
+            background: #cbd5e1; border-radius: 20px;
+            transition: background .2s;
+            cursor: pointer;
+        }
+        .pi-toggle-track::after {
+            content: ''; position: absolute;
+            left: 2px; top: 2px;
+            width: 16px; height: 16px;
+            background: white; border-radius: 50%;
+            transition: transform .2s;
+            box-shadow: 0 1px 3px rgba(0,0,0,.2);
+        }
+        .pi-toggle input:checked ~ .pi-toggle-track { background: var(--pi-blue); }
+        .pi-toggle input:checked ~ .pi-toggle-track::after { transform: translateX(16px); }
+        .pi-override-input-wrap { flex: 1; }
+
+        /* Submit button */
+        .pi-submit-btn {
+            display: flex; align-items: center; justify-content: center; gap: 7px;
+            padding: 10px 20px;
+            border: none; border-radius: 8px;
+            font-size: 0.82rem; font-weight: 600;
+            cursor: pointer;
+            transition: opacity .15s, transform .1s, box-shadow .15s;
+            min-width: 140px;
+        }
+        .pi-submit-btn:hover:not(:disabled) { opacity: .9; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,.12); }
+        .pi-submit-btn:active:not(:disabled) { transform: translateY(0); }
+        .pi-submit-btn:disabled { opacity: .5; cursor: not-allowed; }
+        .pi-submit-btn.allowance-btn { background: linear-gradient(135deg, #16a34a, #15803d); color: white; }
+        .pi-submit-btn.deduction-btn { background: linear-gradient(135deg, #dc2626, #b91c1c); color: white; }
+        .pi-submit-btn .material-icons-round { font-size: 16px; }
+
+        .pi-spinner {
+            width: 14px; height: 14px;
+            border: 2px solid rgba(255,255,255,.35);
+            border-top-color: white; border-radius: 50%;
+            animation: spin .5s linear infinite;
+        }
+
+        .pi-panel { display: none; }
+        .pi-panel.active { display: flex; flex-direction: column; gap: 0; }
+
+        .pi-footer {
+            padding: 14px 24px;
+            border-top: 1px solid var(--pi-border);
+            display: flex; justify-content: flex-end;
+            flex-shrink: 0;
+        }
+        .pi-footer-close {
+            padding: 9px 22px;
+            border: 1px solid var(--pi-border);
+            border-radius: 8px;
+            background: white;
+            color: var(--pi-muted);
+            font-size: 0.82rem; font-weight: 600;
+            cursor: pointer;
+            transition: background .15s, color .15s;
+        }
+        .dark .pi-footer-close { background: #0f172a; border-color: #334155; }
+        .pi-footer-close:hover { background: var(--pi-surface); color: var(--pi-text); }
+
+        /* Loading skeleton */
+        .pi-skeleton {
+            display: flex; flex-direction: column; gap: 8px;
+            padding: 12px;
+        }
+        .pi-skel-row {
+            height: 60px; border-radius: 10px;
+            background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.2s infinite;
+        }
+        .dark .pi-skel-row {
+            background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+            background-size: 200% 100%;
+        }
+        @keyframes shimmer { to { background-position: -200% 0; } }
     </style>
 </head>
 <body>
 <main layout:fragment="content">
 
-    <!-- Stats Cards -->
+    <!-- Stats Cards (unchanged) -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6">
             <div class="flex items-center justify-between mb-4">
@@ -282,6 +684,12 @@
                                     class="text-green-600 hover:text-green-700 text-sm font-medium">
                                 Edit
                             </button>
+                            <!-- NEW: Pay Items button -->
+                            <button type="button"
+                                    th:onclick="'event.stopPropagation(); openPayItemsModal(' + ${employee.id} + ')'"
+                                    class="text-blue-600 hover:text-blue-700 text-sm font-medium">
+                                Pay Items
+                            </button>
                         </div>
                     </td>
                 </tr>
@@ -325,8 +733,7 @@
         </div>
     </div>
 
-
-    <!-- ========== ADD EMPLOYEE MODAL ========== -->
+    <!-- ========== ADD EMPLOYEE MODAL ========== (unchanged) -->
     <div id="addEmployeeModal" class="fixed inset-0 z-50 hidden modal-transition" onclick="if(event.target === this) closeModal('addEmployeeModal')">
         <div class="modal-backdrop fixed inset-0 bg-black bg-opacity-50"></div>
         <div class="fixed inset-0 flex items-center justify-center p-4">
@@ -563,7 +970,7 @@
                             </div>
                         </div>
 
-                        <!-- Footer Buttons (always visible) -->
+                        <!-- Footer Buttons -->
                         <div class="flex justify-end space-x-3 pt-5 mt-5 border-t border-gray-200 dark:border-gray-700">
                             <button type="button" onclick="closeModal('addEmployeeModal')"
                                     class="px-5 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
@@ -581,14 +988,12 @@
         </div>
     </div>
 
-
-    <!-- ========== EDIT EMPLOYEE MODAL ========== -->
+    <!-- ========== EDIT EMPLOYEE MODAL ========== (unchanged) -->
     <div id="editEmployeeModal" class="fixed inset-0 z-50 hidden modal-transition" onclick="if(event.target === this) closeModal('editEmployeeModal')">
         <div class="modal-backdrop fixed inset-0 bg-black bg-opacity-50"></div>
         <div class="fixed inset-0 flex items-center justify-center p-4">
             <div class="modal-content bg-white dark:bg-gray-800 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
 
-                <!-- Modal Header -->
                 <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
                     <div class="flex items-center space-x-3">
                         <div class="p-2 bg-green-100 dark:bg-green-900/30 rounded-full">
@@ -605,7 +1010,6 @@
                     <form id="editEmployeeForm" onsubmit="return false;">
                         <input type="hidden" id="editEmployeeId" name="id">
 
-                        <!-- Tab Bar -->
                         <div class="tab-bar">
                             <button type="button" class="tab-btn active" onclick="switchTab('edit', 'general', this)">
                                 <span class="tab-icon"><span class="material-icons-round" style="font-size:0.85rem">person</span></span>
@@ -820,7 +1224,6 @@
                             </div>
                         </div>
 
-                        <!-- Footer Buttons (always visible) -->
                         <div class="flex justify-end space-x-3 pt-5 mt-5 border-t border-gray-200 dark:border-gray-700">
                             <button type="button" onclick="closeModal('editEmployeeModal')"
                                     class="px-5 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
@@ -838,8 +1241,7 @@
         </div>
     </div>
 
-
-    <!-- View Employee Modal -->
+    <!-- ========== VIEW EMPLOYEE MODAL ========== (unchanged) -->
     <div id="viewEmployeeModal" class="fixed inset-0 z-50 hidden modal-transition" onclick="if(event.target === this) closeModal('viewEmployeeModal')">
         <div class="modal-backdrop fixed inset-0 bg-black bg-opacity-50"></div>
         <div class="fixed inset-0 flex items-center justify-center p-4">
@@ -867,6 +1269,201 @@
         </div>
     </div>
 
+    <!-- ========== PAY ITEMS MODAL (NEW) ========== -->
+    <div id="payItemsModal"
+         class="fixed inset-0 z-50 hidden"
+         style="background:rgba(0,0,0,.5); display:none; align-items:center; justify-content:center; padding:16px;"
+         onclick="if(event.target===this) closeModal('payItemsModal')">
+
+        <div class="pi-shell">
+
+            <!-- Header -->
+            <div class="pi-header">
+                <div class="pi-header-left">
+                    <div class="pi-header-icon">
+                        <span class="material-icons-round">payments</span>
+                    </div>
+                    <div>
+                        <div class="pi-header-title">Allowances &amp; Deductions</div>
+                        <div class="pi-header-sub">
+                            Employee
+                            <span class="pi-emp-badge" id="pi-emp-badge-id">—</span>
+                        </div>
+                    </div>
+                </div>
+                <button class="pi-close-btn" onclick="closeModal('payItemsModal')">
+                    <span class="material-icons-round" style="font-size:18px">close</span>
+                </button>
+            </div>
+
+            <!-- Tabs -->
+            <div class="pi-tabs">
+                <button class="pi-tab active" id="pi-tab-allowances" onclick="switchPiTab('allowances')">
+                    <span class="material-icons-round" style="font-size:16px">card_giftcard</span>
+                    Allowances
+                    <span class="pi-tab-dot" id="pi-dot-allowances">0</span>
+                </button>
+                <button class="pi-tab" id="pi-tab-deductions" onclick="switchPiTab('deductions')">
+                    <span class="material-icons-round" style="font-size:16px">remove_circle_outline</span>
+                    Deductions
+                    <span class="pi-tab-dot" id="pi-dot-deductions">0</span>
+                </button>
+            </div>
+
+            <!-- Body -->
+            <div class="pi-body">
+
+                <!-- ── ALLOWANCES PANEL ── -->
+                <div id="pi-panel-allowances" class="pi-panel active">
+
+                    <!-- Current allowances card -->
+                    <div class="pi-section">
+                        <div class="pi-section-head">
+                            <div class="pi-section-head-left">
+                                <span class="material-icons-round" style="font-size:16px; color:#16a34a">check_circle</span>
+                                <span class="pi-section-label">Assigned Allowances</span>
+                                <span class="pi-count-badge" id="pi-allowance-count">0</span>
+                            </div>
+                        </div>
+                        <div id="pi-allowances-list">
+                            <!-- skeleton while loading -->
+                            <div class="pi-skeleton">
+                                <div class="pi-skel-row"></div>
+                                <div class="pi-skel-row" style="opacity:.6"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Add allowance form -->
+                    <div class="pi-section" style="margin-top:0; border-top:none; border-top-left-radius:0; border-top-right-radius:0;">
+                        <div class="pi-add-form">
+                            <div class="pi-add-form-title">Add New Allowance</div>
+                            <div class="pi-form-row">
+                                <div>
+                                    <div class="pi-field-label">Allowance <span class="req">*</span></div>
+                                    <select id="pi-allowance-select" class="pi-input pi-select">
+                                        <option value="">Select an allowance…</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <div class="pi-field-label">Override Amount</div>
+                                    <div class="pi-override-row">
+                                        <label class="pi-toggle-label" for="pi-allowance-override-chk">
+                                            <span class="pi-toggle">
+                                                <input type="checkbox" id="pi-allowance-override-chk"
+                                                       onchange="toggleOverride('allowance', this.checked)">
+                                                <span class="pi-toggle-track"></span>
+                                            </span>
+                                            Override default?
+                                        </label>
+                                        <div class="pi-override-input-wrap">
+                                            <input type="number" id="pi-allowance-amount"
+                                                   class="pi-input" placeholder="₦ 0.00"
+                                                   step="0.01" min="0" disabled>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="pi-form-row triple">
+                                <div>
+                                    <div class="pi-field-label">Effective From</div>
+                                    <input type="date" id="pi-allowance-from" class="pi-input">
+                                </div>
+                                <div>
+                                    <div class="pi-field-label">Effective To</div>
+                                    <input type="date" id="pi-allowance-to" class="pi-input">
+                                </div>
+                                <div style="display:flex; align-items:flex-end;">
+                                    <button class="pi-submit-btn allowance-btn" id="pi-add-allowance-btn"
+                                            onclick="submitPayItem('allowance')">
+                                        <span class="material-icons-round">add</span>
+                                        Add Allowance
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── DEDUCTIONS PANEL ── -->
+                <div id="pi-panel-deductions" class="pi-panel">
+
+                    <!-- Current deductions card -->
+                    <div class="pi-section">
+                        <div class="pi-section-head">
+                            <div class="pi-section-head-left">
+                                <span class="material-icons-round" style="font-size:16px; color:#dc2626">remove_circle</span>
+                                <span class="pi-section-label">Assigned Deductions</span>
+                                <span class="pi-count-badge" id="pi-deduction-count">0</span>
+                            </div>
+                        </div>
+                        <div id="pi-deductions-list">
+                            <div class="pi-skeleton">
+                                <div class="pi-skel-row"></div>
+                                <div class="pi-skel-row" style="opacity:.6"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Add deduction form -->
+                    <div class="pi-section" style="border-top:none; border-top-left-radius:0; border-top-right-radius:0;">
+                        <div class="pi-add-form">
+                            <div class="pi-add-form-title">Add New Deduction</div>
+                            <div class="pi-form-row">
+                                <div>
+                                    <div class="pi-field-label">Deduction <span class="req">*</span></div>
+                                    <select id="pi-deduction-select" class="pi-input pi-select">
+                                        <option value="">Select a deduction…</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <div class="pi-field-label">Override Amount</div>
+                                    <div class="pi-override-row">
+                                        <label class="pi-toggle-label" for="pi-deduction-override-chk">
+                                            <span class="pi-toggle">
+                                                <input type="checkbox" id="pi-deduction-override-chk"
+                                                       onchange="toggleOverride('deduction', this.checked)">
+                                                <span class="pi-toggle-track"></span>
+                                            </span>
+                                            Override default?
+                                        </label>
+                                        <div class="pi-override-input-wrap">
+                                            <input type="number" id="pi-deduction-amount"
+                                                   class="pi-input" placeholder="₦ 0.00"
+                                                   step="0.01" min="0" disabled>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="pi-form-row triple">
+                                <div>
+                                    <div class="pi-field-label">Effective From</div>
+                                    <input type="date" id="pi-deduction-from" class="pi-input">
+                                </div>
+                                <div>
+                                    <div class="pi-field-label">Effective To</div>
+                                    <input type="date" id="pi-deduction-to" class="pi-input">
+                                </div>
+                                <div style="display:flex; align-items:flex-end;">
+                                    <button class="pi-submit-btn deduction-btn" id="pi-add-deduction-btn"
+                                            onclick="submitPayItem('deduction')">
+                                        <span class="material-icons-round">add</span>
+                                        Add Deduction
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div><!-- /pi-body -->
+
+            <!-- Footer -->
+            <div class="pi-footer">
+                <button class="pi-footer-close" onclick="closeModal('payItemsModal')">Close</button>
+            </div>
+        </div>
+    </div>
 
     <script th:inline="javascript">
         /*<![CDATA[*/
@@ -901,6 +1498,10 @@
             /*[/]*/
         ];
 
+        // NEW: Allowances and deductions lists from server (assumed to be passed as model attributes)
+        const allowancesList = /*[[${allowances}]]*/ [];
+        const deductionsList = /*[[${deductions}]]*/ [];
+
         // Build flat jobSteps array
         let jobSteps = [];
         if (Array.isArray(jobGrades) && jobGrades.length > 0) {
@@ -920,17 +1521,14 @@
 
         // ── TAB SWITCHER ─────────────────────────────────────────────
         function switchTab(modal, tab, clickedBtn) {
-            // Deactivate all panels and buttons in this modal
             document.querySelectorAll('#' + modal + 'EmployeeModal .tab-panel').forEach(p => p.classList.remove('active'));
             document.querySelectorAll('#' + modal + 'EmployeeModal .tab-btn').forEach(b => b.classList.remove('active'));
 
-            // Activate selected
             const panel = document.getElementById(modal + '-tab-' + tab);
             if (panel) panel.classList.add('active');
             if (clickedBtn) clickedBtn.classList.add('active');
         }
 
-        // Reset tabs to General when a modal opens
         function resetTabs(modalId) {
             const prefix = modalId === 'addEmployeeModal' ? 'add' : 'edit';
             document.querySelectorAll('#' + modalId + ' .tab-panel').forEach(p => p.classList.remove('active'));
@@ -974,12 +1572,15 @@
                 if (addGradeSelect.value) addGradeSelect.dispatchEvent(new Event('change'));
             }
 
-            // Edit modal grade/step wiring
             const editGradeSelect = document.getElementById('editJobGradeId');
             const editStepSelect  = document.getElementById('editJobStepId');
             if (editGradeSelect && editStepSelect) {
                 editGradeSelect.addEventListener('change', () => populateJobSteps(editGradeSelect, editStepSelect));
             }
+
+            // NOTE: Pay items select population and override toggles are now handled
+            // inside the new pay items script (which runs after this). So we remove
+            // the old pay items initialization from here to avoid duplication.
         });
 
         // ── MODAL HELPERS ─────────────────────────────────────────────
@@ -994,10 +1595,11 @@
             if (modal) {
                 modal.classList.remove('hidden');
                 document.body.style.overflow = 'hidden';
-                resetTabs(id);
+                if (id !== 'payItemsModal') resetTabs(id);
             }
         };
 
+        // Base closeModal – will be overridden for payItemsModal below
         window.closeModal = function (id) {
             const modal = document.getElementById(id);
             if (modal) { modal.classList.add('hidden'); document.body.style.overflow = 'auto'; }
@@ -1019,24 +1621,20 @@
             document.getElementById('editDepartmentId').value      = row.dataset.departmentId || '';
             document.getElementById('editPayGroupId').value        = row.dataset.payGroupId || '';
 
-            // Identity
             document.getElementById('editNinNumber').value = row.dataset.ninNumber || '';
             document.getElementById('editBvnNumber').value = row.dataset.bvnNumber || '';
 
-            // Next of Kin
             document.getElementById('editNextOfKinName').value        = row.dataset.nokName || '';
             document.getElementById('editNextOfKinPhoneNumber').value  = row.dataset.nokPhone || '';
             document.getElementById('editNextOfKinEmail').value        = row.dataset.nokEmail || '';
             document.getElementById('editNextOfKinAddress').value      = row.dataset.nokAddress || '';
 
-            // Guarantor
             document.getElementById('editGuarantorName').value        = row.dataset.guarantorName || '';
             document.getElementById('editGuarantorPhoneNumber').value  = row.dataset.guarantorPhone || '';
             document.getElementById('editGuarantorEmail').value        = row.dataset.guarantorEmail || '';
             document.getElementById('editGuarantorAddress').value      = row.dataset.guarantorAddress || '';
             document.getElementById('editGuarantorNinNumber').value    = row.dataset.guarantorNin || '';
 
-            // Grade / Step
             const gradeSelect = document.getElementById('editJobGradeId');
             gradeSelect.value = row.dataset.jobGradeId || '';
             gradeSelect.dispatchEvent(new Event('change'));
@@ -1047,7 +1645,6 @@
             openModal('editEmployeeModal');
         };
 
-        // ── EDIT FORM SUBMISSION ──────────────────────────────────────
         document.getElementById('editEmployeeForm').addEventListener('submit', function (e) {
             e.preventDefault();
 
@@ -1098,6 +1695,368 @@
             });
         });
 
+        // ── PAY ITEMS FUNCTIONS (NEW) ───────────────────────────────────────
+        /* ── PAY ITEMS STATE ─────────────────────────────────────────────── */
+        let piEmployeeId = null;
+        let piAssignedAllowanceIds = new Set();
+        let piAssignedDeductionIds = new Set();
+
+        /* ── TAB SWITCHER ─────────────────────────────────────────────────── */
+        function switchPiTab(tab) {
+            ['allowances', 'deductions'].forEach(t => {
+                document.getElementById('pi-panel-' + t).classList.toggle('active', t === tab);
+                document.getElementById('pi-tab-' + t).classList.toggle('active', t === tab);
+            });
+        }
+
+        /* ── OPEN MODAL ──────────────────────────────────────────────────── */
+        window.openPayItemsModal = function(employeeId) {
+            piEmployeeId = employeeId;
+            document.getElementById('pi-emp-badge-id').textContent = '#' + employeeId;
+            switchPiTab('allowances');
+
+            // Reset forms
+            resetPiForm('allowance');
+            resetPiForm('deduction');
+
+            // Show modal (override the hidden class approach used for other modals)
+            const modal = document.getElementById('payItemsModal');
+            modal.classList.remove('hidden');
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+
+            // Show skeletons while loading
+            showSkeleton('allowances');
+            showSkeleton('deductions');
+
+            fetchPayItemsData(employeeId);
+        };
+
+        // Override closeModal to also reset display style for pay items modal
+        const _origCloseModal = window.closeModal;
+        window.closeModal = function(id) {
+            if (id === 'payItemsModal') {
+                const m = document.getElementById('payItemsModal');
+                m.classList.add('hidden');
+                m.style.display = 'none';
+                document.body.style.overflow = 'auto';
+            } else {
+                _origCloseModal(id);
+            }
+        };
+
+        /* ── FETCH DATA ──────────────────────────────────────────────────── */
+        function fetchPayItemsData(employeeId) {
+            fetch('/employees/' + employeeId + '/pay-items')
+                .then(r => { if (!r.ok) throw new Error('Failed to fetch'); return r.json(); })
+                .then(data => {
+                    const assigned = {
+                        allowances: data.allowances || [],
+                        deductions: data.deductions || []
+                    };
+                    piAssignedAllowanceIds = new Set(
+                        assigned.allowances.map(a => String(a.allowanceId || a.id))
+                    );
+                    piAssignedDeductionIds = new Set(
+                        assigned.deductions.map(d => String(d.deductionId || d.id))
+                    );
+
+                    renderPiItems('allowances', assigned.allowances);
+                    renderPiItems('deductions', assigned.deductions);
+                    rebuildSelectOptions('allowance');
+                    rebuildSelectOptions('deduction');
+                })
+                .catch(err => {
+                    console.error(err);
+                    showPiError('allowances');
+                    showPiError('deductions');
+                });
+        }
+
+        /* ── RENDER HELPERS ──────────────────────────────────────────────── */
+        function showSkeleton(type) {
+            document.getElementById('pi-' + type + '-list').innerHTML = `
+                <div class="pi-skeleton">
+                    <div class="pi-skel-row"></div>
+                    <div class="pi-skel-row" style="opacity:.6"></div>
+                </div>`;
+        }
+
+        function showPiError(type) {
+            document.getElementById('pi-' + type + '-list').innerHTML = `
+                <div class="pi-empty">
+                    <div class="pi-empty-icon"><span class="material-icons-round" style="color:#ef4444">error_outline</span></div>
+                    <span>Failed to load ${type}. Please try again.</span>
+                </div>`;
+        }
+
+        function renderPiItems(type, items) {
+            const container = document.getElementById('pi-' + type + '-list');
+            const countBadge = document.getElementById('pi-' + type.replace('es','') + '-count') ||
+                               document.getElementById('pi-' + (type === 'allowances' ? 'allowance' : 'deduction') + '-count');
+
+            document.getElementById('pi-dot-' + type).textContent = items.length;
+            if (type === 'allowances') {
+                document.getElementById('pi-allowance-count').textContent = items.length;
+            } else {
+                document.getElementById('pi-deduction-count').textContent = items.length;
+            }
+
+            if (!items.length) {
+                const noun = type === 'allowances' ? 'allowances' : 'deductions';
+                const icon = type === 'allowances' ? 'card_giftcard' : 'remove_circle_outline';
+                container.innerHTML = `
+                    <div class="pi-empty">
+                        <div class="pi-empty-icon">
+                            <span class="material-icons-round">${icon}</span>
+                        </div>
+                        <span>No ${noun} assigned yet</span>
+                    </div>`;
+                return;
+            }
+
+            const masterList = type === 'allowances' ? allowancesList : deductionsList;
+            const idKey      = type === 'allowances' ? 'allowanceId' : 'deductionId';
+            const typeClass  = type === 'allowances' ? 'allowance' : 'deduction';
+            const iconName   = type === 'allowances' ? 'card_giftcard' : 'remove_circle_outline';
+            const amtClass   = type === 'allowances' ? 'allowance-amt' : 'deduction-amt';
+
+            container.innerHTML = '<div class="pi-items-list">' + items.map((item, idx) => {
+                const masterId = item[idKey] || item.id;
+                const found = masterList.find(m => String(m.id) === String(masterId));
+                const name = found ? (found.name || found.allowanceName || found.deductionName || 'Unnamed')
+                                   : (item.name || item.allowanceName || item.deductionName || 'Unnamed');
+
+                const chips = [];
+                if (item.overridden) chips.push(`<span class="pi-chip override"><span class="material-icons-round" style="font-size:10px">edit</span> Overridden</span>`);
+                if (item.effectiveFrom) chips.push(`<span class="pi-chip date"><span class="material-icons-round" style="font-size:10px">event</span> From ${item.effectiveFrom}</span>`);
+                if (item.effectiveTo)   chips.push(`<span class="pi-chip date"><span class="material-icons-round" style="font-size:10px">event</span> To ${item.effectiveTo}</span>`);
+
+                const amtDisplay = item.overrideAmount
+                    ? `<span class="pi-amount ${amtClass}">₦${Number(item.overrideAmount).toLocaleString()}</span>`
+                    : `<span class="pi-amount" style="color:var(--pi-muted);font-size:0.75rem">Default</span>`;
+
+                return `
+                    <div class="pi-item-card" data-item-id="${masterId}" data-record-id="${item.id || ''}">
+                        <div class="pi-item-left">
+                            <div class="pi-item-icon ${typeClass}">
+                                <span class="material-icons-round">${iconName}</span>
+                            </div>
+                            <div style="min-width:0">
+                                <div class="pi-item-name">${piEscHtml(name)}</div>
+                                <div class="pi-item-meta">${chips.join('')}</div>
+                            </div>
+                        </div>
+                        <div class="pi-item-right">
+                            ${amtDisplay}
+                            <button class="pi-remove-btn"
+                                    title="Remove"
+                                    onclick="removePiItem('${typeClass}', '${item.id || masterId}', this)">
+                                <span class="material-icons-round">close</span>
+                            </button>
+                        </div>
+                    </div>`;
+            }).join('') + '</div>';
+        }
+
+        /* ── REBUILD SELECT OPTIONS (filter already assigned) ────────────── */
+        function rebuildSelectOptions(type) {
+            const select     = document.getElementById('pi-' + type + '-select');
+            const masterList = type === 'allowance' ? allowancesList : deductionsList;
+            const assigned   = type === 'allowance' ? piAssignedAllowanceIds : piAssignedDeductionIds;
+
+            const prev = select.value;
+            select.innerHTML = `<option value="">Select a ${type}…</option>`;
+
+            const available = masterList.filter(item => !assigned.has(String(item.id)));
+
+            if (!available.length) {
+                const opt = document.createElement('option');
+                opt.disabled = true;
+                opt.textContent = 'All ' + type + 's already assigned';
+                select.appendChild(opt);
+            } else {
+                available.forEach(item => {
+                    const opt = document.createElement('option');
+                    opt.value = item.id;
+                    opt.textContent = item.name || item.allowanceName || item.deductionName || 'Unnamed';
+                    select.appendChild(opt);
+                });
+                // Restore previous selection if still valid
+                if (prev && available.find(i => String(i.id) === prev)) {
+                    select.value = prev;
+                }
+            }
+        }
+
+        /* ── TOGGLE OVERRIDE ─────────────────────────────────────────────── */
+        function toggleOverride(type, checked) {
+            const input = document.getElementById('pi-' + type + '-amount');
+            input.disabled = !checked;
+            if (!checked) input.value = '';
+            if (checked) input.focus();
+        }
+
+        /* ── RESET FORM ──────────────────────────────────────────────────── */
+        function resetPiForm(type) {
+            const sel = document.getElementById('pi-' + type + '-select');
+            if (sel) sel.value = '';
+            const chk = document.getElementById('pi-' + type + '-override-chk');
+            if (chk) { chk.checked = false; }
+            const amt = document.getElementById('pi-' + type + '-amount');
+            if (amt) { amt.value = ''; amt.disabled = true; }
+            const from = document.getElementById('pi-' + type + '-from');
+            if (from) from.value = '';
+            const to = document.getElementById('pi-' + type + '-to');
+            if (to) to.value = '';
+        }
+
+        /* ── SUBMIT ──────────────────────────────────────────────────────── */
+        function submitPayItem(type) {
+            const btn    = document.getElementById('pi-add-' + type + '-btn');
+            const selId  = document.getElementById('pi-' + type + '-select').value;
+
+            if (!selId) {
+                shakeElement(document.getElementById('pi-' + type + '-select'));
+                return;
+            }
+
+            const overridden = document.getElementById('pi-' + type + '-override-chk').checked;
+            let overrideAmount = null;
+            if (overridden) {
+                overrideAmount = parseFloat(document.getElementById('pi-' + type + '-amount').value);
+                if (isNaN(overrideAmount) || overrideAmount < 0) {
+                    shakeElement(document.getElementById('pi-' + type + '-amount'));
+                    return;
+                }
+            }
+
+            const effectiveFrom = document.getElementById('pi-' + type + '-from').value || null;
+            const effectiveTo   = document.getElementById('pi-' + type + '-to').value  || null;
+
+            const idKey   = type === 'allowance' ? 'allowanceId' : 'deductionId';
+            const payload = [{ [idKey]: parseInt(selId, 10), overridden, overrideAmount, effectiveFrom, effectiveTo }];
+
+            const endpoint = '/setup/employee/' + piEmployeeId + '/' + type + 's';
+
+            // Loading state
+            const originalHTML = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = `<span class="pi-spinner"></span> Adding…`;
+
+            fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(r => { if (!r.ok) return r.text().then(t => { throw new Error(t || 'Failed'); }); return r.json(); })
+            .then(() => {
+                resetPiForm(type);
+                fetchPayItemsData(piEmployeeId);
+                showPiToast(type === 'allowance' ? 'Allowance added ✓' : 'Deduction added ✓', 'success');
+            })
+            .catch(err => {
+                console.error(err);
+                showPiToast('Failed: ' + err.message, 'error');
+            })
+            .finally(() => {
+                btn.disabled = false;
+                btn.innerHTML = originalHTML;
+            });
+        }
+
+        /* ── REMOVE ──────────────────────────────────────────────────────── */
+        function removePiItem(type, recordId, btn) {
+            if (!confirm('Remove this ' + type + '?')) return;
+
+            const card = btn.closest('.pi-item-card');
+            card.style.opacity = '0.4';
+            card.style.pointerEvents = 'none';
+
+            // Determine endpoint — adjust to your actual API
+            const endpoint = '/setup/employee/' + piEmployeeId + '/' + type + 's/' + recordId;
+
+            fetch(endpoint, { method: 'DELETE' })
+            .then(r => {
+                if (!r.ok) throw new Error('Remove failed');
+                fetchPayItemsData(piEmployeeId);
+                showPiToast((type === 'allowance' ? 'Allowance' : 'Deduction') + ' removed', 'success');
+            })
+            .catch(err => {
+                card.style.opacity = '1';
+                card.style.pointerEvents = 'auto';
+                showPiToast('Failed to remove: ' + err.message, 'error');
+            });
+        }
+
+        /* ── TOAST NOTIFICATION ──────────────────────────────────────────── */
+        function showPiToast(msg, type) {
+            const existing = document.getElementById('pi-toast');
+            if (existing) existing.remove();
+
+            const toast = document.createElement('div');
+            toast.id = 'pi-toast';
+            const bg = type === 'success' ? '#16a34a' : '#dc2626';
+            const icon = type === 'success' ? 'check_circle' : 'error';
+            toast.style.cssText = `
+                position:fixed; bottom:24px; right:24px; z-index:9999;
+                background:${bg}; color:white;
+                padding:12px 18px; border-radius:10px;
+                font-size:0.82rem; font-weight:600;
+                display:flex; align-items:center; gap:8px;
+                box-shadow:0 8px 24px rgba(0,0,0,.2);
+                animation:piToastIn .25s ease;
+                max-width:320px;
+            `;
+            toast.innerHTML = `
+                <style>@keyframes piToastIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}</style>
+                <span class="material-icons-round" style="font-size:18px">${icon}</span>
+                <span>${piEscHtml(msg)}</span>`;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3200);
+        }
+
+        /* ── SHAKE ANIMATION (validation) ───────────────────────────────── */
+        function shakeElement(el) {
+            el.style.animation = 'none';
+            el.style.borderColor = '#ef4444';
+            el.style.boxShadow = '0 0 0 3px rgba(239,68,68,.15)';
+            setTimeout(() => {
+                el.style.borderColor = '';
+                el.style.boxShadow = '';
+            }, 1500);
+        }
+
+        /* ── HTML ESCAPE ─────────────────────────────────────────────────── */
+        function piEscHtml(s) {
+            if (!s) return '';
+            return String(s).replace(/[&<>'"]/g, c =>
+                ({ '&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;' }[c]));
+        }
+
+        /* ── DOM READY: populate select options ──────────────────────────── */
+        document.addEventListener('DOMContentLoaded', function() {
+            // Populate allowances select from server data
+            const aSelect = document.getElementById('pi-allowance-select');
+            if (aSelect && allowancesList && allowancesList.length) {
+                allowancesList.forEach(a => {
+                    const o = document.createElement('option');
+                    o.value = a.id;
+                    o.textContent = a.name || a.allowanceName || 'Unnamed';
+                    aSelect.appendChild(o);
+                });
+            }
+            // Populate deductions select
+            const dSelect = document.getElementById('pi-deduction-select');
+            if (dSelect && deductionsList && deductionsList.length) {
+                deductionsList.forEach(d => {
+                    const o = document.createElement('option');
+                    o.value = d.id;
+                    o.textContent = d.name || d.deductionName || 'Unnamed';
+                    dSelect.appendChild(o);
+                });
+            }
+        });
         /*]]>*/
     </script>
 </main>

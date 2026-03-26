@@ -160,7 +160,9 @@ public class EmployeeController {
                 payrollSetupService.getAllowancesForEmployee(id);
         List<EmployeeDeductionResponse> deductions =
                 payrollSetupService.getDeductionsForEmployee(id);
-
+        allowances.forEach(
+                a -> System.out.println("Allowance for employee ID " + id + ": " + a));
+        System.out.println("Deductions for employee ID " + id + ": " + deductions);
         return ResponseEntity.ok(Map.of(
                 "allowances", allowances,
                 "deductions", deductions
