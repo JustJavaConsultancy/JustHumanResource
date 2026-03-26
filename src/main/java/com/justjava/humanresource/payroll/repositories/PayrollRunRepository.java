@@ -353,4 +353,22 @@ GROUP BY e.id, e.firstName, e.lastName
             LocalDate start,
             LocalDate end
     );
+    Optional<PayrollRun>
+    findTopByEmployee_IdAndPeriodStartAndPeriodEndOrderByVersionNumberDesc(
+            Long employeeId,
+            LocalDate periodStart,
+            LocalDate periodEnd
+    );
+    @Query("""
+SELECT COALESCE(MAX(pr.versionNumber), 0)
+FROM PayrollRun pr
+WHERE pr.employee.id = :employeeId
+AND pr.periodStart = :periodStart
+AND pr.periodEnd = :periodEnd
+""")
+    Integer findMaxVersionForEmployeeAndPeriod(
+            Long employeeId,
+            LocalDate periodStart,
+            LocalDate periodEnd
+    );
 }

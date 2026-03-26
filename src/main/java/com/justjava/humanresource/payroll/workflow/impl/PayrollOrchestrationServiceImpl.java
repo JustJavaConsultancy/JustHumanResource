@@ -66,6 +66,10 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
             LocalDate payrollDate,
             String processInstanceId) {
 
+    /* ============================================================
+       1. LOAD EMPLOYEE
+       ============================================================ */
+
         Employee employee = employeeRepository.findById(employeeId)
                 .orElseThrow(() ->
                         new ResourceNotFoundException("Employee", employeeId));
@@ -75,57 +79,115 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
                 .getCompany()
                 .getId();
 
+    /* ============================================================
+       2. VALIDATIONS
+       ============================================================ */
+
         payrollSetupService.validatePayrollSystemReadiness(payrollDate);
+
+        PayrollPeriod openPeriod =
+                payrollPeriodService.getOpenPeriod(companyId);
+
         payrollPeriodService.validatePayrollDate(companyId, payrollDate);
 
-        Optional<PayrollRun> existingOpt =
+    /* ============================================================
+       3. CHECK EXISTING RUNS (LATEST VERSION IN PERIOD)
+       ============================================================ */
+
+        Optional<PayrollRun> latestOpt =
                 payrollRunRepository
-                        .findTopByEmployeeIdAndPeriodEndOrderByVersionNumberDesc(
+                        .findTopByEmployee_IdAndPeriodStartAndPeriodEndOrderByVersionNumberDesc(
                                 employeeId,
-                                payrollDate
+                                openPeriod.getPeriodStart(),
+                                openPeriod.getPeriodEnd()
                         );
 
-        if (existingOpt.isPresent()) {
+        if (latestOpt.isPresent()) {
 
-            PayrollRun existing = existingOpt.get();
+            PayrollRun latest = latestOpt.get();
 
-            if (existing.getStatus() == PayrollRunStatus.POSTED) {
+        /* --------------------------------------------------------
+           CASE 1: IN-PROGRESS → REUSE (IDEMPOTENCY)
+           -------------------------------------------------------- */
+            if (latest.getStatus() == PayrollRunStatus.IN_PROGRESS) {
+                return latest.getId();
+            }
 
-                if (!payrollPeriodService
-                        .isPayrollDateInOpenPeriod(companyId, payrollDate)) {
+        /* --------------------------------------------------------
+           CASE 2: POSTED → CREATE AMENDMENT (IF PERIOD STILL OPEN)
+           -------------------------------------------------------- */
+            if (latest.getStatus() == PayrollRunStatus.POSTED) {
+
+                if (!payrollPeriodService.isPayrollDateInOpenPeriod(
+                        companyId,
+                        payrollDate)) {
 
                     throw new IllegalStateException(
                             "Cannot amend payroll. Period is CLOSED."
                     );
                 }
 
-                PayrollRun amendment = createAmendmentRun(existing);
-                amendment.setFlowableProcessInstanceId(processInstanceId);
-                return amendment.getId();
-            }
+            /* ----------------------------------------------------
+               DETERMINE NEXT VERSION (SAFE VERSIONING)
+               ---------------------------------------------------- */
 
-            if (existing.getStatus() == PayrollRunStatus.IN_PROGRESS) {
-                return existing.getId();
+                Integer maxVersion =
+                        payrollRunRepository.findMaxVersionForEmployeeAndPeriod(
+                                employeeId,
+                                openPeriod.getPeriodStart(),
+                                openPeriod.getPeriodEnd()
+                        );
+
+                int nextVersion = (maxVersion == null ? 0 : maxVersion) + 1;
+
+            /* ----------------------------------------------------
+               CREATE AMENDMENT RUN
+               ---------------------------------------------------- */
+
+                PayrollRun amendment = new PayrollRun();
+                amendment.setEmployee(employee);
+                amendment.setPayrollDate(payrollDate);
+                amendment.setStatus(PayrollRunStatus.IN_PROGRESS);
+                amendment.setRunType(PayrollRunType.AMENDMENT);
+                amendment.setVersionNumber(nextVersion);
+                amendment.setParentRun(latest);
+
+                amendment.setPeriodStart(openPeriod.getPeriodStart());
+                amendment.setPeriodEnd(openPeriod.getPeriodEnd());
+
+                amendment.setGrossPay(BigDecimal.ZERO);
+                amendment.setTotalDeductions(BigDecimal.ZERO);
+                amendment.setNetPay(BigDecimal.ZERO);
+
+                amendment.setFlowableProcessInstanceId(processInstanceId);
+                amendment.setFlowableBusinessKey(employee.getId().toString());
+                amendment.setPayrollYear(openPeriod.getPeriodStart().getYear());
+
+                return payrollRunRepository.save(amendment).getId();
             }
         }
+
+    /* ============================================================
+       4. NO EXISTING RUN → CREATE ORIGINAL (VERSION = 1)
+       ============================================================ */
 
         PayrollRun run = new PayrollRun();
         run.setEmployee(employee);
         run.setPayrollDate(payrollDate);
         run.setStatus(PayrollRunStatus.IN_PROGRESS);
-        run.setFlowableProcessInstanceId(processInstanceId);
         run.setRunType(PayrollRunType.ORIGINAL);
         run.setVersionNumber(1);
+
+        run.setPeriodStart(openPeriod.getPeriodStart());
+        run.setPeriodEnd(openPeriod.getPeriodEnd());
+
         run.setGrossPay(BigDecimal.ZERO);
+        run.setTotalDeductions(BigDecimal.ZERO);
         run.setNetPay(BigDecimal.ZERO);
 
-        PayrollPeriod open =
-                payrollPeriodService.getOpenPeriod(companyId);
-
-        run.setPeriodStart(open.getPeriodStart());
-        run.setPeriodEnd(open.getPeriodEnd());
+        run.setFlowableProcessInstanceId(processInstanceId);
         run.setFlowableBusinessKey(employee.getId().toString());
-        run.setPayrollYear(open.getPeriodStart().getYear());
+        run.setPayrollYear(openPeriod.getPeriodStart().getYear());
 
         return payrollRunRepository.save(run).getId();
     }
