@@ -86,4 +86,5 @@ public interface PayrollPeriodService {
     );
 
     PayrollPeriod findById(Long id);
+    public PayrollPeriod getCurrentPeriod(Long companyId);
 }

@@ -9,6 +9,7 @@ import com.justjava.humanresource.hr.entity.EmployeePositionHistory;
 import com.justjava.humanresource.hr.entity.JobStep;
 import com.justjava.humanresource.hr.entity.PayGroup;
 import com.justjava.humanresource.hr.repository.EmployeeRepository;
+import com.justjava.humanresource.kpi.service.KpiMeasurementService;
 import com.justjava.humanresource.payroll.calculation.PayGroupResolutionService;
 import com.justjava.humanresource.payroll.calculation.dto.ResolvedPayComponents;
 import com.justjava.humanresource.payroll.entity.*;
@@ -33,6 +34,7 @@ import javax.script.ScriptEngineManager;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
@@ -51,6 +53,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
     private final PensionCalculatorService pensionCalculatorService;
     private final EmployeePositionHistoryService employeePositionHistoryService;
     private final PayrollPeriodService payrollPeriodService;
+    private final KpiMeasurementService kpiMeasurementService;
 
     /* ============================================================
        INITIALIZE
@@ -173,14 +176,36 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
 
             BigDecimal configuredGross = jobStep.getGrossSalary();
 
-            grossPay = configuredGross;
+
+
+            BigDecimal kpiScore =
+                    kpiMeasurementService.getEmployeeKpiScore(
+                            employee.getId(),
+                            YearMonth.from(run.getPayrollDate())
+                    );
+
+            System.out.println(" The KPI Score Here========"+kpiScore);
+// Convert % → factor
+            BigDecimal performanceFactor =
+                    kpiScore.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
+
+            System.out.println(" The Performance Factor==="+performanceFactor);
+// Apply
+            BigDecimal adjustedGross =
+                    configuredGross.multiply(performanceFactor)
+                            .setScale(2, RoundingMode.HALF_UP);
+
+// Save
+            run.setGrossPay(adjustedGross);
+
+            grossPay = adjustedGross;
 
             // Derive BASIC (e.g. 40% of gross)
             BigDecimal basicPercentage =
                     Optional.ofNullable(jobStep.getBasicPercentage())
                             .orElse(BigDecimal.valueOf(40));
 
-            basicSalary = configuredGross
+            basicSalary = adjustedGross
                     .multiply(basicPercentage)
                     .divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
 
@@ -320,7 +345,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
         PensionScheme scheme =
                 pensionSchemeRepository
                         .findEffectiveScheme(
-                                LocalDate.now(),
+                                run.getPayrollDate(),
                                 RecordStatus.ACTIVE
                         )
                         .orElse(null);
@@ -492,7 +517,93 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
         run.setStatus(PayrollRunStatus.POSTED);
         payrollRunRepository.save(run);
     }
+    @Override
+    @Transactional
+    public void applyOtherDeductions(Long payrollRunId) {
 
+        PayrollRun run = getEditableRun(payrollRunId);
+        Employee employee = run.getEmployee();
+
+        BigDecimal totalOtherDeductions = BigDecimal.ZERO;
+
+    /* ============================================================
+       FETCH DEDUCTIONS FROM PAY GROUP
+       ============================================================ */
+
+        EmployeePositionHistory position =
+                employeePositionHistoryService
+                        .getCurrentPosition(employee.getId());
+
+        PayGroup payGroup = position.getPayGroup();
+
+        ResolvedPayComponents resolved =
+                payGroupResolutionService.resolve(
+                        payGroup,
+                        employee,
+                        run.getPayrollDate()
+                );
+
+        for (Deduction deduction : resolved.getDeductions()) {
+
+            BigDecimal amount = computeDeductionAmount(
+                    deduction,
+                    run.getGrossPay(),
+                    run.getNetPay()
+            );
+
+            if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0)
+                continue;
+
+            amount = amount.setScale(2, RoundingMode.HALF_UP);
+
+            saveLine(run, employee,
+                    deduction.getCode(),
+                    deduction.getName(),
+                    amount,
+                    false,
+                    PayComponentType.DEDUCTION);
+
+            totalOtherDeductions = totalOtherDeductions.add(amount);
+        }
+
+    /* ============================================================
+       UPDATE TOTALS
+       ============================================================ */
+
+        run.setTotalDeductions(
+                run.getTotalDeductions().add(totalOtherDeductions)
+        );
+
+        run.setNetPay(
+                run.getGrossPay()
+                        .subtract(run.getTotalDeductions())
+                        .setScale(2, RoundingMode.HALF_UP)
+        );
+
+        payrollRunRepository.save(run);
+    }
+    private BigDecimal computeDeductionAmount(
+            Deduction deduction,
+            BigDecimal gross,
+            BigDecimal net) {
+
+        switch (deduction.getCalculationType()) {
+
+            case FIXED_AMOUNT:
+                return deduction.getAmount();
+
+            case PERCENTAGE_OF_GROSS:
+                return gross.multiply(deduction.getPercentageRate())
+                        .divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
+
+            case PERCENTAGE_OF_BASIC:
+                return net.multiply(deduction.getPercentageRate())
+                        .divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
+
+            default:
+                throw new IllegalStateException("Unsupported deduction type");
+        }
+    }
     /* ============================================================
        INTERNAL UTILITIES
        ============================================================ */

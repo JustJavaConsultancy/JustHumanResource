@@ -36,11 +36,13 @@ public class InitializePayrollDelegate implements JavaDelegate {
          * If payrollRunId already exists (async retry),
          * do not create a second run.
          */
+/*
         if (execution.hasVariable("payrollRunId")) {
             log.warn("Payroll already initialized for employeeId={}, skipping duplicate initialization",
                     employeeId);
             return;
         }
+*/
 
         Long payrollRunId = payrollService.initializePayrollRun(
                 employeeId,
@@ -48,6 +50,7 @@ public class InitializePayrollDelegate implements JavaDelegate {
                 processInstanceId
         );
 
+        System.out.println( " In Initialize The payrollRunId=="+payrollRunId+" payrollDate===="+payrollDate);
         execution.setVariable("payrollRunId", payrollRunId);
 
         log.info("PayrollRun created with id={}", payrollRunId);

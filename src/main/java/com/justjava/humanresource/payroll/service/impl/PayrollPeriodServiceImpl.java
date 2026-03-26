@@ -233,7 +233,21 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
         PayrollPeriodStatus status = current != null ? current.getStatus() : null;
         return status;
     }
+    @Override
+    public PayrollPeriod getCurrentPeriod(Long companyId) {
+        PayrollPeriod current =
+                payrollPeriodRepository
+                        .findByCompanyIdAndStatusIn(
+                                companyId,
+                                List.of(
+                                        PayrollPeriodStatus.OPEN,
+                                        PayrollPeriodStatus.LOCKED
+                                )
+                        )
+                        .orElse(null);
 
+        return current;
+    }
     /* ============================================================
        FLOWABLE APPROVAL
        ============================================================ */

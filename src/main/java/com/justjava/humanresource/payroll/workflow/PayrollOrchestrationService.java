@@ -16,4 +16,5 @@ public interface PayrollOrchestrationService {
     void applyStatutoryDeductions(Long payrollRunId);
 
     void finalizePayroll(Long payrollRunId);
+    public void applyOtherDeductions(Long payrollRunId);
 }

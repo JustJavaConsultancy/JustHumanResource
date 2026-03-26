@@ -11,5 +11,5 @@ public enum PayComponentCalculationType {
 
     PERCENTAGE_OF_TAXABLE,
 
-    FORMULA
+    PERCENTAGE_OF_NET, FORMULA
 }
