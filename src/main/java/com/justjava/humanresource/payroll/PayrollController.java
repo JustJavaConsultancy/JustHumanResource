@@ -221,11 +221,15 @@ public class PayrollController {
     }
     @PostMapping("/setup/allowance")
     public String createAllowance(Allowance allowance) {
+        if(allowance.getAmount()==null)
+            allowance.setAmount(new BigDecimal(0.00));
         payrollSetupService.createAllowance(allowance);
         return "redirect:/payroll/items";
     }
     @PostMapping("/setup/deduction")
     public String createDeduction(Deduction deduction) {
+        if(deduction.getAmount()==null)
+            deduction.setAmount(new BigDecimal(0.00));
         payrollSetupService.createDeduction(deduction);
         return "redirect:/payroll/items";
     }

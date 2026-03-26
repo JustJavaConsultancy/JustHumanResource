@@ -1,5 +1,6 @@
 package com.justjava.humanresource.kpi.service;
 
+import com.justjava.humanresource.dispatcher.PayrollMessageDispatcher;
 import com.justjava.humanresource.hr.entity.Employee;
 import com.justjava.humanresource.hr.entity.JobStep;
 import com.justjava.humanresource.hr.repository.EmployeeRepository;
@@ -34,6 +35,7 @@ public class KpiMeasurementService {
     private final KpiDefinitionRepository kpiRepository;
 
     private final JobStepRepository jobStepRepository;
+    private final PayrollMessageDispatcher payrollMessageDispatcher;
 
     /* =====================================================
        BULK MEASUREMENT ENTRY
@@ -119,7 +121,7 @@ public class KpiMeasurementService {
                             .build()
             );
         }
-
+        payrollMessageDispatcher.requestPayroll(employee.getId(),LocalDate.now());
         return responseList;
     }
     /* =========================================================
@@ -207,7 +209,31 @@ public class KpiMeasurementService {
                 )
                 .toList();
     }
+    @Transactional(readOnly = true)
+    public BigDecimal getEmployeeKpiScore(
+            Long employeeId,
+            YearMonth period
+    ) {
 
+        List<KpiMeasurement> measurements =
+                measurementRepository.findByEmployee_IdAndPeriod(employeeId, period);
+
+        if (measurements.isEmpty()) {
+            return BigDecimal.valueOf(100); // 🔥 fallback (no penalty)
+        }
+
+        BigDecimal total = BigDecimal.ZERO;
+
+        for (KpiMeasurement m : measurements) {
+            total = total.add(m.getScore());
+        }
+
+        return total.divide(
+                BigDecimal.valueOf(measurements.size()),
+                2,
+                RoundingMode.HALF_UP
+        );
+    }
     /* =====================================================
        INTERNAL VALIDATION
        ===================================================== */
