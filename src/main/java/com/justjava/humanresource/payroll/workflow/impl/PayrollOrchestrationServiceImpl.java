@@ -404,9 +404,9 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
                 .map(PayrollLineItem::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-    /* ============================================================
-       PENSION CALCULATION (ALL EARNINGS)
-       ============================================================ */
+/* ============================================================
+   PENSION CALCULATION (ONLY PENSIONABLE EARNINGS)
+   ============================================================ */
 
         PensionScheme scheme =
                 pensionSchemeRepository
@@ -421,7 +421,10 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
 
         if (scheme != null) {
 
-            BigDecimal pensionableEarnings = totalEarnings;
+            BigDecimal pensionableEarnings = earningLines.stream()
+                    .filter(PayrollLineItem::isPensionable)   // ✅ KEY CHANGE
+                    .map(PayrollLineItem::getAmount)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
 
             employeePension =
                     pensionCalculatorService.calculateEmployeeContribution(
@@ -470,7 +473,6 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
                 taxableIncome = BigDecimal.ZERO;
             }
         }
-
     /* ============================================================
        PAYE CALCULATION
        ============================================================ */
