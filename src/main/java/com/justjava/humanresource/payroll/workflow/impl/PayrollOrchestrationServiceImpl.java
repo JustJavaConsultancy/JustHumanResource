@@ -227,74 +227,54 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
                 jobStep.getGrossSalary() != null
                         && jobStep.getGrossSalary().compareTo(BigDecimal.ZERO) > 0;
 
-        BigDecimal grossPay = BigDecimal.ZERO;
-        BigDecimal basicSalary;
+        BigDecimal grossPay;
+        BigDecimal runningGross = BigDecimal.ZERO;
+        BigDecimal taxableIncome = BigDecimal.ZERO;
 
         if (isGrossBased) {
 
         /* --------------------------------------------------------
-           GROSS-BASED PAYROLL
+           GROSS-BASED PAYROLL (NO BASIC HERE)
            -------------------------------------------------------- */
 
             BigDecimal configuredGross = jobStep.getGrossSalary();
 
-
-
             BigDecimal kpiScore =
                     kpiMeasurementService.getEmployeeKpiScore(
                             employee.getId(),
-                            YearMonth.from(run.getPayrollDate())
+                            YearMonth.from(payrollDate)
                     );
 
-            System.out.println(" The KPI Score Here========"+kpiScore);
-// Convert % → factor
             BigDecimal performanceFactor =
                     kpiScore.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
 
-            System.out.println(" The Performance Factor==="+performanceFactor);
-// Apply
-            BigDecimal adjustedGross =
-                    configuredGross.multiply(performanceFactor)
-                            .setScale(2, RoundingMode.HALF_UP);
-
-// Save
-            run.setGrossPay(adjustedGross);
-
-            grossPay = adjustedGross;
-
-            // Derive BASIC (e.g. 40% of gross)
-            BigDecimal basicPercentage =
-                    Optional.ofNullable(jobStep.getBasicPercentage())
-                            .orElse(BigDecimal.valueOf(40));
-
-            basicSalary = adjustedGross
-                    .multiply(basicPercentage)
-                    .divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
+            grossPay = configuredGross
+                    .multiply(performanceFactor)
+                    .setScale(2, RoundingMode.HALF_UP);
 
         } else {
 
         /* --------------------------------------------------------
-           BASIC-BASED PAYROLL (EXISTING LOGIC)
+           BASIC-BASED PAYROLL (LEGACY MODE)
            -------------------------------------------------------- */
 
-            basicSalary = jobStep.getBasicSalary();
+            BigDecimal basicSalary = jobStep.getBasicSalary()
+                    .setScale(2, RoundingMode.HALF_UP);
+
+            saveLine(run, employee,
+                    "BASIC",
+                    "Basic Salary",
+                    basicSalary,
+                    true,
+                    PayComponentType.EARNING);
+
             grossPay = basicSalary;
+            runningGross = basicSalary;
+            taxableIncome = basicSalary;
         }
 
-        basicSalary = basicSalary.setScale(2, RoundingMode.HALF_UP);
-
-        saveLine(run, employee,
-                "BASIC",
-                "Basic Salary",
-                basicSalary,
-                true,
-                PayComponentType.EARNING);
-
-        BigDecimal computedAllowancesTotal = BigDecimal.ZERO;
-        BigDecimal taxableIncome = basicSalary;
-
     /* ============================================================
-       RESOLVE ALLOWANCES
+       RESOLVE ALL EARNINGS (INCLUDING BASIC IF CONFIGURED)
        ============================================================ */
 
         ResolvedPayComponents resolved =
@@ -308,8 +288,8 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
 
             BigDecimal amount = computeAllowanceAmount(
                     allowance,
-                    basicSalary,
-                    isGrossBased ? grossPay : grossPay.add(computedAllowancesTotal),
+                    runningGross,   // no fixed BASIC
+                    isGrossBased ? grossPay : runningGross,
                     taxableIncome
             );
 
@@ -333,7 +313,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
                     allowance.isTaxable(),
                     PayComponentType.EARNING);
 
-            computedAllowancesTotal = computedAllowancesTotal.add(amount);
+            runningGross = runningGross.add(amount);
 
             if (allowance.isTaxable()) {
                 taxableIncome = taxableIncome.add(amount);
@@ -344,21 +324,35 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
        FINAL GROSS HANDLING
        ============================================================ */
 
-        if (!isGrossBased) {
-            grossPay = grossPay.add(computedAllowancesTotal);
-        } else {
-            /*
-             * IMPORTANT:
-             * In gross-based payroll,
-             * allowances MUST NOT exceed gross.
-             */
-            BigDecimal derivedTotal = basicSalary.add(computedAllowancesTotal);
+        if (isGrossBased) {
 
-            if (derivedTotal.compareTo(grossPay) > 0) {
+            if (runningGross.compareTo(grossPay) > 0) {
                 throw new IllegalStateException(
-                        "Derived earnings exceed configured gross salary."
+                        "Configured earnings exceed gross salary."
                 );
             }
+
+            /*
+             * Optional but recommended:
+             * Balance any remaining difference
+             */
+            BigDecimal difference = grossPay.subtract(runningGross);
+
+            if (difference.compareTo(BigDecimal.ZERO) > 0) {
+
+                saveLine(run, employee,
+                        "RESIDUAL",
+                        "Residual Adjustment",
+                        difference,
+                        true,
+                        PayComponentType.EARNING);
+
+                runningGross = runningGross.add(difference);
+                taxableIncome = taxableIncome.add(difference);
+            }
+
+        } else {
+            grossPay = runningGross;
         }
 
         run.setGrossPay(grossPay.setScale(2, RoundingMode.HALF_UP));
@@ -376,11 +370,14 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
         PayrollRun run = getEditableRun(payrollRunId);
         Employee employee = run.getEmployee();
 
-        payrollLineItemRepository
-                .deleteByPayrollRunIdAndComponentType(
-                        payrollRunId,
-                        PayComponentType.DEDUCTION
-                );
+    /* ============================================================
+       CLEAN ONLY STATUTORY DEDUCTIONS (SAFE FOR RETRIES)
+       ============================================================ */
+
+        payrollLineItemRepository.deleteByPayrollRunIdAndComponentCodeIn(
+                payrollRunId,
+                List.of("PAYE", "PENSION_EMP", "PENSION_EMPLOYER")
+        );
 
         BigDecimal totalDeductions = BigDecimal.ZERO;
 
@@ -395,13 +392,17 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
                                 PayComponentType.EARNING
                         );
 
+        BigDecimal totalEarnings = earningLines.stream()
+                .map(PayrollLineItem::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
         BigDecimal taxableIncome = earningLines.stream()
                 .filter(PayrollLineItem::isTaxable)
                 .map(PayrollLineItem::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
     /* ============================================================
-       PENSION CALCULATION
+       PENSION CALCULATION (ALL EARNINGS)
        ============================================================ */
 
         PensionScheme scheme =
@@ -417,11 +418,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
 
         if (scheme != null) {
 
-            // Pensionable earnings (BASIC + HOUSING + TRANSPORT)
-            BigDecimal pensionableEarnings = earningLines.stream()
-                    .filter(line -> line.getComponentType()==PayComponentType.EARNING)
-                    .map(PayrollLineItem::getAmount)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            BigDecimal pensionableEarnings = totalEarnings;
 
             employeePension =
                     pensionCalculatorService.calculateEmployeeContribution(
@@ -447,7 +444,6 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
                 totalDeductions = totalDeductions.add(employeePension);
             }
 
-            // Employer pension (not deducted from net pay)
             if (employerPension.compareTo(BigDecimal.ZERO) > 0) {
 
                 saveLine(run, employee,
@@ -458,14 +454,16 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
                         PayComponentType.EMPLOYER_COST);
             }
 
-            // Save snapshot
             run.setAppliedPensionSchemeName(scheme.getName());
 
             /*
-             * IMPORTANT:
              * Pension reduces taxable income
              */
             taxableIncome = taxableIncome.subtract(employeePension);
+
+            if (taxableIncome.compareTo(BigDecimal.ZERO) < 0) {
+                taxableIncome = BigDecimal.ZERO;
+            }
         }
 
     /* ============================================================
@@ -586,10 +584,20 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
         PayrollRun run = getEditableRun(payrollRunId);
         Employee employee = run.getEmployee();
 
+    /* ============================================================
+       CLEAN ONLY OTHER DEDUCTIONS (SAFE)
+       ============================================================ */
+
+        payrollLineItemRepository.deleteByPayrollRunIdAndComponentTypeAndComponentCodeNotIn(
+                payrollRunId,
+                PayComponentType.DEDUCTION,
+                List.of("PAYE", "PENSION_EMP")
+        );
+
         BigDecimal totalOtherDeductions = BigDecimal.ZERO;
 
     /* ============================================================
-       FETCH DEDUCTIONS FROM PAY GROUP
+       FETCH PAY GROUP CONFIG
        ============================================================ */
 
         EmployeePositionHistory position =
@@ -605,12 +613,30 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
                         run.getPayrollDate()
                 );
 
+    /* ============================================================
+       COMPUTATION BASES
+       ============================================================ */
+
+        BigDecimal grossPay = run.getGrossPay();
+
+        /*
+         * Net BEFORE other deductions
+         */
+        BigDecimal netBeforeOtherDeductions =
+                run.getGrossPay()
+                        .subtract(Optional.ofNullable(run.getTotalDeductions())
+                                .orElse(BigDecimal.ZERO));
+
+    /* ============================================================
+       APPLY OTHER DEDUCTIONS
+       ============================================================ */
+
         for (Deduction deduction : resolved.getDeductions()) {
 
             BigDecimal amount = computeDeductionAmount(
                     deduction,
-                    run.getGrossPay(),
-                    run.getNetPay()
+                    grossPay,
+                    netBeforeOtherDeductions
             );
 
             if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0)
@@ -629,16 +655,20 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
         }
 
     /* ============================================================
-       UPDATE TOTALS
+       RECOMPUTE TOTAL DEDUCTIONS (SAFE)
        ============================================================ */
 
-        run.setTotalDeductions(
-                run.getTotalDeductions().add(totalOtherDeductions)
-        );
+        BigDecimal statutoryDeductions =
+                payrollLineItemRepository.sumStatutoryDeductions(run.getId());
+
+        BigDecimal totalDeductions =
+                statutoryDeductions.add(totalOtherDeductions);
+
+        run.setTotalDeductions(totalDeductions);
 
         run.setNetPay(
                 run.getGrossPay()
-                        .subtract(run.getTotalDeductions())
+                        .subtract(totalDeductions)
                         .setScale(2, RoundingMode.HALF_UP)
         );
 

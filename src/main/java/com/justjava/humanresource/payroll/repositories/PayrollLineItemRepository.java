@@ -4,6 +4,7 @@ package com.justjava.humanresource.payroll.repositories;
 import com.justjava.humanresource.payroll.entity.PayrollLineItem;
 import com.justjava.humanresource.payroll.enums.PayComponentType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -63,4 +64,33 @@ public interface PayrollLineItemRepository
             @Param("runId") Long runId,
             @Param("code") String code
     );
+    @Modifying
+    @Query("""
+    DELETE FROM PayrollLineItem li
+    WHERE li.payrollRun.id = :payrollRunId
+      AND li.componentCode IN :codes
+""")
+    void deleteByPayrollRunIdAndComponentCodeIn(
+            @Param("payrollRunId") Long payrollRunId,
+            @Param("codes") List<String> codes
+    );
+    @Modifying
+    @Query("""
+    DELETE FROM PayrollLineItem li
+    WHERE li.payrollRun.id = :runId
+      AND li.componentType = :type
+      AND li.componentCode NOT IN :codes
+""")
+    void deleteByPayrollRunIdAndComponentTypeAndComponentCodeNotIn(
+            @Param("runId") Long runId,
+            @Param("type") PayComponentType type,
+            @Param("codes") List<String> codes
+    );
+    @Query("""
+    SELECT COALESCE(SUM(li.amount), 0)
+    FROM PayrollLineItem li
+    WHERE li.payrollRun.id = :runId
+      AND li.componentCode IN ('PAYE', 'PENSION_EMP')
+""")
+    BigDecimal sumStatutoryDeductions(@Param("runId") Long runId);
 }
