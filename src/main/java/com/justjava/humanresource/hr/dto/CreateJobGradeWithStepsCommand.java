@@ -22,5 +22,6 @@ public class CreateJobGradeWithStepsCommand {
         private String stepName;
         private BigDecimal basicSalary;
         private BigDecimal grossSalary;
+        private boolean annual; // to convert the annual salary to monthly values
     }
 }

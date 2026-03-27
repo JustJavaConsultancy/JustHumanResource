@@ -443,6 +443,8 @@
         const nameInput   = row.querySelector('input[type="text"]');
         const salaryInput = row.querySelector('input[type="number"]');
         const radios      = row.querySelectorAll('input[type="radio"]');
+       const annual = row.querySelector('input[type="checkbox"]');
+       if (annual) annual.name = `steps[${i}].annual`;
 
         if (nameInput) nameInput.name = `steps[${i}].stepName`;
 
@@ -496,45 +498,59 @@
       const row = document.createElement('div');
       row.className = 'modal-step-row';
       row.innerHTML = `
-        <div class="flex items-center gap-3 flex-wrap sm:flex-nowrap">
+  <div class="flex flex-col gap-2">
 
-          <!-- Step name -->
-          <input type="text"
-                 name="steps[${idx}].stepName"
-                 placeholder="Step name (e.g. Step 1)"
-                 class="flex-1 min-w-0 px-3 py-2 border border-gray-300 dark:border-gray-600
-                        rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500
-                        dark:bg-gray-900 dark:text-white transition"
-                 required>
+    <!-- Row 1: inputs -->
+    <div class="flex items-center gap-3 flex-wrap sm:flex-nowrap">
 
-          <!-- Salary amount — name switches between basicSalary / grossSalary via JS -->
-          <div class="relative flex-1 min-w-0">
-            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium pointer-events-none">₦</span>
-            <input type="number"
-                   name="steps[${idx}].basicSalary"
-                   placeholder="0.00"
-                   min="0" step="0.01"
-                   class="w-full pl-8 pr-3 py-2 border border-gray-300 dark:border-gray-600
-                          rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500
-                          dark:bg-gray-900 dark:text-white transition"
-                   required>
-          </div>
+      <!-- Step name -->
+      <input type="text"
+             name="steps[${idx}].stepName"
+             placeholder="Step name (e.g. Step 1)"
+             class="flex-1 min-w-0 px-3 py-2 border border-gray-300 dark:border-gray-600
+                    rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500
+                    dark:bg-gray-900 dark:text-white transition"
+             required>
 
-          <!-- Basic / Gross toggle — name groups them per row; JS renames the salary input above -->
-          <div class="salary-type-toggle flex-shrink-0">
-            <input type="radio" id="${basicId}" name="salaryTypeGroup_${idx}" value="BASIC" checked onchange="updateSalaryFieldName(this)">
-            <label for="${basicId}" data-val="BASIC">Basic</label>
-            <input type="radio" id="${grossId}" name="salaryTypeGroup_${idx}" value="GROSS" onchange="updateSalaryFieldName(this)">
-            <label for="${grossId}" data-val="GROSS">Gross</label>
-          </div>
+      <!-- Salary amount -->
+      <div class="relative flex-1 min-w-0">
+        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium pointer-events-none">₦</span>
+        <input type="number"
+               name="steps[${idx}].basicSalary"
+               placeholder="0.00"
+               min="0" step="0.01"
+               class="w-full pl-8 pr-3 py-2 border border-gray-300 dark:border-gray-600
+                      rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500
+                      dark:bg-gray-900 dark:text-white transition"
+               required>
+      </div>
 
-          <!-- Remove -->
-          <button type="button" onclick="removeStepRow(this)"
-                  class="flex-shrink-0 p-1.5 text-gray-400 hover:text-red-500 rounded-lg
-                         hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
-            <span class="material-icons-round text-sm">delete</span>
-          </button>
-        </div>`;
+      <!-- Basic / Gross toggle -->
+      <div class="salary-type-toggle flex-shrink-0">
+        <input type="radio" id="${basicId}" name="salaryTypeGroup_${idx}" value="BASIC" checked onchange="updateSalaryFieldName(this)">
+        <label for="${basicId}" data-val="BASIC">Basic</label>
+        <input type="radio" id="${grossId}" name="salaryTypeGroup_${idx}" value="GROSS" onchange="updateSalaryFieldName(this)">
+        <label for="${grossId}" data-val="GROSS">Gross</label>
+      </div>
+
+      <!-- Remove -->
+      <button type="button" onclick="removeStepRow(this)"
+              class="flex-shrink-0 p-1.5 text-gray-400 hover:text-red-500 rounded-lg
+                     hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+        <span class="material-icons-round text-sm">delete</span>
+      </button>
+    </div>
+
+    <!-- Row 2: Annally checkbox -->
+  <div class="flex items-center gap-2 bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 rounded-lg px-3 py-2">
+  <input type="checkbox" id="annual_${idx}" name="steps[${idx}].annual"
+         class="rounded border-blue-300 text-blue-500 focus:ring-blue-400 cursor-pointer">
+  <label for="annual_${idx}" class="text-xs text-blue-700 dark:text-blue-400 cursor-pointer">
+    Tick if Salary Figure is <strong>Annual</strong>
+  </label>
+</div>
+
+  </div>`;
       container.appendChild(row);
     }
 

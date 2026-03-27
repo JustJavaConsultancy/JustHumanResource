@@ -21,6 +21,7 @@ import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.math.RoundingMode;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -99,8 +100,18 @@ public class SetupServiceImpl implements SetupService {
 
                     JobStep step = new JobStep();
                     step.setName(stepCommand.getStepName());
-                    step.setBasicSalary(stepCommand.getBasicSalary());
-                    step.setGrossSalary(stepCommand.getGrossSalary());
+                    BigDecimal divisor = stepCommand.isAnnual() ? BigDecimal.valueOf(12) : BigDecimal.ONE;
+
+                    step.setBasicSalary(
+                            stepCommand.getBasicSalary() != null
+                                    ? stepCommand.getBasicSalary().divide(divisor, 2, RoundingMode.HALF_UP)
+                                    : null
+                    );
+                    step.setGrossSalary(
+                            stepCommand.getGrossSalary() != null
+                                    ? stepCommand.getGrossSalary().divide(divisor, 2, RoundingMode.HALF_UP)
+                                    : null
+                    );
                     step.setDepartment(department);
                     step.setJobGrade(savedGrade);
                     return jobStepRepository.save(step);
