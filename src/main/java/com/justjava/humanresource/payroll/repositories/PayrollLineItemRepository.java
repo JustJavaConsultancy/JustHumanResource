@@ -4,6 +4,7 @@ package com.justjava.humanresource.payroll.repositories;
 import com.justjava.humanresource.payroll.entity.PayrollLineItem;
 import com.justjava.humanresource.payroll.enums.PayComponentType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -62,5 +63,15 @@ public interface PayrollLineItemRepository
     BigDecimal sumByRunAndCode(
             @Param("runId") Long runId,
             @Param("code") String code
+    );
+    @Modifying
+    @Query("""
+    DELETE FROM PayrollLineItem li
+    WHERE li.payrollRun.id = :payrollRunId
+      AND li.componentCode IN :codes
+""")
+    void deleteByPayrollRunIdAndComponentCodeIn(
+            @Param("payrollRunId") Long payrollRunId,
+            @Param("codes") List<String> codes
     );
 }
