@@ -36,10 +36,10 @@ public class PayeCalculatorServiceImpl implements PayeCalculatorService {
      * ========================= */
 
     @Override
-    public BigDecimal calculateTax(BigDecimal taxableAmount, LocalDate payrollDate) {
+    public BigDecimal calculateTax(BigDecimal annualTaxableAmount, LocalDate payrollDate) {
 
-        if (taxableAmount == null
-                || taxableAmount.compareTo(BigDecimal.ZERO) <= 0) {
+        if (annualTaxableAmount == null
+                || annualTaxableAmount.compareTo(BigDecimal.ZERO) <= 0) {
 
             return BigDecimal.ZERO.setScale(SCALE, RoundingMode.HALF_UP);
         }
@@ -50,22 +50,29 @@ public class PayeCalculatorServiceImpl implements PayeCalculatorService {
 
         for (PayeTaxBand band : bands) {
 
-            if (taxableAmount.compareTo(band.getLowerBound()) <= 0) {
+            BigDecimal lower = band.getLowerBound();
+            BigDecimal upper = band.getUpperBound(); // can be null
+            BigDecimal rate = band.getRate(); // e.g. 7, 11, etc.
+
+            if (annualTaxableAmount.compareTo(lower) <= 0) {
                 continue;
             }
 
-            BigDecimal upperBound = band.getUpperBound() == null
-                    ? taxableAmount
-                    : taxableAmount.min(band.getUpperBound());
+            BigDecimal taxableInBand;
 
-            BigDecimal bandAmount = upperBound.subtract(band.getLowerBound());
+            if (upper == null) {
+                taxableInBand = annualTaxableAmount.subtract(lower);
+            } else {
+                BigDecimal cappedUpper = annualTaxableAmount.min(upper);
+                taxableInBand = cappedUpper.subtract(lower);
+            }
 
-            if (bandAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            if (taxableInBand.compareTo(BigDecimal.ZERO) <= 0) {
                 continue;
             }
 
-            BigDecimal bandTax = bandAmount
-                    .multiply(band.getRate())
+            BigDecimal bandTax = taxableInBand
+                    .multiply(rate)
                     .divide(ONE_HUNDRED, SCALE, RoundingMode.HALF_UP);
 
             totalTax = totalTax.add(bandTax);
@@ -73,7 +80,35 @@ public class PayeCalculatorServiceImpl implements PayeCalculatorService {
 
         return totalTax.setScale(SCALE, RoundingMode.HALF_UP);
     }
+    @Override
+    public BigDecimal calculateMonthlyTax(BigDecimal monthlyTaxable, LocalDate payrollDate) {
 
+        if (monthlyTaxable == null
+                || monthlyTaxable.compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO.setScale(SCALE, RoundingMode.HALF_UP);
+        }
+
+    /* --------------------------------------------------------
+       STEP 1: Annualize
+       -------------------------------------------------------- */
+
+        BigDecimal annualTaxable =
+                monthlyTaxable.multiply(BigDecimal.valueOf(12));
+
+    /* --------------------------------------------------------
+       STEP 2: Calculate annual tax using existing engine
+       -------------------------------------------------------- */
+
+        BigDecimal annualTax =
+                calculateTax(annualTaxable, payrollDate);
+
+    /* --------------------------------------------------------
+       STEP 3: Convert back to monthly
+       -------------------------------------------------------- */
+
+        return annualTax
+                .divide(BigDecimal.valueOf(12), SCALE, RoundingMode.HALF_UP);
+    }
     /* =========================
      * EFFECTIVE BAND FETCHING
      * ========================= */

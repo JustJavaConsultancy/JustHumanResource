@@ -8,4 +8,5 @@ public interface PayeCalculatorService {
     BigDecimal calculateTax(BigDecimal taxableAmount);
 
     BigDecimal calculateTax(BigDecimal taxableAmount, LocalDate payrollDate);
+    public BigDecimal calculateMonthlyTax(BigDecimal monthlyTaxable, LocalDate payrollDate);
 }

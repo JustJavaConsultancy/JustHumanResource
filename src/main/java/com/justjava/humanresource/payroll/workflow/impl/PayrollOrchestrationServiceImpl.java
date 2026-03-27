@@ -471,8 +471,10 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
        ============================================================ */
 
         BigDecimal paye =
-                payeCalculatorService.calculateTax(taxableIncome)
-                        .setScale(2, RoundingMode.HALF_UP);
+                payeCalculatorService.calculateMonthlyTax(
+                        taxableIncome,
+                        run.getPayrollDate()
+                );
 
         if (paye.compareTo(BigDecimal.ZERO) > 0) {
 
