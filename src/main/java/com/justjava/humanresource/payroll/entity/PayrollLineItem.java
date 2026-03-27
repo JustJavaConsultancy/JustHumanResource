@@ -45,4 +45,7 @@ public class PayrollLineItem extends BaseEntity {
     @Column(nullable = false)
     private boolean taxable;
 
+    @Column(name = "pensionable")
+    private boolean pensionable;
+
 }

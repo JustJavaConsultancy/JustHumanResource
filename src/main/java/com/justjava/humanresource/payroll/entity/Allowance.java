@@ -47,4 +47,7 @@ public class Allowance extends BaseEntity {
 
     @Column(nullable = false)
     private boolean proratable = false;
+
+    @Column(name = "pensionable")
+    private boolean pensionable;
 }

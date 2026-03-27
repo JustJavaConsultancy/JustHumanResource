@@ -266,6 +266,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
                     "Basic Salary",
                     basicSalary,
                     true,
+                    true,
                     PayComponentType.EARNING);
 
             grossPay = basicSalary;
@@ -311,6 +312,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
                     allowance.getName(),
                     amount,
                     allowance.isTaxable(),
+                    allowance.isPensionable(),
                     PayComponentType.EARNING);
 
             runningGross = runningGross.add(amount);
@@ -344,6 +346,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
                         "RESIDUAL",
                         "Residual Adjustment",
                         difference,
+                        true,
                         true,
                         PayComponentType.EARNING);
 
@@ -439,6 +442,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
                         "Employee Pension",
                         employeePension,
                         false,
+                        false,
                         PayComponentType.DEDUCTION);
 
                 totalDeductions = totalDeductions.add(employeePension);
@@ -450,6 +454,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
                         "PENSION_EMPLOYER",
                         "Employer Pension",
                         employerPension,
+                        false,
                         false,
                         PayComponentType.EMPLOYER_COST);
             }
@@ -482,6 +487,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
                     "PAYE",
                     "PAYE Tax",
                     paye,
+                    false,
                     false,
                     PayComponentType.DEDUCTION);
 
@@ -651,6 +657,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
                     deduction.getName(),
                     amount,
                     false,
+                    false,
                     PayComponentType.DEDUCTION);
 
             totalOtherDeductions = totalOtherDeductions.add(amount);
@@ -722,6 +729,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
             String description,
             BigDecimal amount,
             boolean taxable,
+            boolean pensionable,
             PayComponentType type) {
 
         PayrollLineItem line = new PayrollLineItem();
@@ -731,11 +739,11 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
         line.setDescription(description);
         line.setAmount(amount);
         line.setTaxable(taxable);
+        line.setPensionable(pensionable);
         line.setComponentType(type);
 
         payrollLineItemRepository.save(line);
     }
-
     private BigDecimal computeAllowanceAmount(
             Allowance allowance,
             BigDecimal basic,
