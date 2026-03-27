@@ -74,4 +74,23 @@ public interface PayrollLineItemRepository
             @Param("payrollRunId") Long payrollRunId,
             @Param("codes") List<String> codes
     );
+    @Modifying
+    @Query("""
+    DELETE FROM PayrollLineItem li
+    WHERE li.payrollRun.id = :runId
+      AND li.componentType = :type
+      AND li.componentCode NOT IN :codes
+""")
+    void deleteByPayrollRunIdAndComponentTypeAndComponentCodeNotIn(
+            @Param("runId") Long runId,
+            @Param("type") PayComponentType type,
+            @Param("codes") List<String> codes
+    );
+    @Query("""
+    SELECT COALESCE(SUM(li.amount), 0)
+    FROM PayrollLineItem li
+    WHERE li.payrollRun.id = :runId
+      AND li.componentCode IN ('PAYE', 'PENSION_EMP')
+""")
+    BigDecimal sumStatutoryDeductions(@Param("runId") Long runId);
 }

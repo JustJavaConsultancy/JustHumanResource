@@ -584,10 +584,20 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
         PayrollRun run = getEditableRun(payrollRunId);
         Employee employee = run.getEmployee();
 
+    /* ============================================================
+       CLEAN ONLY OTHER DEDUCTIONS (SAFE)
+       ============================================================ */
+
+        payrollLineItemRepository.deleteByPayrollRunIdAndComponentTypeAndComponentCodeNotIn(
+                payrollRunId,
+                PayComponentType.DEDUCTION,
+                List.of("PAYE", "PENSION_EMP")
+        );
+
         BigDecimal totalOtherDeductions = BigDecimal.ZERO;
 
     /* ============================================================
-       FETCH DEDUCTIONS FROM PAY GROUP
+       FETCH PAY GROUP CONFIG
        ============================================================ */
 
         EmployeePositionHistory position =
@@ -603,12 +613,30 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
                         run.getPayrollDate()
                 );
 
+    /* ============================================================
+       COMPUTATION BASES
+       ============================================================ */
+
+        BigDecimal grossPay = run.getGrossPay();
+
+        /*
+         * Net BEFORE other deductions
+         */
+        BigDecimal netBeforeOtherDeductions =
+                run.getGrossPay()
+                        .subtract(Optional.ofNullable(run.getTotalDeductions())
+                                .orElse(BigDecimal.ZERO));
+
+    /* ============================================================
+       APPLY OTHER DEDUCTIONS
+       ============================================================ */
+
         for (Deduction deduction : resolved.getDeductions()) {
 
             BigDecimal amount = computeDeductionAmount(
                     deduction,
-                    run.getGrossPay(),
-                    run.getNetPay()
+                    grossPay,
+                    netBeforeOtherDeductions
             );
 
             if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0)
@@ -627,16 +655,20 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
         }
 
     /* ============================================================
-       UPDATE TOTALS
+       RECOMPUTE TOTAL DEDUCTIONS (SAFE)
        ============================================================ */
 
-        run.setTotalDeductions(
-                run.getTotalDeductions().add(totalOtherDeductions)
-        );
+        BigDecimal statutoryDeductions =
+                payrollLineItemRepository.sumStatutoryDeductions(run.getId());
+
+        BigDecimal totalDeductions =
+                statutoryDeductions.add(totalOtherDeductions);
+
+        run.setTotalDeductions(totalDeductions);
 
         run.setNetPay(
                 run.getGrossPay()
-                        .subtract(run.getTotalDeductions())
+                        .subtract(totalDeductions)
                         .setScale(2, RoundingMode.HALF_UP)
         );
 
