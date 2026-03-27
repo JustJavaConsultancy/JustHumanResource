@@ -324,6 +324,12 @@
                             <span class="text-sm font-medium">Taxable (include in tax calculation)</span>
                         </label>
                     </div>
+                    <input type="hidden" name="pensionable" id="addAllowancePensionableHidden" value="true">
+                    <label class="flex items-center space-x-2">
+                        <input type="checkbox" id="addAllowancePensionableCheck" class="text-primary-600"
+                               onchange="document.getElementById('addAllowancePensionableHidden').value = this.checked ? 'false' : 'true'">
+                        <span class="text-sm font-medium">Non-Pensionable (exclude from pension calculation)</span>
+                    </label>
                     <div>
                         <label class="block text-sm font-medium mb-2">Status</label>
                         <select name="status" class="form-input" required>
@@ -395,6 +401,12 @@
                             <span class="text-sm font-medium">Taxable</span>
                         </label>
                     </div>
+                    <input type="hidden" name="pensionable" id="editAllowancePensionableHidden" value="true">
+                    <label class="flex items-center space-x-2">
+                        <input type="checkbox" id="editAllowancePensionable" class="text-primary-600"
+                               onchange="document.getElementById('editAllowancePensionableHidden').value = this.checked ? 'false' : 'true'">
+                        <span class="text-sm font-medium">Non-Pensionable (exclude from pension calculation)</span>
+                    </label>
                     <div>
                         <label class="block text-sm font-medium mb-2">Status</label>
                         <select name="status" id="editAllowanceStatus" class="form-input" required>
@@ -642,6 +654,7 @@
             document.getElementById('editAllowanceFormula').value = allowance.formulaExpression || '';
             document.getElementById('editAllowanceProratable').checked = allowance.proratable || false;
             document.getElementById('editAllowanceTaxable').checked = allowance.taxable || false;
+            document.getElementById('editAllowancePensionable').checked = !allowance.pensionable;
             document.getElementById('editAllowanceStatus').value = allowance.status || 'ACTIVE';
             const select = document.getElementById('editAllowanceCalcType');
             toggleCalculationFields(select, 'editAllowance');
