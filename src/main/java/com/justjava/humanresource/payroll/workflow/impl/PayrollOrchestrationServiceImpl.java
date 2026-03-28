@@ -426,13 +426,9 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
                     .map(PayrollLineItem::getAmount)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-            // Add 8% to the pensionableEarnings
-            BigDecimal eightPercent = new BigDecimal("0.08");
-            BigDecimal pensionableEarningsWithEightPercent =
-                    pensionableEarnings.multiply(BigDecimal.ONE.add(eightPercent));
             employeePension =
                     pensionCalculatorService.calculateEmployeeContribution(
-                            pensionableEarningsWithEightPercent,
+                            pensionableEarnings,
                             scheme.getEmployeeRate()
                     ).setScale(2, RoundingMode.HALF_UP);
 
