@@ -346,8 +346,8 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
                         "RESIDUAL",
                         "Residual Adjustment",
                         difference,
-                        true,
-                        true,
+                        false,
+                        false,
                         PayComponentType.EARNING);
 
                 runningGross = runningGross.add(difference);
