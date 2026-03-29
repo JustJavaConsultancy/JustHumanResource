@@ -49,4 +49,7 @@ public class PayrollLineItem extends BaseEntity {
     private boolean pensionable;
     @Column(name = "tax_relief")
     private boolean taxRelief;
+
+    @Column(name = "part_of_gross")
+    private boolean partOfGross;
 }
