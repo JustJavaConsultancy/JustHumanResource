@@ -386,7 +386,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
        FINAL SET VALUES
        ============================================================ */
 
-        run.setGrossPay(grossPay.setScale(2, RoundingMode.HALF_UP));
+        run.setGrossPay(runningGross.setScale(2, RoundingMode.HALF_UP));
         run.setNonGrossEarnings(nonGrossEarnings.setScale(2, RoundingMode.HALF_UP));
 
         payrollRunRepository.save(run);
@@ -505,11 +505,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
     /* ============================================================
        APPLY TAX RELIEFS
        TaxRelief pipeline — reserved for future activation.
-       totalReliefs and resolved reliefs are computed here and kept
-       available. The active PAYE calculation below uses the Nigerian
-       statutory relief pipeline instead, which has been verified to
-       match the company Excel sheet exactly.
-       ============================================================ */
+       ===================== */
 
         BigDecimal totalReliefs = BigDecimal.ZERO;
         LocalDate payrollDate = run.getPayrollDate();
@@ -576,8 +572,13 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
                 .reduce(BigDecimal.ZERO, BigDecimal::add)
                 .multiply(BigDecimal.valueOf(12));
 
+
         BigDecimal annualPensionRelief = scheme != null
-                ? run.getGrossPay()
+                ? earningLines.stream()
+                .filter(line -> line.isPartOfGross()
+                        || "RESIDUAL".equals(line.getComponentCode()))
+                .map(PayrollLineItem::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
                 .multiply(BigDecimal.valueOf(12))
                 .multiply(new BigDecimal("0.07829"))
                 .multiply(new BigDecimal("0.80"))
