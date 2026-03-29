@@ -23,6 +23,9 @@ public class PayGroupResolutionServiceImpl implements PayGroupResolutionService 
     private final EmployeeAllowanceRepository employeeAllowanceRepository;
     private final EmployeeDeductionRepository employeeDeductionRepository;
 
+    private final PayGroupTaxReliefRepository payGroupTaxReliefRepository;
+    private final EmployeeTaxReliefRepository employeeTaxReliefRepository;
+
     @Override
     public ResolvedPayComponents resolve(
             PayGroup payGroup,
@@ -31,14 +34,19 @@ public class PayGroupResolutionServiceImpl implements PayGroupResolutionService 
 
         Map<String, Allowance> allowanceMap = new LinkedHashMap<>();
         Map<String, Deduction> deductionMap = new LinkedHashMap<>();
+        Map<String, TaxRelief> taxReliefMap = new LinkedHashMap<>();
 
-        /* ============================================================
-           1️⃣ Resolve PayGroup Hierarchy (Root → Leaf)
-           ============================================================ */
+    /* ============================================================
+       1️⃣ Resolve PayGroup Hierarchy (Root → Leaf)
+       ============================================================ */
 
         List<PayGroup> hierarchy = resolveHierarchy(payGroup);
 
         for (PayGroup group : hierarchy) {
+
+        /* ---------------------------
+           ALLOWANCES
+           --------------------------- */
 
             List<PayGroupAllowance> groupAllowances =
                     payGroupAllowanceRepository.findActiveAllowances(
@@ -47,15 +55,14 @@ public class PayGroupResolutionServiceImpl implements PayGroupResolutionService 
                             RecordStatus.ACTIVE
                     );
 
-
-
             for (PayGroupAllowance mapping : groupAllowances) {
 
                 Allowance allowance = mapping.getAllowance();
 
-                // Respect override amount if present
-                if (mapping.getOverrideAmount() != null && mapping.getOverrideAmount().intValue()!=0) {
-                    allowance = cloneWithOverride(
+                if (mapping.getOverrideAmount() != null
+                        && mapping.getOverrideAmount().compareTo(BigDecimal.ZERO) > 0) {
+
+                    allowance = cloneAllowanceWithOverride(
                             allowance,
                             mapping.getOverrideAmount()
                     );
@@ -66,6 +73,10 @@ public class PayGroupResolutionServiceImpl implements PayGroupResolutionService 
                         allowance
                 );
             }
+
+        /* ---------------------------
+           DEDUCTIONS
+           --------------------------- */
 
             List<PayGroupDeduction> groupDeductions =
                     payGroupDeductionRepository.findActiveDeductions(
@@ -80,11 +91,45 @@ public class PayGroupResolutionServiceImpl implements PayGroupResolutionService 
                         mapping.getDeduction()
                 );
             }
+
+        /* ---------------------------
+           TAX RELIEFS (NEW)
+           --------------------------- */
+
+            List<PayGroupTaxRelief> groupReliefs =
+                    payGroupTaxReliefRepository.findActiveReliefs(
+                            group.getId(),
+                            payrollDate,
+                            RecordStatus.ACTIVE
+                    );
+
+            for (PayGroupTaxRelief mapping : groupReliefs) {
+
+                TaxRelief relief = mapping.getTaxRelief();
+
+                if (mapping.getOverrideAmount() != null
+                        && mapping.getOverrideAmount().compareTo(BigDecimal.ZERO) > 0) {
+
+                    relief = cloneReliefWithOverride(
+                            relief,
+                            mapping.getOverrideAmount()
+                    );
+                }
+
+                taxReliefMap.putIfAbsent(
+                        relief.getCode(),
+                        relief
+                );
+            }
         }
 
-        /* ============================================================
-           2️⃣ Employee Overrides (Highest Priority)
-           ============================================================ */
+    /* ============================================================
+       2️⃣ Employee Overrides (Highest Priority)
+       ============================================================ */
+
+    /* ---------------------------
+       ALLOWANCES
+       --------------------------- */
 
         List<EmployeeAllowance> employeeAllowances =
                 employeeAllowanceRepository.findActiveAllowances(
@@ -98,9 +143,9 @@ public class PayGroupResolutionServiceImpl implements PayGroupResolutionService 
             Allowance allowance = mapping.getAllowance();
 
             if (mapping.isOverridden()
-                    && mapping.getOverrideAmount() != null  && mapping.getOverrideAmount() != null) {
+                    && mapping.getOverrideAmount() != null) {
 
-                allowance = cloneWithOverride(
+                allowance = cloneAllowanceWithOverride(
                         allowance,
                         mapping.getOverrideAmount()
                 );
@@ -111,6 +156,10 @@ public class PayGroupResolutionServiceImpl implements PayGroupResolutionService 
                     allowance
             );
         }
+
+    /* ---------------------------
+       DEDUCTIONS
+       --------------------------- */
 
         List<EmployeeDeduction> employeeDeductions =
                 employeeDeductionRepository.findActiveDeductions(
@@ -127,9 +176,44 @@ public class PayGroupResolutionServiceImpl implements PayGroupResolutionService 
             );
         }
 
+    /* ---------------------------
+       TAX RELIEFS (NEW)
+       --------------------------- */
+
+        List<EmployeeTaxRelief> employeeReliefs =
+                employeeTaxReliefRepository.findActiveReliefs(
+                        employee.getId(),
+                        payrollDate,
+                        RecordStatus.ACTIVE
+                );
+
+        for (EmployeeTaxRelief mapping : employeeReliefs) {
+
+            TaxRelief relief = mapping.getTaxRelief();
+
+            if (mapping.isOverridden()
+                    && mapping.getOverrideAmount() != null) {
+
+                relief = cloneReliefWithOverride(
+                        relief,
+                        mapping.getOverrideAmount()
+                );
+            }
+
+            taxReliefMap.put(
+                    relief.getCode(),
+                    relief
+            );
+        }
+
+    /* ============================================================
+       FINAL RESULT
+       ============================================================ */
+
         return new ResolvedPayComponents(
                 new ArrayList<>(allowanceMap.values()),
-                new ArrayList<>(deductionMap.values())
+                new ArrayList<>(deductionMap.values()),
+                new ArrayList<>(taxReliefMap.values())
         );
     }
 
@@ -153,7 +237,7 @@ public class PayGroupResolutionServiceImpl implements PayGroupResolutionService 
        Helper: Clone Allowance With Override Amount
        ============================================================ */
 
-    private Allowance cloneWithOverride(
+/*    private Allowance cloneWithOverride(
             Allowance original,
             BigDecimal overrideAmount) {
 
@@ -163,5 +247,33 @@ public class PayGroupResolutionServiceImpl implements PayGroupResolutionService 
         clone.setTaxable(original.isTaxable());
         clone.setAmount(overrideAmount);
         return clone;
+    }*/
+    private Allowance cloneAllowanceWithOverride(
+            Allowance original,
+            BigDecimal overrideAmount) {
+
+        Allowance clone = new Allowance();
+        clone.setCode(original.getCode());
+        clone.setName(original.getName());
+        clone.setTaxable(original.isTaxable());
+        clone.setPensionable(original.isPensionable());
+        clone.setAmount(overrideAmount);
+        return clone;
+    }
+    private TaxRelief cloneReliefWithOverride(
+            TaxRelief original,
+            BigDecimal overrideAmount) {
+
+        TaxRelief clone = new TaxRelief();
+        clone.setCode(original.getCode());
+        clone.setName(original.getName());
+        clone.setCalculationType(original.getCalculationType());
+        clone.setAmount(overrideAmount);
+        clone.setPercentageRate(original.getPercentageRate());
+        clone.setFormulaExpression(original.getFormulaExpression());
+        clone.setMaximumAmount(original.getMaximumAmount());
+        clone.setActive(original.isActive());
+        return clone;
     }
 }
+

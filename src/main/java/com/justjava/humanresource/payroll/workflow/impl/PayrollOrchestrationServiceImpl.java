@@ -213,6 +213,10 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
         JobStep jobStep = position.getJobStep();
         PayGroup payGroup = position.getPayGroup();
 
+    /* ============================================================
+       CLEAN PREVIOUS EARNINGS
+       ============================================================ */
+
         payrollLineItemRepository
                 .deleteByPayrollRunIdAndComponentType(
                         payrollRunId,
@@ -220,7 +224,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
                 );
 
     /* ============================================================
-       DETERMINE PAY MODEL (BASIC vs GROSS)
+       DETERMINE PAY MODEL
        ============================================================ */
 
         boolean isGrossBased =
@@ -229,12 +233,17 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
 
         BigDecimal grossPay;
         BigDecimal runningGross = BigDecimal.ZERO;
+        BigDecimal nonGrossEarnings = BigDecimal.ZERO;
         BigDecimal taxableIncome = BigDecimal.ZERO;
+
+    /* ============================================================
+       INITIALIZE BASE VALUES
+       ============================================================ */
 
         if (isGrossBased) {
 
         /* --------------------------------------------------------
-           GROSS-BASED PAYROLL (NO BASIC HERE)
+           GROSS-BASED PAYROLL (NO BASIC AUTO-INJECTION)
            -------------------------------------------------------- */
 
             BigDecimal configuredGross = jobStep.getGrossSalary();
@@ -255,7 +264,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
         } else {
 
         /* --------------------------------------------------------
-           BASIC-BASED PAYROLL (LEGACY MODE)
+           BASIC-BASED PAYROLL
            -------------------------------------------------------- */
 
             BigDecimal basicSalary = jobStep.getBasicSalary()
@@ -275,7 +284,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
         }
 
     /* ============================================================
-       RESOLVE ALL EARNINGS (INCLUDING BASIC IF CONFIGURED)
+       RESOLVE ALLOWANCES
        ============================================================ */
 
         ResolvedPayComponents resolved =
@@ -289,8 +298,8 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
 
             BigDecimal amount = computeAllowanceAmount(
                     allowance,
-                    runningGross,   // no fixed BASIC
-                    isGrossBased ? grossPay : runningGross,
+                    runningGross,
+                    grossPay,
                     taxableIncome
             );
 
@@ -315,7 +324,18 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
                     allowance.isPensionable(),
                     PayComponentType.EARNING);
 
-            runningGross = runningGross.add(amount);
+        /* ============================================================
+           🔥 KEY SPLIT: GROSS vs NON-GROSS
+           ============================================================ */
+
+            if (allowance.isPartOfGross()) {
+
+                runningGross = runningGross.add(amount);
+
+            } else {
+
+                nonGrossEarnings = nonGrossEarnings.add(amount);
+            }
 
             if (allowance.isTaxable()) {
                 taxableIncome = taxableIncome.add(amount);
@@ -323,7 +343,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
         }
 
     /* ============================================================
-       FINAL GROSS HANDLING
+       FINAL GROSS VALIDATION (FOR GROSS-BASED ONLY)
        ============================================================ */
 
         if (isGrossBased) {
@@ -335,8 +355,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
             }
 
             /*
-             * Optional but recommended:
-             * Balance any remaining difference
+             * Optional balancing (VERY IMPORTANT for production)
              */
             BigDecimal difference = grossPay.subtract(runningGross);
 
@@ -346,19 +365,24 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
                         "RESIDUAL",
                         "Residual Adjustment",
                         difference,
-                        true,
+                        false,
                         false,
                         PayComponentType.EARNING);
 
-                runningGross = runningGross.add(difference);
-                taxableIncome = taxableIncome.add(difference);
+                //runningGross = runningGross.add(difference);
+                //taxableIncome = taxableIncome.add(difference);
             }
 
         } else {
             grossPay = runningGross;
         }
 
+    /* ============================================================
+       FINAL SET VALUES
+       ============================================================ */
+
         run.setGrossPay(grossPay.setScale(2, RoundingMode.HALF_UP));
+        run.setNonGrossEarnings(nonGrossEarnings.setScale(2, RoundingMode.HALF_UP));
 
         payrollRunRepository.save(run);
     }
@@ -467,12 +491,56 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
             /*
              * Pension reduces taxable income
              */
-            taxableIncome = taxableIncome.subtract(employeePension);
 
-            if (taxableIncome.compareTo(BigDecimal.ZERO) < 0) {
-                taxableIncome = BigDecimal.ZERO;
-            }
         }
+        /* ============================================================
+            APPLY TAX RELIEFS
+        ============================================================ */
+
+        BigDecimal totalReliefs = BigDecimal.ZERO;
+        LocalDate payrollDate = run.getPayrollDate();
+
+        EmployeePositionHistory position =
+                employeePositionHistoryService
+                        .getCurrentPosition(employee.getId());
+
+        JobStep jobStep = position.getJobStep();
+        PayGroup payGroup = position.getPayGroup();
+        ResolvedPayComponents resolved =
+                payGroupResolutionService.resolve(
+                        payGroup,
+                        employee,
+                        payrollDate
+                );
+
+
+        for (TaxRelief relief : resolved.getTaxReliefs()) {
+
+            BigDecimal amount = computeReliefAmount(
+                    relief,
+                    run.getGrossPay()
+            );
+
+            if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0)
+                continue;
+
+            amount = amount.setScale(2, RoundingMode.HALF_UP);
+
+            saveRelief(run, employee,
+                    relief.getCode(),
+                    relief.getName(),
+                    amount);
+
+            totalReliefs = totalReliefs.add(amount);
+        }
+        taxableIncome = taxableIncome
+                .subtract(employeePension)
+                .subtract(totalReliefs);
+
+        if (taxableIncome.compareTo(BigDecimal.ZERO) < 0) {
+            taxableIncome = BigDecimal.ZERO;
+        }
+
     /* ============================================================
        PAYE CALCULATION
        ============================================================ */
@@ -723,7 +791,6 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
 
         return run;
     }
-
     private void saveLine(
             PayrollRun run,
             Employee employee,
@@ -743,6 +810,26 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
         line.setTaxable(taxable);
         line.setPensionable(pensionable);
         line.setComponentType(type);
+
+        payrollLineItemRepository.save(line);
+    }
+    private void saveRelief(
+            PayrollRun run,
+            Employee employee,
+            String code,
+            String description,
+            BigDecimal amount) {
+
+        PayrollLineItem line = new PayrollLineItem();
+        line.setPayrollRun(run);
+        line.setEmployee(employee);
+        line.setComponentCode(code);
+        line.setDescription(description);
+        line.setAmount(amount);
+        line.setTaxable(false);
+        line.setPensionable(false);
+        line.setTaxRelief(true);
+        line.setComponentType(PayComponentType.TAX_RELIEF);
 
         payrollLineItemRepository.save(line);
     }
@@ -834,5 +921,30 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
         amendment.setNetPay(BigDecimal.ZERO);
 
         return payrollRunRepository.save(amendment);
+    }
+    private BigDecimal computeReliefAmount(
+            TaxRelief relief,
+            BigDecimal gross) {
+
+        switch (relief.getCalculationType()) {
+
+            case FIXED_AMOUNT:
+                return relief.getAmount();
+
+            case PERCENTAGE_OF_GROSS:
+                return gross.multiply(relief.getPercentageRate())
+                        .divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
+
+            case FORMULA:
+                return evaluateFormula(
+                        relief.getFormulaExpression(),
+                        BigDecimal.ZERO,
+                        gross,
+                        gross
+                );
+
+            default:
+                throw new IllegalStateException("Unsupported relief type");
+        }
     }
 }

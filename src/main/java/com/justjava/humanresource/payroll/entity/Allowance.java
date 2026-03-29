@@ -50,4 +50,7 @@ public class Allowance extends BaseEntity {
 
     @Column(name = "pensionable")
     private boolean pensionable;
+
+    @Column(nullable = false)
+    private boolean partOfGross = true;
 }

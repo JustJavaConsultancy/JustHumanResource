@@ -112,4 +112,8 @@ public class PayrollRun extends BaseEntity {
 
     @Column(nullable = false)
     private Integer payrollYear;
+
+    @Column(nullable = false)
+    private BigDecimal nonGrossEarnings;
+
 }

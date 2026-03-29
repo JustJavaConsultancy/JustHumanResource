@@ -3,6 +3,7 @@ package com.justjava.humanresource.payroll.calculation.dto;
 
 import com.justjava.humanresource.payroll.entity.Allowance;
 import com.justjava.humanresource.payroll.entity.Deduction;
+import com.justjava.humanresource.payroll.entity.TaxRelief;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
@@ -14,4 +15,5 @@ public class ResolvedPayComponents {
 
     private final List<Allowance> allowances;
     private final List<Deduction> deductions;
+    private final List<TaxRelief> taxReliefs;
 }

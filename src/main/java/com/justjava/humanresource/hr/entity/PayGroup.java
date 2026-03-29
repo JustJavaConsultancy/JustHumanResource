@@ -3,15 +3,12 @@ package com.justjava.humanresource.hr.entity;
 import com.justjava.humanresource.core.entity.BaseEntity;
 import com.justjava.humanresource.core.enums.PayFrequency;
 import com.justjava.humanresource.core.enums.RecordStatus;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
+import com.justjava.humanresource.payroll.entity.TaxRelief;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.util.List;
 
 @Getter
 @Setter
@@ -36,4 +33,12 @@ public class PayGroup extends BaseEntity {
     @ManyToOne
     @JoinColumn(name = "parent_pay_group_id")
     private PayGroup parent;
+
+    @ManyToMany
+    @JoinTable(
+            name = "paygroup_tax_reliefs",
+            joinColumns = @JoinColumn(name = "paygroup_id"),
+            inverseJoinColumns = @JoinColumn(name = "tax_relief_id")
+    )
+    private List<TaxRelief> taxReliefs;
 }

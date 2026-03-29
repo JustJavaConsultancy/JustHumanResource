@@ -53,6 +53,9 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
     private final PayrollChangeOrchestrator  payrollChangeOrchestrator;
 
     private final PayrollPeriodService payrollPeriodService;
+    private final TaxReliefRepository taxReliefRepository;
+    private final PayGroupTaxReliefRepository payGroupTaxReliefRepository;
+    private final EmployeeTaxReliefRepository employeeTaxReliefRepository;
 
 
 
@@ -445,6 +448,143 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
         entity.setStatus(RecordStatus.ACTIVE);
 
         return employeeDeductionRepository.save(entity);
+    }
+    @Override
+    public TaxRelief createTaxRelief(TaxRelief relief) {
+        relief.setActive(true);
+        return taxReliefRepository.save(relief);
+    }
+    @Override
+    public List<TaxRelief> getActiveTaxReliefs() {
+        return taxReliefRepository.findByActiveTrue();
+    }
+    @Override
+    public PayGroupTaxRelief addTaxReliefToPayGroup(
+            Long payGroupId,
+            Long taxReliefId,
+            BigDecimal overrideAmount,
+            LocalDate effectiveFrom,
+            LocalDate effectiveTo) {
+
+        PayGroup group = payGroupRepository.findById(payGroupId)
+                .orElseThrow(() -> new IllegalStateException("PayGroup not found"));
+
+        TaxRelief relief = taxReliefRepository.findById(taxReliefId)
+                .orElseThrow(() -> new IllegalStateException("TaxRelief not found"));
+
+        PayGroupTaxRelief mapping = new PayGroupTaxRelief();
+        mapping.setPayGroup(group);
+        mapping.setTaxRelief(relief);
+        mapping.setOverrideAmount(overrideAmount);
+        mapping.setEffectiveFrom(effectiveFrom);
+        mapping.setEffectiveTo(effectiveTo);
+
+        return payGroupTaxReliefRepository.save(mapping);
+    }
+    @Override
+    public List<PayGroupTaxReliefResponse> addTaxReliefsToPayGroup(
+            Long payGroupId,
+            List<TaxReliefAttachmentRequest> requests) {
+
+        return requests.stream()
+                .map(req -> {
+
+                    PayGroupTaxRelief mapping =
+                            addTaxReliefToPayGroup(
+                                    payGroupId,
+                                    req.getTaxReliefId(),
+                                    req.getOverrideAmount(),
+                                    req.getEffectiveFrom(),
+                                    req.getEffectiveTo()
+                            );
+
+                    return PayGroupTaxReliefResponse.builder()
+                            .id(mapping.getId())
+                            .payGroupId(payGroupId)
+                            .reliefCode(mapping.getTaxRelief().getCode())
+                            .reliefName(mapping.getTaxRelief().getName())
+                            .overrideAmount(mapping.getOverrideAmount())
+                            .effectiveFrom(mapping.getEffectiveFrom())
+                            .effectiveTo(mapping.getEffectiveTo())
+                            .build();
+                })
+                .toList();
+    }
+    @Override
+    public EmployeeTaxRelief addTaxReliefToEmployee(
+            Long employeeId,
+            Long taxReliefId,
+            boolean overridden,
+            BigDecimal overrideAmount,
+            LocalDate effectiveFrom,
+            LocalDate effectiveTo) {
+
+        employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new IllegalStateException("Employee not found"));
+
+        TaxRelief relief = taxReliefRepository.findById(taxReliefId)
+                .orElseThrow(() -> new IllegalStateException("TaxRelief not found"));
+
+        EmployeeTaxRelief mapping = new EmployeeTaxRelief();
+        mapping.setEmployeeId(employeeId);
+        mapping.setTaxRelief(relief);
+        mapping.setOverridden(overridden);
+        mapping.setOverrideAmount(overrideAmount);
+        mapping.setEffectiveFrom(effectiveFrom);
+        mapping.setEffectiveTo(effectiveTo);
+
+        return employeeTaxReliefRepository.save(mapping);
+    }
+
+    @Override
+    public List<EmployeeTaxReliefResponse> addTaxReliefsToEmployee(
+            Long employeeId,
+            List<TaxReliefAttachmentRequest> requests) {
+
+        return requests.stream()
+                .map(req -> {
+
+                    EmployeeTaxRelief mapping =
+                            addTaxReliefToEmployee(
+                                    employeeId,
+                                    req.getTaxReliefId(),
+                                    req.isOverridden(),
+                                    req.getOverrideAmount(),
+                                    req.getEffectiveFrom(),
+                                    req.getEffectiveTo()
+                            );
+
+                    return EmployeeTaxReliefResponse.builder()
+                            .id(mapping.getId())
+                            .employeeId(employeeId)
+                            .reliefCode(mapping.getTaxRelief().getCode())
+                            .reliefName(mapping.getTaxRelief().getName())
+                            .overridden(mapping.isOverridden())
+                            .overrideAmount(mapping.getOverrideAmount())
+                            .effectiveFrom(mapping.getEffectiveFrom())
+                            .effectiveTo(mapping.getEffectiveTo())
+                            .build();
+                })
+                .toList();
+    }
+    @Override
+    public List<EmployeeTaxReliefResponse> getTaxReliefsForEmployee(Long employeeId) {
+
+        return employeeTaxReliefRepository
+                .findByEmployeeId(employeeId)
+                .stream()
+                .map(mapping -> EmployeeTaxReliefResponse.builder()
+                        .id(mapping.getId())
+                        .employeeId(employeeId)
+                        .reliefCode(mapping.getTaxRelief().getCode())
+                        .reliefName(mapping.getTaxRelief().getName())
+                        .overridden(mapping.isOverridden())
+                        .overrideAmount(mapping.getOverrideAmount())
+                        .effectiveFrom(mapping.getEffectiveFrom())
+                        .effectiveTo(mapping.getEffectiveTo())
+                        .build()
+                )
+                .toList();
     }
     private LocalDate determineAffectedPayrollDate(
             List<? extends Object> requests) {

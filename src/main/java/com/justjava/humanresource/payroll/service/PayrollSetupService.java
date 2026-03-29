@@ -110,4 +110,51 @@ public interface PayrollSetupService {
             LocalDate effectiveFrom,
             LocalDate effectiveTo
     );
+
+    /* =========================
+     * TAX RELIEF
+     * ========================= */
+    TaxRelief createTaxRelief(TaxRelief relief);
+    List<TaxRelief> getActiveTaxReliefs();
+
+/* ============================================================
+   BULK PAYGROUP TAX RELIEF CONFIGURATION
+   ============================================================ */
+
+    List<PayGroupTaxReliefResponse> addTaxReliefsToPayGroup(
+            Long payGroupId,
+            List<TaxReliefAttachmentRequest> requests
+    );
+
+/* ============================================================
+   BULK EMPLOYEE TAX RELIEF CONFIGURATION
+   ============================================================ */
+
+    List<EmployeeTaxReliefResponse> addTaxReliefsToEmployee(
+            Long employeeId,
+            List<TaxReliefAttachmentRequest> requests
+    );
+
+    List<EmployeeTaxReliefResponse> getTaxReliefsForEmployee(Long employeeId);
+
+/* ============================================================
+   SINGLE ATTACHMENT (LOW LEVEL)
+   ============================================================ */
+
+    PayGroupTaxRelief addTaxReliefToPayGroup(
+            Long payGroupId,
+            Long taxReliefId,
+            BigDecimal overrideAmount,
+            LocalDate effectiveFrom,
+            LocalDate effectiveTo
+    );
+
+    EmployeeTaxRelief addTaxReliefToEmployee(
+            Long employeeId,
+            Long taxReliefId,
+            boolean overridden,
+            BigDecimal overrideAmount,
+            LocalDate effectiveFrom,
+            LocalDate effectiveTo
+    );
 }
