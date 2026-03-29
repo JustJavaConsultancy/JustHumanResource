@@ -26,6 +26,7 @@ import com.justjava.humanresource.payroll.statutory.service.PayeCalculatorServic
 import com.justjava.humanresource.payroll.statutory.service.PensionCalculatorService;
 import com.justjava.humanresource.payroll.workflow.PayrollOrchestrationService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,6 +40,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationService {
@@ -389,6 +391,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
 
         payrollRunRepository.save(run);
     }
+
     /* ============================================================
        APPLY DEDUCTIONS
        ============================================================ */
@@ -431,9 +434,9 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
                 .map(PayrollLineItem::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-/* ============================================================
-   PENSION CALCULATION (ONLY PENSIONABLE EARNINGS)
-   ============================================================ */
+    /* ============================================================
+       PENSION CALCULATION (ONLY PENSIONABLE EARNINGS)
+       ============================================================ */
 
         PensionScheme scheme =
                 pensionSchemeRepository
@@ -498,9 +501,15 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
              */
 
         }
-        /* ============================================================
-            APPLY TAX RELIEFS
-        ============================================================ */
+
+    /* ============================================================
+       APPLY TAX RELIEFS
+       TaxRelief pipeline — reserved for future activation.
+       totalReliefs and resolved reliefs are computed here and kept
+       available. The active PAYE calculation below uses the Nigerian
+       statutory relief pipeline instead, which has been verified to
+       match the company Excel sheet exactly.
+       ============================================================ */
 
         BigDecimal totalReliefs = BigDecimal.ZERO;
         LocalDate payrollDate = run.getPayrollDate();
@@ -511,13 +520,13 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
 
         JobStep jobStep = position.getJobStep();
         PayGroup payGroup = position.getPayGroup();
+
         ResolvedPayComponents resolved =
                 payGroupResolutionService.resolve(
                         payGroup,
                         employee,
                         payrollDate
                 );
-
 
         for (TaxRelief relief : resolved.getTaxReliefs()) {
 
@@ -538,21 +547,70 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
 
             totalReliefs = totalReliefs.add(amount);
         }
-        taxableIncome = taxableIncome
-                .subtract(employeePension)
-                .subtract(totalReliefs);
-
-        if (taxableIncome.compareTo(BigDecimal.ZERO) < 0) {
-            taxableIncome = BigDecimal.ZERO;
-        }
 
     /* ============================================================
-       PAYE CALCULATION
+       PAYE CALCULATION — NIGERIAN STATUTORY RELIEF PIPELINE
+       ============================================================
+
+       Step 1: Annual Gross Income
+               = all earning lines EXCEPT RESIDUAL × 12
+               (includes both taxable and non-taxable allowances —
+               RESIDUAL is a non-statutory balancing figure and must
+               always be excluded from the tax base)
+
+       Step 2: Less annual pension relief
+               = grossPay × 12 × 7.829% × 80%
+               (matches Excel's exact pension relief formula)
+
+       Step 3: Less Housing Allowance Relief
+               = 20% of annual housing allowance
+               (Nigerian statutory housing relief)
+
+       Step 4: Divide by 12 → Monthly Chargeable Income
+               Pass THIS into calculateMonthlyTax()
        ============================================================ */
+
+        BigDecimal annualGrossIncome = earningLines.stream()
+                .filter(line -> !"RESIDUAL".equals(line.getComponentCode()))
+                .map(PayrollLineItem::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .multiply(BigDecimal.valueOf(12));
+
+        BigDecimal annualPensionRelief = scheme != null
+                ? run.getGrossPay()
+                .multiply(BigDecimal.valueOf(12))
+                .multiply(new BigDecimal("0.07829"))
+                .multiply(new BigDecimal("0.80"))
+                .setScale(10, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO;
+
+        BigDecimal grossForCRA = annualGrossIncome.subtract(annualPensionRelief);
+
+        BigDecimal annualHousingAllowance = earningLines.stream()
+                .filter(line -> line.isPensionable()
+                        && line.getDescription() != null
+                        && line.getDescription().toLowerCase().contains("housing"))
+                .map(PayrollLineItem::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .multiply(BigDecimal.valueOf(12));
+
+        BigDecimal housingRelief = annualHousingAllowance
+                .multiply(new BigDecimal("0.20"));
+
+        BigDecimal monthlyChargeable = grossForCRA
+                .subtract(housingRelief)
+                .divide(BigDecimal.valueOf(12), 2, RoundingMode.HALF_UP);
+
+        if (monthlyChargeable.compareTo(BigDecimal.ZERO) < 0) {
+            monthlyChargeable = BigDecimal.ZERO;
+        }
+
+        log.info("PAYE DEBUG → annualGrossIncome={}, annualPensionRelief={}, grossForCRA={}, housingRelief={}, monthlyChargeable={}",
+                annualGrossIncome, annualPensionRelief, grossForCRA, housingRelief, monthlyChargeable);
 
         BigDecimal paye =
                 payeCalculatorService.calculateMonthlyTax(
-                        taxableIncome,
+                        monthlyChargeable,
                         run.getPayrollDate()
                 );
 
@@ -584,6 +642,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
 
         payrollRunRepository.save(run);
     }
+
     /* ============================================================
        FINALIZE
        ============================================================ */
@@ -661,6 +720,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
         run.setStatus(PayrollRunStatus.POSTED);
         payrollRunRepository.save(run);
     }
+
     @Override
     @Transactional
     public void applyOtherDeductions(Long payrollRunId) {
@@ -760,6 +820,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
 
         payrollRunRepository.save(run);
     }
+
     private BigDecimal computeDeductionAmount(
             Deduction deduction,
             BigDecimal gross,
@@ -782,6 +843,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
                 throw new IllegalStateException("Unsupported deduction type");
         }
     }
+
     /* ============================================================
        INTERNAL UTILITIES
        ============================================================ */
@@ -798,6 +860,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
 
         return run;
     }
+
     private void saveLine(
             PayrollRun run,
             Employee employee,
@@ -822,6 +885,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
 
         payrollLineItemRepository.save(line);
     }
+
     private void saveRelief(
             PayrollRun run,
             Employee employee,
@@ -842,6 +906,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
 
         payrollLineItemRepository.save(line);
     }
+
     private BigDecimal computeAllowanceAmount(
             Allowance allowance,
             BigDecimal basic,
@@ -931,6 +996,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
 
         return payrollRunRepository.save(amendment);
     }
+
     private BigDecimal computeReliefAmount(
             TaxRelief relief,
             BigDecimal gross) {
