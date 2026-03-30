@@ -44,7 +44,7 @@ public class GeneratePayslipsDelegate implements JavaDelegate {
          */
         var runs =
                 payrollRunRepository
-                        .findByEmployee_Department_Company_IdAndPayrollDateBetweenAndStatus(
+                        .findLatestByCompanyAndPeriodAndStatus(
                                 period.getCompanyId(),
                                 period.getPeriodStart(),
                                 period.getPeriodEnd(),

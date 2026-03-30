@@ -49,14 +49,27 @@ public interface PayrollRunRepository
        COMPANY-SCOPED FETCH
        ============================================================ */
 
-    List<PayrollRun>
-    findByEmployee_Department_Company_IdAndPayrollDateBetweenAndStatus(
+    @Query("""
+    SELECT p
+    FROM PayrollRun p
+    WHERE p.employee.department.company.id = :companyId
+      AND p.periodStart = :start
+      AND p.periodEnd = :end
+      AND p.status = :status
+      AND p.versionNumber = (
+          SELECT MAX(p2.versionNumber)
+          FROM PayrollRun p2
+          WHERE p2.employee.id = p.employee.id
+          AND p2.periodStart = p.periodStart
+          AND p2.periodEnd = p.periodEnd
+      )
+""")
+    List<PayrollRun> findLatestByCompanyAndPeriodAndStatus(
             Long companyId,
             LocalDate start,
             LocalDate end,
             PayrollRunStatus status
     );
-
     List<PayrollRun>
     findByEmployee_Department_Company_IdAndPayrollDateBetween(
             Long companyId,
@@ -69,47 +82,66 @@ public interface PayrollRunRepository
        ============================================================ */
 
     @Query("""
-        SELECT COALESCE(SUM(p.grossPay), 0)
-        FROM PayrollRun p
-        WHERE p.employee.department.company.id = :companyId
-          AND p.payrollDate BETWEEN :start AND :end
-          AND p.status = :status
-    """)
+    SELECT COALESCE(SUM(p.grossPay), 0)
+    FROM PayrollRun p
+    WHERE p.employee.department.company.id = :companyId
+      AND p.periodStart = :start
+      AND p.periodEnd = :end
+      AND p.status = :status
+      AND p.versionNumber = (
+          SELECT MAX(p2.versionNumber)
+          FROM PayrollRun p2
+          WHERE p2.employee.id = p.employee.id
+          AND p2.periodStart = p.periodStart
+          AND p2.periodEnd = p.periodEnd
+      )
+""")
     BigDecimal sumGrossByCompanyAndPeriodAndStatus(
-            @Param("companyId") Long companyId,
-            @Param("start") LocalDate start,
-            @Param("end") LocalDate end,
-            @Param("status") PayrollRunStatus status
+            Long companyId,
+            LocalDate start,
+            LocalDate end,
+            PayrollRunStatus status
     );
-
     @Query("""
-        SELECT COALESCE(SUM(p.totalDeductions), 0)
-        FROM PayrollRun p
-        WHERE p.employee.department.company.id = :companyId
-          AND p.payrollDate BETWEEN :start AND :end
-          AND p.status = :status
-    """)
+    SELECT COALESCE(SUM(p.totalDeductions), 0)
+    FROM PayrollRun p
+    WHERE p.employee.department.company.id = :companyId
+      AND p.periodStart = :start
+      AND p.periodEnd = :end
+      AND p.status = :status
+      AND p.versionNumber = (
+          SELECT MAX(p2.versionNumber)
+          FROM PayrollRun p2
+          WHERE p2.employee.id = p.employee.id
+          AND p2.periodStart = p.periodStart
+          AND p2.periodEnd = p.periodEnd
+      )
+""")
     BigDecimal sumDeductionsByCompanyAndPeriodAndStatus(
-            @Param("companyId") Long companyId,
-            @Param("start") LocalDate start,
-            @Param("end") LocalDate end,
-            @Param("status") PayrollRunStatus status
+            Long companyId,
+            LocalDate start,
+            LocalDate end,
+            PayrollRunStatus status
     );
-
     @Query("""
-        SELECT COALESCE(SUM(p.netPay), 0)
-        FROM PayrollRun p
-        WHERE p.employee.department.company.id = :companyId
-          AND p.payrollDate BETWEEN :start AND :end
-          AND p.status = :status
-    """)
+    SELECT COALESCE(SUM(p.netPay), 0)
+    FROM PayrollRun p
+    WHERE p.employee.department.company.id = :companyId
+      AND p.payrollDate BETWEEN :start AND :end
+      AND p.status = :status
+      AND p.versionNumber = (
+          SELECT MAX(p2.versionNumber)
+          FROM PayrollRun p2
+          WHERE p2.employee.id = p.employee.id
+          AND p2.payrollDate = p.payrollDate
+      )
+""")
     BigDecimal sumNetByCompanyAndPeriodAndStatus(
             @Param("companyId") Long companyId,
             @Param("start") LocalDate start,
             @Param("end") LocalDate end,
             @Param("status") PayrollRunStatus status
     );
-
     @Query("""
     SELECT COUNT(p)
     FROM PayrollRun p
@@ -183,6 +215,13 @@ WHERE d.company_id = :companyId
 AND pr.period_start = :oldPeriodStart
 AND pr.period_end = :oldPeriodEnd
 AND pr.status = 'POSTED'
+AND pr.version_number = (
+    SELECT MAX(pr2.version_number)
+    FROM payroll_runs pr2
+    WHERE pr2.employee_id = pr.employee_id
+    AND pr2.period_start = pr.period_start
+    AND pr2.period_end = pr.period_end
+)
 """, nativeQuery = true)
     void bulkCarryForward(
             @Param("companyId") Long companyId,

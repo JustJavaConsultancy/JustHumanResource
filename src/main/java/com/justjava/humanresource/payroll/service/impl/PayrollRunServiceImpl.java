@@ -98,7 +98,7 @@ public class PayrollRunServiceImpl implements PayrollRunService {
 
         List<PayrollRun> runs =
                 payrollRunRepository
-                        .findByEmployee_Department_Company_IdAndPayrollDateBetweenAndStatus(
+                        .findLatestByCompanyAndPeriodAndStatus(
                                 companyId,
                                 periodStart,
                                 periodEnd,
