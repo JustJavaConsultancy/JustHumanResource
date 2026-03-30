@@ -929,22 +929,101 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
             BigDecimal taxable) {
 
         try {
+
+        /* ============================================================
+           1. PREPROCESS EXPRESSION
+           ============================================================ */
+
+            String processed = preprocessExpression(expression);
+
+        /* ============================================================
+           2. INIT ENGINE
+           ============================================================ */
+
             ScriptEngine engine =
                     new ScriptEngineManager()
                             .getEngineByName("JavaScript");
+
+        /* ============================================================
+           3. VARIABLES
+           ============================================================ */
 
             engine.put("BASIC", basic);
             engine.put("GROSS", gross);
             engine.put("TAXABLE", taxable);
 
-            Object result = engine.eval(expression);
+        /* ============================================================
+           4. HELPER FUNCTIONS (Payroll DSL)
+           ============================================================ */
+
+            engine.eval("""
+            function MIN(a,b){ return Math.min(a,b); }
+            function MAX(a,b){ return Math.max(a,b); }
+            function CAP(value, cap){ return Math.min(value, cap); }
+            function FLOOR(value, floor){ return Math.max(value, floor); }
+            function IF(cond, a, b){ return cond ? a : b; }
+        """);
+
+        /* ============================================================
+           5. EXECUTE
+           ============================================================ */
+
+            Object result = engine.eval(processed);
+
             return new BigDecimal(result.toString());
 
         } catch (Exception e) {
-            throw new IllegalStateException("Invalid formula: " + expression);
+            throw new IllegalStateException("Invalid formula: " + expression, e);
         }
     }
+    private String preprocessExpression(String expr) {
 
+        if (expr == null) return null;
+
+        String processed = expr.trim();
+
+    /* ============================================================
+       1. NORMALIZE CASE
+       ============================================================ */
+
+        processed = processed.toUpperCase();
+
+    /* ============================================================
+       2. HANDLE "OF" SYNTAX
+       e.g. 10% OF GROSS → (10%)*(GROSS)
+       ============================================================ */
+
+        processed = processed.replaceAll(
+                "(\\d+(\\.\\d+)?%?)\\s+OF\\s+\\(",
+                "($1)*("
+        );
+
+        processed = processed.replaceAll(
+                "(\\d+(\\.\\d+)?%?)\\s+OF\\s+([A-Z_]+)",
+                "($1)*($3)"
+        );
+
+    /* ============================================================
+       3. HANDLE PERCENTAGES
+       e.g. 10% → (10/100)
+       ============================================================ */
+
+        processed = processed.replaceAll(
+                "(\\d+(\\.\\d+)?)%",
+                "($1/100)"
+        );
+
+    /* ============================================================
+       4. HANDLE LOGICAL OPERATORS
+       ============================================================ */
+
+        processed = processed
+                .replaceAll("\\bAND\\b", "&&")
+                .replaceAll("\\bOR\\b", "||")
+                .replaceAll("\\bNOT\\b", "!");
+
+        return processed;
+    }
     private BigDecimal applyProration(
             BigDecimal amount,
             LocalDate periodStart,
@@ -994,12 +1073,17 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
                 return result;
 
             case FORMULA:
-                return evaluateFormula(
+
+                BigDecimal formulaResult= evaluateFormula(
                         relief.getFormulaExpression(),
                         BigDecimal.ZERO,
                         gross,
                         gross
                 );
+                System.out.println(" Inside FORMULA  GROSS=="+gross+
+                        " the relief percent==="+relief.getFormulaExpression() +
+                        " and the result sending out==="+formulaResult);
+                return formulaResult;
 
             default:
                 throw new IllegalStateException("Unsupported relief type");
