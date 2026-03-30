@@ -56,6 +56,7 @@ public class PayrollController {
         List<Employee> employees = employeeOnboardingService.getAllOnboardings();
         List<Allowance> allowances = payrollSetupService.getActiveAllowances();
         List<Deduction> deductions = payrollSetupService.getActiveDeductions();
+        List<TaxRelief> taxReliefs = payrollSetupService.getActiveTaxReliefs();
         List<PayGroup> payGroups = payrollSetupService.getAllPayGroups();
         List<Allowance> taxableAllowances = allowances
                 .stream()
@@ -72,6 +73,7 @@ public class PayrollController {
         model.addAttribute("taxableAllowances", taxableAllowances.size());
         model.addAttribute("saturatoryDeductions", saturatoryDeductions.size());
         model.addAttribute("deductions", deductions.size());
+        model.addAttribute("taxReliefs", taxReliefs.size());
         model.addAttribute("payGroups", payGroups.size());
         model.addAttribute("title","Payroll Management");
         model.addAttribute("subTitle","Manage employee payroll, salary details, and payment history");
@@ -81,10 +83,12 @@ public class PayrollController {
     public String getPayrollItems(Model model) {
         List<Allowance> allowances = payrollSetupService.getActiveAllowances();
         List<Deduction> deductions = payrollSetupService.getActiveDeductions();
+        List<TaxRelief> taxReliefs = payrollSetupService.getActiveTaxReliefs();
 
 
         model.addAttribute("allowances", allowances);
         model.addAttribute("deductions", deductions);
+        model.addAttribute("taxReliefs", taxReliefs);
         model.addAttribute("title","Payroll Management");
         model.addAttribute("subTitle","Manage employee payroll, salary details, and payment history");
         return "payroll/fragments/payroll-items";
@@ -93,6 +97,7 @@ public class PayrollController {
     public String getPayGroup(Model model){
         List<Deduction> deductions = payrollSetupService.getActiveDeductions();
         List<Allowance> allowances = payrollSetupService.getActiveAllowances();
+        List<TaxRelief> taxReliefs = payrollSetupService.getActiveTaxReliefs();
         List<PayGroup> payGroups = payrollSetupService.getAllPayGroups();
 
         LocalDate currentDate = LocalDate.now();
@@ -102,6 +107,7 @@ public class PayrollController {
                         .payGroup(payGroup)
                         .allowances(payGroupService.getAllowances(payGroup.getId(), currentDate))
                         .deductions(payGroupService.getDeductions(payGroup.getId(), currentDate))
+                        .taxReliefs(payGroupService.getTaxReliefs(payGroup.getId(), currentDate))
                         .employees(payGroupService.getEmployees(payGroup.getId(), currentDate))
                         .build()
                 )
@@ -113,6 +119,7 @@ public class PayrollController {
                         +" the Employees ==="+payGroupFullViewDTO.getEmployees().size())
         );
 
+        model.addAttribute("taxReliefs", taxReliefs);
         model.addAttribute("payGroups", payGroupFullList);
         model.addAttribute("allowances", allowances);
         model.addAttribute("deductions", deductions);
@@ -201,6 +208,45 @@ public class PayrollController {
         return "redirect:/payroll/pay-group";
     }
 
+    @PostMapping("/setup/paygroup/taxreliefs")
+    public String attachTaxReliefsToPayGroup(
+            @RequestParam Long payGroupId,
+            @RequestParam(required = false) List<String> taxReliefSending) {
+        if (taxReliefSending == null || taxReliefSending.isEmpty()) {
+            return "redirect:/payroll/pay-group";
+        }
+        List<TaxReliefAttachmentRequest> requests = taxReliefSending.stream()
+                .map(value -> {
+
+                    System.out.println("RAW VALUE: " + value);
+
+                    String[] parts = value.split(" ");
+
+                    if (parts.length < 2) {
+                        throw new IllegalArgumentException("Invalid tax relief format: " + parts);
+                    }
+
+                    Long id = Long.parseLong(parts[0]);
+                    BigDecimal amount = new BigDecimal(parts[1]);
+
+                    TaxReliefAttachmentRequest req = new TaxReliefAttachmentRequest();
+                    req.setTaxReliefId(id);
+                    req.setOverridden(true);
+                    req.setOverrideAmount(amount);
+                    req.setEffectiveFrom(LocalDate.now());
+
+                    return req;
+                })
+                .toList();
+
+        payrollSetupService.addTaxReliefsToPayGroup(
+                payGroupId,
+                requests
+        );
+
+        return "redirect:/payroll/pay-group";
+    }
+
     @GetMapping("/payroll/employee-payroll")
     public String getEmployeePayroll(Model model) {
         List<PayrollRun> payrollRuns = paySlipService.getCurrentPeriodPayrollRuns(1L);
@@ -231,6 +277,13 @@ public class PayrollController {
         if(deduction.getAmount()==null)
             deduction.setAmount(new BigDecimal(0.00));
         payrollSetupService.createDeduction(deduction);
+        return "redirect:/payroll/items";
+    }
+    @PostMapping("/setup/taxrelief")
+    public String createTaxRelief(TaxRelief taxRelief) {
+        if(taxRelief.getAmount()==null)
+            taxRelief.setAmount(new BigDecimal(0.00));
+        payrollSetupService.createTaxRelief(taxRelief);
         return "redirect:/payroll/items";
     }
     @PostMapping("/setup/payroll/open")

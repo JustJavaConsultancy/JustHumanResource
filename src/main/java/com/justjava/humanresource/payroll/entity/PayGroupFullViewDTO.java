@@ -18,6 +18,7 @@ public class PayGroupFullViewDTO {
 
     private List<PayGroupAllowanceViewDTO> allowances;
     private List<PayGroupDeductionViewDTO> deductions;
+    private List<PayGroupTaxReliefViewDTO> taxReliefs;
     private List<PayGroupEmployeeViewDTO> employees;
 }
 

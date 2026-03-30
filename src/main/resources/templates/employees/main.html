@@ -338,6 +338,7 @@
         }
         .pi-item-icon.allowance { background: #dcfce7; color: #16a34a; }
         .pi-item-icon.deduction { background: #fee2e2; color: #dc2626; }
+        .pi-item-icon.taxrelief { background: #fef3c7; color: #d97706; }
         .pi-item-icon .material-icons-round { font-size: 18px; }
         .pi-item-name {
             font-size: 0.85rem; font-weight: 600;
@@ -367,6 +368,7 @@
         }
         .pi-amount.allowance-amt { color: #16a34a; }
         .pi-amount.deduction-amt { color: #dc2626; }
+        .pi-amount.taxrelief-amt { color: #d97706; }
 
         .pi-remove-btn {
             width: 28px; height: 28px; border-radius: 6px;
@@ -474,6 +476,7 @@
         .pi-submit-btn:disabled { opacity: .5; cursor: not-allowed; }
         .pi-submit-btn.allowance-btn { background: linear-gradient(135deg, #16a34a, #15803d); color: white; }
         .pi-submit-btn.deduction-btn { background: linear-gradient(135deg, #dc2626, #b91c1c); color: white; }
+        .pi-submit-btn.taxrelief-btn { background: linear-gradient(135deg, #d97706, #b45309); color: white; }
         .pi-submit-btn .material-icons-round { font-size: 16px; }
 
         .pi-spinner {
@@ -1263,7 +1266,7 @@
                         <span class="material-icons-round">payments</span>
                     </div>
                     <div>
-                        <div class="pi-header-title">Allowances &amp; Deductions</div>
+                        <div class="pi-header-title">Allowances, Deductions &amp; Tax Reliefs</div>
                         <div class="pi-header-sub">
                             Employee
                             <span class="pi-emp-badge" id="pi-emp-badge-id">—</span>
@@ -1286,6 +1289,11 @@
                     <span class="material-icons-round" style="font-size:16px">remove_circle_outline</span>
                     Deductions
                     <span class="pi-tab-dot" id="pi-dot-deductions">0</span>
+                </button>
+                <button class="pi-tab" id="pi-tab-taxreliefs" onclick="switchPiTab('taxreliefs')">
+                    <span class="material-icons-round" style="font-size:16px">shield</span>
+                    Tax Reliefs
+                    <span class="pi-tab-dot" id="pi-dot-taxreliefs">0</span>
                 </button>
             </div>
 
@@ -1435,6 +1443,77 @@
                     </div>
                 </div>
 
+                <!-- ── TAX RELIEFS PANEL ── -->
+                <div id="pi-panel-taxreliefs" class="pi-panel">
+
+                    <!-- Current tax reliefs card -->
+                    <div class="pi-section">
+                        <div class="pi-section-head">
+                            <div class="pi-section-head-left">
+                                <span class="material-icons-round" style="font-size:16px; color:#d97706">shield</span>
+                                <span class="pi-section-label">Assigned Tax Reliefs</span>
+                                <span class="pi-count-badge" id="pi-taxrelief-count">0</span>
+                            </div>
+                        </div>
+                        <div id="pi-taxreliefs-list">
+                            <div class="pi-skeleton">
+                                <div class="pi-skel-row"></div>
+                                <div class="pi-skel-row" style="opacity:.6"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Add tax relief form -->
+                    <div class="pi-section" style="border-top:none; border-top-left-radius:0; border-top-right-radius:0;">
+                        <div class="pi-add-form">
+                            <div class="pi-add-form-title">Add New Tax Relief</div>
+                            <div class="pi-form-row">
+                                <div>
+                                    <div class="pi-field-label">Tax Relief <span class="req">*</span></div>
+                                    <select id="pi-taxrelief-select" class="pi-input pi-select">
+                                        <option value="">Select a tax relief…</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <div class="pi-field-label">Override Amount</div>
+                                    <div class="pi-override-row">
+                                        <label class="pi-toggle-label" for="pi-taxrelief-override-chk">
+                                            <span class="pi-toggle">
+                                                <input type="checkbox" id="pi-taxrelief-override-chk"
+                                                       onchange="toggleOverride('taxrelief', this.checked)">
+                                                <span class="pi-toggle-track"></span>
+                                            </span>
+                                            Override default?
+                                        </label>
+                                        <div class="pi-override-input-wrap">
+                                            <input type="number" id="pi-taxrelief-amount"
+                                                   class="pi-input" placeholder="₦ 0.00"
+                                                   step="0.01" min="0" disabled>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="pi-form-row triple">
+                                <div>
+                                    <div class="pi-field-label">Effective From</div>
+                                    <input type="date" id="pi-taxrelief-from" class="pi-input">
+                                </div>
+                                <div>
+                                    <div class="pi-field-label">Effective To</div>
+                                    <input type="date" id="pi-taxrelief-to" class="pi-input">
+                                </div>
+                                <div style="display:flex; align-items:flex-end;">
+                                    <button class="pi-submit-btn taxrelief-btn" id="pi-add-taxrelief-btn"
+                                            onclick="submitPayItem('taxrelief')">
+                                        <span class="material-icons-round">add</span>
+                                        Add Tax Relief
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </div><!-- /pi-body -->
 
             <!-- Footer -->
@@ -1480,6 +1559,7 @@
         // NEW: Allowances and deductions lists from server (assumed to be passed as model attributes)
         const allowancesList = /*[[${allowances}]]*/ [];
         const deductionsList = /*[[${deductions}]]*/ [];
+        const taxReliefsList = /*[[${taxReliefs}]]*/ [];
 
         // Build flat jobSteps array
         let jobSteps = [];
@@ -1679,10 +1759,11 @@
         let piEmployeeId = null;
         let piAssignedAllowanceIds = new Set();
         let piAssignedDeductionIds = new Set();
+        let piAssignedTaxReliefIds = new Set();
 
         /* ── TAB SWITCHER ─────────────────────────────────────────────────── */
         function switchPiTab(tab) {
-            ['allowances', 'deductions'].forEach(t => {
+            ['allowances', 'deductions', 'taxreliefs'].forEach(t => {
                 document.getElementById('pi-panel-' + t).classList.toggle('active', t === tab);
                 document.getElementById('pi-tab-' + t).classList.toggle('active', t === tab);
             });
@@ -1697,6 +1778,7 @@
             // Reset forms
             resetPiForm('allowance');
             resetPiForm('deduction');
+            resetPiForm('taxrelief');
 
             // Show modal (override the hidden class approach used for other modals)
             const modal = document.getElementById('payItemsModal');
@@ -1707,6 +1789,7 @@
             // Show skeletons while loading
             showSkeleton('allowances');
             showSkeleton('deductions');
+            showSkeleton('taxreliefs');
 
             fetchPayItemsData(employeeId);
         };
@@ -1731,7 +1814,8 @@
                 .then(data => {
                     const assigned = {
                         allowances: data.allowances || [],
-                        deductions: data.deductions || []
+                        deductions: data.deductions || [],
+                        taxreliefs: data.taxReliefs || []
                     };
                     piAssignedAllowanceIds = new Set(
                         assigned.allowances.map(a => String(a.allowanceId || a.id))
@@ -1739,16 +1823,22 @@
                     piAssignedDeductionIds = new Set(
                         assigned.deductions.map(d => String(d.deductionId || d.id))
                     );
+                    piAssignedTaxReliefIds = new Set(
+                        assigned.taxreliefs.map(t => String(t.taxReliefId || t.reliefCode || t.id))
+                    );
 
                     renderPiItems('allowances', assigned.allowances);
                     renderPiItems('deductions', assigned.deductions);
+                    renderPiItems('taxreliefs', assigned.taxreliefs);
                     rebuildSelectOptions('allowance');
                     rebuildSelectOptions('deduction');
+                    rebuildSelectOptions('taxrelief');
                 })
                 .catch(err => {
                     console.error(err);
                     showPiError('allowances');
                     showPiError('deductions');
+                    showPiError('taxreliefs');
                 });
         }
 
@@ -1771,19 +1861,21 @@
 
         function renderPiItems(type, items) {
             const container = document.getElementById('pi-' + type + '-list');
-            const countBadge = document.getElementById('pi-' + type.replace('es','') + '-count') ||
-                               document.getElementById('pi-' + (type === 'allowances' ? 'allowance' : 'deduction') + '-count');
 
             document.getElementById('pi-dot-' + type).textContent = items.length;
             if (type === 'allowances') {
                 document.getElementById('pi-allowance-count').textContent = items.length;
-            } else {
+            } else if (type === 'deductions') {
                 document.getElementById('pi-deduction-count').textContent = items.length;
+            } else if (type === 'taxreliefs') {
+                document.getElementById('pi-taxrelief-count').textContent = items.length;
             }
 
             if (!items.length) {
-                const noun = type === 'allowances' ? 'allowances' : 'deductions';
-                const icon = type === 'allowances' ? 'card_giftcard' : 'remove_circle_outline';
+                const nounMap = { allowances: 'allowances', deductions: 'deductions', taxreliefs: 'tax reliefs' };
+                const iconMap = { allowances: 'card_giftcard', deductions: 'remove_circle_outline', taxreliefs: 'shield' };
+                const noun = nounMap[type] || type;
+                const icon = iconMap[type] || 'help_outline';
                 container.innerHTML = `
                     <div class="pi-empty">
                         <div class="pi-empty-icon">
@@ -1794,17 +1886,23 @@
                 return;
             }
 
-            const masterList = type === 'allowances' ? allowancesList : deductionsList;
-            const idKey      = type === 'allowances' ? 'allowanceId' : 'deductionId';
-            const typeClass  = type === 'allowances' ? 'allowance' : 'deduction';
-            const iconName   = type === 'allowances' ? 'card_giftcard' : 'remove_circle_outline';
-            const amtClass   = type === 'allowances' ? 'allowance-amt' : 'deduction-amt';
+            const masterListMap = { allowances: allowancesList, deductions: deductionsList, taxreliefs: taxReliefsList };
+            const idKeyMap      = { allowances: 'allowanceId', deductions: 'deductionId', taxreliefs: 'taxReliefId' };
+            const typeClassMap  = { allowances: 'allowance', deductions: 'deduction', taxreliefs: 'taxrelief' };
+            const iconNameMap   = { allowances: 'card_giftcard', deductions: 'remove_circle_outline', taxreliefs: 'shield' };
+            const amtClassMap   = { allowances: 'allowance-amt', deductions: 'deduction-amt', taxreliefs: 'taxrelief-amt' };
+
+            const masterList = masterListMap[type];
+            const idKey      = idKeyMap[type];
+            const typeClass  = typeClassMap[type];
+            const iconName   = iconNameMap[type];
+            const amtClass   = amtClassMap[type];
 
             container.innerHTML = '<div class="pi-items-list">' + items.map((item, idx) => {
                 const masterId = item[idKey] || item.id;
                 const found = masterList.find(m => String(m.id) === String(masterId));
-                const name = found ? (found.name || found.allowanceName || found.deductionName || 'Unnamed')
-                                   : (item.name || item.allowanceName || item.deductionName || 'Unnamed');
+                const name = found ? (found.name || found.allowanceName || found.deductionName || found.reliefName || 'Unnamed')
+                                   : (item.name || item.allowanceName || item.deductionName || item.reliefName || 'Unnamed');
 
                 const chips = [];
                 if (item.overridden) chips.push(`<span class="pi-chip override"><span class="material-icons-round" style="font-size:10px">edit</span> Overridden</span>`);
@@ -1841,8 +1939,10 @@
         /* ── REBUILD SELECT OPTIONS (filter already assigned) ────────────── */
         function rebuildSelectOptions(type) {
             const select     = document.getElementById('pi-' + type + '-select');
-            const masterList = type === 'allowance' ? allowancesList : deductionsList;
-            const assigned   = type === 'allowance' ? piAssignedAllowanceIds : piAssignedDeductionIds;
+            const masterListMap = { allowance: allowancesList, deduction: deductionsList, taxrelief: taxReliefsList };
+            const assignedMap   = { allowance: piAssignedAllowanceIds, deduction: piAssignedDeductionIds, taxrelief: piAssignedTaxReliefIds };
+            const masterList = masterListMap[type];
+            const assigned   = assignedMap[type];
 
             const prev = select.value;
             select.innerHTML = `<option value="">Select a ${type}…</option>`;
@@ -1913,7 +2013,8 @@
             const effectiveFrom = document.getElementById('pi-' + type + '-from').value || null;
             const effectiveTo   = document.getElementById('pi-' + type + '-to').value  || null;
 
-            const idKey   = type === 'allowance' ? 'allowanceId' : 'deductionId';
+            const idKeyMap = { allowance: 'allowanceId', deduction: 'deductionId', taxrelief: 'taxReliefId' };
+            const idKey   = idKeyMap[type] || (type + 'Id');
             const payload = [{ [idKey]: parseInt(selId, 10), overridden, overrideAmount, effectiveFrom, effectiveTo }];
 
             const endpoint = '/setup/employee/' + piEmployeeId + '/' + type + 's';
@@ -1932,7 +2033,8 @@
             .then(() => {
                 resetPiForm(type);
                 fetchPayItemsData(piEmployeeId);
-                showPiToast(type === 'allowance' ? 'Allowance added ✓' : 'Deduction added ✓', 'success');
+                const toastMap = { allowance: 'Allowance added ✓', deduction: 'Deduction added ✓', taxrelief: 'Tax Relief added ✓' };
+                showPiToast(toastMap[type] || (type + ' added ✓'), 'success');
             })
             .catch(err => {
                 console.error(err);
@@ -1959,7 +2061,8 @@
             .then(r => {
                 if (!r.ok) throw new Error('Remove failed');
                 fetchPayItemsData(piEmployeeId);
-                showPiToast((type === 'allowance' ? 'Allowance' : 'Deduction') + ' removed', 'success');
+                const removeToastMap = { allowance: 'Allowance', deduction: 'Deduction', taxrelief: 'Tax Relief' };
+                showPiToast((removeToastMap[type] || type) + ' removed', 'success');
             })
             .catch(err => {
                 card.style.opacity = '1';
@@ -2033,6 +2136,16 @@
                     o.value = d.id;
                     o.textContent = d.name || d.deductionName || 'Unnamed';
                     dSelect.appendChild(o);
+                });
+            }
+            // Populate tax reliefs select
+            const tSelect = document.getElementById('pi-taxrelief-select');
+            if (tSelect && taxReliefsList && taxReliefsList.length) {
+                taxReliefsList.forEach(t => {
+                    const o = document.createElement('option');
+                    o.value = t.id;
+                    o.textContent = t.name || 'Unnamed';
+                    tSelect.appendChild(o);
                 });
             }
         });

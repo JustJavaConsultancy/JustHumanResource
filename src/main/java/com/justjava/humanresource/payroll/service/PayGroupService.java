@@ -5,6 +5,7 @@ import com.justjava.humanresource.hr.entity.PayGroup;
 import com.justjava.humanresource.payroll.entity.PayGroupAllowanceViewDTO;
 import com.justjava.humanresource.payroll.entity.PayGroupDeductionViewDTO;
 import com.justjava.humanresource.payroll.entity.PayGroupEmployeeViewDTO;
+import com.justjava.humanresource.payroll.entity.PayGroupTaxReliefViewDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.time.LocalDate;
@@ -24,6 +25,11 @@ public interface PayGroupService {
     );
 
     List<PayGroupEmployeeViewDTO> getEmployees(
+            Long payGroupId,
+            LocalDate date
+    );
+
+    List<PayGroupTaxReliefViewDTO> getTaxReliefs(
             Long payGroupId,
             LocalDate date
     );

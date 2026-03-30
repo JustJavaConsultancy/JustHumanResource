@@ -92,6 +92,10 @@
                 <span class="text-gray-500">Deductions</span>
                 <span class="text-red-600" th:text="${#lists.size(pg.deductions)} + ' items'">0 items</span>
               </div>
+              <div class="flex justify-between text-sm">
+                <span class="text-gray-500">Tax Reliefs</span>
+                <span class="text-amber-600" th:text="${#lists.size(pg.taxReliefs)} + ' items'">0 items</span>
+              </div>
             </div>
 
             <div class="flex items-center space-x-2 mt-3 pt-2 border-t border-gray-100 dark:border-gray-700">
@@ -107,6 +111,13 @@
                       title="Manage Deductions">
                 <span class="material-icons-round text-sm mr-1">remove_circle</span>
                 <span class="text-xs">Deductions</span>
+              </button>
+
+              <button th:attr="onclick='openTaxReliefsModal(' + ${pg.payGroup.id} + ')'"
+                      class="action-btn flex items-center text-amber-600 dark:text-amber-400"
+                      title="Manage Tax Reliefs">
+                <span class="material-icons-round text-sm mr-1">shield</span>
+                <span class="text-xs">Tax Reliefs</span>
               </button>
 
               <button th:attr="onclick='editPaygroup(' + ${pg.payGroup.id} + ')'"
@@ -275,6 +286,52 @@
     </div>
   </div>
 
+  <!-- Manage Tax Reliefs Modal -->
+  <div id="manageTaxReliefsModal" class="fixed inset-0 z-50 hidden">
+    <div class="modal-backdrop fixed inset-0"></div>
+    <div class="fixed inset-0 flex items-center justify-center p-4 custom-scrollbar">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-2xl">
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+          <div class="flex justify-between items-center">
+            <h3 class="text-xl font-bold" id="taxReliefsModalTitle">Manage Tax Reliefs</h3>
+            <button onclick="closeModal('manageTaxReliefsModal')" class="text-gray-400 hover:text-gray-600">
+              <span class="material-icons-round">close</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="p-6">
+          <form th:action="@{/setup/paygroup/taxreliefs}" method="post" id="manageTaxReliefsForm" class="space-y-6" onsubmit="disableSubmitButton(this)">
+            <input name="payGroupId" type="hidden" id="manageTaxReliefsPaygroupId" value="">
+
+            <div>
+              <label class="block text-sm font-medium mb-3">Select tax reliefs to include</label>
+              <div class="space-y-2 max-h-96 overflow-y-auto p-2 border border-gray-200 dark:border-gray-700 rounded-lg" id="taxReliefCheckboxList">
+                <th:block th:if="${taxReliefs != null and !taxReliefs.empty}">
+                  <label th:each="taxRelief : ${taxReliefs}" class="flex items-center space-x-2 p-1 hover:bg-gray-50 dark:hover:bg-gray-700 rounded">
+                    <input name="taxReliefSending" type="checkbox" th:value="${taxRelief.id + ' ' + taxRelief.amount}" class="rounded taxrelief-check">
+                    <span th:text="${taxRelief.name}">CRA Relief</span>
+                    - <span th:text="${'₦' + taxRelief.amount}">₦200,000.00</span>
+                  </label>
+                </th:block>
+                <div th:unless="${taxReliefs != null and !taxReliefs.empty}" class="flex flex-col items-center justify-center py-8 text-center">
+                  <span class="material-icons-round text-4xl text-gray-300 mb-2">shield</span>
+                  <p class="text-gray-500 dark:text-gray-400">No tax reliefs available</p>
+                  <p class="text-sm text-gray-400 dark:text-gray-500">Add tax reliefs to manage them here.</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex justify-end space-x-3 pt-4">
+              <button type="button" onclick="closeModal('manageTaxReliefsModal')" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">Cancel</button>
+              <button type="submit" class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">Save Tax Reliefs</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
     function disableSubmitButton(form) {
       const submitButton = form.querySelector('button[type="submit"]');
@@ -321,6 +378,18 @@
       document.getElementById('manageDeductionsPaygroupId').value = paygroupId;
 
       openModal('manageDeductionsModal');
+    }
+
+    // Open Tax Reliefs modal
+    function openTaxReliefsModal(paygroupId) {
+      const card = document.querySelector(`.payroll-card[data-paygroup-id="${paygroupId}"]`);
+      if (!card) return;
+
+      const paygroupName = card.getAttribute('data-paygroup-name');
+      document.getElementById('taxReliefsModalTitle').innerText = `Tax Reliefs for ${paygroupName}`;
+      document.getElementById('manageTaxReliefsPaygroupId').value = paygroupId;
+
+      openModal('manageTaxReliefsModal');
     }
 
     // Save deductions
