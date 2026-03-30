@@ -15,7 +15,7 @@ import java.time.LocalDate;
         uniqueConstraints = {
                 @UniqueConstraint(
                         name = "uk_paygroup_tax_relief",
-                        columnNames = {"pay_group_id", "tax_relief_id"}
+                        columnNames = {"paygroup_id", "tax_relief_id"}
                 )
         })
 @Getter
@@ -31,7 +31,7 @@ public class PayGroupTaxRelief {
      * ========================= */
 
     @ManyToOne(optional = false)
-    @JoinColumn(name = "pay_group_id")
+    @JoinColumn(name = "paygroup_id")
     private PayGroup payGroup;
 
     @ManyToOne(optional = false)

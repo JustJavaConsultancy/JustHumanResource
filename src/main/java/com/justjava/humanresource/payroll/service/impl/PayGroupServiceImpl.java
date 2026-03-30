@@ -6,6 +6,7 @@ import com.justjava.humanresource.hr.repository.*;
 import com.justjava.humanresource.payroll.entity.PayGroupAllowanceViewDTO;
 import com.justjava.humanresource.payroll.entity.PayGroupDeductionViewDTO;
 import com.justjava.humanresource.payroll.entity.PayGroupEmployeeViewDTO;
+import com.justjava.humanresource.payroll.entity.PayGroupTaxReliefViewDTO;
 import com.justjava.humanresource.payroll.repositories.*;
 import com.justjava.humanresource.payroll.service.PayGroupService;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +22,7 @@ public class PayGroupServiceImpl implements PayGroupService {
     private final PayGroupRepository payGroupRepository;
     private final PayGroupAllowanceRepository payGroupAllowanceRepository;
     private final PayGroupDeductionRepository payGroupDeductionRepository;
+    private final PayGroupTaxReliefRepository payGroupTaxReliefRepository;
     private final EmployeePositionHistoryRepository positionHistoryRepository;
 
     /* ============================================================
@@ -113,6 +115,38 @@ public class PayGroupServiceImpl implements PayGroupService {
                                                 + position.getEmployee().getLastName()
                                 )
                                 .effectiveFrom(position.getEffectiveFrom())
+                                .build()
+                )
+                .toList();
+    }
+
+    /* ============================================================
+       TAX RELIEFS
+       ============================================================ */
+
+    @Override
+    public List<PayGroupTaxReliefViewDTO> getTaxReliefs(
+            Long payGroupId,
+            LocalDate date) {
+
+        payGroupRepository.findById(payGroupId)
+                .orElseThrow();
+
+        return payGroupTaxReliefRepository
+                .findActiveReliefs(
+                        payGroupId,
+                        date,
+                        RecordStatus.ACTIVE
+                )
+                .stream()
+                .map(entity ->
+                        PayGroupTaxReliefViewDTO.builder()
+                                .taxReliefId(entity.getTaxRelief().getId())
+                                .taxReliefCode(entity.getTaxRelief().getCode())
+                                .taxReliefName(entity.getTaxRelief().getName())
+                                .overrideAmount(entity.getOverrideAmount())
+                                .effectiveFrom(entity.getEffectiveFrom())
+                                .effectiveTo(entity.getEffectiveTo())
                                 .build()
                 )
                 .toList();

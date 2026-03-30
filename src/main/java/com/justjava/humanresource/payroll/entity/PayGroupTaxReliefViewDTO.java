@@ -1,25 +1,20 @@
 package com.justjava.humanresource.payroll.entity;
 
 import lombok.Builder;
-import lombok.Data;
+import lombok.Getter;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-@Data
+@Getter
 @Builder
-public class EmployeeTaxReliefResponse {
+public class PayGroupTaxReliefViewDTO {
 
-    private Long id;
-    private Long employeeId;
     private Long taxReliefId;
-
-    private String reliefCode;
-    private String reliefName;
-
-    private boolean overridden;
+    private String taxReliefCode;
+    private String taxReliefName;
     private BigDecimal overrideAmount;
-
     private LocalDate effectiveFrom;
     private LocalDate effectiveTo;
 }
+

@@ -97,9 +97,11 @@ public class EmployeeController {
 
         List<Deduction> deductions = payrollSetupService.getActiveDeductions();
         List<Allowance> allowances  = payrollSetupService.getActiveAllowances();
+        List<TaxRelief> taxReliefs  = payrollSetupService.getActiveTaxReliefs();
 
         model.addAttribute("deductions",  deductions);
         model.addAttribute("allowances",  allowances);
+        model.addAttribute("taxReliefs",  taxReliefs);
         model.addAttribute("employees",   employees);
         model.addAttribute("jobGrades",   jobGrades);
         model.addAttribute("departments", departments);
@@ -160,12 +162,15 @@ public class EmployeeController {
                 payrollSetupService.getAllowancesForEmployee(id);
         List<EmployeeDeductionResponse> deductions =
                 payrollSetupService.getDeductionsForEmployee(id);
+        List<EmployeeTaxReliefResponse> taxReliefs =
+                payrollSetupService.getTaxReliefsForEmployee(id);
         allowances.forEach(
                 a -> System.out.println("Allowance for employee ID " + id + ": " + a));
         System.out.println("Deductions for employee ID " + id + ": " + deductions);
         return ResponseEntity.ok(Map.of(
                 "allowances", allowances,
-                "deductions", deductions
+                "deductions", deductions,
+                "taxReliefs", taxReliefs
         ));
     }
 
@@ -206,6 +211,26 @@ public class EmployeeController {
         System.out.println("Received request to attach deductions to employee ID: " + employeeId);
         List<EmployeeDeductionResponse> result =
                 payrollSetupService.addDeductionsToEmployee(employeeId, requests);
+        return ResponseEntity.ok(result);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  PAY ITEMS  – Attach tax reliefs to an employee
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Replaces / adds the tax relief assignments for an employee.
+     *
+     * Request body: List of { "taxReliefId": <Long>, ... }
+     */
+    @PostMapping("/setup/employee/{employeeId}/taxreliefs")
+    @ResponseBody
+    public ResponseEntity<List<EmployeeTaxReliefResponse>> attachTaxReliefsToEmployee(
+            @PathVariable Long employeeId,
+            @RequestBody List<TaxReliefAttachmentRequest> requests) {
+        System.out.println("Received request to attach tax reliefs to employee ID: " + employeeId);
+        List<EmployeeTaxReliefResponse> result =
+                payrollSetupService.addTaxReliefsToEmployee(employeeId, requests);
         return ResponseEntity.ok(result);
     }
 
