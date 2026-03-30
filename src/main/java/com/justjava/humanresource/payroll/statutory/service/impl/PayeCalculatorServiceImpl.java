@@ -81,19 +81,16 @@ public class PayeCalculatorServiceImpl implements PayeCalculatorService {
         return totalTax.setScale(SCALE, RoundingMode.HALF_UP);
     }
     @Override
-    public BigDecimal calculateMonthlyTax(BigDecimal monthlyTaxable, LocalDate payrollDate) {
+    public BigDecimal calculateMonthlyTax(BigDecimal annualTaxable, LocalDate payrollDate) {
 
-        if (monthlyTaxable == null
-                || monthlyTaxable.compareTo(BigDecimal.ZERO) <= 0) {
+        if (annualTaxable == null
+                || annualTaxable.compareTo(BigDecimal.ZERO) <= 0) {
             return BigDecimal.ZERO.setScale(SCALE, RoundingMode.HALF_UP);
         }
 
     /* --------------------------------------------------------
        STEP 1: Annualize
        -------------------------------------------------------- */
-
-        BigDecimal annualTaxable =
-                monthlyTaxable.multiply(BigDecimal.valueOf(12));
 
     /* --------------------------------------------------------
        STEP 2: Calculate annual tax using existing engine

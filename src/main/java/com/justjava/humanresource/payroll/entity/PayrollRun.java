@@ -116,4 +116,7 @@ public class PayrollRun extends BaseEntity {
     @Column(nullable = false)
     private BigDecimal nonGrossEarnings;
 
+    @Column(precision = 19, scale = 2)
+    private BigDecimal grossDifference;
+
 }
