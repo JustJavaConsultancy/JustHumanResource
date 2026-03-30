@@ -375,4 +375,24 @@ AND pr.periodEnd = :periodEnd
             LocalDate periodStart,
             LocalDate periodEnd
     );
+    @Query("""
+SELECT pr
+FROM PayrollRun pr
+JOIN pr.employee e
+WHERE e.department.company.id = :companyId
+AND pr.periodStart = :periodStart
+AND pr.periodEnd = :periodEnd
+AND pr.versionNumber = (
+    SELECT MAX(pr2.versionNumber)
+    FROM PayrollRun pr2
+    WHERE pr2.employee.id = pr.employee.id
+    AND pr2.periodStart = pr.periodStart
+    AND pr2.periodEnd = pr.periodEnd
+)
+""")
+    List<PayrollRun> findLatestRunsPerEmployeeForPeriod(
+            @Param("companyId") Long companyId,
+            @Param("periodStart") LocalDate periodStart,
+            @Param("periodEnd") LocalDate periodEnd
+    );
 }

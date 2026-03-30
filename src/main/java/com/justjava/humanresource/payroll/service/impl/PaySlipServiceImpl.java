@@ -142,7 +142,7 @@ public class PaySlipServiceImpl implements PaySlipService {
 
         System.out.println( " The Period Here====="+current);
         List<PayrollRun> currentPayrollRuns=payrollRunRepository
-                .findByEmployee_Department_Company_IdAndPayrollDateBetween(
+                .findLatestRunsPerEmployeeForPeriod(
                         companyId,
                         current.getPeriodStart(),
                         current.getPeriodEnd()
