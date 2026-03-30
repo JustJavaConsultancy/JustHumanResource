@@ -186,6 +186,8 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
         run.setGrossPay(BigDecimal.ZERO);
         run.setTotalDeductions(BigDecimal.ZERO);
         run.setNetPay(BigDecimal.ZERO);
+        run.setNonGrossEarnings(BigDecimal.ZERO);
+        run.setGrossDifference(BigDecimal.ZERO);
 
         run.setFlowableProcessInstanceId(processInstanceId);
         run.setFlowableBusinessKey(employee.getId().toString());
@@ -236,6 +238,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
         BigDecimal grossPay;
         BigDecimal runningGross = BigDecimal.ZERO;
         BigDecimal nonGrossEarnings = BigDecimal.ZERO;
+        BigDecimal grossDifference = BigDecimal.ZERO;
         BigDecimal taxableIncome = BigDecimal.ZERO;
 
     /* ============================================================
@@ -319,14 +322,16 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
 
             amount = amount.setScale(2, RoundingMode.HALF_UP);
 
-            saveLine(run, employee,
+            saveLine(
+                    run, employee,
                     allowance.getCode(),
                     allowance.getName(),
                     amount,
                     allowance.isTaxable(),
                     allowance.isPensionable(),
                     allowance.isPartOfGross(),
-                    PayComponentType.EARNING);
+                    PayComponentType.EARNING
+            );
 
         /* ============================================================
            🔥 KEY SPLIT: GROSS vs NON-GROSS
@@ -361,7 +366,9 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
             /*
              * Optional balancing (VERY IMPORTANT for production)
              */
-            BigDecimal difference = grossPay.subtract(runningGross);
+            System.out.println(" grossPay===="+grossPay +"  runningGross==="+runningGross+"  " +
+                    " nonGrossEarnings==="+nonGrossEarnings);
+            BigDecimal difference = grossPay.subtract(runningGross.add(nonGrossEarnings));
 
             if (difference.compareTo(BigDecimal.ZERO) > 0) {
 
@@ -374,6 +381,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
                         false,
                         PayComponentType.EARNING);
 
+                grossDifference=difference;
                 //runningGross = runningGross.add(difference);
                 //taxableIncome = taxableIncome.add(difference);
             }
@@ -386,10 +394,19 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
        FINAL SET VALUES
        ============================================================ */
 
-        run.setGrossPay(grossPay.setScale(2, RoundingMode.HALF_UP));
-        run.setNonGrossEarnings(nonGrossEarnings.setScale(2, RoundingMode.HALF_UP));
+        System.out.println(" The nonGrossEarnings ===="+nonGrossEarnings);
 
+        System.out.println(" The runningGross ===="+runningGross);
+        System.out.println(" The grossDifference ===="+grossDifference);
+        System.out.println(" The grossPay ===="+grossPay);
+
+        run.setGrossPay(runningGross.setScale(2, RoundingMode.HALF_UP));
+        run.setNonGrossEarnings(nonGrossEarnings.setScale(2, RoundingMode.HALF_UP));
+        run.setGrossDifference(grossDifference.setScale(2, RoundingMode.HALF_UP));
+
+        System.out.println("2 The grossPay ===="+grossPay);
         payrollRunRepository.save(run);
+        System.out.println("3 The grossPay ===="+grossPay);
     }
 
     /* ============================================================
@@ -409,7 +426,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
 
         payrollLineItemRepository.deleteByPayrollRunIdAndComponentCodeIn(
                 payrollRunId,
-                List.of("PAYE", "PENSION_EMP", "PENSION_EMPLOYER")
+                List.of("PAYE", "PENSION_EMP", "PENSION_EMPLOYER","TAX_RELIEF")
         );
 
         BigDecimal totalDeductions = BigDecimal.ZERO;
@@ -429,11 +446,13 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
                 .map(PayrollLineItem::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
+        System.out.println(" The total  earning ===="+totalEarnings);
         BigDecimal taxableIncome = earningLines.stream()
                 .filter(PayrollLineItem::isTaxable)
                 .map(PayrollLineItem::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
+        System.out.println(" The total taxableIncome  ===="+taxableIncome);
     /* ============================================================
        PENSION CALCULATION (ONLY PENSIONABLE EARNINGS)
        ============================================================ */
@@ -518,7 +537,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
                 employeePositionHistoryService
                         .getCurrentPosition(employee.getId());
 
-        JobStep jobStep = position.getJobStep();
+        //JobStep jobStep = position.getJobStep();
         PayGroup payGroup = position.getPayGroup();
 
         ResolvedPayComponents resolved =
@@ -527,14 +546,20 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
                         employee,
                         payrollDate
                 );
+        BigDecimal fullGross= run.getGrossPay()
+                .add(run.getNonGrossEarnings()).add(run.getGrossDifference());
+
+        System.out.println(" The Full Gross==="+fullGross);
+        fullGross = fullGross.multiply(BigDecimal.valueOf(12));
 
         for (TaxRelief relief : resolved.getTaxReliefs()) {
-
+            System.out.println(" The Full Gross Annual Figure ==="+fullGross);
             BigDecimal amount = computeReliefAmount(
-                    relief,
-                    run.getGrossPay()
+                    relief,fullGross
             );
 
+            System.out.println(" TaxRelief amount ==="+amount+" with gross=="+run.getGrossPay()
+            + " and the taxableIncome==="+taxableIncome);
             if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0)
                 continue;
 
@@ -548,69 +573,23 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
             totalReliefs = totalReliefs.add(amount);
         }
 
-    /* ============================================================
-       PAYE CALCULATION — NIGERIAN STATUTORY RELIEF PIPELINE
-       ============================================================
+        System.out.println(" The Total Relief==="+totalReliefs);
+        taxableIncome = fullGross
+                //.subtract(employeePension)
+                .subtract(totalReliefs);
 
-       Step 1: Annual Gross Income
-               = all earning lines EXCEPT RESIDUAL × 12
-               (includes both taxable and non-taxable allowances —
-               RESIDUAL is a non-statutory balancing figure and must
-               always be excluded from the tax base)
-
-       Step 2: Less annual pension relief
-               = grossPay × 12 × 7.829% × 80%
-               (matches Excel's exact pension relief formula)
-
-       Step 3: Less Housing Allowance Relief
-               = 20% of annual housing allowance
-               (Nigerian statutory housing relief)
-
-       Step 4: Divide by 12 → Monthly Chargeable Income
-               Pass THIS into calculateMonthlyTax()
-       ============================================================ */
-
-        BigDecimal annualGrossIncome = earningLines.stream()
-                .filter(line -> !"RESIDUAL".equals(line.getComponentCode()))
-                .map(PayrollLineItem::getAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add)
-                .multiply(BigDecimal.valueOf(12));
-
-        BigDecimal annualPensionRelief = scheme != null
-                ? run.getGrossPay()
-                .multiply(BigDecimal.valueOf(12))
-                .multiply(new BigDecimal("0.07829"))
-                .multiply(new BigDecimal("0.80"))
-                .setScale(10, RoundingMode.HALF_UP)
-                : BigDecimal.ZERO;
-
-        BigDecimal grossForCRA = annualGrossIncome.subtract(annualPensionRelief);
-
-        BigDecimal annualHousingAllowance = earningLines.stream()
-                .filter(line -> line.isPensionable()
-                        && line.getDescription() != null
-                        && line.getDescription().toLowerCase().contains("housing"))
-                .map(PayrollLineItem::getAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add)
-                .multiply(BigDecimal.valueOf(12));
-
-        BigDecimal housingRelief = annualHousingAllowance
-                .multiply(new BigDecimal("0.20"));
-
-        BigDecimal monthlyChargeable = grossForCRA
-                .subtract(housingRelief)
-                .divide(BigDecimal.valueOf(12), 2, RoundingMode.HALF_UP);
-
-        if (monthlyChargeable.compareTo(BigDecimal.ZERO) < 0) {
-            monthlyChargeable = BigDecimal.ZERO;
+        System.out.println(" The Final Taxable Income===="+taxableIncome);
+        if (taxableIncome.compareTo(BigDecimal.ZERO) < 0) {
+            taxableIncome = BigDecimal.ZERO;
         }
 
-        log.info("PAYE DEBUG → annualGrossIncome={}, annualPensionRelief={}, grossForCRA={}, housingRelief={}, monthlyChargeable={}",
-                annualGrossIncome, annualPensionRelief, grossForCRA, housingRelief, monthlyChargeable);
+    /* ============================================================
+       PAYE CALCULATION
+       ============================================================ */
 
         BigDecimal paye =
                 payeCalculatorService.calculateMonthlyTax(
-                        monthlyChargeable,
+                        taxableIncome,
                         run.getPayrollDate()
                 );
 
@@ -1007,8 +986,12 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
                 return relief.getAmount();
 
             case PERCENTAGE_OF_GROSS:
-                return gross.multiply(relief.getPercentageRate())
+                BigDecimal result= gross.multiply(relief.getPercentageRate())
                         .divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
+                System.out.println(" Inside PERCENTAGE_OF_GROSS GROSS=="+gross+
+                " the relief percent==="+relief.getPercentageRate() +
+                " and the result sending out==="+result);
+                return result;
 
             case FORMULA:
                 return evaluateFormula(
