@@ -160,7 +160,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
                 amendment.setGrossPay(BigDecimal.ZERO);
                 amendment.setTotalDeductions(BigDecimal.ZERO);
                 amendment.setNetPay(BigDecimal.ZERO);
-
+                amendment.setNonGrossEarnings(BigDecimal.ZERO);
                 amendment.setFlowableProcessInstanceId(processInstanceId);
                 amendment.setFlowableBusinessKey(employee.getId().toString());
                 amendment.setPayrollYear(openPeriod.getPeriodStart().getYear());

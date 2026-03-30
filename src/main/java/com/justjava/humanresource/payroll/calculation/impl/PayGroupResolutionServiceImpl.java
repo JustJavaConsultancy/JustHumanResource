@@ -86,9 +86,21 @@ public class PayGroupResolutionServiceImpl implements PayGroupResolutionService 
                     );
 
             for (PayGroupDeduction mapping : groupDeductions) {
+
+                Deduction deduction = mapping.getDeduction();
+
+                if (mapping.getOverrideAmount() != null
+                        && mapping.getOverrideAmount().compareTo(BigDecimal.ZERO) > 0) {
+
+                    deduction = cloneDeductionWithOverride(
+                            deduction,
+                            mapping.getOverrideAmount()
+                    );
+                }
+
                 deductionMap.putIfAbsent(
-                        mapping.getDeduction().getCode(),
-                        mapping.getDeduction()
+                        deduction.getCode(),
+                        deduction
                 );
             }
 
@@ -170,12 +182,22 @@ public class PayGroupResolutionServiceImpl implements PayGroupResolutionService 
 
         for (EmployeeDeduction mapping : employeeDeductions) {
 
+            Deduction deduction = mapping.getDeduction();
+
+            if (mapping.isOverridden()
+                    && mapping.getOverrideAmount() != null) {
+
+                deduction = cloneDeductionWithOverride(
+                        deduction,
+                        mapping.getOverrideAmount()
+                );
+            }
+
             deductionMap.put(
-                    mapping.getDeduction().getCode(),
-                    mapping.getDeduction()
+                    deduction.getCode(),
+                    deduction
             );
         }
-
     /* ---------------------------
        TAX RELIEFS (NEW)
        --------------------------- */
@@ -257,7 +279,29 @@ public class PayGroupResolutionServiceImpl implements PayGroupResolutionService 
         clone.setName(original.getName());
         clone.setTaxable(original.isTaxable());
         clone.setPensionable(original.isPensionable());
+        clone.setCalculationType(original.getCalculationType());
+        clone.setPartOfGross(original.isPartOfGross());
         clone.setAmount(overrideAmount);
+        return clone;
+    }
+    private Deduction cloneDeductionWithOverride(
+            Deduction original,
+            BigDecimal overrideAmount) {
+
+        Deduction clone = new Deduction();
+
+        clone.setCode(original.getCode());
+        clone.setName(original.getName());
+
+        clone.setCalculationType(original.getCalculationType());
+        clone.setPercentageRate(original.getPercentageRate());
+        clone.setFormulaExpression(original.getFormulaExpression());
+
+        clone.setAmount(overrideAmount);
+
+        // Optional fields if present in your entity
+        //clone.setActive(original.isActive());
+
         return clone;
     }
     private TaxRelief cloneReliefWithOverride(
