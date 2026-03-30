@@ -82,7 +82,7 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
 
         long incomplete =
                 payrollRunRepository
-                        .countByEmployee_Department_Company_IdAndPayrollDateBetweenAndStatusNot(
+                        .countLatestByCompanyAndPayrollDateBetweenAndStatusNot(
                                 companyId,
                                 current.getPeriodStart(),
                                 current.getPeriodEnd(),

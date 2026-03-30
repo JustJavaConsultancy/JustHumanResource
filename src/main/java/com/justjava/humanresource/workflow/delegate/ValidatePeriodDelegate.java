@@ -65,7 +65,7 @@ public class ValidatePeriodDelegate implements JavaDelegate {
 
         long incomplete =
                 payrollRunRepository
-                        .countByEmployee_Department_Company_IdAndPayrollDateBetweenAndStatusNot(
+                        .countLatestByCompanyAndPayrollDateBetweenAndStatusNot(
                                 companyId,
                                 period.getPeriodStart(),
                                 period.getPeriodEnd(),

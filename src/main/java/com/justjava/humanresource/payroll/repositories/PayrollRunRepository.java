@@ -38,13 +38,25 @@ public interface PayrollRunRepository
             PayrollRunStatus status
     );
 
-    long countByEmployee_Department_Company_IdAndPayrollDateBetweenAndStatusNot(
-            Long companyId,
-            LocalDate start,
-            LocalDate end,
-            PayrollRunStatus status
+    @Query("""
+    SELECT COUNT(p)
+    FROM PayrollRun p
+    WHERE p.employee.department.company.id = :companyId
+      AND p.payrollDate BETWEEN :start AND :end
+      AND p.versionNumber = (
+          SELECT MAX(p2.versionNumber)
+          FROM PayrollRun p2
+          WHERE p2.employee.id = p.employee.id
+          AND p2.payrollDate = p.payrollDate
+      )
+      AND p.status <> :status
+""")
+    long countLatestByCompanyAndPayrollDateBetweenAndStatusNot(
+            @Param("companyId") Long companyId,
+            @Param("start") LocalDate start,
+            @Param("end") LocalDate end,
+            @Param("status") PayrollRunStatus status
     );
-
     /* ============================================================
        COMPANY-SCOPED FETCH
        ============================================================ */
