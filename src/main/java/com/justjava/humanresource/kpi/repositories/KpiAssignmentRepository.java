@@ -25,40 +25,60 @@ public interface KpiAssignmentRepository
 
     List<KpiAssignment> findByJobStep_IdAndActiveTrue(Long jobStepId);
 
+    List<KpiAssignment> findByDepartment_IdAndActiveTrue(Long departmentId);
+
+
+
     /* =========================================================
        VALIDITY-AWARE LOOKUP
        Used for appraisal calculation
        ========================================================= */
     @Query("""
-       SELECT a
-       FROM KpiAssignment a
-       WHERE a.active = true
-       AND (
-            (a.employee.id = :employeeId)
-            OR
-            (
-                a.employee IS NULL
-                AND a.jobStep.id = :jobStepId
-                AND NOT EXISTS (
-                    SELECT 1
-                    FROM KpiAssignment a2
-                    WHERE a2.active = true
-                    AND a2.kpi.id = a.kpi.id
-                    AND a2.employee.id = :employeeId
-                    AND (a2.validFrom IS NULL OR a2.validFrom <= :referenceDate)
-                    AND (a2.validTo IS NULL OR a2.validTo >= :referenceDate)
-                )
+   SELECT a
+   FROM KpiAssignment a
+   WHERE a.active = true
+   AND (
+        (a.employee.id = :employeeId)
+        OR
+        (
+            a.employee IS NULL
+            AND a.jobStep.id = :jobStepId
+            AND NOT EXISTS (
+                SELECT 1 FROM KpiAssignment a2
+                WHERE a2.active = true
+                AND a2.kpi.id = a.kpi.id
+                AND a2.employee.id = :employeeId
+                AND (a2.validFrom IS NULL OR a2.validFrom <= :referenceDate)
+                AND (a2.validTo IS NULL OR a2.validTo >= :referenceDate)
             )
-       )
-       AND (a.validFrom IS NULL OR a.validFrom <= :referenceDate)
-       AND (a.validTo IS NULL OR a.validTo >= :referenceDate)
-       """)
+        )
+        OR
+        (
+            a.employee IS NULL
+            AND a.jobStep IS NULL
+            AND a.department.id = :departmentId
+            AND NOT EXISTS (
+                SELECT 1 FROM KpiAssignment a3
+                WHERE a3.active = true
+                AND a3.kpi.id = a.kpi.id
+                AND (
+                    a3.employee.id = :employeeId
+                    OR a3.jobStep.id = :jobStepId
+                )
+                AND (a3.validFrom IS NULL OR a3.validFrom <= :referenceDate)
+                AND (a3.validTo IS NULL OR a3.validTo >= :referenceDate)
+            )
+        )
+   )
+   AND (a.validFrom IS NULL OR a.validFrom <= :referenceDate)
+   AND (a.validTo IS NULL OR a.validTo >= :referenceDate)
+   """)
     List<KpiAssignment> findEffectiveAssignmentsForEmployee(
             @Param("employeeId") Long employeeId,
             @Param("jobStepId") Long jobStepId,
+            @Param("departmentId") Long departmentId,
             @Param("referenceDate") LocalDate referenceDate
     );
-
     @Query("""
            SELECT a
            FROM KpiAssignment a
@@ -124,6 +144,11 @@ public interface KpiAssignmentRepository
             Long kpiId
     );
 
+    Optional<KpiAssignment> findByDepartment_IdAndKpi_IdAndActiveTrue(
+            Long departmentId,
+            Long kpiId
+    );
+
     /* =========================================================
        WEIGHT AGGREGATION
        Important for validation before saving new assignments
@@ -159,21 +184,22 @@ public interface KpiAssignmentRepository
             @Param("employeeId") Long employeeId
     );
     @Query("""
-       SELECT CASE WHEN COUNT(a) > 0 THEN true ELSE false END
-       FROM KpiAssignment a
-       WHERE a.active = true
-       AND a.kpi.id = :kpiId
-       AND (
-            (a.employee.id = :employeeId)
-            OR
-            (a.employee IS NULL AND a.jobStep.id = :jobStepId)
-       )
-       AND (a.validFrom IS NULL OR a.validFrom <= CURRENT_DATE)
-       AND (a.validTo IS NULL OR a.validTo >= CURRENT_DATE)
-       """)
+   SELECT CASE WHEN COUNT(a) > 0 THEN true ELSE false END
+   FROM KpiAssignment a
+   WHERE a.active = true
+   AND a.kpi.id = :kpiId
+   AND (
+        (a.employee.id = :employeeId)
+        OR (a.employee IS NULL AND a.jobStep.id = :jobStepId)
+        OR (a.employee IS NULL AND a.jobStep IS NULL AND a.department.id = :departmentId)
+   )
+   AND (a.validFrom IS NULL OR a.validFrom <= CURRENT_DATE)
+   AND (a.validTo IS NULL OR a.validTo >= CURRENT_DATE)
+   """)
     boolean existsActiveAssignment(
             @Param("employeeId") Long employeeId,
             @Param("jobStepId") Long jobStepId,
+            @Param("departmentId") Long departmentId,
             @Param("kpiId") Long kpiId
     );
 

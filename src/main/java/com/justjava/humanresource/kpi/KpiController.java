@@ -3,6 +3,7 @@ package com.justjava.humanresource.kpi;
 import com.justjava.humanresource.hr.dto.JobGradeResponseDTO;
 import com.justjava.humanresource.hr.dto.KpiAssignmentResponseDTO;
 import com.justjava.humanresource.hr.dto.KpiBulkAssignmentRequestDTO;
+import com.justjava.humanresource.hr.entity.Department;
 import com.justjava.humanresource.hr.entity.Employee;
 import com.justjava.humanresource.hr.entity.JobStep;
 import com.justjava.humanresource.hr.service.SetupService;
@@ -60,6 +61,8 @@ public class KpiController {
         List<KpiDefinition> kpiDefinitions = kpiDefinitionService.getAll();
         List<Employee> employees = employeeOnboardingService.getAllOnboardings();
         List<JobGradeResponseDTO> jobGrades = setupService.getAllJobGrades();
+        List<Department> departments = setupService.getAllDepartments();
+
 
         List<KpiAssignment> assignments = kpiAssignmentService.getAllAssignments();
 
@@ -83,6 +86,21 @@ public class KpiController {
             List<KpiAssignmentResponseDTO> jobStepKpis = kpiAssignmentService.getAssignmentsForEmployee(jobStep.getId());
             assignmentsByJobStep.put(jobStep, jobStepKpis);
         }
+
+        // Get unique departments (excluding null)
+        List<Department> uniqueDepartments = assignments.stream()
+                .map(KpiAssignment::getDepartment)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+
+        Map<Department, List<KpiAssignmentResponseDTO>> assignmentsByDepartment = new LinkedHashMap<>();
+        for (Department dept : uniqueDepartments) {
+            List<KpiAssignmentResponseDTO> deptKpis =
+                    kpiAssignmentService.getAssignmentsForDepartment(dept.getId());
+            assignmentsByDepartment.put(dept, deptKpis);
+        }
+
 
         // Get unique employees (excluding null)
         List<Employee> uniqueEmployees = assignments.stream()
@@ -160,8 +178,19 @@ public class KpiController {
 
         model.addAttribute("assignmentsByEmployee", assignmentsByEmployee.size());
         model.addAttribute("assignmentsByJobStep", assignmentsByJobStep.size());
+        model.addAttribute("assignmentsByDepartment", assignmentsByDepartment);
         model.addAttribute("totalAssignments",assignmentsByEmployee.size() + assignmentsByJobStep.size());
         model.addAttribute("definitionSize", kpiDefinitions.size());
+        List<Map<String, Object>> deptList = departments.stream()
+                .map(d -> {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("id", d.getId());
+                    map.put("name", d.getName());
+                    return map;
+                })
+                .collect(Collectors.toList());
+        model.addAttribute("departments", deptList);
+       //        model.addAttribute("departments", departments);
         model.addAttribute("jobGrades", jobGrades);
         model.addAttribute("employees", employees);
         model.addAttribute("kpiDefinitions", kpiDefinitions);
@@ -194,6 +223,21 @@ public class KpiController {
             assignmentsByJobStep.put(jobStep, jobStepKpis);
         }
 
+        // Get unique departments (excluding null)
+        List<Department> uniqueDepartments = assignments.stream()
+                .map(KpiAssignment::getDepartment)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+
+        Map<Department, List<KpiAssignmentResponseDTO>> assignmentsByDepartment = new LinkedHashMap<>();
+        for (Department dept : uniqueDepartments) {
+            List<KpiAssignmentResponseDTO> deptKpis =
+                    kpiAssignmentService.getAssignmentsForDepartment(dept.getId());
+            assignmentsByDepartment.put(dept, deptKpis);
+        }
+
+
         // Get unique employees (excluding null)
         List<Employee> uniqueEmployees = assignments.stream()
                 .map(KpiAssignment::getEmployee)
@@ -224,6 +268,7 @@ public class KpiController {
 
         model.addAttribute("assignmentsByEmployee", assignmentsByEmployee);
         model.addAttribute("assignmentsByJobStep", assignmentsByJobStep);
+        model.addAttribute("assignmentsByDepartment", assignmentsByDepartment);
         model.addAttribute("employmentSize", assignmentsByEmployee.size()+ assignmentsByJobStep.size());
         return "kpi/fragment/kpi-assignments-fragment";
     }
@@ -260,6 +305,21 @@ public class KpiController {
             assignmentsByJobStep.put(jobStep, jobStepKpis);
         }
 
+        // Get unique departments (excluding null)
+        List<Department> uniqueDepartments = assignments.stream()
+                .map(KpiAssignment::getDepartment)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+
+        Map<Department, List<KpiAssignmentResponseDTO>> assignmentsByDepartment = new LinkedHashMap<>();
+        for (Department dept : uniqueDepartments) {
+            List<KpiAssignmentResponseDTO> deptKpis =
+                    kpiAssignmentService.getAssignmentsForDepartment(dept.getId());
+            assignmentsByDepartment.put(dept, deptKpis);
+        }
+
+
         // Get unique employees (excluding null)
         List<Employee> uniqueEmployees = assignments.stream()
                 .map(KpiAssignment::getEmployee)
@@ -289,6 +349,7 @@ public class KpiController {
 
         model.addAttribute("assignmentsByEmployee", assignmentsByEmployee);
         model.addAttribute("assignmentsByJobStep", assignmentsByJobStep);
+        model.addAttribute("assignmentsByDepartment", assignmentsByDepartment);
         model.addAttribute("employmentSize", assignmentsByEmployee.size()+ assignmentsByJobStep.size());
         // Return the fragment to reload the assignments tab
         return "kpi/fragment/kpi-assignments-fragment";

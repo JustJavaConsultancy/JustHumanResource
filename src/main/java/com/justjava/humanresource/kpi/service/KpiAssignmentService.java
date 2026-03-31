@@ -3,8 +3,10 @@ package com.justjava.humanresource.kpi.service;
 import com.justjava.humanresource.hr.dto.KpiAssignmentItemRequestDTO;
 import com.justjava.humanresource.hr.dto.KpiAssignmentResponseDTO;
 import com.justjava.humanresource.hr.dto.KpiBulkAssignmentRequestDTO;
+import com.justjava.humanresource.hr.entity.Department;
 import com.justjava.humanresource.hr.entity.Employee;
 import com.justjava.humanresource.hr.entity.JobStep;
+import com.justjava.humanresource.hr.repository.DepartmentRepository;
 import com.justjava.humanresource.hr.repository.EmployeeRepository;
 import com.justjava.humanresource.hr.repository.JobStepRepository;
 import com.justjava.humanresource.kpi.entity.KpiAssignment;
@@ -29,15 +31,21 @@ public class KpiAssignmentService {
     private final EmployeeRepository employeeRepository;
     private final JobStepRepository jobStepRepository;
     private final KpiDefinitionRepository kpiRepository;
+    private final DepartmentRepository departmentRepository;
+
 
     public List<KpiAssignmentResponseDTO> bulkAssign(KpiBulkAssignmentRequestDTO request) {
 
-        if (request.getEmployeeId() == null && request.getJobStepId() == null) {
-            throw new IllegalArgumentException("Either employeeId or jobStepId must be provided");
+        if (request.getEmployeeId() == null
+                && request.getJobStepId() == null
+                && request.getDepartmentId() == null) {
+            throw new IllegalArgumentException(
+                    "Either employeeId, jobStepId, or departmentId must be provided");
         }
 
         Employee employee = null;
         JobStep jobStep = null;
+        Department department = null;
 
         if (request.getEmployeeId() != null) {
             employee = employeeRepository.findById(request.getEmployeeId())
@@ -46,6 +54,11 @@ public class KpiAssignmentService {
 
         if (request.getJobStepId() != null) {
             jobStep = jobStepRepository.findById(request.getJobStepId())
+                    .orElseThrow();
+        }
+
+        if (request.getDepartmentId() != null) {
+            department = departmentRepository.findById(request.getDepartmentId())
                     .orElseThrow();
         }
 
@@ -69,12 +82,20 @@ public class KpiAssignmentService {
                                 employee.getId(),
                                 kpi.getId()
                         ).isPresent();
-            } else {
+            } else if (jobStep != null) {
                 exists = repository
                         .findByJobStep_IdAndKpi_IdAndActiveTrue(
                                 jobStep.getId(),
                                 kpi.getId()
                         ).isPresent();
+            } else if (department != null) {
+                exists = repository
+                        .findByDepartment_IdAndKpi_IdAndActiveTrue(
+                                department.getId(),
+                                kpi.getId()
+                        ).isPresent();
+            } else {
+                exists = false;
             }
 
             if (exists) {
@@ -85,6 +106,7 @@ public class KpiAssignmentService {
                     .kpi(kpi)
                     .employee(employee)
                     .jobStep(jobStep)
+                    .department(department)
                     .weight(item.getWeight())
                     .mandatory(item.isMandatory())
                     .validFrom(LocalDate.now())
@@ -123,6 +145,7 @@ public class KpiAssignmentService {
                 repository.findEffectiveAssignmentsForEmployee(
                         employeeId,
                         employee.getJobStep().getId(),
+                        employee.getDepartment().getId(),
                         today
                 );
 
@@ -175,6 +198,27 @@ public class KpiAssignmentService {
             );
         }
 
+        return response;
+    }
+
+    @Transactional(readOnly = true)
+    public List<KpiAssignmentResponseDTO> getAssignmentsForDepartment(Long departmentId) {
+        List<KpiAssignment> assignments =
+                repository.findByDepartment_IdAndActiveTrue(departmentId);
+
+        List<KpiAssignmentResponseDTO> response = new ArrayList<>();
+        for (KpiAssignment assignment : assignments) {
+            response.add(
+                    KpiAssignmentResponseDTO.builder()
+                            .assignmentId(assignment.getId())
+                            .kpiId(assignment.getKpi().getId())
+                            .kpiCode(assignment.getKpi().getCode())
+                            .weight(assignment.getWeight())
+                            .mandatory(assignment.isMandatory())
+                            .name(assignment.getKpi().getName())
+                            .build()
+            );
+        }
         return response;
     }
 

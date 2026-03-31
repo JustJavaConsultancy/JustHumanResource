@@ -143,6 +143,7 @@ public class KpiMeasurementService {
                 assignmentRepository.findEffectiveAssignmentsForEmployee(
                         employeeId,
                         employee.getJobStep().getId(),
+                        employee.getDepartment().getId(),
                         referenceDate
                 );
 
@@ -243,6 +244,7 @@ public class KpiMeasurementService {
         boolean assigned = assignmentRepository.existsActiveAssignment(
                 employee.getId(),
                 employee.getJobStep().getId(),
+                employee.getDepartment().getId(),
                 kpi.getId()
         );
 

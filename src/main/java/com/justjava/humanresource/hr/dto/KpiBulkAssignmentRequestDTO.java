@@ -7,6 +7,7 @@ public class KpiBulkAssignmentRequestDTO {
 
     private Long employeeId;   // nullable
     private Long jobStepId;    // nullable
+    private Long departmentId;
 
     private List<KpiAssignmentItemRequestDTO> kpis;
 }
