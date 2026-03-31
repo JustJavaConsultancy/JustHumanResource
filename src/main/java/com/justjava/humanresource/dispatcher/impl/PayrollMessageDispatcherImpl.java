@@ -1,6 +1,7 @@
 package com.justjava.humanresource.dispatcher.impl;
 
 import com.justjava.humanresource.dispatcher.PayrollMessageDispatcher;
+import com.justjava.humanresource.hr.service.EmployeeService;
 import com.justjava.humanresource.payroll.entity.PayrollPeriod;
 import com.justjava.humanresource.payroll.enums.PayrollPeriodStatus;
 import com.justjava.humanresource.payroll.repositories.PayrollPeriodRepository;
@@ -64,9 +65,12 @@ public class PayrollMessageDispatcherImpl
             );
         }
 
+
+        PayrollPeriod period = payrollPeriodService
+                .getOpenPeriod(1L);
         Map<String, Object> vars = new HashMap<>();
         vars.put("employeeId", employeeId);
-        vars.put("payrollDate", effectiveDate);
+        vars.put("payrollDate", period.getPeriodEnd());
         vars.put("approvalRequired", false);
         vars.put("exit", false);
 
