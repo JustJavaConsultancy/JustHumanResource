@@ -140,15 +140,18 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
         }
 
         // ---------------------------------------------------------
-        // 6. Bulk Carry Forward (Single SQL Statement)
+        // 6. Carry Forward (Flowable Driven)
         // ---------------------------------------------------------
 
-        payrollRunRepository.bulkCarryForward(
-                companyId,
-                current.getPeriodStart(),
-                current.getPeriodEnd(),
-                nextStart,
-                nextEnd
+        runtimeService.startProcessInstanceByKey(
+                "payrollCarryForwardProcess",
+                Map.of(
+                        "companyId", companyId,
+                        "oldPeriodStart", current.getPeriodStart(),
+                        "oldPeriodEnd", current.getPeriodEnd(),
+                        "newPeriodStart", nextStart,
+                        "newPeriodEnd", nextEnd
+                )
         );
     }
     /* ============================================================

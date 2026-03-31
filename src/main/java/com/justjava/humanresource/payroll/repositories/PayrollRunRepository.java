@@ -234,13 +234,16 @@ AND pr.version_number = (
     AND pr2.period_start = pr.period_start
     AND pr2.period_end = pr.period_end
 )
+LIMIT :limit OFFSET :offset
 """, nativeQuery = true)
-    void bulkCarryForward(
-            @Param("companyId") Long companyId,
-            @Param("oldPeriodStart") LocalDate oldPeriodStart,
-            @Param("oldPeriodEnd") LocalDate oldPeriodEnd,
-            @Param("newPeriodStart") LocalDate newPeriodStart,
-            @Param("newPeriodEnd") LocalDate newPeriodEnd
+    int bulkCarryForwardChunk(
+            Long companyId,
+            LocalDate oldPeriodStart,
+            LocalDate oldPeriodEnd,
+            LocalDate newPeriodStart,
+            LocalDate newPeriodEnd,
+            int limit,
+            int offset
     );
     long countByEmployee_Department_Company_IdAndPayrollDateBetween(
             Long companyId,
@@ -446,4 +449,5 @@ AND pr.versionNumber = (
             @Param("periodStart") LocalDate periodStart,
             @Param("periodEnd") LocalDate periodEnd
     );
+
 }
