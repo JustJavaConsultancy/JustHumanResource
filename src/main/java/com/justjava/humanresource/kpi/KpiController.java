@@ -62,6 +62,14 @@ public class KpiController {
         List<Employee> employees = employeeOnboardingService.getAllOnboardings();
         List<JobGradeResponseDTO> jobGrades = setupService.getAllJobGrades();
         List<Department> departments = setupService.getAllDepartments();
+        List<Map<String, Object>> deptList = departments.stream()
+                .map(d -> {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("id", d.getId());
+                    map.put("name", d.getName());
+                    return map;
+                })
+                .collect(Collectors.toList());
 
 
         List<KpiAssignment> assignments = kpiAssignmentService.getAllAssignments();
@@ -181,16 +189,7 @@ public class KpiController {
         model.addAttribute("assignmentsByDepartment", assignmentsByDepartment);
         model.addAttribute("totalAssignments",assignmentsByEmployee.size() + assignmentsByJobStep.size());
         model.addAttribute("definitionSize", kpiDefinitions.size());
-        List<Map<String, Object>> deptList = departments.stream()
-                .map(d -> {
-                    Map<String, Object> map = new HashMap<>();
-                    map.put("id", d.getId());
-                    map.put("name", d.getName());
-                    return map;
-                })
-                .collect(Collectors.toList());
         model.addAttribute("departments", deptList);
-       //        model.addAttribute("departments", departments);
         model.addAttribute("jobGrades", jobGrades);
         model.addAttribute("employees", employees);
         model.addAttribute("kpiDefinitions", kpiDefinitions);
