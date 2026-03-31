@@ -323,6 +323,8 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
         }
         LocalDate affectedDate = determineAffectedPayrollDate(requests);
 
+        System.out.println(" affectedDate in addDeductionsToEmployee ==="+affectedDate);
+
         if (payrollPeriodService.isPayrollDateInOpenPeriod(1L,affectedDate)) {
             payrollChangeOrchestrator.recalculateForEmployee(employeeId, affectedDate);
         }
