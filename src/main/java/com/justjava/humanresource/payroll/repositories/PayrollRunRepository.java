@@ -198,6 +198,11 @@ INSERT INTO payroll_runs (
     gross_difference,
     total_deductions,
     net_pay,
+    ytd_deductions, 
+    ytd_gross, 
+    ytd_net, 
+    ytd_paye,
+    ytd_taxable,
     parent_run_id,
     created_at,
     updated_at
@@ -217,6 +222,11 @@ SELECT
     pr.gross_difference,
     pr.total_deductions,
     pr.net_pay,
+    pr.ytd_deductions, 
+    pr.ytd_gross, 
+    pr.ytd_net, 
+    pr.ytd_paye,
+    pr.ytd_taxable,
     pr.id,
     NOW(),
     NOW()
