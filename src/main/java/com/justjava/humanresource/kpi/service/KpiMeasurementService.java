@@ -219,6 +219,8 @@ public class KpiMeasurementService {
         List<KpiMeasurement> measurements =
                 measurementRepository.findByEmployee_IdAndPeriod(employeeId, period);
 
+        System.out.println(" Is measurements empty? "+measurements.isEmpty() + " while period=="+period);
+
         if (measurements.isEmpty()) {
             return BigDecimal.valueOf(100); // 🔥 fallback (no penalty)
         }
