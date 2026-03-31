@@ -1,6 +1,7 @@
 package com.justjava.humanresource.kpi.entity;
 
 import com.justjava.humanresource.core.entity.BaseEntity;
+import com.justjava.humanresource.hr.entity.Department;
 import com.justjava.humanresource.hr.entity.Employee;
 import com.justjava.humanresource.hr.entity.JobStep;
 import jakarta.persistence.Entity;
@@ -32,6 +33,9 @@ public class KpiAssignment extends BaseEntity {
 
     @ManyToOne
     private JobStep jobStep;
+
+    @ManyToOne
+    private Department department;
 
     private BigDecimal weight; // importance (e.g. 0.3)
 

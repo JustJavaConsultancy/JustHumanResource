@@ -750,6 +750,11 @@
                                    class="w-4 h-4 text-primary-600 focus:ring-primary-500">
                             <label for="assignGrade" class="ml-2 text-sm">Job Grade with Steps</label>
                         </div>
+                        <div class="flex items-center">
+                            <input type="radio" id="assignDepartment" name="assignTo" value="department"
+                                   class="w-4 h-4 text-primary-600 focus:ring-primary-500">
+                            <label for="assignDepartment" class="ml-2 text-sm">Department</label>
+                        </div>
                     </div>
                 </div>
 
@@ -776,6 +781,18 @@
                         <p class="text-xs text-gray-500 mt-1">Select a job grade first to see available steps</p>
                     </div>
                 </div>
+
+                <div id="departmentAssignment" class="assignment-option hidden">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Department *</label>
+                    <select id="assignmentDepartment" name="departmentId"
+                            class="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+                        <option value="">Select Department</option>
+                        <option th:each="dept : ${departments}"
+                                th:value="${dept['id']}"
+                                th:text="${dept['name']}">Engineering</option>
+                    </select>
+                </div>
+
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">KPIs with Weights</label>
@@ -1113,11 +1130,16 @@ function resetAssignmentForm() {
     document.getElementById('weightError').classList.add('hidden');
     const gradeSelect = document.getElementById('assignmentJobGrade');
     const stepSelect = document.getElementById('assignmentJobStep');
+    const departmentDiv = document.getElementById('departmentAssignment');
+    const departmentSelect = document.getElementById('assignmentDepartment');
+
     if (gradeSelect) gradeSelect.value = '';
     if (stepSelect) {
         stepSelect.innerHTML = '<option value="">Select Job Step</option>';
         stepSelect.disabled = true;
     }
+    if (departmentDiv) departmentDiv.classList.add('hidden');
+    if (departmentSelect) departmentSelect.required = false;
     kpiRowCounter = 0; // reset counter
 
     // Ensure correct visibility and required attributes based on default radio (employee)
@@ -1156,6 +1178,9 @@ function setupAssignmentToggle() {
     const employeeSelect = document.getElementById('assignmentEmployee');
     const gradeSelect = document.getElementById('assignmentJobGrade');
     const stepSelect = document.getElementById('assignmentJobStep');
+    const updatedDepartment = document.getElementById('assignDepartment');
+const departmentDiv = document.getElementById('departmentAssignment');
+const departmentSelect = document.getElementById('assignmentDepartment');
 
     // Remove existing listeners to avoid duplicates
     const newEmployee = assignEmployee.cloneNode(true);
@@ -1188,6 +1213,18 @@ function setupAssignmentToggle() {
             // Step select may still be disabled if no grade selected; that's fine.
         }
     });
+    updatedDepartment.addEventListener('change', () => {
+    if (updatedDepartment.checked) {
+        employeeDiv.classList.add('hidden');
+        gradeDiv.classList.add('hidden');
+        departmentDiv.classList.remove('hidden');
+        employeeSelect.required = false;
+        gradeSelect.required = false;
+        stepSelect.required = false;
+        departmentSelect.required = true;
+        }
+   });
+
 }
 
 // Validation (now checks indexed fields correctly)
@@ -1248,6 +1285,15 @@ function validateAssignmentForm(event) {
             return false;
         }
     }
+
+    if (document.getElementById('assignDepartment').checked) {
+    const dept = document.getElementById('assignmentDepartment');
+    if (!dept.value) {
+        alert('Please select a department.');
+        event.preventDefault();
+        return false;
+    }
+}
 
     return true; // allow htmx submission
 }
