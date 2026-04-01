@@ -322,10 +322,14 @@ SELECT new com.justjava.humanresource.payroll.report.dto.PayrollSummaryDTO(
         FROM PayrollLineItem li1
         WHERE li1.payrollRun.id IN (
             SELECT prx.id FROM PayrollRun prx
+            JOIN PayrollPeriod pp1 
+                ON pp1.periodStart = prx.periodStart 
+               AND pp1.periodEnd = prx.periodEnd
             WHERE prx.employee.department.id = d.id
             AND prx.periodStart >= :start
             AND prx.periodEnd <= :end
             AND prx.status = com.justjava.humanresource.core.enums.PayrollRunStatus.POSTED
+            AND pp1.status = com.justjava.humanresource.payroll.enums.PayrollPeriodStatus.CLOSED
             AND prx.versionNumber = (
                 SELECT MAX(pr2.versionNumber)
                 FROM PayrollRun pr2
@@ -341,10 +345,14 @@ SELECT new com.justjava.humanresource.payroll.report.dto.PayrollSummaryDTO(
         FROM PayrollLineItem li2
         WHERE li2.payrollRun.id IN (
             SELECT pry.id FROM PayrollRun pry
+            JOIN PayrollPeriod pp2 
+                ON pp2.periodStart = pry.periodStart 
+               AND pp2.periodEnd = pry.periodEnd
             WHERE pry.employee.department.id = d.id
             AND pry.periodStart >= :start
             AND pry.periodEnd <= :end
             AND pry.status = com.justjava.humanresource.core.enums.PayrollRunStatus.POSTED
+            AND pp2.status = com.justjava.humanresource.payroll.enums.PayrollPeriodStatus.CLOSED
             AND pry.versionNumber = (
                 SELECT MAX(pr3.versionNumber)
                 FROM PayrollRun pr3
@@ -359,10 +367,14 @@ SELECT new com.justjava.humanresource.payroll.report.dto.PayrollSummaryDTO(
 FROM PayrollRun pr
 JOIN pr.employee e
 JOIN e.department d
+JOIN PayrollPeriod pp 
+    ON pp.periodStart = pr.periodStart 
+   AND pp.periodEnd = pr.periodEnd
 WHERE d.company.id = :companyId
 AND pr.periodStart >= :start
 AND pr.periodEnd <= :end
 AND pr.status = com.justjava.humanresource.core.enums.PayrollRunStatus.POSTED
+AND pp.status = com.justjava.humanresource.payroll.enums.PayrollPeriodStatus.CLOSED
 AND pr.versionNumber = (
     SELECT MAX(pr2.versionNumber)
     FROM PayrollRun pr2
@@ -376,8 +388,7 @@ GROUP BY d.id, d.name
             Long companyId,
             LocalDate start,
             LocalDate end
-    );
-    @Query("""
+    );    @Query("""
 SELECT new com.justjava.humanresource.payroll.report.dto.ComponentBreakdownDTO(
     li.componentCode,
     li.description,

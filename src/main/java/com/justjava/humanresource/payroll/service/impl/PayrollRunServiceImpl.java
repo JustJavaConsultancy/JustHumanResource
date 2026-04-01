@@ -178,6 +178,9 @@ public class PayrollRunServiceImpl implements PayrollRunService {
             LocalDate start,
             LocalDate end) {
 
+
+        System.out.println(" start date ==="+start + " end date ==="+end);
+
         return payrollRunRepository.getPayrollSummary(companyId, start, end);
     }
 
