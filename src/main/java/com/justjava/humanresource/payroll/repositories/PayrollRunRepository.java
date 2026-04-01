@@ -388,7 +388,9 @@ GROUP BY d.id, d.name
             Long companyId,
             LocalDate start,
             LocalDate end
-    );    @Query("""
+    );
+
+    @Query("""
 SELECT new com.justjava.humanresource.payroll.report.dto.ComponentBreakdownDTO(
     li.componentCode,
     li.description,
@@ -397,10 +399,22 @@ SELECT new com.justjava.humanresource.payroll.report.dto.ComponentBreakdownDTO(
 FROM PayrollLineItem li
 JOIN li.payrollRun pr
 JOIN pr.employee e
+JOIN PayrollPeriod pp
+    ON pp.periodStart = pr.periodStart
+   AND pp.periodEnd = pr.periodEnd
 WHERE e.department.company.id = :companyId
 AND pr.periodStart >= :start
 AND pr.periodEnd <= :end
 AND li.componentType = com.justjava.humanresource.payroll.enums.PayComponentType.EARNING
+AND pr.status = com.justjava.humanresource.core.enums.PayrollRunStatus.POSTED
+AND pp.status = com.justjava.humanresource.payroll.enums.PayrollPeriodStatus.CLOSED
+AND pr.versionNumber = (
+    SELECT MAX(pr2.versionNumber)
+    FROM PayrollRun pr2
+    WHERE pr2.employee.id = pr.employee.id
+    AND pr2.periodStart = pr.periodStart
+    AND pr2.periodEnd = pr.periodEnd
+)
 GROUP BY li.componentCode, li.description
 """)
     List<ComponentBreakdownDTO> getEarningsBreakdown(
@@ -417,7 +431,19 @@ FROM payroll_line_items li
 JOIN payroll_runs pr ON pr.id = li.payroll_run_id
 JOIN employees e ON e.id = pr.employee_id
 JOIN departments d ON d.id = e.department_id
+JOIN payroll_periods pp 
+    ON pp.period_start = pr.period_start
+   AND pp.period_end = pr.period_end
 WHERE d.company_id = :companyId
+AND pr.status = 'POSTED'
+AND pp.status = 'CLOSED'
+AND pr.version_number = (
+    SELECT MAX(pr2.version_number)
+    FROM payroll_runs pr2
+    WHERE pr2.employee_id = pr.employee_id
+    AND pr2.period_start = pr.period_start
+    AND pr2.period_end = pr.period_end
+)
 GROUP BY 
     TO_CHAR(pr.payroll_date, 'YYYY-MM'),
     li.component_code
@@ -432,16 +458,28 @@ SELECT new com.justjava.humanresource.payroll.report.dto.PensionReportDTO(
     CONCAT(e.firstName,' ',e.lastName),
     SUM(CASE WHEN li.componentCode = 'PENSION_EMP' THEN li.amount END),
     SUM(CASE WHEN li.componentCode = 'PENSION_EMPLOYER' THEN li.amount END),
-    pr.appliedPensionSchemeName
+    COALESCE(MAX(pr.appliedPensionSchemeName), '')
 )
-FROM PayrollLineItem li
-JOIN li.payrollRun pr
-JOIN pr.employee e
-WHERE e.department.company.id = :companyId
-AND pr.periodStart >= :start
-AND pr.periodEnd <= :end
-GROUP BY e.id, e.firstName, e.lastName, pr.appliedPensionSchemeName
-""")
+    FROM PayrollLineItem li
+    JOIN li.payrollRun pr
+    JOIN pr.employee e
+    JOIN PayrollPeriod pp
+        ON pp.periodStart = pr.periodStart
+       AND pp.periodEnd = pr.periodEnd
+    WHERE e.department.company.id = :companyId
+    AND pr.periodStart >= :start
+    AND pr.periodEnd <= :end
+    AND pr.status = com.justjava.humanresource.core.enums.PayrollRunStatus.POSTED
+    AND pp.status = com.justjava.humanresource.payroll.enums.PayrollPeriodStatus.CLOSED
+    AND pr.versionNumber = (
+        SELECT MAX(pr2.versionNumber)
+        FROM PayrollRun pr2
+        WHERE pr2.employee.id = pr.employee.id
+        AND pr2.periodStart = pr.periodStart
+        AND pr2.periodEnd = pr.periodEnd
+    )
+    GROUP BY e.id, e.firstName, e.lastName
+    """)
     List<PensionReportDTO> getPensionReport(
             Long companyId,
             LocalDate start,
@@ -456,10 +494,22 @@ SELECT new com.justjava.humanresource.payroll.report.dto.ComponentBreakdownDTO(
 FROM PayrollLineItem li
 JOIN li.payrollRun pr
 JOIN pr.employee e
+JOIN PayrollPeriod pp
+    ON pp.periodStart = pr.periodStart
+   AND pp.periodEnd = pr.periodEnd
 WHERE e.department.company.id = :companyId
 AND pr.periodStart >= :start
 AND pr.periodEnd <= :end
 AND li.componentType = com.justjava.humanresource.payroll.enums.PayComponentType.DEDUCTION
+AND pr.status = com.justjava.humanresource.core.enums.PayrollRunStatus.POSTED
+AND pp.status = com.justjava.humanresource.payroll.enums.PayrollPeriodStatus.CLOSED
+AND pr.versionNumber = (
+    SELECT MAX(pr2.versionNumber)
+    FROM PayrollRun pr2
+    WHERE pr2.employee.id = pr.employee.id
+    AND pr2.periodStart = pr.periodStart
+    AND pr2.periodEnd = pr.periodEnd
+)
 GROUP BY li.componentCode, li.description
 """)
     List<ComponentBreakdownDTO> getDeductionBreakdown(
@@ -478,17 +528,28 @@ SELECT new com.justjava.humanresource.payroll.report.dto.PayeReportDTO(
 FROM PayrollLineItem li
 JOIN li.payrollRun pr
 JOIN pr.employee e
+JOIN PayrollPeriod pp
+    ON pp.periodStart = pr.periodStart
+   AND pp.periodEnd = pr.periodEnd
 WHERE e.department.company.id = :companyId
 AND pr.periodStart >= :start
 AND pr.periodEnd <= :end
+AND pr.status = com.justjava.humanresource.core.enums.PayrollRunStatus.POSTED
+AND pp.status = com.justjava.humanresource.payroll.enums.PayrollPeriodStatus.CLOSED
+AND pr.versionNumber = (
+    SELECT MAX(pr2.versionNumber)
+    FROM PayrollRun pr2
+    WHERE pr2.employee.id = pr.employee.id
+    AND pr2.periodStart = pr.periodStart
+    AND pr2.periodEnd = pr.periodEnd
+)
 GROUP BY e.id, e.firstName, e.lastName
 """)
     List<PayeReportDTO> getPayeReport(
             Long companyId,
             LocalDate start,
             LocalDate end
-    );
-    Optional<PayrollRun>
+    );    Optional<PayrollRun>
     findTopByEmployee_IdAndPeriodStartAndPeriodEndOrderByVersionNumberDesc(
             Long employeeId,
             LocalDate periodStart,
