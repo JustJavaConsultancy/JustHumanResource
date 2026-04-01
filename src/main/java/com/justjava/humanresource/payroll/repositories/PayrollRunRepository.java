@@ -317,18 +317,60 @@ SELECT new com.justjava.humanresource.payroll.report.dto.PayrollSummaryDTO(
     SUM(pr.grossPay),
     SUM(pr.totalDeductions),
     SUM(pr.netPay),
-    SUM(CASE WHEN li.componentCode = 'PAYE' THEN li.amount END),
-    SUM(CASE WHEN li.componentCode = 'PENSION' THEN li.amount END)
+    (
+        SELECT COALESCE(SUM(li1.amount), 0)
+        FROM PayrollLineItem li1
+        WHERE li1.payrollRun.id IN (
+            SELECT prx.id FROM PayrollRun prx
+            WHERE prx.employee.department.id = d.id
+            AND prx.periodStart >= :start
+            AND prx.periodEnd <= :end
+            AND prx.status = com.justjava.humanresource.core.enums.PayrollRunStatus.POSTED
+            AND prx.versionNumber = (
+                SELECT MAX(pr2.versionNumber)
+                FROM PayrollRun pr2
+                WHERE pr2.employee.id = prx.employee.id
+                AND pr2.periodStart = prx.periodStart
+                AND pr2.periodEnd = prx.periodEnd
+            )
+        )
+        AND li1.componentCode = 'PAYE'
+    ),
+    (
+        SELECT COALESCE(SUM(li2.amount), 0)
+        FROM PayrollLineItem li2
+        WHERE li2.payrollRun.id IN (
+            SELECT pry.id FROM PayrollRun pry
+            WHERE pry.employee.department.id = d.id
+            AND pry.periodStart >= :start
+            AND pry.periodEnd <= :end
+            AND pry.status = com.justjava.humanresource.core.enums.PayrollRunStatus.POSTED
+            AND pry.versionNumber = (
+                SELECT MAX(pr3.versionNumber)
+                FROM PayrollRun pr3
+                WHERE pr3.employee.id = pry.employee.id
+                AND pr3.periodStart = pry.periodStart
+                AND pr3.periodEnd = pry.periodEnd
+            )
+        )
+        AND li2.componentCode = 'PENSION_EMP'
+    )
 )
 FROM PayrollRun pr
 JOIN pr.employee e
 JOIN e.department d
-LEFT JOIN PayrollLineItem li ON li.payrollRun.id = pr.id
 WHERE d.company.id = :companyId
 AND pr.periodStart >= :start
 AND pr.periodEnd <= :end
 AND pr.status = com.justjava.humanresource.core.enums.PayrollRunStatus.POSTED
-GROUP BY d.name
+AND pr.versionNumber = (
+    SELECT MAX(pr2.versionNumber)
+    FROM PayrollRun pr2
+    WHERE pr2.employee.id = pr.employee.id
+    AND pr2.periodStart = pr.periodStart
+    AND pr2.periodEnd = pr.periodEnd
+)
+GROUP BY d.id, d.name
 """)
     List<PayrollSummaryDTO> getPayrollSummary(
             Long companyId,
