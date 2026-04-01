@@ -56,7 +56,7 @@ public class ValidatePeriodDelegate implements JavaDelegate {
 
         long postedCount =
                 payrollRunRepository
-                        .countByEmployee_Department_Company_IdAndPayrollDateBetweenAndStatus(
+                        .countLatestByCompanyAndPayrollDateBetweenAndStatus(
                                 companyId,
                                 period.getPeriodStart(),
                                 period.getPeriodEnd(),

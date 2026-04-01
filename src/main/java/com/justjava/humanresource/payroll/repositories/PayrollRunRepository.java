@@ -31,13 +31,25 @@ public interface PayrollRunRepository
        COMPANY-SCOPED PERIOD VALIDATION
        ============================================================ */
 
-    long countByEmployee_Department_Company_IdAndPayrollDateBetweenAndStatus(
-            Long companyId,
-            LocalDate start,
-            LocalDate end,
-            PayrollRunStatus status
+    @Query("""
+    SELECT COUNT(p)
+    FROM PayrollRun p
+    WHERE p.employee.department.company.id = :companyId
+      AND p.payrollDate BETWEEN :start AND :end
+      AND p.status = :status
+      AND p.versionNumber = (
+          SELECT MAX(p2.versionNumber)
+          FROM PayrollRun p2
+          WHERE p2.employee.id = p.employee.id
+          AND p2.payrollDate = p.payrollDate
+      )
+""")
+    long countLatestByCompanyAndPayrollDateBetweenAndStatus(
+            @Param("companyId") Long companyId,
+            @Param("start") LocalDate start,
+            @Param("end") LocalDate end,
+            @Param("status") PayrollRunStatus status
     );
-
     @Query("""
     SELECT COUNT(p)
     FROM PayrollRun p

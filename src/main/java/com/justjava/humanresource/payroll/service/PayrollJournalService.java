@@ -72,7 +72,7 @@ public class PayrollJournalService {
 
         long employeeCount =
                 payrollRunRepository
-                        .countByEmployee_Department_Company_IdAndPayrollDateBetweenAndStatus(
+                        .countLatestByCompanyAndPayrollDateBetweenAndStatus(
                                 companyId,
                                 period.getPeriodStart(),
                                 period.getPeriodEnd(),
