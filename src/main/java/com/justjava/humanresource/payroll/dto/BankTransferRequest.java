@@ -11,6 +11,7 @@ public class BankTransferRequest {
 
     private String accountNumber;
     private String accountName;
+    private String bankName;  //new
     private BigDecimal amount;
     private String reference;
 }
