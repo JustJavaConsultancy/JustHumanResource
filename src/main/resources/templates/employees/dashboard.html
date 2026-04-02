@@ -167,7 +167,9 @@
                         <span class="material-icons-round text-sm mr-1 text-green-600">add_circle</span> Allowances
                     </div>
                     <div class="space-y-1.5">
-                        <div th:each="allowance : ${latestPaySlip.allowances}" class="pay-item">
+                        <div th:each="allowance : ${latestPaySlip.allowances}"
+                             th:unless="${allowance.description == 'Residual Adjustment' or allowance.code == 'RESIDUAL'}"
+                             class="pay-item">
                             <span class="flex items-center text-sm">
                                 <span th:text="${allowance.description}">Allowance</span>
                                 <span th:if="${allowance.taxable}" class="tax-badge ml-2">
