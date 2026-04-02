@@ -3,13 +3,16 @@ package com.justjava.humanresource.employee;
 import com.justjava.humanresource.core.config.AuthenticationManager;
 import com.justjava.humanresource.core.enums.EmploymentStatus;
 import com.justjava.humanresource.hr.dto.EmployeeDTO;
+import com.justjava.humanresource.hr.dto.EmployeeDocumentDTO;
 import com.justjava.humanresource.hr.dto.EmployeeOnboardingResponseDTO;
 import com.justjava.humanresource.hr.dto.JobGradeResponseDTO;
 import com.justjava.humanresource.hr.entity.Department;
 import com.justjava.humanresource.hr.entity.Employee;
+import com.justjava.humanresource.hr.entity.EmployeeDocument;
 import com.justjava.humanresource.hr.entity.PayGroup;
 import com.justjava.humanresource.hr.service.EmployeeService;
 import com.justjava.humanresource.hr.service.SetupService;
+import com.justjava.humanresource.hr.service.EmployeeDocumentService;
 import com.justjava.humanresource.kpi.dto.AppraisalTaskViewDTO;
 import com.justjava.humanresource.kpi.entity.AppraisalCycle;
 import com.justjava.humanresource.kpi.entity.EmployeeAppraisal;
@@ -28,10 +31,13 @@ import com.justjava.humanresource.workflow.dto.FlowableTaskDTO;
 import com.justjava.humanresource.workflow.service.FlowableTaskService;
 import org.flowable.engine.history.HistoricProcessInstance;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -74,6 +80,11 @@ public class EmployeeController {
 
     @Autowired
     private PayrollSetupService payrollSetupService;
+
+    @Autowired
+    private EmployeeDocumentService documentService;
+
+
 
     @Autowired
     PaySlipService paySlipService;
@@ -393,9 +404,14 @@ public class EmployeeController {
 
     @GetMapping("employee/documents")
     public String getDocuments(Model model) {
-        model.addAttribute("title",    "Document Management");
-        model.addAttribute("subTitle",
-                "View and manage your important documents such as contracts, certifications, and performance reviews");
+        String email = (String) authenticationManager.get("email");
+
+        Employee loginEmployee = employeeService.getByEmail(email);
+
+        model.addAttribute("employee", loginEmployee);
+        model.addAttribute("title", "Document Management");
+        model.addAttribute("subTitle", "View and manage your important documents such as contracts and certifications");
+
         return "employees/documents";
     }
 
@@ -416,4 +432,50 @@ public class EmployeeController {
         employeeService.updateBankDetails(dto.getId(), dto);
         return "redirect:/employee/profile";
     }
+
+// FOR EMPLOYEE DOCUMENTS
+@PostMapping("/employees/{id}/documents/upload")
+@ResponseBody
+public ResponseEntity<?> uploadDoc(@PathVariable Long id,
+                                   @RequestParam("documentName") String name,
+                                   @RequestParam("file") MultipartFile file) {
+    try {
+        documentService.uploadDocument(id, name, file);
+        return ResponseEntity.ok().build();
+    } catch (Exception e) {
+        return ResponseEntity.badRequest().body("Upload failed: " + e.getMessage());
+    }
+}
+
+    @GetMapping("/employees/{id}/documents")
+    @ResponseBody
+    public List<EmployeeDocumentDTO> listDocs(@PathVariable Long id) {
+        return documentService.getEmployeeDocuments(id);
+    }
+
+    @GetMapping("/documents/view/{docId}")
+    public ResponseEntity<byte[]> viewDoc(@PathVariable Long docId) {
+        EmployeeDocument doc = documentService.getDocumentFile(docId);
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(doc.getFileType()))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + doc.getFileName() + "\"")
+                .body(doc.getFileData());
+    }
+
+    @GetMapping("/documents/download/{docId}")
+    public ResponseEntity<byte[]> downloadDoc(@PathVariable Long docId) {
+        EmployeeDocument doc = documentService.getDocumentFile(docId);
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(doc.getFileType()))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + doc.getFileName() + "\"")
+                .body(doc.getFileData());
+    }
+
+    @DeleteMapping("/documents/{docId}")
+    @ResponseBody
+    public ResponseEntity<?> deleteDoc(@PathVariable Long docId) {
+        documentService.deleteDocument(docId);
+        return ResponseEntity.ok().build();
+    }
+
 }

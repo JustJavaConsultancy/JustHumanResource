@@ -45,7 +45,11 @@
             border-bottom: 2px solid #e5e7eb;
             margin-bottom: 1.5rem;
             gap: 0;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
         }
+        .tab-bar::-webkit-scrollbar { display: none; }
         .dark .tab-bar { border-bottom-color: #374151; }
         .tab-btn {
             display: flex;
@@ -747,10 +751,10 @@
     <div id="addEmployeeModal" class="fixed inset-0 z-50 hidden modal-transition" onclick="if(event.target === this) closeModal('addEmployeeModal')">
         <div class="modal-backdrop fixed inset-0 bg-black bg-opacity-50"></div>
         <div class="fixed inset-0 flex items-center justify-center p-4">
-            <div class="modal-content bg-white dark:bg-gray-800 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div class="modal-content bg-white dark:bg-gray-800 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-hidden shadow-2xl flex flex-col">
 
                 <!-- Modal Header -->
-                <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+                <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
                     <div class="flex items-center space-x-3">
                         <div class="p-2 bg-primary-100 dark:bg-primary-900/30 rounded-full">
                             <span class="material-icons-round text-primary-600 dark:text-primary-400 text-2xl">person_add</span>
@@ -762,11 +766,11 @@
                     </button>
                 </div>
 
-                <div class="p-6">
-                    <form th:action="@{/onboarding}" method="post" onsubmit="disableSubmitButton(this)">
+                <div class="p-6 flex flex-col flex-1 overflow-hidden">
+                    <form th:action="@{/onboarding}" method="post" onsubmit="disableSubmitButton(this)" class="flex flex-col flex-1 overflow-hidden">
 
                         <!-- Tab Bar -->
-                        <div class="tab-bar">
+                        <div class="tab-bar flex-shrink-0">
                             <button type="button" class="tab-btn active" onclick="switchTab('add', 'general', this)">
                                 <span class="tab-icon"><span class="material-icons-round" style="font-size:0.85rem">person</span></span>
                                 General
@@ -779,199 +783,221 @@
                                 <span class="tab-icon"><span class="material-icons-round" style="font-size:0.85rem">group</span></span>
                                 Next of Kin &amp; Guarantor
                             </button>
+                            <button type="button" class="tab-btn" onclick="switchTab('add', 'documents', this)">
+                                <span class="tab-icon"><span class="material-icons-round" style="font-size:0.85rem">description</span></span>
+                                Documents
+                            </button>
                         </div>
 
-                        <!-- TAB 1: General -->
-                        <div id="add-tab-general" class="tab-panel active">
-                            <p class="form-section-title">Personal</p>
-                            <div class="grid grid-cols-2 gap-4 mb-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                        First Name <span class="text-red-500">*</span>
-                                    </label>
-                                    <div class="relative">
-                                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
-                                            <span class="material-icons-round text-sm">badge</span>
-                                        </span>
-                                        <input type="text" name="firstName" class="form-input pl-10" placeholder="John" required>
-                                    </div>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                        Last Name <span class="text-red-500">*</span>
-                                    </label>
-                                    <div class="relative">
-                                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
-                                            <span class="material-icons-round text-sm">badge</span>
-                                        </span>
-                                        <input type="text" name="lastName" class="form-input pl-10" placeholder="Doe" required>
-                                    </div>
-                                </div>
-                            </div>
+                        <!-- Scrollable tab content area -->
+                        <div class="flex-1 overflow-y-auto">
 
-                            <p class="form-section-title">Contact</p>
-                            <div class="space-y-4 mb-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                        Email Address <span class="text-red-500">*</span>
-                                    </label>
-                                    <div class="relative">
+                            <!-- TAB 1: General -->
+                            <div id="add-tab-general" class="tab-panel active">
+                                <p class="form-section-title">Personal</p>
+                                <div class="grid grid-cols-2 gap-4 mb-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                            First Name <span class="text-red-500">*</span>
+                                        </label>
+                                        <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                                            <span class="material-icons-round text-sm">badge</span>
+                                        </span>
+                                            <input type="text" name="firstName" class="form-input pl-10" placeholder="John" required>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                            Last Name <span class="text-red-500">*</span>
+                                        </label>
+                                        <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                                            <span class="material-icons-round text-sm">badge</span>
+                                        </span>
+                                            <input type="text" name="lastName" class="form-input pl-10" placeholder="Doe" required>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <p class="form-section-title">Contact</p>
+                                <div class="space-y-4 mb-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                            Email Address <span class="text-red-500">*</span>
+                                        </label>
+                                        <div class="relative">
                                         <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
                                             <span class="material-icons-round text-sm">email</span>
                                         </span>
-                                        <input type="email" name="email" class="form-input pl-10" placeholder="john.doe@company.com" required>
+                                            <input type="email" name="email" class="form-input pl-10" placeholder="john.doe@company.com" required>
+                                        </div>
                                     </div>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone Number</label>
-                                    <div class="relative">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone Number</label>
+                                        <div class="relative">
                                         <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
                                             <span class="material-icons-round text-sm">phone</span>
                                         </span>
-                                        <input type="text" name="phoneNumber" class="form-input pl-10" placeholder="+234 800 000 0000">
+                                            <input type="text" name="phoneNumber" class="form-input pl-10" placeholder="+234 800 000 0000">
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <p class="form-section-title">Employment</p>
-                            <div class="space-y-4">
-                                <input type="hidden" name="employmentStatus" value="ONBOARDING">
+                                <p class="form-section-title">Employment</p>
+                                <div class="space-y-4">
+                                    <input type="hidden" name="employmentStatus" value="ONBOARDING">
 
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                        Department <span class="text-red-500">*</span>
-                                    </label>
-                                    <select name="departmentId" id="addDepartmentId" class="form-input" required>
-                                        <option value="">Select Department</option>
-                                        <option th:each="dept : ${departments}" th:value="${dept.id}" th:text="${dept.name}">Engineering</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                        Job Grade <span class="text-red-500">*</span>
-                                    </label>
-                                    <div class="relative">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                            Department <span class="text-red-500">*</span>
+                                        </label>
+                                        <select name="departmentId" id="addDepartmentId" class="form-input" required>
+                                            <option value="">Select Department</option>
+                                            <option th:each="dept : ${departments}" th:value="${dept.id}" th:text="${dept.name}">Engineering</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                            Job Grade <span class="text-red-500">*</span>
+                                        </label>
+                                        <div class="relative">
                                         <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
                                             <span class="material-icons-round text-sm">layers</span>
                                         </span>
-                                        <select id="addJobGradeId" class="form-input pl-10">
-                                            <option value="">Select Job Grade</option>
-                                            <option th:each="grade : ${jobGrades}" th:value="${grade.id}" th:text="${grade.name}">Grade 1</option>
-                                        </select>
+                                            <select id="addJobGradeId" class="form-input pl-10">
+                                                <option value="">Select Job Grade</option>
+                                                <option th:each="grade : ${jobGrades}" th:value="${grade.id}" th:text="${grade.name}">Grade 1</option>
+                                            </select>
+                                        </div>
                                     </div>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                        Job Step <span class="text-red-500">*</span>
-                                    </label>
-                                    <div class="relative">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                            Job Step <span class="text-red-500">*</span>
+                                        </label>
+                                        <div class="relative">
                                         <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
                                             <span class="material-icons-round text-sm">trending_up</span>
                                         </span>
-                                        <select name="jobStepId" id="addJobStepId" class="form-input pl-10" required disabled>
-                                            <option value="">Select Job Step</option>
+                                            <select name="jobStepId" id="addJobStepId" class="form-input pl-10" required disabled>
+                                                <option value="">Select Job Step</option>
+                                            </select>
+                                        </div>
+                                        <p class="text-xs text-gray-500 mt-1">Select a job grade first to see available steps</p>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                            Pay Group <span class="text-red-500">*</span>
+                                        </label>
+                                        <select name="payGroupId" id="addPayGroupId" class="form-input" required>
+                                            <option value="">Select Pay Group</option>
+                                            <option th:each="pg : ${payGroups}" th:value="${pg.id}" th:text="${pg.name}">Executive</option>
                                         </select>
                                     </div>
-                                    <p class="text-xs text-gray-500 mt-1">Select a job grade first to see available steps</p>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                        Pay Group <span class="text-red-500">*</span>
-                                    </label>
-                                    <select name="payGroupId" id="addPayGroupId" class="form-input" required>
-                                        <option value="">Select Pay Group</option>
-                                        <option th:each="pg : ${payGroups}" th:value="${pg.id}" th:text="${pg.name}">Executive</option>
-                                    </select>
                                 </div>
                             </div>
-                        </div>
 
-                        <!-- TAB 2: Identity -->
-                        <div id="add-tab-identity" class="tab-panel">
-                            <p class="form-section-title">Identity Numbers</p>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">NIN Number</label>
-                                    <div class="relative">
+                            <!-- TAB 2: Identity -->
+                            <div id="add-tab-identity" class="tab-panel">
+                                <p class="form-section-title">Identity Numbers</p>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">NIN Number</label>
+                                        <div class="relative">
                                         <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
                                             <span class="material-icons-round text-sm">fingerprint</span>
                                         </span>
-                                        <input type="text" name="ninNumber" class="form-input pl-10" placeholder="11 digits"
-                                               pattern="\d{11}" maxlength="11"
-                                               oninput="this.value=this.value.replace(/\D/g,'').slice(0,11)">
+                                            <input type="text" name="ninNumber" class="form-input pl-10" placeholder="11 digits"
+                                                   pattern="\d{11}" maxlength="11"
+                                                   oninput="this.value=this.value.replace(/\D/g,'').slice(0,11)">
+                                        </div>
+                                        <p class="text-xs text-gray-400 mt-1">National Identification Number</p>
                                     </div>
-                                    <p class="text-xs text-gray-400 mt-1">National Identification Number</p>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">BVN Number</label>
-                                    <div class="relative">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">BVN Number</label>
+                                        <div class="relative">
                                         <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
                                             <span class="material-icons-round text-sm">account_balance_wallet</span>
                                         </span>
-                                        <input type="text" name="bvnNumber" class="form-input pl-10" placeholder="11 digits"
-                                               pattern="\d{11}" maxlength="11"
+                                            <input type="text" name="bvnNumber" class="form-input pl-10" placeholder="11 digits"
+                                                   pattern="\d{11}" maxlength="11"
+                                                   oninput="this.value=this.value.replace(/\D/g,'').slice(0,11)">
+                                        </div>
+                                        <p class="text-xs text-gray-400 mt-1">Bank Verification Number</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- TAB 3: Next of Kin & Guarantor -->
+                            <div id="add-tab-kin" class="tab-panel">
+                                <p class="form-section-title">Next of Kin</p>
+                                <div class="space-y-4 mb-6">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
+                                        <input type="text" name="nextOfKinName" class="form-input" placeholder="Full Name">
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone Number</label>
+                                            <input type="text" name="nextOfKinPhoneNumber" class="form-input" placeholder="Phone Number">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email Address</label>
+                                            <input type="email" name="nextOfKinEmail" class="form-input" placeholder="Email Address">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Residential Address</label>
+                                        <input type="text" name="nextOfKinAddress" class="form-input" placeholder="Residential Address">
+                                    </div>
+                                </div>
+
+                                <p class="form-section-title">Guarantor</p>
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
+                                        <input type="text" name="guarantorName" class="form-input" placeholder="Guarantor Full Name">
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone Number</label>
+                                            <input type="text" name="guarantorPhoneNumber" class="form-input" placeholder="Phone Number">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email Address</label>
+                                            <input type="email" name="guarantorEmail" class="form-input" placeholder="Email Address">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Residential Address</label>
+                                        <input type="text" name="guarantorAddress" class="form-input" placeholder="Guarantor Address">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">NIN Number</label>
+                                        <input type="text" name="guarantorNinNumber" class="form-input"
+                                               placeholder="Guarantor NIN (11 digits)" pattern="\d{11}" maxlength="11"
                                                oninput="this.value=this.value.replace(/\D/g,'').slice(0,11)">
                                     </div>
-                                    <p class="text-xs text-gray-400 mt-1">Bank Verification Number</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- TAB 3: Next of Kin & Guarantor -->
-                        <div id="add-tab-kin" class="tab-panel">
-                            <p class="form-section-title">Next of Kin</p>
-                            <div class="space-y-4 mb-6">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
-                                    <input type="text" name="nextOfKinName" class="form-input" placeholder="Full Name">
-                                </div>
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone Number</label>
-                                        <input type="text" name="nextOfKinPhoneNumber" class="form-input" placeholder="Phone Number">
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email Address</label>
-                                        <input type="email" name="nextOfKinEmail" class="form-input" placeholder="Email Address">
-                                    </div>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Residential Address</label>
-                                    <input type="text" name="nextOfKinAddress" class="form-input" placeholder="Residential Address">
                                 </div>
                             </div>
 
-                            <p class="form-section-title">Guarantor</p>
-                            <div class="space-y-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
-                                    <input type="text" name="guarantorName" class="form-input" placeholder="Guarantor Full Name">
-                                </div>
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone Number</label>
-                                        <input type="text" name="guarantorPhoneNumber" class="form-input" placeholder="Phone Number">
+                            <!-- TAB 4: Documents (Add Modal) -->
+                            <div id="add-tab-documents" class="tab-panel">
+                                <div class="flex flex-col items-center justify-center py-10 text-center">
+                                    <div class="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-full mb-4">
+                                        <span class="material-icons-round text-blue-600 dark:text-blue-400 text-3xl">upload_file</span>
                                     </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email Address</label>
-                                        <input type="email" name="guarantorEmail" class="form-input" placeholder="Email Address">
-                                    </div>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Residential Address</label>
-                                    <input type="text" name="guarantorAddress" class="form-input" placeholder="Guarantor Address">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">NIN Number</label>
-                                    <input type="text" name="guarantorNinNumber" class="form-input"
-                                           placeholder="Guarantor NIN (11 digits)" pattern="\d{11}" maxlength="11"
-                                           oninput="this.value=this.value.replace(/\D/g,'').slice(0,11)">
+                                    <h4 class="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-2">Documents Unavailable</h4>
+                                    <p class="text-sm text-gray-500 dark:text-gray-400 max-w-sm">
+                                        Documents can be uploaded after the employee record is created. Please save the profile first.
+                                    </p>
                                 </div>
                             </div>
-                        </div>
+
+                        </div><!-- end scrollable tab content -->
 
                         <!-- Footer Buttons -->
-                        <div class="flex justify-end space-x-3 pt-5 mt-5 border-t border-gray-200 dark:border-gray-700">
+                        <div class="flex justify-end space-x-3 pt-5 mt-5 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
                             <button type="button" onclick="closeModal('addEmployeeModal')"
                                     class="px-5 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                                 Cancel
@@ -992,9 +1018,9 @@
     <div id="editEmployeeModal" class="fixed inset-0 z-50 hidden modal-transition" onclick="if(event.target === this) closeModal('editEmployeeModal')">
         <div class="modal-backdrop fixed inset-0 bg-black bg-opacity-50"></div>
         <div class="fixed inset-0 flex items-center justify-center p-4">
-            <div class="modal-content bg-white dark:bg-gray-800 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div class="modal-content bg-white dark:bg-gray-800 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-hidden shadow-2xl flex flex-col">
 
-                <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+                <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
                     <div class="flex items-center space-x-3">
                         <div class="p-2 bg-green-100 dark:bg-green-900/30 rounded-full">
                             <span class="material-icons-round text-green-600 dark:text-green-400 text-2xl">edit</span>
@@ -1006,11 +1032,11 @@
                     </button>
                 </div>
 
-                <div class="p-6">
-                    <form id="editEmployeeForm" onsubmit="return false;">
+                <div class="p-6 flex flex-col flex-1 overflow-hidden">
+                    <form id="editEmployeeForm" onsubmit="return false;" class="flex flex-col flex-1 overflow-hidden">
                         <input type="hidden" id="editEmployeeId" name="id">
 
-                        <div class="tab-bar">
+                        <div class="tab-bar flex-shrink-0">
                             <button type="button" class="tab-btn active" onclick="switchTab('edit', 'general', this)">
                                 <span class="tab-icon"><span class="material-icons-round" style="font-size:0.85rem">person</span></span>
                                 General
@@ -1023,197 +1049,254 @@
                                 <span class="tab-icon"><span class="material-icons-round" style="font-size:0.85rem">group</span></span>
                                 Next of Kin &amp; Guarantor
                             </button>
+                            <button type="button" class="tab-btn" onclick="switchTab('edit', 'documents', this)">
+                                <span class="tab-icon"><span class="material-icons-round" style="font-size:0.85rem">description</span></span>
+                                Documents
+                            </button>
                         </div>
 
-                        <!-- TAB 1: General -->
-                        <div id="edit-tab-general" class="tab-panel active">
-                            <p class="form-section-title">Personal</p>
-                            <div class="grid grid-cols-2 gap-4 mb-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                        First Name <span class="text-red-500">*</span>
-                                    </label>
-                                    <div class="relative">
-                                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
-                                            <span class="material-icons-round text-sm">badge</span>
-                                        </span>
-                                        <input type="text" id="editFirstName" name="firstName" class="form-input pl-10" placeholder="John" required>
-                                    </div>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                        Last Name <span class="text-red-500">*</span>
-                                    </label>
-                                    <div class="relative">
-                                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
-                                            <span class="material-icons-round text-sm">badge</span>
-                                        </span>
-                                        <input type="text" id="editLastName" name="lastName" class="form-input pl-10" placeholder="Doe" required>
-                                    </div>
-                                </div>
-                            </div>
+                        <!-- Scrollable tab content area -->
+                        <div class="flex-1 overflow-y-auto">
 
-                            <p class="form-section-title">Contact</p>
-                            <div class="space-y-4 mb-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                        Email Address <span class="text-red-500">*</span>
-                                    </label>
-                                    <div class="relative">
+                            <!-- TAB 1: General -->
+                            <div id="edit-tab-general" class="tab-panel active">
+                                <p class="form-section-title">Personal</p>
+                                <div class="grid grid-cols-2 gap-4 mb-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                            First Name <span class="text-red-500">*</span>
+                                        </label>
+                                        <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                                            <span class="material-icons-round text-sm">badge</span>
+                                        </span>
+                                            <input type="text" id="editFirstName" name="firstName" class="form-input pl-10" placeholder="John" required>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                            Last Name <span class="text-red-500">*</span>
+                                        </label>
+                                        <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                                            <span class="material-icons-round text-sm">badge</span>
+                                        </span>
+                                            <input type="text" id="editLastName" name="lastName" class="form-input pl-10" placeholder="Doe" required>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <p class="form-section-title">Contact</p>
+                                <div class="space-y-4 mb-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                            Email Address <span class="text-red-500">*</span>
+                                        </label>
+                                        <div class="relative">
                                         <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
                                             <span class="material-icons-round text-sm">email</span>
                                         </span>
-                                        <input type="email" id="editEmail" name="email" class="form-input pl-10" placeholder="john.doe@company.com" required>
+                                            <input type="email" id="editEmail" name="email" class="form-input pl-10" placeholder="john.doe@company.com" required>
+                                        </div>
                                     </div>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone Number</label>
-                                    <div class="relative">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone Number</label>
+                                        <div class="relative">
                                         <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
                                             <span class="material-icons-round text-sm">phone</span>
                                         </span>
-                                        <input type="text" id="editPhoneNumber" name="phoneNumber" class="form-input pl-10" placeholder="+234 800 000 0000">
+                                            <input type="text" id="editPhoneNumber" name="phoneNumber" class="form-input pl-10" placeholder="+234 800 000 0000">
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <p class="form-section-title">Employment</p>
-                            <div class="space-y-4">
-                                <input type="hidden" id="editEmploymentStatus" name="employmentStatus" value="ONBOARDING">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                        Department <span class="text-red-500">*</span>
-                                    </label>
-                                    <select id="editDepartmentId" name="departmentId" class="form-input" required>
-                                        <option value="">Select Department</option>
-                                        <option th:each="dept : ${departments}" th:value="${dept.id}" th:text="${dept.name}">Engineering</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                        Job Grade <span class="text-red-500">*</span>
-                                    </label>
-                                    <div class="relative">
+                                <p class="form-section-title">Employment</p>
+                                <div class="space-y-4">
+                                    <input type="hidden" id="editEmploymentStatus" name="employmentStatus" value="ONBOARDING">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                            Department <span class="text-red-500">*</span>
+                                        </label>
+                                        <select id="editDepartmentId" name="departmentId" class="form-input" required>
+                                            <option value="">Select Department</option>
+                                            <option th:each="dept : ${departments}" th:value="${dept.id}" th:text="${dept.name}">Engineering</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                            Job Grade <span class="text-red-500">*</span>
+                                        </label>
+                                        <div class="relative">
                                         <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
                                             <span class="material-icons-round text-sm">layers</span>
                                         </span>
-                                        <select id="editJobGradeId" class="form-input pl-10">
-                                            <option value="">Select Job Grade</option>
-                                            <option th:each="grade : ${jobGrades}" th:value="${grade.id}" th:text="${grade.name}">Grade 1</option>
-                                        </select>
+                                            <select id="editJobGradeId" class="form-input pl-10">
+                                                <option value="">Select Job Grade</option>
+                                                <option th:each="grade : ${jobGrades}" th:value="${grade.id}" th:text="${grade.name}">Grade 1</option>
+                                            </select>
+                                        </div>
                                     </div>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                        Job Step <span class="text-red-500">*</span>
-                                    </label>
-                                    <div class="relative">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                            Job Step <span class="text-red-500">*</span>
+                                        </label>
+                                        <div class="relative">
                                         <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
                                             <span class="material-icons-round text-sm">trending_up</span>
                                         </span>
-                                        <select name="jobStepId" id="editJobStepId" class="form-input pl-10" required disabled>
-                                            <option value="">Select Job Step</option>
+                                            <select name="jobStepId" id="editJobStepId" class="form-input pl-10" required disabled>
+                                                <option value="">Select Job Step</option>
+                                            </select>
+                                        </div>
+                                        <p class="text-xs text-gray-500 mt-1">Select a job grade first to see available steps</p>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                            Pay Group <span class="text-red-500">*</span>
+                                        </label>
+                                        <select id="editPayGroupId" name="payGroupId" class="form-input" required>
+                                            <option value="">Select Pay Group</option>
+                                            <option th:each="pg : ${payGroups}" th:value="${pg.id}" th:text="${pg.name}">Executive</option>
                                         </select>
                                     </div>
-                                    <p class="text-xs text-gray-500 mt-1">Select a job grade first to see available steps</p>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                        Pay Group <span class="text-red-500">*</span>
-                                    </label>
-                                    <select id="editPayGroupId" name="payGroupId" class="form-input" required>
-                                        <option value="">Select Pay Group</option>
-                                        <option th:each="pg : ${payGroups}" th:value="${pg.id}" th:text="${pg.name}">Executive</option>
-                                    </select>
                                 </div>
                             </div>
-                        </div>
 
-                        <!-- TAB 2: Identity -->
-                        <div id="edit-tab-identity" class="tab-panel">
-                            <p class="form-section-title">Identity Numbers</p>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">NIN Number</label>
-                                    <div class="relative">
+                            <!-- TAB 2: Identity -->
+                            <div id="edit-tab-identity" class="tab-panel">
+                                <p class="form-section-title">Identity Numbers</p>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">NIN Number</label>
+                                        <div class="relative">
                                         <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
                                             <span class="material-icons-round text-sm">fingerprint</span>
                                         </span>
-                                        <input type="text" id="editNinNumber" name="ninNumber" class="form-input pl-10"
-                                               placeholder="11 digits" pattern="\d{11}" maxlength="11"
-                                               oninput="this.value=this.value.replace(/\D/g,'').slice(0,11)">
+                                            <input type="text" id="editNinNumber" name="ninNumber" class="form-input pl-10"
+                                                   placeholder="11 digits" pattern="\d{11}" maxlength="11"
+                                                   oninput="this.value=this.value.replace(/\D/g,'').slice(0,11)">
+                                        </div>
+                                        <p class="text-xs text-gray-400 mt-1">National Identification Number</p>
                                     </div>
-                                    <p class="text-xs text-gray-400 mt-1">National Identification Number</p>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">BVN Number</label>
-                                    <div class="relative">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">BVN Number</label>
+                                        <div class="relative">
                                         <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
                                             <span class="material-icons-round text-sm">account_balance_wallet</span>
                                         </span>
-                                        <input type="text" id="editBvnNumber" name="bvnNumber" class="form-input pl-10"
-                                               placeholder="11 digits" pattern="\d{11}" maxlength="11"
+                                            <input type="text" id="editBvnNumber" name="bvnNumber" class="form-input pl-10"
+                                                   placeholder="11 digits" pattern="\d{11}" maxlength="11"
+                                                   oninput="this.value=this.value.replace(/\D/g,'').slice(0,11)">
+                                        </div>
+                                        <p class="text-xs text-gray-400 mt-1">Bank Verification Number</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- TAB 3: Next of Kin & Guarantor -->
+                            <div id="edit-tab-kin" class="tab-panel">
+                                <p class="form-section-title">Next of Kin</p>
+                                <div class="space-y-4 mb-6">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
+                                        <input type="text" id="editNextOfKinName" class="form-input" placeholder="Full Name">
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone Number</label>
+                                            <input type="text" id="editNextOfKinPhoneNumber" class="form-input" placeholder="Phone">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email Address</label>
+                                            <input type="email" id="editNextOfKinEmail" class="form-input" placeholder="Email">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Residential Address</label>
+                                        <input type="text" id="editNextOfKinAddress" class="form-input" placeholder="Address">
+                                    </div>
+                                </div>
+
+                                <p class="form-section-title">Guarantor</p>
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
+                                        <input type="text" id="editGuarantorName" class="form-input" placeholder="Full Name">
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone Number</label>
+                                            <input type="text" id="editGuarantorPhoneNumber" class="form-input" placeholder="Phone">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email Address</label>
+                                            <input type="email" id="editGuarantorEmail" class="form-input" placeholder="Email">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Residential Address</label>
+                                        <input type="text" id="editGuarantorAddress" class="form-input" placeholder="Address">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">NIN Number</label>
+                                        <input type="text" id="editGuarantorNinNumber" class="form-input"
+                                               placeholder="Guarantor NIN (11 digits)" pattern="\d{11}" maxlength="11"
                                                oninput="this.value=this.value.replace(/\D/g,'').slice(0,11)">
                                     </div>
-                                    <p class="text-xs text-gray-400 mt-1">Bank Verification Number</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- TAB 3: Next of Kin & Guarantor -->
-                        <div id="edit-tab-kin" class="tab-panel">
-                            <p class="form-section-title">Next of Kin</p>
-                            <div class="space-y-4 mb-6">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
-                                    <input type="text" id="editNextOfKinName" class="form-input" placeholder="Full Name">
-                                </div>
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone Number</label>
-                                        <input type="text" id="editNextOfKinPhoneNumber" class="form-input" placeholder="Phone">
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email Address</label>
-                                        <input type="email" id="editNextOfKinEmail" class="form-input" placeholder="Email">
-                                    </div>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Residential Address</label>
-                                    <input type="text" id="editNextOfKinAddress" class="form-input" placeholder="Address">
                                 </div>
                             </div>
 
-                            <p class="form-section-title">Guarantor</p>
-                            <div class="space-y-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
-                                    <input type="text" id="editGuarantorName" class="form-input" placeholder="Full Name">
-                                </div>
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone Number</label>
-                                        <input type="text" id="editGuarantorPhoneNumber" class="form-input" placeholder="Phone">
+                            <!-- TAB 4: Documents (Edit Modal) -->
+                            <div id="edit-tab-documents" class="tab-panel p-4">
+                                <div class="bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 rounded-xl p-5 mb-8">
+                                    <p class="text-sm font-bold text-blue-800 dark:text-blue-400 uppercase tracking-wider mb-4 flex items-center">
+                                        <span class="material-icons-round text-sm mr-2">add_circle</span>
+                                        Add New Document
+                                    </p>
+
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
+                                        <div>
+                                            <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2">
+                                                Document Name <span class="text-red-500">*</span>
+                                            </label>
+                                            <div class="relative">
+                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                        <span class="material-icons-round text-sm">label</span>
+                    </span>
+                                                <input type="text" id="docNameInput"
+                                                       class="w-full pl-10 pr-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                                                       placeholder="e.g. ID Card, Contract...">
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2">
+                                                Choose File <span class="text-red-500">*</span>
+                                            </label>
+                                            <input type="file" id="docFileInput"
+                                                   class="w-full px-3 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-xs file:mr-4 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer">
+                                        </div>
                                     </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email Address</label>
-                                        <input type="email" id="editGuarantorEmail" class="form-input" placeholder="Email">
+
+                                    <div class="flex justify-end">
+                                        <button type="button" id="docUploadBtn" onclick="uploadDocument()"
+                                                class="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:transform active:scale-95 transition-all shadow-md hover:shadow-lg flex items-center space-x-2 text-sm font-bold">
+                                            <span class="material-icons-round text-base">cloud_upload</span>
+                                            <span>Upload Document</span>
+                                        </button>
                                     </div>
                                 </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Residential Address</label>
-                                    <input type="text" id="editGuarantorAddress" class="form-input" placeholder="Address">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">NIN Number</label>
-                                    <input type="text" id="editGuarantorNinNumber" class="form-input"
-                                           placeholder="Guarantor NIN (11 digits)" pattern="\d{11}" maxlength="11"
-                                           oninput="this.value=this.value.replace(/\D/g,'').slice(0,11)">
+
+                                <p class="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-4 flex items-center">
+                                    <span class="material-icons-round text-sm mr-2">inventory_2</span>
+                                    UPLOADED DOCUMENTS
+                                </p>
+                                <div id="docListContainer" class="min-h-[100px]">
                                 </div>
                             </div>
-                        </div>
 
-                        <div class="flex justify-end space-x-3 pt-5 mt-5 border-t border-gray-200 dark:border-gray-700">
+                        </div><!-- end scrollable tab content -->
+
+                        <div class="flex justify-end space-x-3 pt-5 mt-5 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
                             <button type="button" onclick="closeModal('editEmployeeModal')"
                                     class="px-5 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                                 Cancel
@@ -2156,6 +2239,156 @@
                 });
             }
         });
+
+        // ── DOCUMENT MANAGEMENT FUNCTIONS ───────────────────────────────────
+        function fetchDocuments(employeeId) {
+    var container = document.getElementById('docListContainer');
+    if (!container) return; // Safety check
+
+    container.innerHTML = '<p class="text-sm text-gray-500">Loading documents...</p>';
+
+    fetch('/employees/' + employeeId + '/documents')
+        .then(function(r) {
+            if (!r.ok) throw new Error('Server returned ' + r.status);
+            return r.json();
+        })
+        .then(function(docs) {
+            if (!docs || docs.length === 0) {
+                container.innerHTML = '<div class="flex flex-col items-center py-6 text-center"><span class="material-icons-round text-gray-300 text-4xl mb-2">folder_open</span><p class="text-sm text-gray-500">No documents uploaded yet.</p></div>';
+                return;
+            }
+
+            var html = '<div class="space-y-2">';
+            docs.forEach(function(doc) {
+                // Handle dates safely
+                var uploadDate = '—';
+                if (doc.uploadedAt) {
+                    var d = new Date(doc.uploadedAt);
+                    uploadDate = !isNaN(d) ? d.toLocaleDateString() : '—';
+                }
+
+                // We use || '' to handle null values and avoid calling piEscHtml
+                var dName = doc.documentName || 'Unnamed Document';
+                var fName = doc.fileName || 'Unknown file';
+
+                html += '<div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">'
+                    + '<div class="flex items-center space-x-3 min-w-0">'
+                    + '<div class="p-2 bg-blue-100 rounded-lg flex-shrink-0"><span class="material-icons-round text-blue-600 text-sm">insert_drive_file</span></div>'
+                    + '<div class="min-w-0">'
+                    + '<div class="text-sm font-medium truncate">' + dName + '</div>'
+                    + '<div class="text-xs text-gray-500 truncate">' + fName + ' &middot; ' + uploadDate + '</div>'
+                    + '</div>'
+                    + '</div>'
+                    + '<div class="flex items-center space-x-1 flex-shrink-0">'
+                    + '<a href="/documents/view/' + doc.id + '" target="_blank" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg" title="View"><span class="material-icons-round text-sm">visibility</span></a>'
+                    + '<a href="/documents/download/' + doc.id + '" class="p-1.5 text-green-600 hover:bg-green-50 rounded-lg" title="Download"><span class="material-icons-round text-sm">download</span></a>'
+                    + '<button type="button" onclick="deleteDoc(' + doc.id + ')" class="p-1.5 text-red-500 hover:bg-red-50 rounded-lg" title="Delete"><span class="material-icons-round text-sm">delete</span></button>'
+                    + '</div>'
+                    + '</div>';
+            });
+            html += '</div>';
+            container.innerHTML = html;
+        })
+        .catch(function(err) {
+            // This is the most important part for debugging
+            console.error('DOCUMENT FETCH ERROR:', err);
+            container.innerHTML = '<div class="flex flex-col items-center py-6 text-center"><span class="material-icons-round text-red-400 text-4xl mb-2">error_outline</span><p class="text-sm text-red-500">Failed to load documents. <br><small>' + err.message + '</small></p></div>';
+        });
+}
+
+        function uploadDocument() {
+    const employeeId = document.getElementById('editEmployeeId').value;
+    const docNameInput = document.getElementById('docNameInput');
+    const fileInput = document.getElementById('docFileInput');
+    const btn = document.getElementById('docUploadBtn');
+
+    const docName = docNameInput.value.trim();
+    const file = fileInput.files[0];
+
+    // 1. Better Validation Experience
+    if (!docName) {
+        docNameInput.classList.add('border-red-500'); // Visual cue
+        showPiToast('Please enter a document name', 'error');
+        docNameInput.focus();
+        return;
+    }
+    docNameInput.classList.remove('border-red-500');
+
+    if (!file) {
+        fileInput.classList.add('border-red-500');
+        showPiToast('Please select a file to upload', 'error');
+        return;
+    }
+    fileInput.classList.remove('border-red-500');
+
+    // 2. Prepare Data
+    var formData = new FormData();
+    formData.append('file', file);
+    formData.append('documentName', docName);
+
+    // 3. UI Loading State
+    var origHTML = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="animate-spin mr-2">⏳</span> Uploading...';
+
+    fetch('/employees/' + employeeId + '/documents/upload', {
+        method: 'POST',
+        body: formData
+    })
+    .then(async function(r) {
+        if (!r.ok) {
+            const errorText = await r.text();
+            throw new Error(errorText || 'Upload failed');
+        }
+        return r.text();
+    })
+    .then(function() {
+        // Success: Clear inputs and refresh list
+        docNameInput.value = '';
+        fileInput.value = '';
+        fetchDocuments(employeeId);
+        showPiToast('Document uploaded successfully ✓', 'success');
+    })
+    .catch(function(err) {
+        console.error(err);
+        showPiToast(err.message, 'error');
+    })
+    .finally(function() {
+        btn.disabled = false;
+        btn.innerHTML = origHTML;
+    });
+    }
+
+       function deleteDoc(docId) {
+      fetch('/documents/' + docId, { method: 'DELETE' })
+        .then(function(r) {
+            if (!r.ok) throw new Error('Delete failed');
+
+            // Retrieve the current employee ID to refresh the list
+            var employeeId = document.getElementById('editEmployeeId').value;
+            fetchDocuments(employeeId);
+
+            // Visual feedback that the action worked
+            if (typeof showPiToast === "function") {
+                showPiToast('Document deleted successfully', 'success');
+            }
+        })
+        .catch(function(err) {
+            console.error('Delete Error:', err);
+            alert('Failed to delete document: ' + err.message);
+        });
+        }
+
+        // ── PATCH editEmployee to fetch documents when switching to Documents tab ──
+        (function() {
+            var origEditEmployee = window.editEmployee;
+            window.editEmployee = function(id) {
+                origEditEmployee(id);
+                // Pre-fetch documents so they are ready when user clicks the Documents tab
+                setTimeout(function() { fetchDocuments(id); }, 100);
+            };
+        })();
+
         /*]]>*/
     </script>
 </main>
