@@ -42,7 +42,7 @@ public class TaxRelief extends BaseEntity {
     /*
      * Used when percentage-based
      */
-    @Column(precision = 5, scale = 2)
+    @Column(precision = 10, scale = 6)
     private BigDecimal percentageRate;
 
     /*
