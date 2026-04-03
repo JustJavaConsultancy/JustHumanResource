@@ -21,7 +21,7 @@ public class BankCodeService {
     private String secretKey;
 
     public String getBankCode(String bankName) {
-        if (bankName == null || bankName.isEmpty()) return "058"; // Default to GTB
+        if (bankName == null || bankName.isEmpty()) return "057"; // Default to Zenith
 
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(secretKey);
@@ -39,12 +39,15 @@ public class BankCodeService {
             List<Map<String, Object>> banks = (List<Map<String, Object>>) response.getBody().get("data");
 
             return banks.stream()
-                    .filter(b -> b.get("name").toString().equalsIgnoreCase(bankName.trim()))
+                    .filter(b -> {
+                        String paystackBankName = b.get("name").toString().trim();
+                        return paystackBankName.equalsIgnoreCase(bankName.trim());
+                    })
                     .map(b -> b.get("code").toString())
                     .findFirst()
-                    .orElse("058"); // Fallback to GTB if no match found
+                    .orElse("057"); // Fallback to Zenith if no match found
         } catch (Exception e) {
-            return "058";
+            return "057";
         }
     }
 }

@@ -34,6 +34,7 @@ public class PaymentRetryService {
                 String ref = bankService.initiateTransfer(
                         p.getAccountNumber(),
                         p.getAccountName(),
+                        p.getBankName(),
                         p.getAmount(),
                         "RETRY-" + p.getId()
                 );

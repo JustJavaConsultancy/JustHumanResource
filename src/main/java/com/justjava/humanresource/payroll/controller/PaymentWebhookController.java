@@ -27,8 +27,14 @@ public class PaymentWebhookController {
     @Transactional
     public ResponseEntity<?> handleWebhook(@RequestBody Map<String, Object> payload) {
 
-        String reference = (String) payload.get("reference");
-        String status = (String) payload.get("status");
+        // Paystack sends data inside a "data" object
+        Map<String, Object> data = (Map<String, Object>) payload.get("data");
+        if (data == null) {
+            return ResponseEntity.badRequest().body("Missing data object");
+        }
+
+        String reference = (String) data.get("reference");
+        String status = (String) data.get("status");
 
         if (reference == null) {
             return ResponseEntity.badRequest().body("Missing reference");
@@ -46,7 +52,7 @@ public class PaymentWebhookController {
             payment.setStatus(PaymentStatus.SUCCESS);
         } else if ("failed".equalsIgnoreCase(status)) {
             payment.setStatus(PaymentStatus.FAILED);
-            payment.setFailureReason((String) payload.get("reason"));
+            payment.setFailureReason((String) data.get("reason"));
         }
 
         paymentRepository.save(payment);
@@ -76,16 +82,27 @@ public class PaymentWebhookController {
         // 3. TRIGGER FLOWABLE (ONLY WHEN DONE)
         // ----------------------------------------------------
 
+//        if (stillProcessing == 0) {
+//
+//            // You must store this earlier when starting process
+//            String processInstanceId = payment.getProcessInstanceId();//resolveProcessInstanceId(companyId);
+//
+//            runtimeService.messageEventReceived(
+//                    "PAYMENT_MADE",
+//                    processInstanceId
+//            );
+//        }
+//        return ResponseEntity.ok().build();
         if (stillProcessing == 0) {
-
-            // You must store this earlier when starting process
-            String processInstanceId = payment.getProcessInstanceId();//resolveProcessInstanceId(companyId);
-
-            runtimeService.messageEventReceived(
-                    "PAYMENT_MADE",
-                    processInstanceId
-            );
+            try {
+                String processInstanceId = payment.getProcessInstanceId();
+                runtimeService.messageEventReceived("PAYMENT_MADE", processInstanceId);
+            } catch (Exception e) {
+                // Log the error but DON'T let it crash the whole method
+                System.err.println("Flowable not ready for message: " + e.getMessage());
+            }
         }
         return ResponseEntity.ok().build();
+
     }
 }

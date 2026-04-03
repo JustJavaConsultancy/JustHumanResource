@@ -19,6 +19,7 @@ public class BankIntegrationService {
     public String initiateTransfer(
             String accountNumber,
             String accountName,
+            String bankName,
             BigDecimal amount,
             String reference
     ) {
@@ -29,6 +30,7 @@ public class BankIntegrationService {
                 BankTransferRequest.builder()
                         .accountNumber(accountNumber)
                         .accountName(accountName)
+                        .bankName(bankName)
                         .amount(amount)
                         .reference(reference)
                         .build()
@@ -43,6 +45,7 @@ public class BankIntegrationService {
                 .map(p -> BankTransferRequest.builder()
                         .accountNumber(p.getAccountNumber())
                         .accountName(p.getAccountName())
+                        .bankName(p.getBankName())
                         .amount(p.getAmount())
                         .reference("SAL-" + p.getId())
                         .build()

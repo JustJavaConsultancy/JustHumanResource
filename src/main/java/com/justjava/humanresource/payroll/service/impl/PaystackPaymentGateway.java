@@ -98,11 +98,17 @@ public class PaystackPaymentGateway implements PaymentGateway {
         }
     }
 
+
     /** Paystack requires creating a 'recipient' before you can send money to a bank account. */
 
     private String createTransferRecipient(BankTransferRequest request) {
+        // 1. Check what name is coming from the DB
+        System.out.println("DEBUG: Request Bank Name from DB: [" + request.getBankName() + "]");
 
         String bankCode = bankCodeService.getBankCode(request.getBankName());
+
+        // 2. Check what code the Service is returning
+        System.out.println("DEBUG: Resolved Bank Code: [" + bankCode + "]");
 
         HttpHeaders headers = createHeaders();
         Map<String, Object> body = Map.of(
@@ -114,11 +120,17 @@ public class PaystackPaymentGateway implements PaymentGateway {
         );
 
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
+
+        // 3. Log the full URL and Body
+        System.out.println("DEBUG: Calling Paystack URL: " + BASE_URL + "/transferrecipient");
+        System.out.println("DEBUG: Paystack Request Body: " + body);
+
         ResponseEntity<Map> response = restTemplate.postForEntity(BASE_URL + "/transferrecipient", entity, Map.class);
 
         Map<String, Object> data = (Map<String, Object>) response.getBody().get("data");
         return (String) data.get("recipient_code");
     }
+
 
     private HttpHeaders createHeaders() {
         HttpHeaders headers = new HttpHeaders();
