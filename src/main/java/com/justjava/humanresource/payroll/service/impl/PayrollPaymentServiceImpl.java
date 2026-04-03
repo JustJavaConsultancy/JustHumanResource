@@ -64,22 +64,24 @@ public class PayrollPaymentServiceImpl implements PayrollPaymentService {
     @Override
     @Transactional
     public void processPendingPayments() {
-
-        Page<PayrollPayment> page =
-                paymentRepository.findByStatus(
-                        PaymentStatus.PENDING,
-                        PageRequest.of(0, 1000)
-                );
+        Page<PayrollPayment> page = paymentRepository.findByStatus(
+                PaymentStatus.PENDING,
+                PageRequest.of(0, 1000)
+        );
 
         List<PayrollPayment> batch = page.getContent();
-
         if (batch.isEmpty()) return;
 
-        bankService.initiateBulkTransfers(batch);
-
         for (PayrollPayment p : batch) {
+            String uniqueRef = "PAY-" + p.getId() + "-" + System.currentTimeMillis();
+
+            p.setExternalReference(uniqueRef);
             p.setStatus(PaymentStatus.PROCESSING);
         }
+
+        paymentRepository.saveAll(batch);
+
+        bankService.initiateBulkTransfers(batch);
     }
 
     @Override

@@ -54,6 +54,7 @@ public class PaystackPaymentGateway implements PaymentGateway {
     public void initiateBulkTransfer(List<BankTransferRequest> requests) {
         HttpHeaders headers = createHeaders();
 
+
         List<Map<String, Object>> transfers = requests.stream().map(req ->
                 Map.<String, Object>of(
                         "amount", req.getAmount().multiply(BigDecimal.valueOf(100)).intValue(),
@@ -69,7 +70,15 @@ public class PaystackPaymentGateway implements PaymentGateway {
         );
 
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
-        restTemplate.postForEntity(BASE_URL + "/transfer/bulk", entity, Map.class);
+
+        try {
+            ResponseEntity<Map> response = restTemplate.postForEntity(BASE_URL + "/transfer/bulk", entity, Map.class);
+
+            System.out.println("DEBUG: Paystack Bulk Response: " + response.getBody());
+        } catch (Exception e) {
+            System.err.println("CRITICAL: Paystack Bulk Transfer Failed: " + e.getMessage());
+            throw e;
+        }
     }
 
     @Override
@@ -102,12 +111,12 @@ public class PaystackPaymentGateway implements PaymentGateway {
     /** Paystack requires creating a 'recipient' before you can send money to a bank account. */
 
     private String createTransferRecipient(BankTransferRequest request) {
-        // 1. Check what name is coming from the DB
+        // Check what name is coming from the DB
         System.out.println("DEBUG: Request Bank Name from DB: [" + request.getBankName() + "]");
 
         String bankCode = bankCodeService.getBankCode(request.getBankName());
 
-        // 2. Check what code the Service is returning
+        // Check what code the Service is returning
         System.out.println("DEBUG: Resolved Bank Code: [" + bankCode + "]");
 
         HttpHeaders headers = createHeaders();
@@ -121,7 +130,7 @@ public class PaystackPaymentGateway implements PaymentGateway {
 
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
 
-        // 3. Log the full URL and Body
+        // Log the full URL and Body
         System.out.println("DEBUG: Calling Paystack URL: " + BASE_URL + "/transferrecipient");
         System.out.println("DEBUG: Paystack Request Body: " + body);
 

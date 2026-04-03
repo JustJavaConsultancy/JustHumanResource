@@ -82,17 +82,7 @@ public class PaymentWebhookController {
         // 3. TRIGGER FLOWABLE (ONLY WHEN DONE)
         // ----------------------------------------------------
 
-//        if (stillProcessing == 0) {
-//
-//            // You must store this earlier when starting process
-//            String processInstanceId = payment.getProcessInstanceId();//resolveProcessInstanceId(companyId);
-//
-//            runtimeService.messageEventReceived(
-//                    "PAYMENT_MADE",
-//                    processInstanceId
-//            );
-//        }
-//        return ResponseEntity.ok().build();
+
         if (stillProcessing == 0) {
             try {
                 String processInstanceId = payment.getProcessInstanceId();

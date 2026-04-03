@@ -47,7 +47,7 @@ public class BankIntegrationService {
                         .accountName(p.getAccountName())
                         .bankName(p.getBankName())
                         .amount(p.getAmount())
-                        .reference("SAL-" + p.getId())
+                        .reference(p.getExternalReference())
                         .build()
                 )
                 .toList();
