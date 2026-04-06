@@ -1,6 +1,7 @@
 package com.justjava.humanresource.payroll.service.impl;
 
 import com.justjava.humanresource.hr.entity.Employee;
+import com.justjava.humanresource.hr.entity.EmployeeBankDetail;
 import com.justjava.humanresource.hr.service.EmployeeService;
 import com.justjava.humanresource.payroll.dto.PaymentStatus;
 import com.justjava.humanresource.payroll.dto.PayrollRunDTO;
@@ -45,15 +46,16 @@ public class PayrollPaymentServiceImpl implements PayrollPaymentService {
             if (paymentRepository.existsByPayrollRunId(run.getPayrollRunId()))
                 continue;
 
+            List<EmployeeBankDetail> bankDetails = employee.getBankDetails();
             PayrollPayment payment = new PayrollPayment();
             payment.setPayrollRunId(run.getPayrollRunId());
             payment.setEmployeeId(run.getEmployeeId());
             payment.setCompanyId(companyId);
             payment.setAmount(run.getNetPay());
             payment.setProcessInstanceId(processInstanceId);
-            payment.setAccountName(employee.getBankDetails().get(0).getAccountName());
-            payment.setAccountNumber(employee.getBankDetails().get(0).getAccountNumber());
-            payment.setBankName(employee.getBankDetails().get(0).getBankName());
+            payment.setAccountName(bankDetails!=null&&!bankDetails.isEmpty()?bankDetails.get(0).getAccountName():"");
+            payment.setAccountNumber(bankDetails!=null&&!bankDetails.isEmpty()?bankDetails.get(0).getAccountNumber():"");
+            payment.setBankName(bankDetails!=null&&!bankDetails.isEmpty()?bankDetails.get(0).getBankName():"");
 
             payment.setStatus(PaymentStatus.PENDING);
 

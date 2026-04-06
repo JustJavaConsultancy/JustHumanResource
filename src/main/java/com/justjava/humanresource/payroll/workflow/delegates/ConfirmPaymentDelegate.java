@@ -17,9 +17,9 @@ public class ConfirmPaymentDelegate implements JavaDelegate {
 
         Long companyId = (Long) execution.getVariable("companyId");
 
-        paymentService.confirmPaymentsAndNotifyFlowable(
+/*        paymentService.confirmPaymentsAndNotifyFlowable(
                 companyId,
                 execution.getProcessInstanceId()
-        );
+        );*/
     }
 }
