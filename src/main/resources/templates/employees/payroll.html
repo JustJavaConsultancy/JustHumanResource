@@ -4,6 +4,9 @@
 <head>
   <meta charset="UTF-8">
   <title>Payslip Details</title>
+  <!-- PDF generation libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script>
     tailwind.config = {
         darkMode: "class",
@@ -344,6 +347,34 @@
     .modal-overlay.active .modal-container {
         transform: scale(1);
     }
+
+    /* ========== PRINT STYLES ========== */
+    @media print {
+        /* Hide everything except the modal being printed */
+        body > *:not(#print-root) {
+            display: none !important;
+        }
+
+        #print-root {
+            display: block !important;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: white;
+            padding: 2rem;
+            z-index: 9999;
+        }
+
+        /* Hide overlay controls inside modal when printing */
+        #print-root .print-hide {
+            display: none !important;
+        }
+
+        @page {
+            margin: 1.5cm;
+        }
+    }
   </style>
 </head>
 <body>
@@ -532,6 +563,7 @@
           <span th:text="${#temporals.format(latestPaySlip.payrollDate, 'MMMM yyyy')}">February 2026</span>
           · Payslip #<span th:text="${latestPaySlip.payrollRunId}">1</span>
         </p>
+        <!-- Updated: View/Download button now opens the modal, matching the eye button behavior -->
         <button id="viewPayslipBtn" class="w-full px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center">
           <span class="material-icons-round text-sm mr-2">visibility</span> View / Download
         </button>
@@ -550,10 +582,7 @@
         <span class="material-icons-round text-primary-600 dark:text-primary-400">history</span>
         <h4 class="section-title mb-0">Payslip History</h4>
       </div>
-      <a href="#" class="text-primary-600 hover:text-primary-700 text-sm font-medium flex items-center">
-        Download All
-        <span class="material-icons-round text-sm ml-1">archive</span>
-      </a>
+
     </div>
 
     <div class="overflow-x-auto -mx-5 md:-mx-6 px-5 md:px-6 pb-1">
@@ -599,7 +628,9 @@
                       th:attr="data-modal-id='viewPayslipModal'">
                 <span class="material-icons-round text-sm">visibility</span>
               </button>
-              <button class="text-gray-500 hover:text-primary-600">
+              <!-- Download button for current payslip in table row -->
+              <button class="text-gray-500 hover:text-primary-600 download-payslip-btn"
+                      th:attr="data-modal-id='viewPayslipModal'">
                 <span class="material-icons-round text-sm">download</span>
               </button>
             </div>
@@ -640,7 +671,9 @@
                       th:attr="data-modal-id=${'viewPayslipModal_' + payslip.id}">
                 <span class="material-icons-round text-sm">visibility</span>
               </button>
-              <button class="text-gray-500 hover:text-primary-600">
+              <!-- Download button for previous payslip in table row -->
+              <button class="text-gray-500 hover:text-primary-600 download-payslip-btn"
+                      th:attr="data-modal-id=${'viewPayslipModal_' + payslip.id}">
                 <span class="material-icons-round text-sm">download</span>
               </button>
             </div>
@@ -770,10 +803,14 @@
       </div>
 
       <div class="flex justify-end space-x-3 mt-6">
-        <button class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700">
+        <!-- Print button: triggers printPayslip for this modal -->
+        <button class="print-payslip-btn px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700"
+                data-modal-id="viewPayslipModal">
           <span class="material-icons-round text-sm mr-1 align-middle">print</span> Print
         </button>
-        <button class="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700">
+        <!-- Download PDF button: triggers downloadPayslipPdf for this modal -->
+        <button class="download-pdf-btn px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700"
+                data-modal-id="viewPayslipModal">
           <span class="material-icons-round text-sm mr-1 align-middle">download</span> Download PDF
         </button>
       </div>
@@ -894,16 +931,23 @@
         </div>
 
         <div class="flex justify-end space-x-3 mt-6">
-          <button class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700">
+          <!-- Print button for previous payslip modal -->
+          <button class="print-payslip-btn px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700"
+                  th:attr="data-modal-id=${'viewPayslipModal_' + payslip.id}">
             <span class="material-icons-round text-sm mr-1 align-middle">print</span> Print
           </button>
-          <button class="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700">
+          <!-- Download PDF button for previous payslip modal -->
+          <button class="download-pdf-btn px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700"
+                  th:attr="data-modal-id=${'viewPayslipModal_' + payslip.id}">
             <span class="material-icons-round text-sm mr-1 align-middle">download</span> Download PDF
           </button>
         </div>
       </div>
     </div>
   </th:block>
+
+  <!-- Hidden print container: modal content is cloned here during print -->
+  <div id="print-root" style="display:none;"></div>
 
   <script>
     // ========== MODAL CONTROL (supports multiple modals) ==========
@@ -948,6 +992,169 @@
             e.stopPropagation();
         });
     });
+
+    // ========== PRINT PAYSLIP ==========
+    // Clones the modal's inner content into #print-root, triggers window.print(), then restores.
+    function printPayslip(modalId) {
+        const modal = document.getElementById(modalId);
+        if (!modal) return;
+
+        const container = modal.querySelector('.modal-container');
+        if (!container) return;
+
+        const printRoot = document.getElementById('print-root');
+
+        // Clone modal content into the print root
+        printRoot.innerHTML = container.innerHTML;
+
+        // Hide the action buttons row inside the clone so they don't appear on print
+        const actionBtns = printRoot.querySelectorAll('.flex.justify-end.space-x-3');
+        actionBtns.forEach(el => el.style.display = 'none');
+
+        // Also hide the close button
+        const closeBtns = printRoot.querySelectorAll('.close-modal');
+        closeBtns.forEach(el => el.style.display = 'none');
+
+        printRoot.style.display = 'block';
+
+        window.print();
+
+        // Restore after print dialog closes
+        setTimeout(() => {
+            printRoot.style.display = 'none';
+            printRoot.innerHTML = '';
+        }, 1000);
+    }
+
+    // ========== DOWNLOAD PAYSLIP AS PDF ==========
+    // Uses html2canvas to render the modal content to a canvas, then jsPDF
+    // to embed it as an image in a PDF file that is downloaded directly —
+    // NO print dialog is ever shown.
+    async function downloadPayslipPdf(modalId) {
+        const modal = document.getElementById(modalId);
+        if (!modal) return;
+
+        const container = modal.querySelector('.modal-container');
+        if (!container) return;
+
+        // Derive filename from heading
+        const headingEl = container.querySelector('h3');
+        const headingText = headingEl ? headingEl.textContent.trim().replace(/\s+/g, ' ') : 'Payslip';
+        const fileName = headingText.replace(/[^a-zA-Z0-9 ]/g, '').replace(/\s+/g, '_') + '.pdf';
+
+        // Temporarily make the modal container fully visible and off-screen
+        // so html2canvas can capture the full (unscrolled) content
+        const originalOverflow = container.style.overflow;
+        const originalMaxHeight = container.style.maxHeight;
+        container.style.overflow = 'visible';
+        container.style.maxHeight = 'none';
+
+        // Hide action buttons and close button during capture
+        const actionRows = container.querySelectorAll('.flex.justify-end.space-x-3');
+        const closeBtns = container.querySelectorAll('.close-modal');
+        actionRows.forEach(el => el.style.visibility = 'hidden');
+        closeBtns.forEach(el => el.style.visibility = 'hidden');
+
+        try {
+            const { jsPDF } = window.jspdf;
+
+            const canvas = await html2canvas(container, {
+                scale: 2,           // 2x for sharpness
+                useCORS: true,
+                backgroundColor: '#ffffff',
+                logging: false,
+            });
+
+            const imgData = canvas.toDataURL('image/png');
+            const imgWidth = canvas.width;
+            const imgHeight = canvas.height;
+
+            // A4 dimensions in mm
+            const pageWidth = 210;
+            const pageHeight = 297;
+
+            // Scale image to fit A4 width
+            const ratio = pageWidth / (imgWidth / 2);  // /2 because scale=2
+            const scaledHeight = (imgHeight / 2) * ratio;
+
+            const pdf = new jsPDF({
+                orientation: scaledHeight > pageHeight ? 'portrait' : 'portrait',
+                unit: 'mm',
+                format: 'a4',
+            });
+
+            // If content is taller than one A4 page, split across pages
+            let yPosition = 0;
+            const pageHeightPx = (pageHeight / ratio);  // page height in original px
+
+            while (yPosition < imgHeight / 2) {
+                if (yPosition > 0) pdf.addPage();
+
+                // Create a temporary canvas for this page slice
+                const sliceCanvas = document.createElement('canvas');
+                sliceCanvas.width = imgWidth;
+                sliceCanvas.height = Math.min(pageHeightPx * 2, imgHeight - yPosition * 2);
+                const ctx = sliceCanvas.getContext('2d');
+                ctx.drawImage(canvas, 0, yPosition * 2, imgWidth, sliceCanvas.height, 0, 0, imgWidth, sliceCanvas.height);
+
+                const sliceData = sliceCanvas.toDataURL('image/png');
+                const sliceHeightMm = (sliceCanvas.height / 2) * ratio;
+                pdf.addImage(sliceData, 'PNG', 0, 0, pageWidth, sliceHeightMm);
+
+                yPosition += pageHeightPx;
+            }
+
+            pdf.save(fileName);
+
+        } catch (err) {
+            console.error('PDF generation failed:', err);
+            alert('Sorry, PDF download failed. Please try again.');
+        } finally {
+            // Restore original styles
+            container.style.overflow = originalOverflow;
+            container.style.maxHeight = originalMaxHeight;
+            actionRows.forEach(el => el.style.visibility = '');
+            closeBtns.forEach(el => el.style.visibility = '');
+        }
+    }
+
+    // ========== WIRE UP: Download buttons in table rows ==========
+    // These open the modal first (so the user sees what they're downloading),
+    // then immediately trigger the PDF download.
+    document.querySelectorAll('.download-payslip-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const modalId = btn.getAttribute('data-modal-id');
+            downloadPayslipPdf(modalId);
+        });
+    });
+
+    // ========== WIRE UP: Print buttons inside modals ==========
+    document.querySelectorAll('.print-payslip-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const modalId = btn.getAttribute('data-modal-id');
+            printPayslip(modalId);
+        });
+    });
+
+    // ========== WIRE UP: Download PDF buttons inside modals ==========
+    document.querySelectorAll('.download-pdf-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const modalId = btn.getAttribute('data-modal-id');
+            downloadPayslipPdf(modalId);
+        });
+    });
+
+    // ========== WIRE UP: Top-level "View / Download" button ==========
+    // Opens the current payslip modal (consistent with the eye button in the table)
+    const viewPayslipBtn = document.getElementById('viewPayslipBtn');
+    if (viewPayslipBtn) {
+        viewPayslipBtn.addEventListener('click', () => {
+            openModal('viewPayslipModal');
+        });
+    }
 
     // ========== MOBILE SIDEBAR ==========
     const menuToggle = document.getElementById('menuToggle');
