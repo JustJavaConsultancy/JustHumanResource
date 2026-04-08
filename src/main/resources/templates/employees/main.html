@@ -660,7 +660,10 @@
                         data-guarantor-phone=${employee.guarantorPhoneNumber},
                         data-guarantor-email=${employee.guarantorEmail},
                         data-guarantor-address=${employee.guarantorAddress},
-                        data-guarantor-nin=${employee.guarantorNinNumber}
+                        data-guarantor-nin=${employee.guarantorNinNumber},
+                        data-account-name=${employee.bankDetails != null and !#lists.isEmpty(employee.bankDetails) ? employee.bankDetails[0].accountName : ''},
+                        data-bank-name=${employee.bankDetails != null and !#lists.isEmpty(employee.bankDetails) ? employee.bankDetails[0].bankName : ''},
+                        data-account-number=${employee.bankDetails != null and !#lists.isEmpty(employee.bankDetails) ? employee.bankDetails[0].accountNumber : ''}
                     "
                     th:onclick="'viewEmployee(' + ${employee.id} + ')'">
 
@@ -767,7 +770,7 @@
                 </div>
 
                 <div class="p-6 flex flex-col flex-1 overflow-hidden">
-                    <form th:action="@{/onboarding}" method="post" onsubmit="disableSubmitButton(this)" class="flex flex-col flex-1 overflow-hidden">
+                    <form th:action="@{/onboarding}" method="post" onsubmit="return validateAddBankDetails(this)" class="flex flex-col flex-1 overflow-hidden">
 
                         <!-- Tab Bar -->
                         <div class="tab-bar flex-shrink-0">
@@ -782,6 +785,10 @@
                             <button type="button" class="tab-btn" onclick="switchTab('add', 'kin', this)">
                                 <span class="tab-icon"><span class="material-icons-round" style="font-size:0.85rem">group</span></span>
                                 Next of Kin &amp; Guarantor
+                            </button>
+                            <button type="button" class="tab-btn" onclick="switchTab('add', 'bank', this)">
+                                <span class="tab-icon"><span class="material-icons-round" style="font-size:0.85rem">account_balance</span></span>
+                                Bank Details
                             </button>
                             <button type="button" class="tab-btn" onclick="switchTab('add', 'documents', this)">
                                 <span class="tab-icon"><span class="material-icons-round" style="font-size:0.85rem">description</span></span>
@@ -981,6 +988,49 @@
                                 </div>
                             </div>
 
+                            <!-- TAB 3b: Bank Details (Add Modal) -->
+                            <div id="add-tab-bank" class="tab-panel">
+                                <div class="bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 rounded-xl p-3 mb-4 flex items-start gap-2">
+                                    <span class="material-icons-round text-amber-500 text-base mt-0.5">account_balance</span>
+                                    <span class="text-xs text-amber-700 dark:text-amber-400">Bank details are optional and can be filled in later via Edit. If you enter any bank detail, all three fields must be completed and account number must be exactly 10 digits.</span>
+                                </div>
+                                <p class="form-section-title">Bank Account</p>
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Account Name</label>
+                                        <div class="relative">
+                                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                                                <span class="material-icons-round text-sm">person</span>
+                                            </span>
+                                            <input type="text" id="addAccountName" name="accountName" class="form-input pl-10" placeholder="Full name as on bank account">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Bank Name</label>
+                                        <div class="relative">
+                                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                                                <span class="material-icons-round text-sm">account_balance</span>
+                                            </span>
+                                            <input type="text" id="addBankName" name="bankName" class="form-input pl-10" placeholder="e.g. First Bank">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Account Number</label>
+                                        <div class="relative">
+                                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                                                <span class="material-icons-round text-sm">tag</span>
+                                            </span>
+                                            <input type="text" id="addAccountNumber" name="accountNumber" class="form-input pl-10"
+                                                   placeholder="10-digit NUBAN account number"
+                                                   style="font-family:'DM Mono',monospace;letter-spacing:0.05em"
+                                                   maxlength="10"
+                                                   oninput="this.value=this.value.replace(/\D/g,'').slice(0,10)">
+                                        </div>
+                                        <p class="text-xs text-gray-400 mt-1">Must be exactly 10 digits</p>
+                                    </div>
+                                </div>
+                            </div>
+
                             <!-- TAB 4: Documents (Add Modal) -->
                             <div id="add-tab-documents" class="tab-panel">
                                 <div class="flex flex-col items-center justify-center py-10 text-center">
@@ -1048,6 +1098,10 @@
                             <button type="button" class="tab-btn" onclick="switchTab('edit', 'kin', this)">
                                 <span class="tab-icon"><span class="material-icons-round" style="font-size:0.85rem">group</span></span>
                                 Next of Kin &amp; Guarantor
+                            </button>
+                            <button type="button" class="tab-btn" onclick="switchTab('edit', 'bank', this)">
+                                <span class="tab-icon"><span class="material-icons-round" style="font-size:0.85rem">account_balance</span></span>
+                                Bank Details
                             </button>
                             <button type="button" class="tab-btn" onclick="switchTab('edit', 'documents', this)">
                                 <span class="tab-icon"><span class="material-icons-round" style="font-size:0.85rem">description</span></span>
@@ -1242,6 +1296,49 @@
                                         <input type="text" id="editGuarantorNinNumber" class="form-input"
                                                placeholder="Guarantor NIN (11 digits)" pattern="\d{11}" maxlength="11"
                                                oninput="this.value=this.value.replace(/\D/g,'').slice(0,11)">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- TAB 3b: Bank Details (Edit Modal) -->
+                            <div id="edit-tab-bank" class="tab-panel">
+                                <div class="bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 rounded-xl p-3 mb-4 flex items-start gap-2">
+                                    <span class="material-icons-round text-amber-500 text-base mt-0.5">account_balance</span>
+                                    <span class="text-xs text-amber-700 dark:text-amber-400">Bank details are optional. If you enter any bank detail, all three fields must be completed and account number must be exactly 10 digits.</span>
+                                </div>
+                                <p class="form-section-title">Bank Account</p>
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Account Name</label>
+                                        <div class="relative">
+                                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                                                <span class="material-icons-round text-sm">person</span>
+                                            </span>
+                                            <input type="text" id="editAccountName" name="accountName" class="form-input pl-10" placeholder="Full name as on bank account">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Bank Name</label>
+                                        <div class="relative">
+                                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                                                <span class="material-icons-round text-sm">account_balance</span>
+                                            </span>
+                                            <input type="text" id="editBankName" name="bankName" class="form-input pl-10" placeholder="e.g. First Bank">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Account Number</label>
+                                        <div class="relative">
+                                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                                                <span class="material-icons-round text-sm">tag</span>
+                                            </span>
+                                            <input type="text" id="editAccountNumber" name="accountNumber" class="form-input pl-10"
+                                                   placeholder="10-digit NUBAN account number"
+                                                   style="font-family:'DM Mono',monospace;letter-spacing:0.05em"
+                                                   maxlength="10"
+                                                   oninput="this.value=this.value.replace(/\D/g,'').slice(0,10)">
+                                        </div>
+                                        <p class="text-xs text-gray-400 mt-1">Must be exactly 10 digits</p>
                                     </div>
                                 </div>
                             </div>
@@ -1616,6 +1713,32 @@
     <script th:inline="javascript">
         /*<![CDATA[*/
 
+        // ── ADD FORM: Bank details validation + disable submit ───────────
+        function validateAddBankDetails(form) {
+            const accountName   = document.getElementById('addAccountName').value.trim();
+            const bankName      = document.getElementById('addBankName').value.trim();
+            const accountNumber = document.getElementById('addAccountNumber').value.trim();
+            const anyFilled = accountName || bankName || accountNumber;
+            if (anyFilled) {
+                if (!accountName) {
+                    shakeElement(document.getElementById('addAccountName'));
+                    showPiToast('Please enter the Account Name', 'error');
+                    return false;
+                }
+                if (!bankName) {
+                    shakeElement(document.getElementById('addBankName'));
+                    showPiToast('Please enter the Bank Name', 'error');
+                    return false;
+                }
+                if (!accountNumber || accountNumber.length !== 10) {
+                    shakeElement(document.getElementById('addAccountNumber'));
+                    showPiToast('Account Number must be exactly 10 digits', 'error');
+                    return false;
+                }
+            }
+            return disableSubmitButton(form);
+        }
+
         // ---------- Data arrays from server ----------
         const jobGrades = [
             /*[# th:each="grade : ${jobGrades}"]*/
@@ -1784,6 +1907,10 @@
             document.getElementById('editGuarantorAddress').value      = row.dataset.guarantorAddress || '';
             document.getElementById('editGuarantorNinNumber').value    = row.dataset.guarantorNin || '';
 
+            document.getElementById('editAccountName').value   = row.dataset.accountName   || '';
+            document.getElementById('editBankName').value      = row.dataset.bankName       || '';
+            document.getElementById('editAccountNumber').value = row.dataset.accountNumber  || '';
+
             const gradeSelect = document.getElementById('editJobGradeId');
             gradeSelect.value = row.dataset.jobGradeId || '';
             gradeSelect.dispatchEvent(new Event('change'));
@@ -1803,6 +1930,34 @@
             submitBtn.innerHTML = 'Updating...';
 
             const id = document.getElementById('editEmployeeId').value;
+
+            // ── Bank details validation ──────────────────────────────────────
+            const editAccountName   = document.getElementById('editAccountName').value.trim();
+            const editBankName      = document.getElementById('editBankName').value.trim();
+            const editAccountNumber = document.getElementById('editAccountNumber').value.trim();
+            const bankFields = [editAccountName, editBankName, editAccountNumber];
+            const anyBankFilled = bankFields.some(f => f !== '');
+            if (anyBankFilled) {
+                if (!editAccountName) {
+                    shakeElement(document.getElementById('editAccountName'));
+                    showPiToast('Please enter the Account Name', 'error');
+                    submitBtn.disabled = false; submitBtn.classList.remove('opacity-50','cursor-not-allowed'); submitBtn.innerHTML = '<span class="material-icons-round text-sm">save</span><span>Update Employee</span>';
+                    return;
+                }
+                if (!editBankName) {
+                    shakeElement(document.getElementById('editBankName'));
+                    showPiToast('Please enter the Bank Name', 'error');
+                    submitBtn.disabled = false; submitBtn.classList.remove('opacity-50','cursor-not-allowed'); submitBtn.innerHTML = '<span class="material-icons-round text-sm">save</span><span>Update Employee</span>';
+                    return;
+                }
+                if (!editAccountNumber || editAccountNumber.length !== 10) {
+                    shakeElement(document.getElementById('editAccountNumber'));
+                    showPiToast('Account Number must be exactly 10 digits', 'error');
+                    submitBtn.disabled = false; submitBtn.classList.remove('opacity-50','cursor-not-allowed'); submitBtn.innerHTML = '<span class="material-icons-round text-sm">save</span><span>Update Employee</span>';
+                    return;
+                }
+            }
+            // ────────────────────────────────────────────────────────────────
             const payload = {
                 firstName:            document.getElementById('editFirstName').value,
                 lastName:             document.getElementById('editLastName').value,
@@ -1822,7 +1977,10 @@
                 guarantorPhoneNumber: document.getElementById('editGuarantorPhoneNumber').value,
                 guarantorEmail:       document.getElementById('editGuarantorEmail').value,
                 guarantorAddress:     document.getElementById('editGuarantorAddress').value,
-                guarantorNinNumber:   document.getElementById('editGuarantorNinNumber').value
+                guarantorNinNumber:   document.getElementById('editGuarantorNinNumber').value,
+                accountName:          editAccountName   || null,
+                bankName:             editBankName      || null,
+                accountNumber:        editAccountNumber || null
             };
 
             fetch('/employees/' + id, {

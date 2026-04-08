@@ -71,4 +71,21 @@ public interface EmployeeRepository extends JpaRepository<Employee,Long> {
        GROUP BY e.department.id
        """)
     List<Object[]> countEmployeesByDepartmentGroup();
+
+
+    // CHECK EMPLOYEE BANK DETAILS
+    @Query("""
+    SELECT e FROM Employee e 
+    LEFT JOIN e.bankDetails bd 
+    WHERE e.department.company.id = :companyId 
+      AND e.status IN (com.justjava.humanresource.core.enums.RecordStatus.ACTIVE, com.justjava.humanresource.core.enums.RecordStatus.INACTIVE)
+      AND (bd IS NULL OR NOT EXISTS (
+          SELECT b FROM EmployeeBankDetail b 
+          WHERE b.employee = e 
+          AND b.status = com.justjava.humanresource.core.enums.RecordStatus.ACTIVE
+          AND b.accountNumber IS NOT NULL 
+          AND b.accountNumber != ''
+      ))
+""")
+    List<Employee> findEmployeesMissingBankDetails(@Param("companyId") Long companyId);
 }

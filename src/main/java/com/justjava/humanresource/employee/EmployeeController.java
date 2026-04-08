@@ -129,12 +129,29 @@ public class EmployeeController {
     @PostMapping("/onboarding")
     public String startOnboarding(
             StartEmployeeOnboardingCommand command,
-            @RequestParam(defaultValue = "humanResource") String initiatedBy) {
+            @RequestParam(defaultValue = "humanResource") String initiatedBy,
+            @RequestParam(required = false) String accountName,
+            @RequestParam(required = false) String bankName,
+            @RequestParam(required = false) String accountNumber) {
 
         EmployeeOnboardingResponseDTO dto =
                 employeeOnboardingService.startOnboarding(command, initiatedBy);
 
-        employeeService.changeEmploymentStatus(dto.getId(), EmploymentStatus.ACTIVE, LocalDate.now());
+        employeeService.changeEmploymentStatus(dto.getEmployeeId(), EmploymentStatus.ACTIVE, LocalDate.now());
+
+        // Save bank details if all three fields were provided
+        boolean hasBankData = accountName != null && !accountName.isBlank()
+                && bankName != null && !bankName.isBlank()
+                && accountNumber != null && !accountNumber.isBlank();
+
+        if (hasBankData) {
+            EmployeeDTO bankDto = new EmployeeDTO();
+            bankDto.setAccountName(accountName.trim());
+            bankDto.setBankName(bankName.trim());
+            bankDto.setAccountNumber(accountNumber.trim());
+            employeeService.updateBankDetails(dto.getEmployeeId(), bankDto);
+        }
+
         return "redirect:/employees";
     }
 
@@ -433,19 +450,19 @@ public class EmployeeController {
         return "redirect:/employee/profile";
     }
 
-// FOR EMPLOYEE DOCUMENTS
-@PostMapping("/employees/{id}/documents/upload")
-@ResponseBody
-public ResponseEntity<?> uploadDoc(@PathVariable Long id,
-                                   @RequestParam("documentName") String name,
-                                   @RequestParam("file") MultipartFile file) {
-    try {
-        documentService.uploadDocument(id, name, file);
-        return ResponseEntity.ok().build();
-    } catch (Exception e) {
-        return ResponseEntity.badRequest().body("Upload failed: " + e.getMessage());
+    // FOR EMPLOYEE DOCUMENTS
+    @PostMapping("/employees/{id}/documents/upload")
+    @ResponseBody
+    public ResponseEntity<?> uploadDoc(@PathVariable Long id,
+                                       @RequestParam("documentName") String name,
+                                       @RequestParam("file") MultipartFile file) {
+        try {
+            documentService.uploadDocument(id, name, file);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Upload failed: " + e.getMessage());
+        }
     }
-}
 
     @GetMapping("/employees/{id}/documents")
     @ResponseBody

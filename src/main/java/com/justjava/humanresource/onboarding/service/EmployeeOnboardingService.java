@@ -170,7 +170,16 @@ public class EmployeeOnboardingService {
         if (dto.getGuarantorAddress() != null) employee.setGuarantorAddress(dto.getGuarantorAddress());
         if (dto.getGuarantorNinNumber() != null) employee.setGuarantorNinNumber(dto.getGuarantorNinNumber());
 
-
         employeeRepository.save(employee); // explicit save
+
+        // Handle bank details — delegate to EmployeeService which manages
+        // deactivating old records and creating a new active one
+        boolean hasBankData = (dto.getAccountName() != null && !dto.getAccountName().isBlank())
+                || (dto.getBankName() != null && !dto.getBankName().isBlank())
+                || (dto.getAccountNumber() != null && !dto.getAccountNumber().isBlank());
+
+        if (hasBankData) {
+            employeeService.updateBankDetails(id, dto);
+        }
     }
 }

@@ -2,19 +2,26 @@ package com.justjava.humanresource.payroll.service.impl;
 
 
 import com.justjava.humanresource.core.enums.PayrollRunStatus;
+import com.justjava.humanresource.hr.repository.EmployeeRepository;
+import com.justjava.humanresource.payroll.entity.PaySlip;
 import com.justjava.humanresource.payroll.entity.PayrollPeriod;
 import com.justjava.humanresource.payroll.enums.PayrollPeriodStatus;
+import com.justjava.humanresource.payroll.repositories.PaySlipRepository;
 import com.justjava.humanresource.payroll.repositories.PayrollPeriodRepository;
 import com.justjava.humanresource.payroll.repositories.PayrollRunRepository;
 import com.justjava.humanresource.payroll.service.PayrollPeriodService;
+import com.justjava.humanresource.core.enums.RecordStatus;
 import lombok.RequiredArgsConstructor;
 import org.flowable.engine.RuntimeService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.justjava.humanresource.hr.entity.Employee;
+import java.util.stream.Collectors;
 
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -24,6 +31,8 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
     private final PayrollPeriodRepository repository;
     private final PayrollRunRepository payrollRunRepository;
     private final RuntimeService runtimeService;
+    private final PaySlipRepository paySlipRepository;
+    private final EmployeeRepository employeeRepository;
 
     /* ============================================================
        INITIALIZATION
@@ -255,10 +264,31 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
        FLOWABLE APPROVAL
        ============================================================ */
 
+
     @Override
+    @Transactional
     public void initiatePeriodCloseApproval(Long companyId) {
 
         PayrollPeriod open = getOpenPeriod(companyId);
+
+        if (open == null) {
+            throw new IllegalStateException("No open payroll period found.");
+        }
+
+        List<Employee> missingDetails = employeeRepository.findEmployeesMissingBankDetails(companyId);
+
+        if (!missingDetails.isEmpty()) {
+
+            String names = missingDetails.stream()
+                    .map(emp -> emp.getFirstName() + " " + emp.getLastName())
+                    .distinct()
+                    .collect(Collectors.joining(", "));
+
+            throw new IllegalStateException(
+                    "BLOCKING ERROR: Period cannot be locked. " + missingDetails.size() +
+                            " employee(s) are missing bank details: [" + names + "]."
+            );
+        }
 
         runtimeService.startProcessInstanceByKey(
                 "payrollPeriodCloseProcess",
@@ -270,6 +300,7 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
                 )
         );
     }
+
 
     @Override
     public PayrollPeriod findById(Long id) {
