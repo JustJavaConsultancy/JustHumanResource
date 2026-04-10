@@ -113,12 +113,10 @@ public class EmployeeOnboardingService {
                 .build();
     }
 
+
     @Transactional
     public List<Employee> getAllOnboardings() {
-        List<EmployeeOnboarding> onboardings = onboardingRepository.findAll();
-        return onboardings.stream()
-                .map(EmployeeOnboarding::getEmployee)
-                .toList();
+        return employeeRepository.findAll();
     }
 
 

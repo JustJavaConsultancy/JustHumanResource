@@ -11,6 +11,7 @@ import com.justjava.humanresource.hr.entity.Employee;
 import com.justjava.humanresource.hr.entity.EmployeeDocument;
 import com.justjava.humanresource.hr.entity.PayGroup;
 import com.justjava.humanresource.hr.service.EmployeeService;
+import com.justjava.humanresource.hr.service.EmployeeUploadService;
 import com.justjava.humanresource.hr.service.SetupService;
 import com.justjava.humanresource.hr.service.EmployeeDocumentService;
 import com.justjava.humanresource.kpi.dto.AppraisalTaskViewDTO;
@@ -84,7 +85,8 @@ public class EmployeeController {
     @Autowired
     private EmployeeDocumentService documentService;
 
-
+    @Autowired
+    private EmployeeUploadService employeeUploadService;
 
     @Autowired
     PaySlipService paySlipService;
@@ -493,6 +495,12 @@ public class EmployeeController {
     public ResponseEntity<?> deleteDoc(@PathVariable Long docId) {
         documentService.deleteDocument(docId);
         return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/employees/upload-csv")
+    public ResponseEntity<String> uploadCsv(@RequestParam("file") MultipartFile file) {
+        employeeUploadService.uploadEmployees(file);
+        return ResponseEntity.ok("Employees uploaded successfully");
     }
 
 }

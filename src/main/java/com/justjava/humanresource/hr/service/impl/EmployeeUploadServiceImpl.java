@@ -10,6 +10,13 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import com.justjava.humanresource.core.enums.EmploymentStatus;
+import com.justjava.humanresource.core.enums.RecordStatus;
+import com.justjava.humanresource.hr.service.EmployeeService;
+import com.justjava.humanresource.onboarding.entity.EmployeeOnboarding;
+import com.justjava.humanresource.onboarding.enums.OnboardingStatus;
+import com.justjava.humanresource.onboarding.repositories.EmployeeOnboardingRepository;
+
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -29,6 +36,8 @@ public class EmployeeUploadServiceImpl implements EmployeeUploadService {
     private final JobStepRepository jobStepRepository;
     private final EmployeePositionHistoryService positionHistoryService;
     private final PayGroupRepository payGroupRepository;
+    private final EmployeeService employeeService;
+    private final EmployeeOnboardingRepository onboardingRepository;
 
     private static final Long DEFAULT_DEPARTMENT_ID = 1L;
 
@@ -57,6 +66,7 @@ public class EmployeeUploadServiceImpl implements EmployeeUploadService {
                 .orElseGet(() -> {
                     JobGrade g = new JobGrade();
                     g.setName("AUTO-GRADE");
+                    g.setDepartment(department); //Newly Added
                     return jobGradeRepository.save(g);
                 });
 
@@ -91,8 +101,24 @@ public class EmployeeUploadServiceImpl implements EmployeeUploadService {
             employee.setFirstName(dto.getFirstName());
             employee.setLastName(dto.getSecondName());
             employee.setDepartment(department);
+            employee.setEmployeeNumber("EMP-" + System.currentTimeMillis()); //  added
+            employee.setEmploymentStatus(EmploymentStatus.ONBOARDING);       //  added
+            employee.setStatus(RecordStatus.ACTIVE);                         //  added
+            employee.setJobStep(step);                                       //  added
+            employee.setPayGroup(payGroup);                                  //  added
 
             employee = employeeRepository.save(employee);
+
+            employeeService.changeEmploymentStatus(employee.getId(), EmploymentStatus.ACTIVE, LocalDate.now()); // added
+
+
+            // Added:  Create onboarding record so employee appears in getAllOnboardings()
+            EmployeeOnboarding onboarding = EmployeeOnboarding.builder()
+                    .employee(employee)
+                    .status(OnboardingStatus.INITIATED)
+                    .initiatedBy("CSV-UPLOAD")
+                    .build();
+            onboardingRepository.save(onboarding);
 
             // -----------------------------------------------------
             // 🔥 4. ASSIGN POSITION (WITH PAYGROUP)

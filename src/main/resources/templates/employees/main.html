@@ -576,6 +576,33 @@
         </div>
     </div>
 
+
+    <!-- CSV Upload Section -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 mb-4 flex flex-col md:flex-row md:items-center gap-4">
+        <div class="flex items-center gap-3">
+            <div class="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                <span class="material-icons-round text-green-600 dark:text-green-400">upload_file</span>
+            </div>
+            <div>
+                <p class="text-sm font-semibold text-gray-700 dark:text-gray-200">Bulk Upload Employees</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">CSV format: firstName, secondName, GROSS</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-3 md:ml-auto">
+            <input type="file" id="csvFileInput" accept=".csv"
+                   class="text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0
+                      file:text-xs file:font-semibold file:bg-green-50 file:text-green-700
+                      hover:file:bg-green-100 cursor-pointer" />
+            <button type="button" onclick="uploadCsv()" id="csvUploadBtn"
+                    class="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors shadow-sm">
+                <span class="material-icons-round text-sm">cloud_upload</span>
+                Upload
+            </button>
+        </div>
+    </div>
+
+
+
     <!-- Add Employee Button -->
     <div class="flex justify-end mb-4">
         <button onclick="openModal('addEmployeeModal')" class="hidden md:flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors shadow-sm hover:shadow">
@@ -2526,7 +2553,7 @@
             var employeeId = document.getElementById('editEmployeeId').value;
             fetchDocuments(employeeId);
 
-            // Visual feedback that the action worked
+            // Visual feedback that the action workedo
             if (typeof showPiToast === "function") {
                 showPiToast('Document deleted successfully', 'success');
             }
@@ -2536,6 +2563,36 @@
             alert('Failed to delete document: ' + err.message);
         });
         }
+
+       function uploadCsv() {
+    const file = document.getElementById('csvFileInput').files[0];
+    const btn = document.getElementById('csvUploadBtn');
+    if (!file) {
+        showPiToast('Please select a CSV file first', 'error');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const originalHTML = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="pi-spinner"></span> Uploading...';
+
+    fetch('/employees/upload-csv', { method: 'POST', body: formData })
+        .then(async r => {
+            const text = await r.text();
+            if (!r.ok) throw new Error(text);
+            document.getElementById('csvFileInput').value = '';
+            showPiToast('Employees uploaded successfully ✓', 'success');
+            setTimeout(() => window.location.reload(), 1500);
+        })
+        .catch(err => showPiToast('Upload failed: ' + err.message, 'error'))
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerHTML = originalHTML;
+        });
+}
 
         // ── PATCH editEmployee to fetch documents when switching to Documents tab ──
         (function() {
