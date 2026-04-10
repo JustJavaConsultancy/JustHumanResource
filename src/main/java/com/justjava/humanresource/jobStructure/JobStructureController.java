@@ -11,6 +11,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 
@@ -47,6 +48,14 @@ public class JobStructureController {
     public String addJobGroup(CreateJobGradeWithStepsCommand command) {
         System.out.println("Received command to add job group: " + command.getGradeName());
         setupService.createJobGradeWithSteps(command);
+        return "redirect:/job-structure";
+    }
+
+    @PostMapping("/updateJobGroup")
+    public String updateJobGroup(
+            @RequestParam Long id,
+            CreateJobGradeWithStepsCommand command) {
+        setupService.updateJobGradeWithSteps(id, command);
         return "redirect:/job-structure";
     }
 }

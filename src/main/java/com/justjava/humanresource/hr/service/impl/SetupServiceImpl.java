@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.RoundingMode;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -229,6 +230,92 @@ public class SetupServiceImpl implements SetupService {
                 .parentId(parent != null ? parent.getId() : null)
                 .build();
     }
+
+
+
+    @Override
+    public JobGradeResponseDTO updateJobGradeWithSteps(Long gradeId, CreateJobGradeWithStepsCommand command) {
+
+        if (command.getSteps() == null || command.getSteps().isEmpty()) {
+            throw new IllegalArgumentException("JobGrade must contain at least one JobStep");
+        }
+
+        JobGrade jobGrade = jobGradeRepository.findById(gradeId)
+                .orElseThrow(() -> new ResourceNotFoundException("JobGrade", gradeId));
+
+        Department department = departmentRepository.findById(command.getDepartmentId())
+                .orElseThrow(() -> new ResourceNotFoundException("Department", command.getDepartmentId()));
+
+        // Update grade-level fields
+        jobGrade.setName(command.getGradeName());
+        jobGrade.setDepartment(department);
+        jobGradeRepository.save(jobGrade);
+
+        // Load existing steps as a mutable list
+        List<JobStep> existingSteps = new ArrayList<>(jobStepRepository.findByJobGrade(jobGrade));
+        List<CreateJobGradeWithStepsCommand.JobStepCommand> incomingSteps = command.getSteps();
+
+        List<JobStep> resultSteps = new ArrayList<>();
+
+        for (int i = 0; i < incomingSteps.size(); i++) {
+            CreateJobGradeWithStepsCommand.JobStepCommand stepCmd = incomingSteps.get(i);
+            BigDecimal divisor = stepCmd.isAnnual() ? BigDecimal.valueOf(12) : BigDecimal.ONE;
+
+            BigDecimal basic = stepCmd.getBasicSalary() != null
+                    ? stepCmd.getBasicSalary().divide(divisor, 2, RoundingMode.HALF_UP) : null;
+            BigDecimal gross = stepCmd.getGrossSalary() != null
+                    ? stepCmd.getGrossSalary().divide(divisor, 2, RoundingMode.HALF_UP) : null;
+
+            if (i < existingSteps.size()) {
+                // Update existing step in place (preserves FK references)
+                JobStep existing = existingSteps.get(i);
+                existing.setName(stepCmd.getStepName());
+                existing.setBasicSalary(basic);
+                existing.setGrossSalary(gross);
+                existing.setDepartment(department);
+                resultSteps.add(jobStepRepository.save(existing));
+            } else {
+                // Add brand new step
+                JobStep newStep = new JobStep();
+                newStep.setName(stepCmd.getStepName());
+                newStep.setBasicSalary(basic);
+                newStep.setGrossSalary(gross);
+                newStep.setDepartment(department);
+                newStep.setJobGrade(jobGrade);
+                resultSteps.add(jobStepRepository.save(newStep));
+            }
+        }
+
+        // If existing had MORE steps than incoming, only delete the unreferenced extras
+        if (existingSteps.size() > incomingSteps.size()) {
+            List<JobStep> toRemove = existingSteps.subList(incomingSteps.size(), existingSteps.size());
+            for (JobStep surplus : toRemove) {
+                try {
+                    jobStepRepository.delete(surplus);
+                    jobStepRepository.flush();
+                } catch (Exception e) {
+                    // Step is still referenced by employee history — leave it, just detach from grade
+                    surplus.setJobGrade(null);
+                    jobStepRepository.save(surplus);
+                }
+            }
+        }
+
+        return JobGradeResponseDTO.builder()
+                .id(jobGrade.getId())
+                .name(jobGrade.getName())
+                .steps(resultSteps.stream()
+                        .map(step -> JobGradeResponseDTO.JobStepSummaryDTO.builder()
+                                .id(step.getId())
+                                .name(step.getName())
+                                .basicSalary(step.getBasicSalary())
+                                .grossSalary(step.getGrossSalary())
+                                .build())
+                        .toList())
+                .build();
+    }
+
+
 }
 
 

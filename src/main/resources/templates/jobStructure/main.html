@@ -111,7 +111,7 @@
                    background-color:#d1fae5; color:#065f46; }
     .dark .badge-gross { background-color:rgba(5,150,105,0.2); color:#6ee7b7; }
 
-    /* ── Step row inside add-modal ──────────────── */
+    /* ── Step row inside modals ──────────────────── */
     .modal-step-row { background:#f9fafb; border:1px solid #e5e7eb; border-radius:10px;
                       padding:12px; margin-bottom:10px; }
     .dark .modal-step-row { background:#111827; border-color:#374151; }
@@ -204,20 +204,15 @@
           </div>
         </div>
         <div class="p-4 md:p-6">
-          <!--
-            data-steps JSON now includes salaryType per step.
-            Each step: { id, name, salary, salaryType }
-            where salaryType is "BASIC" or "GROSS".
-          -->
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="gradesList">
             <div th:each="grade, iterStat : ${grades}"
                  th:id="'grade-card-' + ${grade.id}"
                  class="grade-card border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:border-primary-500 transition-colors cursor-pointer"
                  th:onclick="'selectGrade(' + ${grade.id} + ')'"
                  th:attr="data-grade-id=${grade.id},
-                          data-grade-name=${grade.name},
-                          data-grade-dept=${grade.departmentName},
-                          data-grade-desc=${grade.name + ' positions'},
+                          data-grade-name=${grade.name ?: ''},
+                          data-grade-dept=${grade.departmentName ?: ''},
+                          data-grade-desc=${grade.name != null ? grade.name + ' positions' : ''},
                           data-steps=${grade.steps != null ?
                             '[' + #strings.listJoin(
                               grade.steps.!['{&quot;id&quot;:' + id
@@ -242,21 +237,19 @@
                           class="p-1 text-gray-400 hover:text-primary-600 transition-colors">
                     <span class="material-icons-round text-sm">edit</span>
                   </button>
-                  <button th:onclick="'deleteGrade(' + ${grade.id} + ')'"
-                          class="p-1 text-gray-400 hover:text-red-600 transition-colors">
-                    <span class="material-icons-round text-sm">delete</span>
-                  </button>
+<!--                  <button th:onclick="'deleteGrade(' + ${grade.id} + ')'"-->
+<!--                          class="p-1 text-gray-400 hover:text-red-600 transition-colors">-->
+<!--                    <span class="material-icons-round text-sm">delete</span>-->
+<!--                  </button>-->
                 </div>
               </div>
 
               <p th:text="${grade.name + ' positions'}"
                  class="text-xs text-gray-600 dark:text-gray-400 mb-3">Entry level positions</p>
 
-              <!-- Step count + salary-type breakdown badge -->
               <div class="flex items-center justify-between text-xs">
                 <span th:text="${(grade.steps != null ? grade.steps.size() : 0) + ' steps'}"
                       class="font-medium text-gray-700 dark:text-gray-300">0 steps</span>
-                <!-- Salary type indicator rendered by JS after card clicks; static fallback -->
                 <span class="grade-salary-types text-gray-400 italic"></span>
               </div>
             </div>
@@ -280,7 +273,7 @@
       </div>
     </div>
 
-  </div><!-- /grid -->
+  </div>
 
 
   <!-- ════════════════════════════════════════════════════
@@ -330,7 +323,6 @@
                   Steps <span class="text-red-500">*</span>
                   <span class="font-normal text-gray-400 ml-1">(at least one)</span>
                 </label>
-                <!-- Legend -->
                 <div class="flex items-center gap-3 text-xs text-gray-500">
                   <span class="flex items-center gap-1">
                     <span class="w-2 h-2 rounded-full bg-blue-500 inline-block"></span>Basic
@@ -369,7 +361,7 @@
 
 
   <!-- ════════════════════════════════════════════════════
-       MODAL — EDIT GRADE
+       MODAL — EDIT GRADE + STEPS
        ════════════════════════════════════════════════════ -->
   <div id="editGradeModal" class="modal">
     <div class="modal-content shadow-2xl">
@@ -377,7 +369,7 @@
       <div class="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
         <div>
           <h3 class="text-xl font-bold text-gray-900 dark:text-white">Edit Job Grade</h3>
-          <p class="text-sm text-gray-500 mt-0.5">Update grade name and department</p>
+          <p class="text-sm text-gray-500 mt-0.5">Update grade name, department, and steps</p>
         </div>
         <button onclick="closeModal('editGradeModal')"
                 class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
@@ -386,17 +378,21 @@
       </div>
 
       <div class="p-6">
-        <form id="editGradeForm">
+        <form id="editGradeForm" th:action="@{/updateJobGroup}" method="post">
           <input type="hidden" name="id" id="editGradeId">
-          <div class="space-y-4">
+          <div class="space-y-5">
+
+            <!-- Grade Name -->
             <div>
-              <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Grade Name</label>
-              <input type="text" required id="editGradeName" name="name"
+              <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Grade Name <span class="text-red-500">*</span></label>
+              <input type="text" required id="editGradeName" name="gradeName"
                      class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-800 dark:text-white transition">
             </div>
+
+            <!-- Department -->
             <div>
-              <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Department</label>
-              <select id="editGradeDept" name="department"
+              <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Department <span class="text-red-500">*</span></label>
+              <select id="editGradeDept" name="departmentId"
                       class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-800 dark:text-white transition">
                 <option value="">Select department</option>
                 <option th:each="department : ${departments}"
@@ -404,12 +400,35 @@
                         th:text="${department.name}">Engineering</option>
               </select>
             </div>
-            <div>
-              <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Description</label>
-              <textarea id="editGradeDescription" rows="2" name="description"
-                        class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-800 dark:text-white transition resize-none"></textarea>
+
+            <!-- Steps -->
+            <div class="pt-1">
+              <div class="flex items-center justify-between mb-3">
+                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  Steps <span class="text-red-500">*</span>
+                  <span class="font-normal text-gray-400 ml-1">(at least one)</span>
+                </label>
+                <div class="flex items-center gap-3 text-xs text-gray-500">
+                  <span class="flex items-center gap-1">
+                    <span class="w-2 h-2 rounded-full bg-blue-500 inline-block"></span>Basic
+                  </span>
+                  <span class="flex items-center gap-1">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>Gross
+                  </span>
+                </div>
+              </div>
+
+              <div id="editStepsContainer" class="space-y-2"></div>
+
+              <button type="button" onclick="addEditStepRow(null)"
+                      class="mt-3 flex items-center justify-center space-x-2 px-3 py-2.5 text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 border border-dashed border-primary-300 dark:border-primary-700 rounded-lg w-full hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors">
+                <span class="material-icons-round text-sm">add_circle</span>
+                <span>Add another step</span>
+              </button>
             </div>
+
           </div>
+
           <div class="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
             <button type="button" onclick="closeModal('editGradeModal')"
                     class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors">
@@ -417,7 +436,7 @@
             </button>
             <button type="submit"
                     class="px-5 py-2 bg-primary-600 text-white rounded-lg text-sm font-semibold hover:bg-primary-700 transition-colors">
-              Update Grade
+              Update Grade &amp; Steps
             </button>
           </div>
         </form>
@@ -432,23 +451,19 @@
   <script>
     let selectedGradeId = null;
 
-    // ── Step rows (add modal) ─────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────
+    // ADD MODAL — step rows
+    // ─────────────────────────────────────────────────────────────────────────
 
-    /**
-     * Re-indexes all step inputs after a row is removed,
-     * so the form array stays contiguous.
-     */
     function refreshStepIndices() {
       document.querySelectorAll('#stepsContainer .modal-step-row').forEach((row, i) => {
         const nameInput   = row.querySelector('input[type="text"]');
         const salaryInput = row.querySelector('input[type="number"]');
         const radios      = row.querySelectorAll('input[type="radio"]');
-       const annual = row.querySelector('input[type="checkbox"]');
-       if (annual) annual.name = `steps[${i}].annual`;
+        const annual      = row.querySelector('input[type="checkbox"]');
+        if (annual)     annual.name     = `steps[${i}].annual`;
+        if (nameInput)  nameInput.name  = `steps[${i}].stepName`;
 
-        if (nameInput) nameInput.name = `steps[${i}].stepName`;
-
-        // Derive salary field name from whichever radio is currently checked
         const checkedRadio = row.querySelector('input[type="radio"]:checked');
         const salaryType   = checkedRadio ? checkedRadio.value : 'BASIC';
         if (salaryInput) {
@@ -457,120 +472,211 @@
             : `steps[${i}].basicSalary`;
         }
 
-        // Re-assign radio ids and group name so they stay mutually exclusive per row
         radios.forEach(r => {
           r.name = `salaryTypeGroup_${i}`;
-          r.id = `step_${i}_${r.value}`;
+          r.id   = `step_${i}_${r.value}`;
           const lbl = row.querySelector(`label[data-val="${r.value}"]`);
           if (lbl) lbl.setAttribute('for', r.id);
         });
       });
     }
 
-    /**
-     * Called whenever a salary-type radio changes.
-     * Renames the salary input in the same row to basicSalary or grossSalary.
-     */
     function updateSalaryFieldName(radio) {
       const row         = radio.closest('.modal-step-row');
       const salaryInput = row.querySelector('input[type="number"]');
       if (!salaryInput) return;
-
-      // Determine current step index from the existing name (e.g. "steps[2].basicSalary")
       const match = salaryInput.name.match(/steps\[(\d+)\]/);
       const idx   = match ? match[1] : '0';
-
       salaryInput.name = radio.value === 'GROSS'
         ? `steps[${idx}].grossSalary`
         : `steps[${idx}].basicSalary`;
     }
 
-    /**
-     * Appends a new step row inside the Add modal.
-     * Each row has: step name | salary amount | Basic / Gross toggle
-     */
     function addStepRow() {
       const container = document.getElementById('stepsContainer');
-      const idx = container.children.length;
-      const basicId = `step_${idx}_BASIC`;
-      const grossId = `step_${idx}_GROSS`;
+      const idx       = container.children.length;
+      const basicId   = `step_${idx}_BASIC`;
+      const grossId   = `step_${idx}_GROSS`;
+      const annualId  = `annual_${idx}`;
 
       const row = document.createElement('div');
       row.className = 'modal-step-row';
       row.innerHTML = `
-  <div class="flex flex-col gap-2">
-
-    <!-- Row 1: inputs -->
-    <div class="flex items-center gap-3 flex-wrap sm:flex-nowrap">
-
-      <!-- Step name -->
-      <input type="text"
-             name="steps[${idx}].stepName"
-             placeholder="Step name (e.g. Step 1)"
-             class="flex-1 min-w-0 px-3 py-2 border border-gray-300 dark:border-gray-600
-                    rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500
-                    dark:bg-gray-900 dark:text-white transition"
-             required>
-
-      <!-- Salary amount -->
-      <div class="relative flex-1 min-w-0">
-        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium pointer-events-none">₦</span>
-        <input type="number"
-               name="steps[${idx}].basicSalary"
-               placeholder="0.00"
-               min="0" step="0.01"
-               class="w-full pl-8 pr-3 py-2 border border-gray-300 dark:border-gray-600
-                      rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500
-                      dark:bg-gray-900 dark:text-white transition"
-               required>
-      </div>
-
-      <!-- Basic / Gross toggle -->
-      <div class="salary-type-toggle flex-shrink-0">
-        <input type="radio" id="${basicId}" name="salaryTypeGroup_${idx}" value="BASIC" checked onchange="updateSalaryFieldName(this)">
-        <label for="${basicId}" data-val="BASIC">Basic</label>
-        <input type="radio" id="${grossId}" name="salaryTypeGroup_${idx}" value="GROSS" onchange="updateSalaryFieldName(this)">
-        <label for="${grossId}" data-val="GROSS">Gross</label>
-      </div>
-
-      <!-- Remove -->
-      <button type="button" onclick="removeStepRow(this)"
-              class="flex-shrink-0 p-1.5 text-gray-400 hover:text-red-500 rounded-lg
-                     hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
-        <span class="material-icons-round text-sm">delete</span>
-      </button>
-    </div>
-
-    <!-- Row 2: Annally checkbox -->
-  <div class="flex items-center gap-2 bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 rounded-lg px-3 py-2">
-  <input type="checkbox" id="annual_${idx}" name="steps[${idx}].annual"
-         class="rounded border-blue-300 text-blue-500 focus:ring-blue-400 cursor-pointer">
-  <label for="annual_${idx}" class="text-xs text-blue-700 dark:text-blue-400 cursor-pointer">
-    Tick if Salary Figure is <strong>Annual</strong>
-  </label>
-</div>
-
-  </div>`;
+        <div class="flex flex-col gap-2">
+          <div class="flex items-center gap-3 flex-wrap sm:flex-nowrap">
+            <input type="text"
+                   name="steps[${idx}].stepName"
+                   placeholder="Step name (e.g. Step 1)"
+                   class="flex-1 min-w-0 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-900 dark:text-white transition"
+                   required>
+            <div class="relative flex-1 min-w-0">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium pointer-events-none">₦</span>
+              <input type="number"
+                     name="steps[${idx}].basicSalary"
+                     placeholder="0.00" min="0" step="0.01"
+                     class="w-full pl-8 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-900 dark:text-white transition"
+                     required>
+            </div>
+            <div class="salary-type-toggle flex-shrink-0">
+              <input type="radio" id="${basicId}" name="salaryTypeGroup_${idx}" value="BASIC" checked onchange="updateSalaryFieldName(this)">
+              <label for="${basicId}" data-val="BASIC">Basic</label>
+              <input type="radio" id="${grossId}" name="salaryTypeGroup_${idx}" value="GROSS" onchange="updateSalaryFieldName(this)">
+              <label for="${grossId}" data-val="GROSS">Gross</label>
+            </div>
+            <button type="button" onclick="removeStepRow(this)"
+                    class="flex-shrink-0 p-1.5 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+              <span class="material-icons-round text-sm">delete</span>
+            </button>
+          </div>
+          <div class="flex items-center gap-2 bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 rounded-lg px-3 py-2">
+            <input type="checkbox" id="${annualId}" name="steps[${idx}].annual"
+                   class="rounded border-blue-300 text-blue-500 focus:ring-blue-400 cursor-pointer">
+            <label for="${annualId}" class="text-xs text-blue-700 dark:text-blue-400 cursor-pointer">
+              Tick if Salary Figure is <strong>Annual</strong>
+            </label>
+          </div>
+        </div>`;
       container.appendChild(row);
     }
 
     function removeStepRow(btn) {
       const container = document.getElementById('stepsContainer');
-      if (container.children.length <= 1) {
-        alert('At least one step is required.');
-        return;
-      }
+      if (container.children.length <= 1) { alert('At least one step is required.'); return; }
       btn.closest('.modal-step-row').remove();
       refreshStepIndices();
     }
 
-    // ── Modals ────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────
+    // EDIT MODAL — step rows
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Adds a step row to the Edit modal.
+     * @param {Object|null} step – existing step data { id, name, basicSalary, grossSalary } or null for blank
+     */
+    function addEditStepRow(step) {
+      const container = document.getElementById('editStepsContainer');
+      const idx       = container.children.length;
+
+      const isGross  = step && step.grossSalary != null && Number(step.grossSalary) > 0;
+      const amount   = isGross ? (step.grossSalary || '') : (step ? (step.basicSalary || '') : '');
+      const stepName = step ? (step.name || '') : '';
+      const stepId   = step ? (step.id || '') : '';
+      const basicId  = `edit_step_${idx}_BASIC`;
+      const grossId  = `edit_step_${idx}_GROSS`;
+      const annualId = `edit_annual_${idx}`;
+
+      const salaryField = isGross
+        ? `steps[${idx}].grossSalary`
+        : `steps[${idx}].basicSalary`;
+
+      const row = document.createElement('div');
+      row.className = 'modal-step-row';
+      row.innerHTML = `
+        <input type="hidden" name="steps[${idx}].id" value="${stepId}">
+        <div class="flex flex-col gap-2">
+          <div class="flex items-center gap-3 flex-wrap sm:flex-nowrap">
+            <input type="text"
+                   name="steps[${idx}].stepName"
+                   value="${stepName}"
+                   placeholder="Step name (e.g. Step 1)"
+                   class="flex-1 min-w-0 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-900 dark:text-white transition"
+                   required>
+            <div class="relative flex-1 min-w-0">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium pointer-events-none">₦</span>
+              <input type="number"
+                     name="${salaryField}"
+                     value="${amount}"
+                     placeholder="0.00" min="0" step="0.01"
+                     class="w-full pl-8 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-900 dark:text-white transition"
+                     required>
+            </div>
+            <div class="salary-type-toggle flex-shrink-0">
+              <input type="radio" id="${basicId}" name="editSalaryTypeGroup_${idx}" value="BASIC"
+                     ${!isGross ? 'checked' : ''} onchange="updateEditSalaryFieldName(this)">
+              <label for="${basicId}" data-val="BASIC">Basic</label>
+              <input type="radio" id="${grossId}" name="editSalaryTypeGroup_${idx}" value="GROSS"
+                     ${isGross ? 'checked' : ''} onchange="updateEditSalaryFieldName(this)">
+              <label for="${grossId}" data-val="GROSS">Gross</label>
+            </div>
+            <button type="button" onclick="removeEditStepRow(this)"
+                    class="flex-shrink-0 p-1.5 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+              <span class="material-icons-round text-sm">delete</span>
+            </button>
+          </div>
+          <div class="flex items-center gap-2 bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 rounded-lg px-3 py-2">
+            <input type="checkbox" id="${annualId}" name="steps[${idx}].annual"
+                   class="rounded border-blue-300 text-blue-500 focus:ring-blue-400 cursor-pointer">
+            <label for="${annualId}" class="text-xs text-blue-700 dark:text-blue-400 cursor-pointer">
+              Tick if Salary Figure is <strong>Annual</strong>
+            </label>
+          </div>
+        </div>`;
+      container.appendChild(row);
+    }
+
+    function removeEditStepRow(btn) {
+      const container = document.getElementById('editStepsContainer');
+      if (container.children.length <= 1) { alert('At least one step is required.'); return; }
+      btn.closest('.modal-step-row').remove();
+      refreshEditStepIndices();
+    }
+
+    function refreshEditStepIndices() {
+      document.querySelectorAll('#editStepsContainer .modal-step-row').forEach((row, i) => {
+        const hiddenId    = row.querySelector('input[type="hidden"]');
+        const nameInput   = row.querySelector('input[type="text"]');
+        const salaryInput = row.querySelector('input[type="number"]');
+        const radios      = row.querySelectorAll('input[type="radio"]');
+        const annual      = row.querySelector('input[type="checkbox"]');
+
+        if (hiddenId)   hiddenId.name   = `steps[${i}].id`;
+        if (nameInput)  nameInput.name  = `steps[${i}].stepName`;
+        if (annual)     annual.name     = `steps[${i}].annual`;
+
+        const checkedRadio = row.querySelector('input[type="radio"]:checked');
+        const salaryType   = checkedRadio ? checkedRadio.value : 'BASIC';
+        if (salaryInput) {
+          salaryInput.name = salaryType === 'GROSS'
+            ? `steps[${i}].grossSalary`
+            : `steps[${i}].basicSalary`;
+        }
+
+        radios.forEach(r => {
+          r.name = `editSalaryTypeGroup_${i}`;
+          r.id   = `edit_step_${i}_${r.value}`;
+          const lbl = row.querySelector(`label[data-val="${r.value}"]`);
+          if (lbl) lbl.setAttribute('for', r.id);
+        });
+
+        if (annual) {
+          annual.id = `edit_annual_${i}`;
+          const annualLbl = row.querySelector(`label[for^="edit_annual_"]`);
+          if (annualLbl) annualLbl.setAttribute('for', `edit_annual_${i}`);
+        }
+      });
+    }
+
+    function updateEditSalaryFieldName(radio) {
+      const row         = radio.closest('.modal-step-row');
+      const salaryInput = row.querySelector('input[type="number"]');
+      if (!salaryInput) return;
+      const match = salaryInput.name.match(/steps\[(\d+)\]/);
+      const idx   = match ? match[1] : '0';
+      salaryInput.name = radio.value === 'GROSS'
+        ? `steps[${idx}].grossSalary`
+        : `steps[${idx}].basicSalary`;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // MODALS
+    // ─────────────────────────────────────────────────────────────────────────
 
     function openModal(id) {
       if (id === 'addGradeModal') {
         document.getElementById('addGradeForm').reset();
         document.getElementById('stepsContainer').innerHTML = '';
-        addStepRow(); // start with one blank row
+        addStepRow();
       }
       document.getElementById(id).classList.add('active');
       document.body.style.overflow = 'hidden';
@@ -581,14 +687,15 @@
       document.body.style.overflow = 'auto';
     }
 
-    // Close on backdrop click
     document.querySelectorAll('.modal').forEach(modal => {
       modal.addEventListener('click', function (e) {
         if (e.target === this) closeModal(this.id);
       });
     });
 
-    // ── Grade selection ───────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────
+    // GRADE SELECTION
+    // ─────────────────────────────────────────────────────────────────────────
 
     function selectGrade(gradeId) {
       document.querySelectorAll('.grade-card').forEach(c =>
@@ -600,9 +707,9 @@
       card.classList.add('ring-2', 'ring-primary-500', 'border-primary-400');
       selectedGradeId = gradeId;
 
-      const gradeName  = card.dataset.gradeName || '—';
-      const department = card.dataset.gradeDept  || '—';
-      const description = card.dataset.gradeDesc || '—';
+      const gradeName   = card.dataset.gradeName || '—';
+      const department  = card.dataset.gradeDept  || '—';
+      const description = card.dataset.gradeDesc  || '—';
 
       let steps = [];
       try {
@@ -615,17 +722,13 @@
       renderGradeDetails({ id: gradeId, name: gradeName, department, description }, steps);
     }
 
-    // ── Render details panel ──────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────
+    // DETAILS PANEL
+    // ─────────────────────────────────────────────────────────────────────────
 
-    /**
-     * @param {Object} grade  – { id, name, department, description }
-     * @param {Array}  steps  – [{ id, name, basicSalary, grossSalary }, ...]
-     *   Type is derived: if grossSalary is non-null/non-zero → GROSS, otherwise → BASIC
-     */
     function renderGradeDetails(grade, steps) {
       const fmt = n => Number(n).toLocaleString('en-NG', { minimumFractionDigits: 2 });
 
-      // Derive type per step: GROSS when grossSalary is present, BASIC otherwise
       const typed = steps.map(s => ({
         ...s,
         _isGross: s.grossSalary != null && Number(s.grossSalary) > 0,
@@ -637,7 +740,6 @@
       const basicSteps = typed.filter(s => !s._isGross);
       const grossSteps = typed.filter(s =>  s._isGross);
 
-      // Helper: compute stats for a subset
       function stats(arr) {
         if (!arr.length) return null;
         const vals = arr.map(s => s._amount);
@@ -650,7 +752,6 @@
       const bs = stats(basicSteps);
       const gs = stats(grossSteps);
 
-      // ── Step list rows ──────────────────────────────────────────────────
       const stepsHtml = typed.length
         ? typed.map((s, i) => {
             const badgeCls = s._isGross ? 'badge-gross' : 'badge-basic';
@@ -669,7 +770,6 @@
           }).join('')
         : '<p class="text-gray-400 dark:text-gray-500 italic text-sm py-4 text-center">No steps defined</p>';
 
-      // ── Salary summary block ────────────────────────────────────────────
       function statBlock(label, color, dotColor, st) {
         if (!st) return '';
         return `
@@ -709,7 +809,6 @@
       const cardTypeEl = document.querySelector(`#grade-card-${grade.id} .grade-salary-types`);
       if (cardTypeEl) cardTypeEl.innerHTML = typeChips.join(' ');
 
-      // ── Render ──────────────────────────────────────────────────────────
       document.getElementById('gradeDetails').innerHTML = `
         <div class="p-4 md:p-5 border-b border-gray-200 dark:border-gray-700">
           <div class="flex justify-between items-start gap-3">
@@ -719,17 +818,13 @@
             </span>
           </div>
           <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">${grade.description}</p>
-
           ${typed.length ? `
           <div class="flex gap-2 mt-3">
             ${basicSteps.length ? `<span class="badge-basic">${basicSteps.length} Basic step${basicSteps.length !== 1 ? 's' : ''}</span>` : ''}
             ${grossSteps.length ? `<span class="badge-gross">${grossSteps.length} Gross step${grossSteps.length !== 1 ? 's' : ''}</span>` : ''}
           </div>` : ''}
         </div>
-
         <div class="p-4 md:p-5 space-y-4">
-
-          <!-- Steps list -->
           <div>
             <div class="flex items-center justify-between mb-2">
               <h4 class="font-semibold text-sm text-gray-800 dark:text-gray-200">
@@ -741,100 +836,69 @@
               ${stepsHtml}
             </div>
           </div>
-
           ${statsHtml}
-
         </div>`;
     }
 
-    // ── Delete grade ──────────────────────────────────────────────────────────
 
-    function deleteGrade(id) {
-      if (!confirm('Delete this grade and all its steps?')) return;
-      const card = document.getElementById('grade-card-' + id);
-      if (card) card.remove();
-      if (selectedGradeId == id) {
-        selectedGradeId = null;
-        document.getElementById('gradeDetails').innerHTML = `
-          <div class="p-4 md:p-6 border-b border-gray-200 dark:border-gray-700">
-            <h3 class="text-lg font-bold">Grade &amp; Steps Details</h3>
-          </div>
-          <div class="p-4 md:p-6">
-            <div class="text-center py-8">
-              <span class="material-icons-round text-gray-300 dark:text-gray-600 text-5xl mb-3">layers</span>
-              <p class="text-gray-500 dark:text-gray-400 text-sm">Select a grade to view its steps</p>
-            </div>
-          </div>`;
-      }
-    }
-
-    // ── Edit grade ────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────
+    // EDIT GRADE — open modal and populate all fields including steps
+    // ─────────────────────────────────────────────────────────────────────────
 
     function editGrade(id) {
       const card = document.getElementById('grade-card-' + id);
       if (!card) return;
 
-      document.getElementById('editGradeId').value          = id;
-      document.getElementById('editGradeName').value        = card.dataset.gradeName || '';
-      document.getElementById('editGradeDescription').value = card.dataset.gradeDesc || '';
+      // Populate basic fields
+      document.getElementById('editGradeId').value   = id;
+      document.getElementById('editGradeName').value = card.dataset.gradeName || '';
 
+      // Match department by name
       const deptName = card.dataset.gradeDept || '';
       const select   = document.getElementById('editGradeDept');
       for (const opt of select.options) {
         if (opt.text.trim() === deptName.trim()) { opt.selected = true; break; }
       }
-      openModal('editGradeModal');
-    }
 
-    // ── Save edit ─────────────────────────────────────────────────────────────
+      // Populate existing steps
+      let steps = [];
+      try { steps = JSON.parse(card.dataset.steps || '[]'); } catch (_) {}
 
-    function updateGrade(e) {
-      e.preventDefault();
-      const form     = e.target;
-      const formData = new FormData(form);
-      const id       = formData.get('id');
-      const card     = document.getElementById('grade-card-' + id);
-      if (!card) { closeModal('editGradeModal'); return; }
+      const container = document.getElementById('editStepsContainer');
+      container.innerHTML = '';
 
-      const newName = formData.get('name');
-      const newDesc = formData.get('description');
-      const select  = document.getElementById('editGradeDept');
-      const newDept = select.options[select.selectedIndex]?.text || card.dataset.gradeDept;
-
-      card.dataset.gradeName = newName;
-      card.dataset.gradeDept = newDept;
-      card.dataset.gradeDesc = newDesc;
-
-      const nameEl = card.querySelector('h4.font-bold');
-      const deptEl = card.querySelector('p.text-xs.text-gray-500');
-      const descEl = card.querySelector('p.text-xs.text-gray-600');
-      if (nameEl) nameEl.innerText = newName;
-      if (deptEl) deptEl.innerText = newDept;
-      if (descEl) descEl.innerText = newDesc || '—';
-
-      closeModal('editGradeModal');
-
-      if (selectedGradeId == id) {
-        let steps = [];
-        try { steps = JSON.parse(card.dataset.steps || '[]'); } catch (_) {}
-        renderGradeDetails({ id, name: newName, department: newDept, description: newDesc }, steps);
+      if (steps.length === 0) {
+        addEditStepRow(null); // blank row if no steps exist yet
+      } else {
+        steps.forEach(s => addEditStepRow(s));
       }
+
+      // Open the modal
+      document.getElementById('editGradeModal').classList.add('active');
+      document.body.style.overflow = 'hidden';
     }
 
-    // ── Misc ──────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────
+    // MISC
+    // ─────────────────────────────────────────────────────────────────────────
 
     function disableSubmitButton(form) {
       const btn = form.querySelector('button[type="submit"]');
       if (btn) { btn.disabled = true; btn.innerText = 'Submitting…'; }
     }
 
-    // ── Init ──────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────
+    // INIT
+    // ─────────────────────────────────────────────────────────────────────────
 
     document.addEventListener('DOMContentLoaded', function () {
       document.getElementById('addGradeForm').addEventListener('submit', function () {
         disableSubmitButton(this);
       });
-      document.getElementById('editGradeForm').addEventListener('submit', updateGrade);
+
+      document.getElementById('editGradeForm').addEventListener('submit', function () {
+        disableSubmitButton(this);
+      });
 
       // Initialise salary-type chips on all pre-rendered cards
       document.querySelectorAll('.grade-card').forEach(card => {
@@ -851,13 +915,17 @@
     });
 
     // Expose to inline onclick handlers
-    window.openModal     = openModal;
-    window.closeModal    = closeModal;
-    window.addStepRow    = addStepRow;
-    window.removeStepRow = removeStepRow;
-    window.selectGrade   = selectGrade;
-    window.editGrade     = editGrade;
-    window.deleteGrade   = deleteGrade;
+    window.openModal                 = openModal;
+    window.closeModal                = closeModal;
+    window.addStepRow                = addStepRow;
+    window.removeStepRow             = removeStepRow;
+    window.updateSalaryFieldName     = updateSalaryFieldName;
+    window.addEditStepRow            = addEditStepRow;
+    window.removeEditStepRow         = removeEditStepRow;
+    window.updateEditSalaryFieldName = updateEditSalaryFieldName;
+    window.selectGrade               = selectGrade;
+    window.editGrade                 = editGrade;
+
   </script>
 </main>
 </body>

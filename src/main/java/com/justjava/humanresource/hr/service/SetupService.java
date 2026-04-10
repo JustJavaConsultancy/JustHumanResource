@@ -18,6 +18,8 @@ public interface SetupService {
 
     JobGradeResponseDTO createJobGradeWithSteps(CreateJobGradeWithStepsCommand command);
 
+    JobGradeResponseDTO updateJobGradeWithSteps(Long gradeId, CreateJobGradeWithStepsCommand command);
+
     List<JobGradeResponseDTO> getAllJobGrades();
 
 /*    LeaveType createLeaveType(
