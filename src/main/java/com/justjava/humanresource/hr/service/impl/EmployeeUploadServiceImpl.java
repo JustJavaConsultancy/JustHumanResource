@@ -21,6 +21,7 @@ import org.springframework.beans.factory.annotation.Value;
 
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
@@ -92,7 +93,7 @@ public class EmployeeUploadServiceImpl implements EmployeeUploadService {
 
                                 JobStep s = new JobStep();
                                 s.setJobGrade(jobGrade);
-                                s.setGrossSalary(gross);
+                                s.setGrossSalary(gross.divide(BigDecimal.valueOf(12), 5, RoundingMode.HALF_UP));
                                 s.setName("STEP-" + gross);
 
                                 return jobStepRepository.save(s);
