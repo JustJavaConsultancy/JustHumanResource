@@ -613,29 +613,38 @@
 
     <!-- Filters -->
     <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6 mb-6">
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div class="flex flex-wrap gap-3">
-                <select id="departmentFilter" class="form-input py-2 w-full md:w-40">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div class="flex flex-wrap gap-3 items-center">
+                <!-- Search first -->
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400 pointer-events-none">
+                        <span class="material-icons-round text-sm">search</span>
+                    </span>
+                    <input type="text" id="employeeSearch" placeholder="Search name or email…"
+                           class="form-input pl-10 w-88"
+                           style="width: 22rem;"
+                           oninput="applyEmployeeFilters()">
+                </div>
+                <!-- Filters -->
+                <select id="departmentFilter" class="form-input py-2 w-48" onchange="applyEmployeeFilters()">
                     <option value="">All Departments</option>
-                    <option>Engineering</option>
-                    <option>Marketing</option>
+                    <option th:each="dept : ${departments}" th:value="${dept.id}" th:text="${dept.name}">Engineering</option>
                 </select>
-                <select id="employmentStatusFilter" class="form-input py-2 w-full md:w-40">
-                    <option value="">All Status</option>
-                    <option>Onboarding</option>
-                    <option>Active</option>
-                    <option>Probation</option>
+                <select id="jobStepFilter" class="form-input py-2 w-56" onchange="applyEmployeeFilters()">
+                    <option value="">All Grades / Steps</option>
+                    <th:block th:each="grade : ${jobGrades}">
+                        <option th:each="step : ${grade.steps}"
+                                th:value="${step.id}"
+                                th:text="${grade.name + ' – ' + step.name}">Grade 1 – Step 1</option>
+                    </th:block>
                 </select>
-                <select id="jobStepFilter" class="form-input py-2 w-full md:w-40">
-                    <option value="">All Steps</option>
-                    <option>Grade 1 – Step 1</option>
-                </select>
-                <select id="payGroupFilter" class="form-input py-2 w-full md:w-40">
+                <select id="payGroupFilter" class="form-input py-2 w-48" onchange="applyEmployeeFilters()">
                     <option value="">All Pay Groups</option>
-                    <option>Executive</option>
+                    <option th:each="pg : ${payGroups}" th:value="${pg.id}" th:text="${pg.name}">Executive</option>
                 </select>
             </div>
-            <div class="flex items-center space-x-3">
+            <div class="flex items-center space-x-3 flex-shrink-0">
+                <span id="filterResultCount" class="text-xs text-gray-500 dark:text-gray-400 hidden"></span>
                 <button onclick="alert('Export disabled in static demo')" class="p-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-500 hover:text-gray-700">
                     <span class="material-icons-round">download</span>
                 </button>
@@ -704,9 +713,9 @@
                             </div>
                         </div>
                     </td>
-                    <td class="px-4 md:px-6 py-4">
-                        <div th:text="${employee.email}" class="text-sm"></div>
-                        <div th:text="${employee.phoneNumber}" class="text-xs text-gray-500"></div>
+                    <td class="px-4 md:px-6 py-4" style="min-width:160px; max-width:220px;">
+                        <div th:text="${employee.email}" class="text-sm break-all leading-snug"></div>
+                        <div th:text="${employee.phoneNumber}" class="text-xs text-gray-500 mt-0.5"></div>
                     </td>
                     <td th:text="${employee.department != null ? employee.department.name : 'No Department'}" class="px-4 md:px-6 py-4"></td>
                     <td th:text="${employee.jobStep != null ? employee.jobStep.jobGrade.name + ' - ' + employee.jobStep.name : 'Not Assigned'}" class="px-4 md:px-6 py-4"></td>
@@ -1177,7 +1186,7 @@
                                         <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
                                             <span class="material-icons-round text-sm">email</span>
                                         </span>
-                                            <input type="email" id="editEmail" name="email" class="form-input pl-10" placeholder="john.doe@company.com" required>
+                                            <input type="email" id="editEmail" name="email" class="form-input pl-10 bg-gray-50 dark:bg-gray-700 text-gray-500 cursor-not-allowed" placeholder="john.doe@company.com" readonly>
                                         </div>
                                     </div>
                                     <div>
@@ -2603,6 +2612,49 @@
                 setTimeout(function() { fetchDocuments(id); }, 100);
             };
         })();
+
+        /* ── EMPLOYEE SEARCH & FILTER ─────────────────────────────────────── */
+        function applyEmployeeFilters() {
+            const searchVal   = (document.getElementById('employeeSearch')?.value  || '').trim().toLowerCase();
+            const deptVal     = (document.getElementById('departmentFilter')?.value || '').toString();
+            const stepVal     = (document.getElementById('jobStepFilter')?.value    || '').toString();
+            const payGrpVal   = (document.getElementById('payGroupFilter')?.value   || '').toString();
+
+            const rows        = document.querySelectorAll('tr.employee-row');
+            let   visible     = 0;
+
+            rows.forEach(function(row) {
+                const firstName  = (row.dataset.firstName  || '').toLowerCase();
+                const lastName   = (row.dataset.lastName   || '').toLowerCase();
+                const email      = (row.dataset.email      || '').toLowerCase();
+                const deptId     = (row.dataset.departmentId || '').toString();
+                const stepId     = (row.dataset.jobStepId  || '').toString();
+                const payGrpId   = (row.dataset.payGroupId || '').toString();
+
+                const fullName   = firstName + ' ' + lastName;
+
+                const matchSearch  = !searchVal  || fullName.includes(searchVal) || email.includes(searchVal);
+                const matchDept    = !deptVal    || deptId    === deptVal;
+                const matchStep    = !stepVal    || stepId    === stepVal;
+                const matchPayGrp  = !payGrpVal  || payGrpId  === payGrpVal;
+
+                const show = matchSearch && matchDept && matchStep && matchPayGrp;
+                row.style.display = show ? '' : 'none';
+                if (show) visible++;
+            });
+
+            // Update result count badge
+            const badge = document.getElementById('filterResultCount');
+            if (badge) {
+                const hasFilter = searchVal || deptVal || stepVal || payGrpVal;
+                if (hasFilter) {
+                    badge.textContent = visible + ' result' + (visible !== 1 ? 's' : '');
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
+                }
+            }
+        }
 
         /*]]>*/
     </script>
