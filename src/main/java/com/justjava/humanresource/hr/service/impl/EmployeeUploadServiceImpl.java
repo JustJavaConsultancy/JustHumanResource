@@ -16,6 +16,8 @@ import com.justjava.humanresource.hr.service.EmployeeService;
 import com.justjava.humanresource.onboarding.entity.EmployeeOnboarding;
 import com.justjava.humanresource.onboarding.enums.OnboardingStatus;
 import com.justjava.humanresource.onboarding.repositories.EmployeeOnboardingRepository;
+import com.justjava.humanresource.aau.keycloak.KeycloakAdminService;
+import org.springframework.beans.factory.annotation.Value;
 
 
 import java.math.BigDecimal;
@@ -38,6 +40,10 @@ public class EmployeeUploadServiceImpl implements EmployeeUploadService {
     private final PayGroupRepository payGroupRepository;
     private final EmployeeService employeeService;
     private final EmployeeOnboardingRepository onboardingRepository;
+    private final KeycloakAdminService keycloakAdminService;
+
+    @Value("${keycloak.realm}")
+    private String realmName;
 
     private static final Long DEFAULT_DEPARTMENT_ID = 1L;
 
@@ -106,8 +112,23 @@ public class EmployeeUploadServiceImpl implements EmployeeUploadService {
             employee.setStatus(RecordStatus.ACTIVE);                         //  added
             employee.setJobStep(step);                                       //  added
             employee.setPayGroup(payGroup);                                  //  added
+            employee.setEmail(dto.getEmail());
 
             employee = employeeRepository.save(employee);
+
+            // Create Keycloak account using email as username
+            String password = employeeService.generateInitialPassword(employee);
+            String keycloakId = keycloakAdminService.createUser(
+                    realmName,
+                    dto.getEmail(),
+                    dto.getEmail(),
+                    password,
+                    dto.getFirstName(),
+                    dto.getSecondName(),
+                    Map.of("employeeId", List.of(String.valueOf(employee.getId())))
+            );
+            employee.setKeycloakUserId(keycloakId);
+
 
             employeeService.changeEmploymentStatus(employee.getId(), EmploymentStatus.ACTIVE, LocalDate.now()); // added
 
