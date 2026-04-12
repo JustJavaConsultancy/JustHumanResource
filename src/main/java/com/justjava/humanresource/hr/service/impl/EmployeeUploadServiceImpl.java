@@ -65,15 +65,15 @@ public class EmployeeUploadServiceImpl implements EmployeeUploadService {
                 .orElseThrow(() -> new IllegalStateException("PayGroup not found"));
 
         // ---------------------------------------------------------
-        // 1. CACHE JOB GRADES BY COMPANY NAME & JOB STEPS BY GROSS
+        // 1. CACHE JOB GRADES BY GRADE NAME & JOB STEPS BY GROSS
         // ---------------------------------------------------------
 
         Map<String, Map<BigDecimal, JobStep>> gradeStepCache = new HashMap<>();
 
         for (EmployeeUploadDTO dto : records) {
 
-            // Fetch or create job grade per company name
-            String gradeName = dto.getCompany();
+            // Fetch or create job grade per grade name
+            String gradeName = dto.getGrade();
             JobGrade jobGrade = jobGradeRepository
                     .findByName(gradeName)
                     .orElseGet(() -> {
@@ -84,7 +84,7 @@ public class EmployeeUploadServiceImpl implements EmployeeUploadService {
                     });
 
             // ---------------------------------------------------------
-            // 2. CACHE JOB STEPS BY GROSS AND JOB GRADE (per grade/company)
+            // 2. CACHE JOB STEPS BY GROSS AND JOB GRADE (per grade)
             // ---------------------------------------------------------
 
             Map<BigDecimal, JobStep> jobStepCache = gradeStepCache.computeIfAbsent(gradeName, k -> new HashMap<>());
