@@ -23,10 +23,14 @@ public class JobStep {
 
 /*    private BigDecimal basicSalary;*/
 
-    private BigDecimal grossSalary; // NEW
-    private BigDecimal basicSalary; // optional / derived
-    private BigDecimal basicPercentage; // e.g. 40% of gross
+    @Column(precision = 38, scale = 5)
+    private BigDecimal grossSalary;
 
+    @Column(precision = 38, scale = 5)
+    private BigDecimal basicSalary;
+
+    @Column(precision = 38, scale = 5)
+    private BigDecimal basicPercentage;
     @ManyToOne
     private Department department;
 

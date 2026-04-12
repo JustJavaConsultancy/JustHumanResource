@@ -13,5 +13,6 @@ public interface JobStepRepository extends JpaRepository<JobStep, Long> {
     void deleteByJobGrade(JobGrade jobGrade);
     List<JobStep> findByJobGrade(JobGrade jobGrade);
     Optional<JobStep> findByGrossSalary(BigDecimal grossSalary);
+    Optional<JobStep> findByGrossSalaryAndJobGrade(BigDecimal grossSalary, JobGrade jobGrade);
 }
 

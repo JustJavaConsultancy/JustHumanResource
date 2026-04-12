@@ -105,12 +105,12 @@ public class SetupServiceImpl implements SetupService {
 
                     step.setBasicSalary(
                             stepCommand.getBasicSalary() != null
-                                    ? stepCommand.getBasicSalary().divide(divisor, 2, RoundingMode.HALF_UP)
+                                    ? stepCommand.getBasicSalary().divide(divisor, 5, RoundingMode.HALF_UP)
                                     : null
                     );
                     step.setGrossSalary(
                             stepCommand.getGrossSalary() != null
-                                    ? stepCommand.getGrossSalary().divide(divisor, 2, RoundingMode.HALF_UP)
+                                    ? stepCommand.getGrossSalary().divide(divisor, 5, RoundingMode.HALF_UP)
                                     : null
                     );
                     step.setDepartment(department);
@@ -262,9 +262,9 @@ public class SetupServiceImpl implements SetupService {
             BigDecimal divisor = stepCmd.isAnnual() ? BigDecimal.valueOf(12) : BigDecimal.ONE;
 
             BigDecimal basic = stepCmd.getBasicSalary() != null
-                    ? stepCmd.getBasicSalary().divide(divisor, 2, RoundingMode.HALF_UP) : null;
+                    ? stepCmd.getBasicSalary().divide(divisor, 5, RoundingMode.HALF_UP) : null;
             BigDecimal gross = stepCmd.getGrossSalary() != null
-                    ? stepCmd.getGrossSalary().divide(divisor, 2, RoundingMode.HALF_UP) : null;
+                    ? stepCmd.getGrossSalary().divide(divisor, 5, RoundingMode.HALF_UP) : null;
 
             if (i < existingSteps.size()) {
                 // Update existing step in place (preserves FK references)

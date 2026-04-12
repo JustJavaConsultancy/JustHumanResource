@@ -35,7 +35,10 @@ public class CsvParserService {
                 EmployeeUploadDTO dto = new EmployeeUploadDTO();
                 dto.setFirstName(parts[0].trim());
                 dto.setSecondName(parts[1].trim());
-                dto.setGross(new BigDecimal(parts[2].trim()));
+                dto.setEmail(parts[2].trim());
+                dto.setGrade(parts[3].trim());
+                dto.setGross(new BigDecimal(parts[4].trim()));
+
 
                 list.add(dto);
             }
