@@ -585,7 +585,7 @@
             </div>
             <div>
                 <p class="text-sm font-semibold text-gray-700 dark:text-gray-200">Bulk Upload Employees</p>
-                <p class="text-xs text-gray-500 dark:text-gray-400">CSV format: firstName, secondName, email, GROSS</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">CSV format: firstName, secondName, email, company, GROSS</p>
             </div>
         </div>
         <div class="flex items-center gap-3 md:ml-auto">
@@ -620,12 +620,22 @@
                     <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400 pointer-events-none">
                         <span class="material-icons-round text-sm">search</span>
                     </span>
-                    <input type="text" id="employeeSearch" placeholder="Search name or email…"
-                           class="form-input pl-10 w-88"
-                           style="width: 22rem;"
-                           oninput="applyEmployeeFilters()">
+                    <input type="text" id="employeeSearch" placeholder="Search name or email"
+                           class="form-input pl-10 pr-8"
+                           style="width: 15rem;"
+                           oninput="applyEmployeeFilters(); document.getElementById('searchClearBtn').style.display = this.value ? 'flex' : 'none';">
+                    <button id="searchClearBtn"
+                            style="display:none;"
+                            onclick="document.getElementById('employeeSearch').value=''; this.style.display='none'; applyEmployeeFilters();"
+                            class="absolute inset-y-0 right-0 pr-2 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                        <span class="material-icons-round text-sm">close</span>
+                    </button>
                 </div>
                 <!-- Filters -->
+                <select id="jobGradeFilter" class="form-input py-2 w-48" onchange="applyEmployeeFilters()">
+                    <option value="">All Companies</option>
+                    <option th:each="grade : ${jobGrades}" th:value="${grade.id}" th:text="${grade.name}">Grade 1</option>
+                </select>
                 <select id="departmentFilter" class="form-input py-2 w-48" onchange="applyEmployeeFilters()">
                     <option value="">All Departments</option>
                     <option th:each="dept : ${departments}" th:value="${dept.id}" th:text="${dept.name}">Engineering</option>
@@ -645,10 +655,7 @@
             </div>
             <div class="flex items-center space-x-3 flex-shrink-0">
                 <span id="filterResultCount" class="text-xs text-gray-500 dark:text-gray-400 hidden"></span>
-                <button onclick="alert('Export disabled in static demo')" class="p-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-500 hover:text-gray-700">
-                    <span class="material-icons-round">download</span>
-                </button>
-                <button onclick="openModal('addEmployeeModal')" class="md:hidden p-2 bg-primary-600 text-white rounded-lg">
+                    <button onclick="openModal('addEmployeeModal')" class="md:hidden p-2 bg-primary-600 text-white rounded-lg">
                     <span class="material-icons-round">person_add</span>
                 </button>
             </div>
@@ -2616,6 +2623,7 @@
         /* ── EMPLOYEE SEARCH & FILTER ─────────────────────────────────────── */
         function applyEmployeeFilters() {
             const searchVal   = (document.getElementById('employeeSearch')?.value  || '').trim().toLowerCase();
+            const jobGradeVal = (document.getElementById('jobGradeFilter')?.value  || '').toString();
             const deptVal     = (document.getElementById('departmentFilter')?.value || '').toString();
             const stepVal     = (document.getElementById('jobStepFilter')?.value    || '').toString();
             const payGrpVal   = (document.getElementById('payGroupFilter')?.value   || '').toString();
@@ -2627,18 +2635,20 @@
                 const firstName  = (row.dataset.firstName  || '').toLowerCase();
                 const lastName   = (row.dataset.lastName   || '').toLowerCase();
                 const email      = (row.dataset.email      || '').toLowerCase();
+                const jobGradeId = (row.dataset.jobGradeId || '').toString();
                 const deptId     = (row.dataset.departmentId || '').toString();
                 const stepId     = (row.dataset.jobStepId  || '').toString();
                 const payGrpId   = (row.dataset.payGroupId || '').toString();
 
                 const fullName   = firstName + ' ' + lastName;
 
-                const matchSearch  = !searchVal  || fullName.includes(searchVal) || email.includes(searchVal);
-                const matchDept    = !deptVal    || deptId    === deptVal;
-                const matchStep    = !stepVal    || stepId    === stepVal;
-                const matchPayGrp  = !payGrpVal  || payGrpId  === payGrpVal;
+                const matchSearch   = !searchVal   || fullName.includes(searchVal) || email.includes(searchVal);
+                const matchGrade    = !jobGradeVal  || jobGradeId  === jobGradeVal;
+                const matchDept     = !deptVal      || deptId      === deptVal;
+                const matchStep     = !stepVal      || stepId      === stepVal;
+                const matchPayGrp   = !payGrpVal    || payGrpId    === payGrpVal;
 
-                const show = matchSearch && matchDept && matchStep && matchPayGrp;
+                const show = matchSearch && matchGrade && matchDept && matchStep && matchPayGrp;
                 row.style.display = show ? '' : 'none';
                 if (show) visible++;
             });
@@ -2646,7 +2656,7 @@
             // Update result count badge
             const badge = document.getElementById('filterResultCount');
             if (badge) {
-                const hasFilter = searchVal || deptVal || stepVal || payGrpVal;
+                const hasFilter = searchVal || jobGradeVal || deptVal || stepVal || payGrpVal;
                 if (hasFilter) {
                     badge.textContent = visible + ' result' + (visible !== 1 ? 's' : '');
                     badge.classList.remove('hidden');

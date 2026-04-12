@@ -65,41 +65,42 @@ public class EmployeeUploadServiceImpl implements EmployeeUploadService {
                 .orElseThrow(() -> new IllegalStateException("PayGroup not found"));
 
         // ---------------------------------------------------------
-        // 1. CREATE OR FETCH JOB GRADE
+        // 1. CACHE JOB GRADES BY COMPANY NAME & JOB STEPS BY GROSS
         // ---------------------------------------------------------
 
-        JobGrade jobGrade = jobGradeRepository
-                .findByName("AUTO-GRADE")
-                .orElseGet(() -> {
-                    JobGrade g = new JobGrade();
-                    g.setName("AUTO-GRADE");
-                    g.setDepartment(department); //Newly Added
-                    return jobGradeRepository.save(g);
-                });
-
-        // ---------------------------------------------------------
-        // 2. CACHE JOB STEPS BY GROSS
-        // ---------------------------------------------------------
-
-        Map<BigDecimal, JobStep> jobStepCache = new HashMap<>();
+        Map<String, Map<BigDecimal, JobStep>> gradeStepCache = new HashMap<>();
 
         for (EmployeeUploadDTO dto : records) {
+
+            // Fetch or create job grade per company name
+            String gradeName = dto.getCompany();
+            JobGrade jobGrade = jobGradeRepository
+                    .findByName(gradeName)
+                    .orElseGet(() -> {
+                        JobGrade g = new JobGrade();
+                        g.setName(gradeName);
+                        g.setDepartment(department);
+                        return jobGradeRepository.save(g);
+                    });
+
+            // ---------------------------------------------------------
+            // 2. CACHE JOB STEPS BY GROSS AND JOB GRADE (per grade/company)
+            // ---------------------------------------------------------
+
+            Map<BigDecimal, JobStep> jobStepCache = gradeStepCache.computeIfAbsent(gradeName, k -> new HashMap<>());
 
             JobStep step = jobStepCache.computeIfAbsent(
                     dto.getGross(),
                     gross -> jobStepRepository
-                            .findByGrossSalary(gross)
+                            .findByGrossSalaryAndJobGrade(gross, jobGrade)
                             .orElseGet(() -> {
-
                                 JobStep s = new JobStep();
                                 s.setJobGrade(jobGrade);
                                 s.setGrossSalary(gross.divide(BigDecimal.valueOf(12), 5, RoundingMode.HALF_UP));
                                 s.setName("STEP-" + gross);
-
                                 return jobStepRepository.save(s);
                             })
             );
-
             // -----------------------------------------------------
             // 3. CREATE EMPLOYEE
             // -----------------------------------------------------
@@ -108,11 +109,11 @@ public class EmployeeUploadServiceImpl implements EmployeeUploadService {
             employee.setFirstName(dto.getFirstName());
             employee.setLastName(dto.getSecondName());
             employee.setDepartment(department);
-            employee.setEmployeeNumber("EMP-" + System.currentTimeMillis()); //  added
-            employee.setEmploymentStatus(EmploymentStatus.ONBOARDING);       //  added
-            employee.setStatus(RecordStatus.ACTIVE);                         //  added
-            employee.setJobStep(step);                                       //  added
-            employee.setPayGroup(payGroup);                                  //  added
+            employee.setEmployeeNumber("EMP-" + System.currentTimeMillis());
+            employee.setEmploymentStatus(EmploymentStatus.ONBOARDING);
+            employee.setStatus(RecordStatus.ACTIVE);
+            employee.setJobStep(step);
+            employee.setPayGroup(payGroup);
             employee.setEmail(dto.getEmail());
 
             employee = employeeRepository.save(employee);

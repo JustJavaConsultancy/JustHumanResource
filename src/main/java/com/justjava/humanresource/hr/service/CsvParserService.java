@@ -36,7 +36,9 @@ public class CsvParserService {
                 dto.setFirstName(parts[0].trim());
                 dto.setSecondName(parts[1].trim());
                 dto.setEmail(parts[2].trim());
-                dto.setGross(new BigDecimal(parts[3].trim()));
+                dto.setCompany(parts[3].trim());
+                dto.setGross(new BigDecimal(parts[4].trim()));
+
 
                 list.add(dto);
             }

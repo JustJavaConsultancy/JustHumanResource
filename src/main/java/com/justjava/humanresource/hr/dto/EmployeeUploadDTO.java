@@ -10,5 +10,6 @@ public class EmployeeUploadDTO {
     private String firstName;
     private String secondName;
     private String email;
+    private String company;
     private BigDecimal gross;
 }
