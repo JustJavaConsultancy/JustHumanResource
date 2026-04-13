@@ -13,6 +13,9 @@ import com.justjava.humanresource.payroll.service.PayGroupService;
 import com.justjava.humanresource.payroll.service.PaySlipService;
 import com.justjava.humanresource.payroll.service.PayrollPeriodService;
 import com.justjava.humanresource.payroll.service.PayrollSetupService;
+import com.justjava.humanresource.payroll.dto.EmployeeGroupedReportDTO;
+import com.justjava.humanresource.payroll.enums.EmployeeGroupBy;
+import com.justjava.humanresource.payroll.report.services.ReportingService;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -47,6 +50,9 @@ public class PayrollController {
 
     @Autowired
     private EmployeeOnboardingService employeeOnboardingService;
+
+    @Autowired
+    private ReportingService reportingService;
 
 
 
@@ -309,4 +315,28 @@ public class PayrollController {
         }
         return "redirect:/payroll/employee-payroll";
     }
+
+
+    @GetMapping("/payroll/report")
+    public String getReport(
+            @RequestParam(defaultValue = "GRADE") String groupBy,
+            Model model) {
+
+        YearMonth currentMonth = YearMonth.now();
+
+        List<EmployeeGroupedReportDTO> report = reportingService.getGroupedReport(
+                1L,
+                currentMonth.atDay(1),
+                currentMonth.atEndOfMonth(),
+                EmployeeGroupBy.valueOf(groupBy)
+        );
+
+        model.addAttribute("report", report);
+        model.addAttribute("groupBy", groupBy);
+        model.addAttribute("title", "Payroll Management");
+        model.addAttribute("subTitle", "Manage employee payroll, salary details, and payment history");
+        return "payroll/fragments/employee-payroll";
+    }
+
+
 }
