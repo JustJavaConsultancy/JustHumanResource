@@ -678,17 +678,17 @@
           </div>
           <div class="flex items-center gap-6 flex-wrap">
             <div class="header-stat">
-              <div th:text="${'₦' + #numbers.formatDecimal(group.totalGross, 1, 'COMMA', 2, 'POINT')}"
+              <div th:text="${'₦' + #numbers.formatDecimal(group.totalGross != null ? group.totalGross : 0, 1, 'COMMA', 2, 'POINT')}"
                    class="stat-val text-slate-800">₦0.00</div>
               <div class="stat-lbl">Total Gross</div>
             </div>
             <div class="header-stat">
-              <div th:text="${'₦' + #numbers.formatDecimal(group.totalDeductions, 1, 'COMMA', 2, 'POINT')}"
+              <div th:text="${'₦' + #numbers.formatDecimal(group.totalDeductions != null ? group.totalDeductions : 0, 1, 'COMMA', 2, 'POINT')}"
                    class="stat-val text-red-600">₦0.00</div>
               <div class="stat-lbl">Deductions</div>
             </div>
             <div class="header-stat">
-              <div th:text="${'₦' + #numbers.formatDecimal(group.totalNet, 1, 'COMMA', 2, 'POINT')}"
+              <div th:text="${'₦' + #numbers.formatDecimal(group.totalNet != null ? group.totalNet : 0, 1, 'COMMA', 2, 'POINT')}"
                    class="stat-val text-green-700">₦0.00</div>
               <div class="stat-lbl">Net Pay</div>
             </div>
@@ -721,24 +721,27 @@
               <td>
                 <div class="flex items-center gap-3">
                   <div class="emp-avatar"
-                       th:with="fullName=${emp.firstName + ' ' + emp.secondName}"
-                       th:text="${#strings.toUpperCase(#strings.substring(fullName, 0, 2))}">AA</div>
+                       th:with="fullName=${(emp.firstName != null ? emp.firstName : '') + ' ' + (emp.secondName != null ? emp.secondName : '')}"
+                       th:text="${#strings.length(fullName) >= 2 ? #strings.toUpperCase(#strings.substring(fullName, 0, 2)) : 'NA'}">AA</div>
                   <div>
-                    <div th:text="${emp.firstName + ' ' + emp.secondName}"
+                    <div th:text="${(emp.firstName != null ? emp.firstName : '') + ' ' + (emp.secondName != null ? emp.secondName : '')}"
                          class="font-semibold text-slate-800 text-sm">—</div>
                     <div th:text="'ID · ' + ${emp.employeeId}" class="text-xs text-slate-400">—</div>
                   </div>
                 </div>
               </td>
-              <td th:text="${'₦' + #numbers.formatDecimal(emp.gross, 1, 'COMMA', 2, 'POINT')}"
+              <td th:text="${'₦' + #numbers.formatDecimal(emp.gross   != null ? emp.gross   : 0, 1, 'COMMA', 2, 'POINT')}"
                   class="mono amount-positive">—</td>
-              <td th:text="${'₦' + #numbers.formatDecimal(emp.paye, 1, 'COMMA', 2, 'POINT')}"
+              <td th:text="${'₦' + #numbers.formatDecimal(emp.paye    != null ? emp.paye    : 0, 1, 'COMMA', 2, 'POINT')}"
                   class="mono amount-deduct">—</td>
-              <td th:text="${'₦' + #numbers.formatDecimal(emp.pension, 1, 'COMMA', 2, 'POINT')}"
+              <td th:text="${'₦' + #numbers.formatDecimal(emp.pension != null ? emp.pension : 0, 1, 'COMMA', 2, 'POINT')}"
                   class="mono amount-deduct">—</td>
-              <td th:text="${'₦' + #numbers.formatDecimal(emp.paye.add(emp.pension), 1, 'COMMA', 2, 'POINT')}"
+              <td th:text="${'₦' + #numbers.formatDecimal(
+                    (emp.paye != null ? emp.paye : T(java.math.BigDecimal).ZERO).add(
+                     emp.pension != null ? emp.pension : T(java.math.BigDecimal).ZERO),
+                    1, 'COMMA', 2, 'POINT')}"
                   class="mono amount-deduct">—</td>
-              <td th:text="${'₦' + #numbers.formatDecimal(emp.net, 1, 'COMMA', 2, 'POINT')}"
+              <td th:text="${'₦' + #numbers.formatDecimal(emp.net     != null ? emp.net     : 0, 1, 'COMMA', 2, 'POINT')}"
                   class="mono amount-positive">—</td>
             </tr>
             </tbody>
