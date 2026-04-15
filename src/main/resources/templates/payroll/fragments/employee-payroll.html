@@ -182,6 +182,123 @@
     .bulk-dl-btn.pdf:hover { background: #fecaca; border-color: #f87171; }
     .bulk-dl-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
+
+    .grand-total-card {
+      background: linear-gradient(135deg, #0f2554 0%, #1e3a8a 60%, #1d4ed8 100%);
+      border-radius: 12px;
+      margin-bottom: 1.75rem;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(30,58,138,0.25), 0 1px 4px rgba(30,58,138,0.15);
+      position: relative;
+    }
+    .grand-total-card::before {
+      content: '';
+      position: absolute;
+      top: -40px; right: -40px;
+      width: 160px; height: 160px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.05);
+      pointer-events: none;
+    }
+    .grand-total-card::after {
+      content: '';
+      position: absolute;
+      bottom: -30px; left: 30px;
+      width: 100px; height: 100px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.04);
+      pointer-events: none;
+    }
+    .grand-total-header {
+      padding: 1.5rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1.25rem;
+      position: relative;
+      z-index: 1;
+    }
+    .grand-total-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .grand-total-icon {
+      width: 46px; height: 46px;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.25rem;
+      color: #ffffff;
+      flex-shrink: 0;
+    }
+    .grand-total-title {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: #ffffff;
+      letter-spacing: -0.01em;
+    }
+    .grand-total-sub {
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.6);
+      margin-top: 2px;
+      font-weight: 500;
+    }
+    .grand-total-stats {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .grand-stat-box {
+      background: rgba(255,255,255,0.10);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 8px;
+      padding: 0.6rem 1.1rem;
+      min-width: 130px;
+    }
+    .grand-stat-lbl {
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: rgba(255,255,255,0.55);
+      margin-bottom: 3px;
+    }
+    .grand-stat-val {
+      font-size: 1.05rem;
+      font-weight: 800;
+      font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
+    }
+    .grand-stat-box.gross .grand-stat-val  { color: #93c5fd; }
+    .grand-stat-box.deduct .grand-stat-val { color: #fca5a5; }
+    .grand-stat-box.net .grand-stat-val    { color: #6ee7b7; }
+    .grand-dl-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .grand-dl-actions .bulk-dl-btn.csv {
+      background: rgba(220,252,231,0.15);
+      border-color: rgba(134,239,172,0.4);
+      color: #bbf7d0;
+    }
+    .grand-dl-actions .bulk-dl-btn.csv:hover {
+      background: rgba(220,252,231,0.25);
+      border-color: rgba(134,239,172,0.6);
+    }
+    .grand-dl-actions .bulk-dl-btn.pdf {
+      background: rgba(254,226,226,0.15);
+      border-color: rgba(252,165,165,0.4);
+      color: #fecaca;
+    }
+    .grand-dl-actions .bulk-dl-btn.pdf:hover {
+      background: rgba(254,226,226,0.25);
+      border-color: rgba(252,165,165,0.6);
+    }
     @media (max-width: 768px) {
       .current-period-header { padding: 1.25rem; }
       .filter-bar { padding: 0.75rem 1rem; }
@@ -506,6 +623,44 @@
 
     <!-- Report groups -->
     <div th:if="${report != null and not #lists.isEmpty(report)}">
+
+      <!-- ── GRAND TOTAL CARD ── -->
+      <div class="grand-total-card" id="grandTotalCard">
+        <div class="grand-total-header">
+          <div class="grand-total-left">
+            <div class="grand-total-icon">
+              <i class="bi bi-calculator-fill"></i>
+            </div>
+            <div>
+              <div class="grand-total-title">Grand Total</div>
+              <div class="grand-total-sub" id="grandTotalSubtitle">All groups combined</div>
+            </div>
+          </div>
+          <div class="grand-total-stats">
+            <div class="grand-stat-box gross">
+              <div class="grand-stat-lbl">Total Gross</div>
+              <div class="grand-stat-val" id="grandGross">₦0.00</div>
+            </div>
+            <div class="grand-stat-box deduct">
+              <div class="grand-stat-lbl">Total Deductions</div>
+              <div class="grand-stat-val" id="grandDeductions">₦0.00</div>
+            </div>
+            <div class="grand-stat-box net">
+              <div class="grand-stat-lbl">Total Net Pay</div>
+              <div class="grand-stat-val" id="grandNet">₦0.00</div>
+            </div>
+            <div class="grand-dl-actions">
+              <button class="bulk-dl-btn csv" onclick="downloadGrandCSV()">
+                <i class="bi bi-filetype-csv"></i> Download All CSV
+              </button>
+              <button class="bulk-dl-btn pdf" onclick="downloadGrandPDF()">
+                <i class="bi bi-file-earmark-pdf"></i> Download All PDF
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div th:each="group : ${report}" class="group-report-card border-2 border-blue-500 rounded-lg mb-6 overflow-hidden"
            th:attr="data-group-name=${group.groupName}, data-group-by=${groupBy}">
 
@@ -678,6 +833,7 @@
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
   <script>
     /*
       Column index map (0-based) — 8 cols both tables:
@@ -946,24 +1102,306 @@
     }
 
     function renderBulkPDF(html, filename) {
-      const container = document.createElement('div');
-      /* Render at exact landscape A4 width so html2canvas captures full width correctly */
-      container.style.cssText = 'position:fixed;left:-9999px;top:0;width:1122px;background:#fff;';
-      container.innerHTML = html;
-      document.body.appendChild(container);
+      /* ── Canvas-size guard ──────────────────────────────────────────────
+         html2canvas has a ~16 384 px height limit per canvas (browser max).
+         For large tables we split the HTML into row-chunks and render each
+         chunk as a separate A4 page, then combine into one PDF file.
+         ─────────────────────────────────────────────────────────────────── */
+      const ROWS_PER_CHUNK = 80;   // rows per page (tune down if still blank)
 
-      html2pdf()
-        .set({
-          margin: [8, 8, 8, 8],   /* mm — tight margins to avoid content pushed off-page */
-          filename,
-          image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: { scale: 2, useCORS: true, scrollX: 0, scrollY: 0 },
-          jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
-        })
-        .from(container.firstElementChild)
-        .save()
-        .then(() => document.body.removeChild(container));
+      /* Parse the built HTML string to extract header and rows */
+      const tmp = document.createElement('div');
+      tmp.innerHTML = html;
+
+      const theadHTML  = tmp.querySelector('thead')?.outerHTML || '';
+      const allRowEls  = Array.from(tmp.querySelectorAll('tbody tr'));
+      const headerHTML = tmp.querySelector('div[style*="border-bottom"]')?.outerHTML || '';
+      const extraHTML  = (() => {
+        /* The summaryExtra div sits between the header block and the table */
+        const nodes = Array.from(tmp.firstElementChild?.childNodes || []);
+        const summaryNodes = [];
+        let afterHeader = false;
+        for (const n of nodes) {
+          if (n.nodeName === 'DIV' && n.style && n.style.borderBottom) { afterHeader = true; continue; }
+          if (afterHeader && n.nodeName === 'TABLE') break;
+          if (afterHeader && n.nodeName === 'DIV') summaryNodes.push(n.outerHTML || '');
+        }
+        return summaryNodes.join('');
+      })();
+      const tableStyle = tmp.querySelector('table')?.getAttribute('style') || 'width:100%;border-collapse:collapse;font-size:0.78rem;';
+
+      /* Split all <tr> into page-sized chunks */
+      const chunks = [];
+      for (let i = 0; i < allRowEls.length; i += ROWS_PER_CHUNK) {
+        chunks.push(allRowEls.slice(i, i + ROWS_PER_CHUNK));
+      }
+      /* If there are no rows at all, fall back to single-page render */
+      if (chunks.length === 0) chunks.push([]);
+
+      const footerHTML = `<div style="margin-top:1.5rem;text-align:center;font-size:0.68rem;color:#cbd5e1;border-top:1px solid #f1f5f9;padding-top:0.75rem;">
+        This is a computer-generated payroll report. No signature required.
+      </div>`;
+
+      function buildChunkHTML(chunkRows, pageNum, totalPages) {
+        const rowsHTML = chunkRows.map(r => r.outerHTML).join('');
+        const pageNote = totalPages > 1
+          ? `<div style="font-size:0.68rem;color:#94a3b8;text-align:right;margin-bottom:4px;">Page ${pageNum} of ${totalPages}</div>`
+          : '';
+        /* Only show the summary/extra block on page 1 */
+        const extra = pageNum === 1 ? extraHTML : '';
+        return `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#fff;padding:1.5rem;width:100%;box-sizing:border-box;">
+          ${pageNum === 1 ? headerHTML : ''}
+          ${extra}
+          ${pageNote}
+          <table style="${tableStyle}">
+            ${theadHTML}
+            <tbody>${rowsHTML}</tbody>
+          </table>
+          ${footerHTML}
+        </div>`;
+      }
+
+      /* Render chunks one by one and combine into a single PDF */
+      const totalPages = chunks.length;
+
+      function renderChunk(index, pdfDoc) {
+        if (index >= chunks.length) {
+          /* All pages done — save */
+          pdfDoc.save(filename);
+          return;
+        }
+
+        const chunkHTML = buildChunkHTML(chunks[index], index + 1, totalPages);
+        const container = document.createElement('div');
+        container.style.cssText = 'position:fixed;left:-9999px;top:0;width:1122px;background:#fff;';
+        container.innerHTML = chunkHTML;
+        document.body.appendChild(container);
+
+        html2pdf()
+          .set({
+            margin: [8, 8, 8, 8],
+            filename,   // only used on single-page; we manage save() ourselves for multi
+            image: { type: 'jpeg', quality: 0.95 },
+            html2canvas: { scale: 1.5, useCORS: true, scrollX: 0, scrollY: 0, logging: false },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+          })
+          .from(container.firstElementChild)
+          .outputPdf('arraybuffer')
+          .then(async (buffer) => {
+            document.body.removeChild(container);
+
+            if (!pdfDoc) {
+              /* First chunk — use its PDF as the base */
+              const { jsPDF } = window.jspdf;
+              pdfDoc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'landscape' });
+            }
+
+            /* Import the rendered chunk page into pdfDoc */
+            const chunkPdf = await PDFLib.PDFDocument.load(buffer);
+            const basePdf  = await PDFLib.PDFDocument.create();
+
+            /* We build final via pdf-lib merge if available, else fall back to simple multi-call */
+            renderChunk(index + 1, pdfDoc);
+          })
+          .catch(err => {
+            document.body.removeChild(container);
+            console.error('PDF chunk render error:', err);
+          });
+      }
+
+      /* ── Simpler, more reliable approach: render all chunks then merge via pdf-lib ── */
+      const buffers = [];
+
+      function renderAllChunks(index) {
+        if (index >= chunks.length) {
+          mergeAndSave(buffers, filename);
+          return;
+        }
+
+        const chunkHTML = buildChunkHTML(chunks[index], index + 1, totalPages);
+        const container = document.createElement('div');
+        container.style.cssText = 'position:fixed;left:-9999px;top:0;width:1122px;background:#fff;';
+        container.innerHTML = chunkHTML;
+        document.body.appendChild(container);
+
+        html2pdf()
+          .set({
+            margin: [8, 8, 8, 8],
+            filename,
+            image: { type: 'jpeg', quality: 0.95 },
+            html2canvas: { scale: 1.5, useCORS: true, scrollX: 0, scrollY: 0, logging: false },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+          })
+          .from(container.firstElementChild)
+          .outputPdf('arraybuffer')
+          .then(buf => {
+            document.body.removeChild(container);
+            buffers.push(buf);
+            renderAllChunks(index + 1);
+          })
+          .catch(err => {
+            document.body.removeChild(container);
+            console.error('Chunk error:', err);
+            renderAllChunks(index + 1); // skip bad chunk and continue
+          });
+      }
+
+      async function mergeAndSave(bufs, fname) {
+        try {
+          const mergedPdf = await PDFLib.PDFDocument.create();
+          for (const buf of bufs) {
+            const srcDoc = await PDFLib.PDFDocument.load(buf);
+            const pages  = await mergedPdf.copyPages(srcDoc, srcDoc.getPageIndices());
+            pages.forEach(p => mergedPdf.addPage(p));
+          }
+          const mergedBytes = await mergedPdf.save();
+          const blob = new Blob([mergedBytes], { type: 'application/pdf' });
+          const url  = URL.createObjectURL(blob);
+          const a    = document.createElement('a');
+          a.href = url; a.download = fname; a.click();
+          URL.revokeObjectURL(url);
+        } catch (e) {
+          console.error('PDF merge error:', e);
+          alert('PDF generation failed. Please try downloading as CSV instead.');
+        }
+      }
+
+      renderAllChunks(0);
     }
+
+
+    /* ── GRAND TOTAL: calculate from all group-report-cards on page load ── */
+    function computeGrandTotal() {
+      const cards = document.querySelectorAll('.group-report-card');
+      if (!cards.length) return;
+
+      let totalGross = 0, totalDeduct = 0, totalNet = 0, totalEmps = 0;
+
+      cards.forEach(card => {
+        const statVals = card.querySelectorAll('.header-stat .stat-val');
+        const parseVal = el => {
+          if (!el) return 0;
+          return parseFloat(el.textContent.replace(/[₦,]/g, '')) || 0;
+        };
+        totalGross  += parseVal(statVals[0]);
+        totalDeduct += parseVal(statVals[1]);
+        totalNet    += parseVal(statVals[2]);
+
+        const empLine = card.querySelector('.text-xs.text-slate-400');
+        if (empLine) totalEmps += parseInt(empLine.textContent) || 0;
+      });
+
+      const fmt = n => '₦' + n.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const el = id => document.getElementById(id);
+
+      if (el('grandGross'))       el('grandGross').textContent       = fmt(totalGross);
+      if (el('grandDeductions'))  el('grandDeductions').textContent  = fmt(totalDeduct);
+      if (el('grandNet'))         el('grandNet').textContent         = fmt(totalNet);
+      if (el('grandTotalSubtitle')) {
+        const groupBy = cards[0]?.dataset.groupBy || 'group';
+        el('grandTotalSubtitle').textContent = cards.length + ' ' + groupBy.toLowerCase() + (cards.length !== 1 ? 's' : '') + ' · ' + totalEmps + ' employee' + (totalEmps !== 1 ? 's' : '') + ' combined';
+      }
+    }
+
+    /* ── GRAND TOTAL: Download All CSV (every employee from every group) ── */
+    function downloadGrandCSV() {
+      const cards = document.querySelectorAll('.group-report-card');
+      const groupBy = cards[0]?.dataset.groupBy || 'Group';
+      let csv = 'Group,Employee,ID,Gross Pay,PAYE,Pension,Total Deductions,Net Pay\n';
+
+      cards.forEach(card => {
+        const groupName = card.dataset.groupName || '—';
+        const tbody = card.querySelector('table tbody');
+        if (!tbody) return;
+        Array.from(tbody.querySelectorAll('tr')).forEach(r => {
+          const name    = r.querySelector('.font-semibold')?.textContent.trim() || '—';
+          const empId   = r.querySelector('.text-slate-400')?.textContent.replace('ID · ','').trim() || '—';
+          const gross   = stripCurrency(cellText(r, 1));
+          const paye    = stripCurrency(cellText(r, 2));
+          const pension = stripCurrency(cellText(r, 3));
+          const deduct  = stripCurrency(cellText(r, 4));
+          const net     = stripCurrency(cellText(r, 5));
+          csv += `"${groupName}","${name}","${empId}",${gross},${paye},${pension},${deduct},${net}\n`;
+        });
+      });
+
+      const date = new Date().toISOString().split('T')[0];
+      triggerCSVDownload(csv, `payroll-grand-total-${groupBy.toLowerCase()}-${date}.csv`);
+    }
+
+    /* ── GRAND TOTAL: Download All PDF (every employee from every group) ── */
+    function downloadGrandPDF() {
+      const cards = document.querySelectorAll('.group-report-card');
+      const groupBy = cards[0]?.dataset.groupBy || 'Group';
+      const date = new Date().toISOString().split('T')[0];
+
+      const grossEl   = document.getElementById('grandGross');
+      const deductEl  = document.getElementById('grandDeductions');
+      const netEl     = document.getElementById('grandNet');
+      const totalGross  = grossEl?.textContent  || '—';
+      const totalDeduct = deductEl?.textContent  || '—';
+      const totalNet    = netEl?.textContent     || '—';
+
+      let tableRows = '';
+      let totalEmps = 0;
+
+      cards.forEach(card => {
+        const groupName = card.dataset.groupName || '—';
+        const tbody = card.querySelector('table tbody');
+        if (!tbody) return;
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        totalEmps += rows.length;
+
+        // Group separator row
+        tableRows += `<tr><td colspan="7" style="background:#f0f4ff;font-weight:700;font-size:0.72rem;color:#1e3a8a;letter-spacing:0.05em;text-transform:uppercase;padding:6px 12px;">${groupBy}: ${groupName}</td></tr>`;
+
+        rows.forEach(r => {
+          const name    = r.querySelector('.font-semibold')?.textContent.trim() || '—';
+          const empId   = r.querySelector('.text-slate-400')?.textContent.replace('ID · ','').trim() || '—';
+          const gross   = cellText(r, 1), paye = cellText(r, 2);
+          const pension = cellText(r, 3), deduct = cellText(r, 4), net = cellText(r, 5);
+          tableRows += `<tr>
+            <td>${name}<br><span style="font-size:0.7rem;color:#94a3b8">ID: ${empId}</span></td>
+            <td style="color:#64748b;font-size:0.75rem">${groupName}</td>
+            <td style="font-weight:600">${gross}</td>
+            <td style="color:#b64343">${paye}</td>
+            <td style="color:#b64343">${pension}</td>
+            <td style="color:#b64343">${deduct}</td>
+            <td style="font-weight:700;color:#1e3a5f">${net}</td>
+          </tr>`;
+        });
+      });
+
+      const summaryExtra = `
+        <div style="display:flex;gap:1rem;margin-bottom:1.25rem;flex-wrap:wrap;">
+          <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:0.6rem 1rem;min-width:130px;">
+            <div style="font-size:0.62rem;color:#3b82f6;text-transform:uppercase;letter-spacing:0.08em;font-weight:700;margin-bottom:3px;">Grand Total Gross</div>
+            <div style="font-weight:700;font-size:0.95rem;color:#1e3a8a">${totalGross}</div>
+          </div>
+          <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:0.6rem 1rem;min-width:130px;">
+            <div style="font-size:0.62rem;color:#ef4444;text-transform:uppercase;letter-spacing:0.08em;font-weight:700;margin-bottom:3px;">Grand Total Deductions</div>
+            <div style="font-weight:700;font-size:0.95rem;color:#b64343">${totalDeduct}</div>
+          </div>
+          <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:0.6rem 1rem;min-width:130px;">
+            <div style="font-size:0.62rem;color:#16a34a;text-transform:uppercase;letter-spacing:0.08em;font-weight:700;margin-bottom:3px;">Grand Total Net Pay</div>
+            <div style="font-weight:700;font-size:0.95rem;color:#166534">${totalNet}</div>
+          </div>
+        </div>`;
+
+      const headers = '<th>Employee</th><th>Group</th><th>Gross Pay</th><th>PAYE</th><th>Pension</th><th>Total Deductions</th><th>Net Pay</th>';
+      const html = buildBulkPDFHTML(
+        `Payroll Grand Total — ${groupBy}`,
+        date,
+        headers,
+        tableRows,
+        totalEmps,
+        summaryExtra
+      );
+
+      renderBulkPDF(html, `payroll-grand-total-${groupBy.toLowerCase()}-${date}.pdf`);
+    }
+
+    document.addEventListener('DOMContentLoaded', computeGrandTotal);
 
     /* --- Wire up group buttons via delegation --- */
     document.addEventListener('click', function(e) {
