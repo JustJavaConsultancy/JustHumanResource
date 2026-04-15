@@ -165,6 +165,23 @@
     .modal-btn.confirm { background: #b85c00; color: white; }
     .modal-btn.confirm:hover { background: #9e4b00; }
 
+    .bulk-dl-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 14px; border-radius: 6px;
+      font-size: 0.8rem; font-weight: 600;
+      cursor: pointer; transition: background 0.15s, border-color 0.15s; white-space: nowrap;
+      border: 1px solid transparent;
+    }
+    .bulk-dl-btn.csv {
+      color: #166534; background: #dcfce7; border-color: #86efac;
+    }
+    .bulk-dl-btn.csv:hover { background: #bbf7d0; border-color: #4ade80; }
+    .bulk-dl-btn.pdf {
+      color: #7c2d12; background: #fee2e2; border-color: #fca5a5;
+    }
+    .bulk-dl-btn.pdf:hover { background: #fecaca; border-color: #f87171; }
+    .bulk-dl-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
     @media (max-width: 768px) {
       .current-period-header { padding: 1.25rem; }
       .filter-bar { padding: 0.75rem 1rem; }
@@ -185,10 +202,54 @@
       <span class="mx-2">/</span>
       <span class="font-medium text-slate-900">Employee Payroll</span>
     </div>
+
+    <!-- Quick-access: Grouped Report (hidden when already on that page) -->
+    <a href="/payroll/grouped-report" class="grouped-report-shortcut" id="groupedReportLink">
+      <span class="grouped-report-label">View Grouped Report</span>
+      <span class="grouped-report-arrow">
+        <i class="bi bi-arrow-right"></i>
+      </span>
+    </a>
   </div>
 
+  <style>
+    .grouped-report-shortcut {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      color: #1d4ed8;
+      font-size: 0.9375rem;
+      font-weight: 700;
+      text-decoration: none;
+      transition: color 0.15s;
+      white-space: nowrap;
+    }
+    .grouped-report-shortcut:hover {
+      color: #1338a0;
+      text-decoration: none;
+    }
+    .grouped-report-arrow {
+      display: flex;
+      align-items: center;
+      font-size: 0.95rem;
+      transition: transform 0.18s;
+    }
+    .grouped-report-shortcut:hover .grouped-report-arrow {
+      transform: translateX(4px);
+    }
+  </style>
 
-<!--  ERROR FOR EMPLOYEE BANK DETAILS-->
+  <script>
+    (function () {
+      const link = document.getElementById('groupedReportLink');
+      if (link && window.location.pathname === '/payroll/grouped-report') {
+        link.style.display = 'none';
+      }
+    })();
+  </script>
+
+
+  <!--  ERROR FOR EMPLOYEE BANK DETAILS-->
   <div th:if="${error}" style="background: #fef2f2; border: 1px solid #fee2e2; color: #991b1b; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; display: flex; align-items: flex-start; gap: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
     <i class="bi bi-exclamation-octagon-fill" style="font-size: 1.25rem; margin-top: 2px;"></i>
     <div>
@@ -234,6 +295,14 @@
           <div class="header-stat">
             <div th:text="${#lists.size(payrollRuns)}" class="stat-val">0</div>
             <div class="stat-lbl">Employees</div>
+          </div>
+          <div class="bulk-dl-actions">
+            <button class="bulk-dl-btn csv" onclick="downloadAllCSV('currentPayrollBody', 'current-payroll', 'current')">
+              <i class="bi bi-filetype-csv"></i> Download All CSV
+            </button>
+            <button class="bulk-dl-btn pdf" onclick="downloadAllPDF('currentPayrollBody', 'Current Payroll', 'current-payroll-all', 'current')">
+              <i class="bi bi-file-earmark-pdf"></i> Download All PDF
+            </button>
           </div>
         </div>
       </div>
@@ -343,6 +412,18 @@
   <!-- Table -->
   <div th:if="${previousPeriods != null and not #lists.isEmpty(previousPeriods)}"
        class="past-period-card">
+    <!-- Past Payroll Download Actions -->
+    <div style="padding: 1rem 1.5rem; background: #fafbfd; border-bottom: 1px solid #e6e9ef; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
+      <span class="text-sm font-semibold text-slate-600">All Past Records</span>
+      <div class="bulk-dl-actions">
+        <button class="bulk-dl-btn csv" onclick="downloadAllCSV('pastPayrollBody', 'past-payroll', 'past')">
+          <i class="bi bi-filetype-csv"></i> Download All CSV
+        </button>
+        <button class="bulk-dl-btn pdf" onclick="downloadAllPDF('pastPayrollBody', 'Past Payroll Records', 'past-payroll-all', 'past')">
+          <i class="bi bi-file-earmark-pdf"></i> Download All PDF
+        </button>
+      </div>
+    </div>
     <div class="overflow-x-auto custom-scrollbar">
       <table class="payroll-table">
         <thead>
@@ -357,35 +438,34 @@
           <th>Actions</th>
         </tr>
         </thead>
-        <tbody>
-        <tr th:each="paySlip : ${previousPeriods}">
-          <td>
-            <div class="flex items-center gap-3">
-              <div class="emp-avatar"
-                   th:text="${paySlip.employeeName != null and #strings.length(paySlip.employeeName) >= 2
+        <tbody id="pastPayrollBody">
+        <td>
+          <div class="flex items-center gap-3">
+            <div class="emp-avatar"
+                 th:text="${paySlip.employeeName != null and #strings.length(paySlip.employeeName) >= 2
                               ? #strings.toUpperCase(#strings.substring(paySlip.employeeName, 0, 2))
                               : 'NA'}">AA</div>
-              <div>
-                <div th:text="${paySlip.employeeName}" class="font-semibold text-slate-800 text-sm">—</div>
-                <div th:text="'ID · ' + ${paySlip.employeeId}" class="text-xs text-slate-400">—</div>
-              </div>
+            <div>
+              <div th:text="${paySlip.employeeName}" class="font-semibold text-slate-800 text-sm">—</div>
+              <div th:text="'ID · ' + ${paySlip.employeeId}" class="text-xs text-slate-400">—</div>
             </div>
-          </td>
-          <td th:text="${paySlip.payDate}" class="mono">—</td>
-          <td th:text="${paySlip.basicSalary}" class="mono amount-positive">—</td>
-          <td th:text="${paySlip.grossPay}" class="mono amount-positive">—</td>
-          <td th:text="${paySlip.totalDeductions}" class="mono amount-deduct">—</td>
-          <td th:text="${paySlip.netPay}" class="mono amount-positive">—</td>
-          <td>
-            <!-- bankName + bankAccountNumber both live on PaySlipDTO -->
-            <div th:text="${paySlip.bankName}" class="text-sm text-slate-700">—</div>
-            <div th:text="${paySlip.bankAccountNumber}" class="text-xs text-slate-400 mono">—</div>
-          </td>
-          <td>
-            <button class="dl-btn" onclick="downloadPayslip(this)">
-              <i class="bi bi-download"></i> Payslip
-            </button>
-          </td>
+          </div>
+        </td>
+        <td th:text="${paySlip.payDate}" class="mono">—</td>
+        <td th:text="${paySlip.basicSalary}" class="mono amount-positive">—</td>
+        <td th:text="${paySlip.grossPay}" class="mono amount-positive">—</td>
+        <td th:text="${paySlip.totalDeductions}" class="mono amount-deduct">—</td>
+        <td th:text="${paySlip.netPay}" class="mono amount-positive">—</td>
+        <td>
+          <!-- bankName + bankAccountNumber both live on PaySlipDTO -->
+          <div th:text="${paySlip.bankName}" class="text-sm text-slate-700">—</div>
+          <div th:text="${paySlip.bankAccountNumber}" class="text-xs text-slate-400 mono">—</div>
+        </td>
+        <td>
+          <button class="dl-btn" onclick="downloadPayslip(this)">
+            <i class="bi bi-download"></i> Payslip
+          </button>
+        </td>
         </tr>
         </tbody>
       </table>
@@ -402,11 +482,11 @@
   <div class="current-period-card mb-8">
     <div class="current-period-header">
       <div>
-        <h2 class="text-slate-800 font-bold text-xl">Employee Report</h2>
-        <p class="text-slate-500 text-sm mt-1">Grouped summary of employee payroll</p>
+        <h2 class="text-slate-800 font-bold text-xl">Employee Grouped Report</h2>
+        <p class="text-slate-500 text-sm mt-1">Grouped summary of employee payroll by selected category</p>
       </div>
       <!-- Group By selector -->
-      <form method="get" th:action="@{/payroll/report}" class="flex items-center gap-3">
+      <form method="get" th:action="@{/payroll/grouped-report}" class="flex items-center gap-3">
         <span class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Group By:</span>
         <select name="groupBy" class="filter-select" onchange="this.form.submit()">
           <option value="GRADE"     th:selected="${groupBy == 'GRADE'}">Grade</option>
@@ -420,13 +500,14 @@
     <div th:if="${report == null or #lists.isEmpty(report)}">
       <div class="empty-state">
         <i class="bi bi-bar-chart"></i>
-        <p>No report data available. Visit <a href="/payroll/report" class="text-blue-600 underline">the report page</a> to load the grouped report.</p>
+        <p>No report data available. Visit <a href="/payroll/grouped-report" class="text-blue-600 underline">the grouped report page</a> to load the grouped report.</p>
       </div>
     </div>
 
     <!-- Report groups -->
     <div th:if="${report != null and not #lists.isEmpty(report)}">
-      <div th:each="group : ${report}" class="border-2 border-blue-500 rounded-lg mb-6 overflow-hidden">
+      <div th:each="group : ${report}" class="group-report-card border-2 border-blue-500 rounded-lg mb-6 overflow-hidden"
+           th:attr="data-group-name=${group.groupName}, data-group-by=${groupBy}">
 
         <!-- Group header -->
         <div class="flex items-center justify-between px-6 py-4 bg-slate-50 border-b border-slate-200">
@@ -455,6 +536,14 @@
               <div th:text="${'₦' + #numbers.formatDecimal(group.totalNet, 1, 'COMMA', 2, 'POINT')}"
                    class="stat-val text-green-700">₦0.00</div>
               <div class="stat-lbl">Net Pay</div>
+            </div>
+            <div class="bulk-dl-actions">
+              <button class="bulk-dl-btn csv group-csv-btn">
+                <i class="bi bi-filetype-csv"></i> CSV
+              </button>
+              <button class="bulk-dl-btn pdf group-pdf-btn">
+                <i class="bi bi-file-earmark-pdf"></i> PDF
+              </button>
             </div>
           </div>
         </div>
@@ -517,10 +606,6 @@
         <div>
           <div style="font-size:1.5rem;font-weight:800;color:#1e3a5f;letter-spacing:-0.03em;">PAYSLIP</div>
           <div style="font-size:0.8rem;color:#94a3b8;margin-top:4px;">Generated on <span id="ps-date"></span></div>
-        </div>
-        <div style="text-align:right;">
-          <div style="font-weight:700;color:#1e293b;">Your Company Name</div>
-          <div style="font-size:0.8rem;color:#94a3b8;">123 Business St., City</div>
         </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-bottom:1.5rem;">
@@ -643,7 +728,256 @@
     function closeModal()    { document.getElementById('lockModal').classList.remove('show'); }
     document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
-    /* Prevent double-submit */
+    /* ================================================================
+       BULK DOWNLOAD HELPERS
+       ================================================================ */
+
+    /* --- Shared utilities --- */
+    function getVisibleRows(tbodyId) {
+      return Array.from(document.querySelectorAll(`#${tbodyId} tr`))
+        .filter(r => r.style.display !== 'none');
+    }
+
+    function cellText(row, idx) {
+      return row.cells[idx]?.textContent.trim().replace(/\s+/g, ' ') || '—';
+    }
+
+    function triggerCSVDownload(csvContent, filename) {
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href = url; a.download = filename; a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    /* Strip currency symbol, commas → plain number string for CSV */
+    function stripCurrency(val) {
+      return val.replace(/[₦,\s]/g, '').trim();
+    }
+
+    /* --- CURRENT PAYROLL — CSV (fix: ID in own column, no combined name+id) --- */
+    function downloadAllCSV(tbodyId, filename, tableType) {
+      const rows = getVisibleRows(tbodyId);
+      let csv = '';
+
+      if (tableType === 'current') {
+        csv = 'Employee,ID,Payroll Date,Period,Gross Pay,Total Deductions,Net Pay,Status\n';
+        rows.forEach(r => {
+          const name   = r.querySelector('.font-semibold')?.textContent.trim() || '—';
+          const empId  = r.querySelector('.text-slate-400')?.textContent.replace('ID · ','').trim() || '—';
+          const date   = cellText(r, 1);
+          const period = cellText(r, 2);
+          const gross  = cellText(r, 3);
+          const deduct = cellText(r, 4);
+          const net    = cellText(r, 5);
+          const status = r.querySelector('.status-badge span:last-child')?.textContent.trim() || '—';
+          csv += `"${name}","${empId}","${date}","${period}","${gross}","${deduct}","${net}","${status}"\n`;
+        });
+      } else if (tableType === 'past') {
+        csv = 'Employee,ID,Pay Day,Basic Salary,Gross Pay,Total Deductions,Net Pay,Bank\n';
+        rows.forEach(r => {
+          const name   = r.querySelector('.font-semibold')?.textContent.trim() || '—';
+          const empId  = r.querySelector('.text-slate-400')?.textContent.replace('ID · ','').trim() || '—';
+          const payday = cellText(r, 1);
+          const basic  = cellText(r, 2);
+          const gross  = cellText(r, 3);
+          const deduct = cellText(r, 4);
+          const net    = cellText(r, 5);
+          const bank   = r.cells[6]?.textContent.trim().replace(/\s+/g,' ') || '—';
+          csv += `"${name}","${empId}","${payday}","${basic}","${gross}","${deduct}","${net}","${bank}"\n`;
+        });
+      }
+
+      triggerCSVDownload(csv, `${filename}-${new Date().toISOString().split('T')[0]}.csv`);
+    }
+
+    /* --- CURRENT / PAST PAYROLL — PDF (no company name/address) --- */
+    function downloadAllPDF(tbodyId, title, filename, tableType) {
+      const rows = getVisibleRows(tbodyId);
+      const date = new Date().toISOString().split('T')[0];
+
+      let tableRows = '';
+      if (tableType === 'current') {
+        rows.forEach(r => {
+          const name   = r.querySelector('.font-semibold')?.textContent.trim() || '—';
+          const empId  = r.querySelector('.text-slate-400')?.textContent.replace('ID · ','').trim() || '—';
+          const d      = cellText(r, 1), period = cellText(r, 2);
+          const gross  = cellText(r, 3), deduct = cellText(r, 4), net = cellText(r, 5);
+          const status = r.querySelector('.status-badge span:last-child')?.textContent.trim() || '—';
+          tableRows += `<tr>
+            <td>${name}<br><span style="font-size:0.7rem;color:#94a3b8">ID: ${empId}</span></td>
+            <td>${d}</td><td>${period}</td>
+            <td style="font-weight:600">${gross}</td>
+            <td style="color:#b64343">${deduct}</td>
+            <td style="font-weight:700;color:#1e3a5f">${net}</td>
+            <td><span style="font-size:0.75rem">${status}</span></td>
+          </tr>`;
+        });
+      } else {
+        rows.forEach(r => {
+          const name   = r.querySelector('.font-semibold')?.textContent.trim() || '—';
+          const empId  = r.querySelector('.text-slate-400')?.textContent.replace('ID · ','').trim() || '—';
+          const payday = cellText(r, 1), basic = cellText(r, 2);
+          const gross  = cellText(r, 3), deduct = cellText(r, 4), net = cellText(r, 5);
+          const bank   = r.cells[6]?.textContent.trim().replace(/\s+/g,' ') || '—';
+          tableRows += `<tr>
+            <td>${name}<br><span style="font-size:0.7rem;color:#94a3b8">ID: ${empId}</span></td>
+            <td>${payday}</td><td>${basic}</td>
+            <td style="font-weight:600">${gross}</td>
+            <td style="color:#b64343">${deduct}</td>
+            <td style="font-weight:700;color:#1e3a5f">${net}</td>
+            <td style="font-size:0.75rem">${bank}</td>
+          </tr>`;
+        });
+      }
+
+      const headers = tableType === 'current'
+        ? '<th>Employee</th><th>Payroll Date</th><th>Period</th><th>Gross Pay</th><th>Deductions</th><th>Net Pay</th><th>Status</th>'
+        : '<th>Employee</th><th>Pay Day</th><th>Basic Salary</th><th>Gross Pay</th><th>Deductions</th><th>Net Pay</th><th>Bank</th>';
+
+      const html = buildBulkPDFHTML(title, date, headers, tableRows, rows.length);
+      renderBulkPDF(html, `${filename}-${date}.pdf`);
+    }
+
+    /* --- GROUP REPORT — CSV per group (fix: ID own column, header "ID", no ₦ sign) --- */
+    function downloadGroupCSV(btn, groupCard) {
+      const groupName = groupCard.dataset.groupName || 'Group';
+      const groupBy   = groupCard.dataset.groupBy   || 'Group';
+      const tbody     = groupCard.querySelector('table tbody');
+      if (!tbody) return;
+
+      let csv = 'Employee,ID,Gross Pay,PAYE,Pension,Total Deductions,Net Pay\n';
+      Array.from(tbody.querySelectorAll('tr')).forEach(r => {
+        const name    = r.querySelector('.font-semibold')?.textContent.trim() || '—';
+        const empId   = r.querySelector('.text-slate-400')?.textContent.replace('ID · ','').trim() || '—';
+        const gross   = stripCurrency(cellText(r, 1));
+        const paye    = stripCurrency(cellText(r, 2));
+        const pension = stripCurrency(cellText(r, 3));
+        const deduct  = stripCurrency(cellText(r, 4));
+        const net     = stripCurrency(cellText(r, 5));
+        csv += `"${name}","${empId}",${gross},${paye},${pension},${deduct},${net}\n`;
+      });
+
+      const safeGroup = groupName.replace(/[^a-z0-9]/gi, '_');
+      triggerCSVDownload(csv, `payroll-report-${groupBy}-${safeGroup}-${new Date().toISOString().split('T')[0]}.csv`);
+    }
+
+    /* --- GROUP REPORT — PDF per group (fix: no company info, fix blank/misaligned pages) --- */
+    function downloadGroupPDF(btn, groupCard) {
+      const groupName = groupCard.dataset.groupName || 'Group';
+      const groupBy   = groupCard.dataset.groupBy   || 'Group';
+      const date      = new Date().toISOString().split('T')[0];
+      const tbody     = groupCard.querySelector('table tbody');
+      if (!tbody) return;
+
+      /* Pull totals from the header stat boxes */
+      const statVals    = groupCard.querySelectorAll('.header-stat .stat-val');
+      const totalGross  = statVals[0]?.textContent.trim() || '—';
+      const totalDeduct = statVals[1]?.textContent.trim() || '—';
+      const totalNet    = statVals[2]?.textContent.trim() || '—';
+      const empRows     = Array.from(tbody.querySelectorAll('tr'));
+
+      let tableRows = '';
+      empRows.forEach(r => {
+        const name    = r.querySelector('.font-semibold')?.textContent.trim() || '—';
+        const empId   = r.querySelector('.text-slate-400')?.textContent.replace('ID · ','').trim() || '—';
+        const gross   = cellText(r, 1), paye = cellText(r, 2);
+        const pension = cellText(r, 3), deduct = cellText(r, 4), net = cellText(r, 5);
+        tableRows += `<tr>
+          <td>${name}<br><span style="font-size:0.7rem;color:#94a3b8">ID: ${empId}</span></td>
+          <td style="font-weight:600">${gross}</td>
+          <td style="color:#b64343">${paye}</td>
+          <td style="color:#b64343">${pension}</td>
+          <td style="color:#b64343">${deduct}</td>
+          <td style="font-weight:700;color:#1e3a5f">${net}</td>
+        </tr>`;
+      });
+
+      const headers = '<th>Employee</th><th>Gross Pay</th><th>PAYE</th><th>Pension</th><th>Total Deductions</th><th>Net Pay</th>';
+      const summaryExtra = `
+        <div style="display:flex;gap:1rem;margin-bottom:1.25rem;flex-wrap:wrap;">
+          <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:0.6rem 1rem;min-width:130px;">
+            <div style="font-size:0.62rem;color:#94a3b8;text-transform:uppercase;letter-spacing:0.08em;font-weight:700;margin-bottom:3px;">Total Gross</div>
+            <div style="font-weight:700;font-size:0.95rem;color:#1e293b">${totalGross}</div>
+          </div>
+          <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:0.6rem 1rem;min-width:130px;">
+            <div style="font-size:0.62rem;color:#94a3b8;text-transform:uppercase;letter-spacing:0.08em;font-weight:700;margin-bottom:3px;">Total Deductions</div>
+            <div style="font-weight:700;font-size:0.95rem;color:#b64343">${totalDeduct}</div>
+          </div>
+          <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:0.6rem 1rem;min-width:130px;">
+            <div style="font-size:0.62rem;color:#94a3b8;text-transform:uppercase;letter-spacing:0.08em;font-weight:700;margin-bottom:3px;">Total Net Pay</div>
+            <div style="font-weight:700;font-size:0.95rem;color:#166534">${totalNet}</div>
+          </div>
+        </div>`;
+
+      const html = buildBulkPDFHTML(
+        `${groupBy}: ${groupName}`,
+        date,
+        headers,
+        tableRows,
+        empRows.length,
+        summaryExtra
+      );
+
+      const safeGroup = groupName.replace(/[^a-z0-9]/gi, '_');
+      renderBulkPDF(html, `payroll-report-${groupBy}-${safeGroup}-${date}.pdf`);
+    }
+
+    /* --- PDF BUILDER — no company name/address, compact padding to prevent blank pages --- */
+    function buildBulkPDFHTML(title, date, headers, tableRows, count, extra = '') {
+      return `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#fff;padding:1.5rem;width:100%;box-sizing:border-box;">
+        <div style="border-bottom:2px solid #e2e8f0;padding-bottom:1rem;margin-bottom:1.25rem;">
+          <div style="font-size:1.3rem;font-weight:800;color:#1e3a5f;letter-spacing:-0.02em;">${title}</div>
+          <div style="font-size:0.75rem;color:#94a3b8;margin-top:3px;">Generated: ${date} &nbsp;·&nbsp; ${count} employee${count !== 1 ? 's' : ''}</div>
+        </div>
+        ${extra}
+        <table style="width:100%;border-collapse:collapse;font-size:0.78rem;">
+          <thead>
+            <tr style="background:#f8fafc;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;">
+              ${headers.replace(/<th>/g,'<th style="padding:0.5rem 0.75rem;text-align:left;font-size:0.62rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#94a3b8;white-space:nowrap;">')}
+            </tr>
+          </thead>
+          <tbody>${tableRows.replace(/<td/g,'<td style="padding:0.6rem 0.75rem;border-bottom:1px solid #f1f5f9;vertical-align:top;"')}</tbody>
+        </table>
+        <div style="margin-top:1.5rem;text-align:center;font-size:0.68rem;color:#cbd5e1;border-top:1px solid #f1f5f9;padding-top:0.75rem;">
+          This is a computer-generated payroll report. No signature required.
+        </div>
+      </div>`;
+    }
+
+    function renderBulkPDF(html, filename) {
+      const container = document.createElement('div');
+      /* Render at exact landscape A4 width so html2canvas captures full width correctly */
+      container.style.cssText = 'position:fixed;left:-9999px;top:0;width:1122px;background:#fff;';
+      container.innerHTML = html;
+      document.body.appendChild(container);
+
+      html2pdf()
+        .set({
+          margin: [8, 8, 8, 8],   /* mm — tight margins to avoid content pushed off-page */
+          filename,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true, scrollX: 0, scrollY: 0 },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+        })
+        .from(container.firstElementChild)
+        .save()
+        .then(() => document.body.removeChild(container));
+    }
+
+    /* --- Wire up group buttons via delegation --- */
+    document.addEventListener('click', function(e) {
+      const csvBtn = e.target.closest('.group-csv-btn');
+      const pdfBtn = e.target.closest('.group-pdf-btn');
+      if (csvBtn) {
+        const card = csvBtn.closest('.group-report-card');
+        if (card) downloadGroupCSV(csvBtn, card);
+      }
+      if (pdfBtn) {
+        const card = pdfBtn.closest('.group-report-card');
+        if (card) downloadGroupPDF(pdfBtn, card);
+      }
+    });
     function disableSubmitButton(form) {
       const btn = form.querySelector('button[type="submit"]');
       if (btn) { btn.disabled = true; btn.classList.add('opacity-50', 'cursor-not-allowed'); btn.textContent = 'Submitting…'; }

@@ -317,7 +317,7 @@ public class PayrollController {
     }
 
 
-    @GetMapping("/payroll/report")
+    @GetMapping("/payroll/grouped-report")
     public String getReport(
             @RequestParam(defaultValue = "GRADE") String groupBy,
             Model model) {
