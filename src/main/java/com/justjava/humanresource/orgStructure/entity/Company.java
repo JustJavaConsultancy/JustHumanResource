@@ -32,4 +32,12 @@ public class Company extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private RecordStatus status = RecordStatus.ACTIVE;
+
+
+    @Lob
+    @Column(name = "logo_data")
+    private byte[] logoData;
+
+    @Column(name = "logo_content_type", length = 20)
+    private String logoContentType;
 }

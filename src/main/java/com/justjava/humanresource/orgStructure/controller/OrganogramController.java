@@ -32,6 +32,12 @@ public class OrganogramController {
         return organogramService.createCompany(dto);
     }
 
+    @PutMapping("/companies/{companyId}")
+    public CompanyDTO updateCompany(@PathVariable Long companyId,
+                                    @RequestBody CompanyDTO dto) {
+        return organogramService.updateCompany(companyId, dto);
+    }
+
     /* =========================================================
        DEPARTMENT MANAGEMENT
        ========================================================= */

@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,10 +51,40 @@ public class OrganogramServiceImpl implements OrganogramService {
                 .code(dto.getCode())
                 .parentCompany(parent)
                 .status(RecordStatus.ACTIVE)
+                .logoData(decodeLogo(dto.getLogoBase64()))
+                .logoContentType(dto.getLogoContentType())
                 .build();
 
         companyRepository.save(company);
 
+        return mapToCompanyDTO(company);
+    }
+
+    @Override
+    public CompanyDTO updateCompany(Long companyId, CompanyDTO dto) {
+
+        Company company = companyRepository.findById(companyId)
+                .orElseThrow(() -> new IllegalArgumentException("Company not found: " + companyId));
+
+        if (dto.getName() != null && !dto.getName().isBlank()) {
+            company.setName(dto.getName().trim());
+        }
+        if (dto.getCode() != null && !dto.getCode().isBlank()) {
+            company.setCode(dto.getCode().trim());
+        }
+        // Logo: if a new logo is supplied, replace it; if logoBase64 is explicitly
+        // set to empty string the caller wants to clear it.
+        if (dto.getLogoBase64() != null) {
+            if (dto.getLogoBase64().isBlank()) {
+                company.setLogoData(null);
+                company.setLogoContentType(null);
+            } else {
+                company.setLogoData(decodeLogo(dto.getLogoBase64()));
+                company.setLogoContentType(dto.getLogoContentType());
+            }
+        }
+
+        companyRepository.save(company);
         return mapToCompanyDTO(company);
     }
 
@@ -208,6 +239,8 @@ public class OrganogramServiceImpl implements OrganogramService {
                 .code(subsidiaryDTO.getCode())
                 .parentCompany(parent)
                 .status(RecordStatus.ACTIVE)
+                .logoData(decodeLogo(subsidiaryDTO.getLogoBase64()))
+                .logoContentType(subsidiaryDTO.getLogoContentType())
                 .build();
 
         companyRepository.save(subsidiary);
@@ -223,11 +256,16 @@ public class OrganogramServiceImpl implements OrganogramService {
         Map<Long, CompanyTreeDTO> map = new HashMap<>();
 
         for (Company c : companies) {
+            String logoBase64 = (c.getLogoData() != null)
+                    ? Base64.getEncoder().encodeToString(c.getLogoData())
+                    : null;
             map.put(c.getId(),
                     CompanyTreeDTO.builder()
                             .companyId(c.getId())
                             .name(c.getName())
                             .code(c.getCode())
+                            .logoBase64(logoBase64)
+                            .logoContentType(c.getLogoContentType())
                             .subsidiaries(new ArrayList<>())
                             .build());
         }
@@ -273,6 +311,9 @@ public class OrganogramServiceImpl implements OrganogramService {
        ===================================================== */
 
     private CompanyDTO mapToCompanyDTO(Company c) {
+        String logoBase64 = (c.getLogoData() != null)
+                ? Base64.getEncoder().encodeToString(c.getLogoData())
+                : null;
         return CompanyDTO.builder()
                 .id(c.getId())
                 .name(c.getName())
@@ -283,7 +324,18 @@ public class OrganogramServiceImpl implements OrganogramService {
                                 : null
                 )
                 .status(c.getStatus())
+                .logoBase64(logoBase64)
+                .logoContentType(c.getLogoContentType())
                 .build();
+    }
+
+
+    private byte[] decodeLogo(String logoBase64) {
+        if (logoBase64 == null || logoBase64.isBlank()) return null;
+        String data = logoBase64.contains(",")
+                ? logoBase64.substring(logoBase64.indexOf(',') + 1)
+                : logoBase64;
+        return Base64.getDecoder().decode(data);
     }
 
     private DepartmentDTO mapToDepartmentDTO(Department d) {

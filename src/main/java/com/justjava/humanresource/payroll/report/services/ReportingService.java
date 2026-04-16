@@ -38,13 +38,13 @@ public class ReportingService {
 
         for (EmployeeReportItemDTO row : raw) {
 
-            // ── Null-safe values from this row ──────────────────────────
+            // ── Null-safe values  ──────────────────────────
             BigDecimal rowGross   = row.getGross()   != null ? row.getGross()   : BigDecimal.ZERO;
             BigDecimal rowNet     = row.getNet()     != null ? row.getNet()     : BigDecimal.ZERO;
             BigDecimal rowPaye    = row.getPaye()    != null ? row.getPaye()    : BigDecimal.ZERO;
             BigDecimal rowPension = row.getPension() != null ? row.getPension() : BigDecimal.ZERO;
 
-            // Write safe values back onto the row so the template also gets clean data
+
             row.setGross(rowGross);
             row.setNet(rowNet);
             row.setPaye(rowPaye);
@@ -80,6 +80,32 @@ public class ReportingService {
 
         return new ArrayList<>(map.values());
     }
+
+
+    public Map<String, Object> calculateGrandTotals(List<EmployeeGroupedReportDTO> report) {
+        BigDecimal totalGross = BigDecimal.ZERO;
+        BigDecimal totalDeductions = BigDecimal.ZERO;
+        BigDecimal totalNet = BigDecimal.ZERO;
+        long totalEmployees = 0;
+
+        for (EmployeeGroupedReportDTO group : report) {
+            totalGross = totalGross.add(group.getTotalGross());
+            totalDeductions = totalDeductions.add(group.getTotalDeductions());
+            totalNet = totalNet.add(group.getTotalNet());
+            totalEmployees += group.getEmployeeCount();
+        }
+
+        return Map.of(
+                "totalGross", totalGross,
+                "totalDeductions", totalDeductions,
+                "totalNet", totalNet,
+                "totalEmployees", totalEmployees,
+                "totalGroups", report.size()
+        );
+    }
+
+
+
 }
 // Sample Response
 //[

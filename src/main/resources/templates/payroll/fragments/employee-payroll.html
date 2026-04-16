@@ -385,6 +385,7 @@
   <!-- ==============================================================
        CURRENT PERIOD   model: payrollRuns  (List<PayrollRun>)
        ============================================================== -->
+  <div th:if="${report == null}">
   <div class="period-label">Current Payroll Period</div>
 
   <div th:if="${payrollRuns == null}" class="model-fallback">
@@ -413,14 +414,7 @@
             <div th:text="${#lists.size(payrollRuns)}" class="stat-val">0</div>
             <div class="stat-lbl">Employees</div>
           </div>
-          <div class="bulk-dl-actions">
-            <button class="bulk-dl-btn csv" onclick="downloadAllCSV('currentPayrollBody', 'current-payroll', 'current')">
-              <i class="bi bi-filetype-csv"></i> Download All CSV
-            </button>
-            <button class="bulk-dl-btn pdf" onclick="downloadAllPDF('currentPayrollBody', 'Current Payroll', 'current-payroll-all', 'current')">
-              <i class="bi bi-file-earmark-pdf"></i> Download All PDF
-            </button>
-          </div>
+
         </div>
       </div>
 
@@ -511,12 +505,14 @@
     </div>
 
   </th:block>
+  </div>
   <!-- /current period -->
 
 
   <!-- ==============================================================
        PAST RECORDS   model: previousPeriods  (List<PaySlipDTO>)
        ============================================================== -->
+  <div th:if="${report == null}">
   <div class="period-label" style="margin-top:2.5rem;">Past Payroll Records</div>
 
   <!-- Fallback: controller did not add the model at all -->
@@ -529,17 +525,9 @@
   <!-- Table -->
   <div th:if="${previousPeriods != null and not #lists.isEmpty(previousPeriods)}"
        class="past-period-card">
-    <!-- Past Payroll Download Actions -->
-    <div style="padding: 1rem 1.5rem; background: #fafbfd; border-bottom: 1px solid #e6e9ef; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
+    <!-- Past Payroll Header -->
+    <div style="padding: 1rem 1.5rem; background: #fafbfd; border-bottom: 1px solid #e6e9ef; display: flex; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
       <span class="text-sm font-semibold text-slate-600">All Past Records</span>
-      <div class="bulk-dl-actions">
-        <button class="bulk-dl-btn csv" onclick="downloadAllCSV('pastPayrollBody', 'past-payroll', 'past')">
-          <i class="bi bi-filetype-csv"></i> Download All CSV
-        </button>
-        <button class="bulk-dl-btn pdf" onclick="downloadAllPDF('pastPayrollBody', 'Past Payroll Records', 'past-payroll-all', 'past')">
-          <i class="bi bi-file-earmark-pdf"></i> Download All PDF
-        </button>
-      </div>
     </div>
     <div class="overflow-x-auto custom-scrollbar">
       <table class="payroll-table">
@@ -588,6 +576,7 @@
       </table>
     </div>
   </div>
+  </div>
   <!-- /previousPaySlips -->
 
 
@@ -625,7 +614,7 @@
     <div th:if="${report != null and not #lists.isEmpty(report)}">
 
       <!-- ── GRAND TOTAL CARD ── -->
-      <div class="grand-total-card" id="grandTotalCard">
+      <div class="grand-total-card" id="grandTotalCard" th:if="${totals != null}">
         <div class="grand-total-header">
           <div class="grand-total-left">
             <div class="grand-total-icon">
@@ -633,21 +622,27 @@
             </div>
             <div>
               <div class="grand-total-title">Grand Total</div>
-              <div class="grand-total-sub" id="grandTotalSubtitle">All groups combined</div>
+              <div class="grand-total-sub" id="grandTotalSubtitle">
+                <span th:text="${totals.totalGroups}">0</span> Groups,
+                <span th:text="${totals.totalEmployees}">0</span> Employees combined
+              </div>
             </div>
           </div>
           <div class="grand-total-stats">
             <div class="grand-stat-box gross">
               <div class="grand-stat-lbl">Total Gross</div>
-              <div class="grand-stat-val" id="grandGross">₦0.00</div>
+              <div class="grand-stat-val" id="grandGross"
+                   th:text="${'₦' + #numbers.formatDecimal(totals.totalGross, 1, 'COMMA', 2, 'POINT')}">₦0.00</div>
             </div>
             <div class="grand-stat-box deduct">
               <div class="grand-stat-lbl">Total Deductions</div>
-              <div class="grand-stat-val" id="grandDeductions">₦0.00</div>
+              <div class="grand-stat-val" id="grandDeductions"
+                   th:text="${'₦' + #numbers.formatDecimal(totals.totalDeductions, 1, 'COMMA', 2, 'POINT')}">₦0.00</div>
             </div>
             <div class="grand-stat-box net">
               <div class="grand-stat-lbl">Total Net Pay</div>
-              <div class="grand-stat-val" id="grandNet">₦0.00</div>
+              <div class="grand-stat-val" id="grandNet"
+                   th:text="${'₦' + #numbers.formatDecimal(totals.totalNet, 1, 'COMMA', 2, 'POINT')}">₦0.00</div>
             </div>
             <div class="grand-dl-actions">
               <button class="bulk-dl-btn csv" onclick="downloadGrandCSV()">
@@ -914,89 +909,6 @@
       return val.replace(/[₦,\s]/g, '').trim();
     }
 
-    /* --- CURRENT PAYROLL — CSV (fix: ID in own column, no combined name+id) --- */
-    function downloadAllCSV(tbodyId, filename, tableType) {
-      const rows = getVisibleRows(tbodyId);
-      let csv = '';
-
-      if (tableType === 'current') {
-        csv = 'Employee,ID,Payroll Date,Period,Gross Pay,Total Deductions,Net Pay,Status\n';
-        rows.forEach(r => {
-          const name   = r.querySelector('.font-semibold')?.textContent.trim() || '—';
-          const empId  = r.querySelector('.text-slate-400')?.textContent.replace('ID · ','').trim() || '—';
-          const date   = cellText(r, 1);
-          const period = cellText(r, 2);
-          const gross  = cellText(r, 3);
-          const deduct = cellText(r, 4);
-          const net    = cellText(r, 5);
-          const status = r.querySelector('.status-badge span:last-child')?.textContent.trim() || '—';
-          csv += `"${name}","${empId}","${date}","${period}","${gross}","${deduct}","${net}","${status}"\n`;
-        });
-      } else if (tableType === 'past') {
-        csv = 'Employee,ID,Pay Day,Basic Salary,Gross Pay,Total Deductions,Net Pay,Bank\n';
-        rows.forEach(r => {
-          const name   = r.querySelector('.font-semibold')?.textContent.trim() || '—';
-          const empId  = r.querySelector('.text-slate-400')?.textContent.replace('ID · ','').trim() || '—';
-          const payday = cellText(r, 1);
-          const basic  = cellText(r, 2);
-          const gross  = cellText(r, 3);
-          const deduct = cellText(r, 4);
-          const net    = cellText(r, 5);
-          const bank   = r.cells[6]?.textContent.trim().replace(/\s+/g,' ') || '—';
-          csv += `"${name}","${empId}","${payday}","${basic}","${gross}","${deduct}","${net}","${bank}"\n`;
-        });
-      }
-
-      triggerCSVDownload(csv, `${filename}-${new Date().toISOString().split('T')[0]}.csv`);
-    }
-
-    /* --- CURRENT / PAST PAYROLL — PDF (no company name/address) --- */
-    function downloadAllPDF(tbodyId, title, filename, tableType) {
-      const rows = getVisibleRows(tbodyId);
-      const date = new Date().toISOString().split('T')[0];
-
-      let tableRows = '';
-      if (tableType === 'current') {
-        rows.forEach(r => {
-          const name   = r.querySelector('.font-semibold')?.textContent.trim() || '—';
-          const empId  = r.querySelector('.text-slate-400')?.textContent.replace('ID · ','').trim() || '—';
-          const d      = cellText(r, 1), period = cellText(r, 2);
-          const gross  = cellText(r, 3), deduct = cellText(r, 4), net = cellText(r, 5);
-          const status = r.querySelector('.status-badge span:last-child')?.textContent.trim() || '—';
-          tableRows += `<tr>
-            <td>${name}<br><span style="font-size:0.7rem;color:#94a3b8">ID: ${empId}</span></td>
-            <td>${d}</td><td>${period}</td>
-            <td style="font-weight:600">${gross}</td>
-            <td style="color:#b64343">${deduct}</td>
-            <td style="font-weight:700;color:#1e3a5f">${net}</td>
-            <td><span style="font-size:0.75rem">${status}</span></td>
-          </tr>`;
-        });
-      } else {
-        rows.forEach(r => {
-          const name   = r.querySelector('.font-semibold')?.textContent.trim() || '—';
-          const empId  = r.querySelector('.text-slate-400')?.textContent.replace('ID · ','').trim() || '—';
-          const payday = cellText(r, 1), basic = cellText(r, 2);
-          const gross  = cellText(r, 3), deduct = cellText(r, 4), net = cellText(r, 5);
-          const bank   = r.cells[6]?.textContent.trim().replace(/\s+/g,' ') || '—';
-          tableRows += `<tr>
-            <td>${name}<br><span style="font-size:0.7rem;color:#94a3b8">ID: ${empId}</span></td>
-            <td>${payday}</td><td>${basic}</td>
-            <td style="font-weight:600">${gross}</td>
-            <td style="color:#b64343">${deduct}</td>
-            <td style="font-weight:700;color:#1e3a5f">${net}</td>
-            <td style="font-size:0.75rem">${bank}</td>
-          </tr>`;
-        });
-      }
-
-      const headers = tableType === 'current'
-        ? '<th>Employee</th><th>Payroll Date</th><th>Period</th><th>Gross Pay</th><th>Deductions</th><th>Net Pay</th><th>Status</th>'
-        : '<th>Employee</th><th>Pay Day</th><th>Basic Salary</th><th>Gross Pay</th><th>Deductions</th><th>Net Pay</th><th>Bank</th>';
-
-      const html = buildBulkPDFHTML(title, date, headers, tableRows, rows.length);
-      renderBulkPDF(html, `${filename}-${date}.pdf`);
-    }
 
     /* --- GROUP REPORT — CSV per group (fix: ID own column, header "ID", no ₦ sign) --- */
     function downloadGroupCSV(btn, groupCard) {
@@ -1273,39 +1185,6 @@
     }
 
 
-    /* ── GRAND TOTAL: calculate from all group-report-cards on page load ── */
-    function computeGrandTotal() {
-      const cards = document.querySelectorAll('.group-report-card');
-      if (!cards.length) return;
-
-      let totalGross = 0, totalDeduct = 0, totalNet = 0, totalEmps = 0;
-
-      cards.forEach(card => {
-        const statVals = card.querySelectorAll('.header-stat .stat-val');
-        const parseVal = el => {
-          if (!el) return 0;
-          return parseFloat(el.textContent.replace(/[₦,]/g, '')) || 0;
-        };
-        totalGross  += parseVal(statVals[0]);
-        totalDeduct += parseVal(statVals[1]);
-        totalNet    += parseVal(statVals[2]);
-
-        const empLine = card.querySelector('.text-xs.text-slate-400');
-        if (empLine) totalEmps += parseInt(empLine.textContent) || 0;
-      });
-
-      const fmt = n => '₦' + n.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-      const el = id => document.getElementById(id);
-
-      if (el('grandGross'))       el('grandGross').textContent       = fmt(totalGross);
-      if (el('grandDeductions'))  el('grandDeductions').textContent  = fmt(totalDeduct);
-      if (el('grandNet'))         el('grandNet').textContent         = fmt(totalNet);
-      if (el('grandTotalSubtitle')) {
-        const groupBy = cards[0]?.dataset.groupBy || 'group';
-        el('grandTotalSubtitle').textContent = cards.length + ' ' + groupBy.toLowerCase() + (cards.length !== 1 ? 's' : '') + ' · ' + totalEmps + ' employee' + (totalEmps !== 1 ? 's' : '') + ' combined';
-      }
-    }
-
     /* ── GRAND TOTAL: Download All CSV (every employee from every group) ── */
     function downloadGrandCSV() {
       const cards = document.querySelectorAll('.group-report-card');
@@ -1404,7 +1283,7 @@
       renderBulkPDF(html, `payroll-grand-total-${groupBy.toLowerCase()}-${date}.pdf`);
     }
 
-    document.addEventListener('DOMContentLoaded', computeGrandTotal);
+
 
     /* --- Wire up group buttons via delegation --- */
     document.addEventListener('click', function(e) {
