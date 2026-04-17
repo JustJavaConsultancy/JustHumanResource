@@ -358,9 +358,9 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
 
         if (isGrossBased) {
 
-            if (runningGross.compareTo(grossPay) > 0) {
+/*            if (runningGross.compareTo(grossPay) > 0) {
 
-            }
+            }*/
 
             /*
              * Optional balancing (VERY IMPORTANT for production)
@@ -400,6 +400,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
         System.out.println(" The grossPay ===="+grossPay);
 
         run.setGrossPay(runningGross.setScale(2, RoundingMode.HALF_UP));
+        run.setNetPay(runningGross.add(nonGrossEarnings).setScale(2, RoundingMode.HALF_UP));
         run.setNonGrossEarnings(nonGrossEarnings.setScale(2, RoundingMode.HALF_UP));
         run.setGrossDifference(grossDifference.setScale(2, RoundingMode.HALF_UP));
 
@@ -613,7 +614,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
         run.setTotalDeductions(totalDeductions);
 
         run.setNetPay(
-                run.getGrossPay()
+                run.getGrossPay().add(run.getNonGrossEarnings())
                         .subtract(totalDeductions)
                         .setScale(2, RoundingMode.HALF_UP)
         );
@@ -791,7 +792,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
         run.setTotalDeductions(totalDeductions);
 
         run.setNetPay(
-                run.getGrossPay()
+                run.getGrossPay().add(run.getNonGrossEarnings())
                         .subtract(totalDeductions)
                         .setScale(2, RoundingMode.HALF_UP)
         );
