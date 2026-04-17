@@ -18,6 +18,7 @@ import java.util.Map;
 @AllArgsConstructor
 public class ReportingService {
     private final PayrollRunRepository payrollRunRepository;
+
     public List<EmployeeGroupedReportDTO> getGroupedReport(
             Long companyId,
             LocalDate start,
@@ -37,9 +38,21 @@ public class ReportingService {
 
         for (EmployeeReportItemDTO row : raw) {
 
+            // ── Null-safe values  ──────────────────────────
+            BigDecimal rowGross   = row.getGross()   != null ? row.getGross()   : BigDecimal.ZERO;
+            BigDecimal rowNet     = row.getNet()     != null ? row.getNet()     : BigDecimal.ZERO;
+            BigDecimal rowPaye    = row.getPaye()    != null ? row.getPaye()    : BigDecimal.ZERO;
+            BigDecimal rowPension = row.getPension() != null ? row.getPension() : BigDecimal.ZERO;
+
+
+            row.setGross(rowGross);
+            row.setNet(rowNet);
+            row.setPaye(rowPaye);
+            row.setPension(rowPension);
+
+            // ── Get or create the group ──────────────────────────────────
             EmployeeGroupedReportDTO group =
                     map.computeIfAbsent(row.getGroupName(), g -> {
-
                         EmployeeGroupedReportDTO dto = new EmployeeGroupedReportDTO();
                         dto.setGroupName(g);
                         dto.setEmployeeCount(0L);
@@ -48,30 +61,51 @@ public class ReportingService {
                         dto.setTotalNet(BigDecimal.ZERO);
                         dto.setPaye(BigDecimal.ZERO);
                         dto.setPension(BigDecimal.ZERO);
-
                         return dto;
                     });
 
-            // add employee
+            // ── Add employee to group ────────────────────────────────────
             group.getEmployees().add(row);
 
-            // aggregates
+            // ── Aggregates (all null-safe) ───────────────────────────────
             group.setEmployeeCount(group.getEmployeeCount() + 1);
-            group.setTotalGross(group.getTotalGross().add(row.getGross()));
-            group.setTotalNet(group.getTotalNet().add(row.getNet()));
-            group.setPaye(group.getPaye().add(row.getPaye()));
-            group.setPension(group.getPension().add(row.getPension()));
+            group.setTotalGross(group.getTotalGross().add(rowGross));
+            group.setTotalNet(group.getTotalNet().add(rowNet));
+            group.setPaye(group.getPaye().add(rowPaye));
+            group.setPension(group.getPension().add(rowPension));
 
-            BigDecimal deductions =
-                    row.getPaye().add(row.getPension());
-
-            group.setTotalDeductions(
-                    group.getTotalDeductions().add(deductions)
-            );
+            BigDecimal deductions = rowPaye.add(rowPension);
+            group.setTotalDeductions(group.getTotalDeductions().add(deductions));
         }
 
         return new ArrayList<>(map.values());
     }
+
+
+    public Map<String, Object> calculateGrandTotals(List<EmployeeGroupedReportDTO> report) {
+        BigDecimal totalGross = BigDecimal.ZERO;
+        BigDecimal totalDeductions = BigDecimal.ZERO;
+        BigDecimal totalNet = BigDecimal.ZERO;
+        long totalEmployees = 0;
+
+        for (EmployeeGroupedReportDTO group : report) {
+            totalGross = totalGross.add(group.getTotalGross());
+            totalDeductions = totalDeductions.add(group.getTotalDeductions());
+            totalNet = totalNet.add(group.getTotalNet());
+            totalEmployees += group.getEmployeeCount();
+        }
+
+        return Map.of(
+                "totalGross", totalGross,
+                "totalDeductions", totalDeductions,
+                "totalNet", totalNet,
+                "totalEmployees", totalEmployees,
+                "totalGroups", report.size()
+        );
+    }
+
+
+
 }
 // Sample Response
 //[

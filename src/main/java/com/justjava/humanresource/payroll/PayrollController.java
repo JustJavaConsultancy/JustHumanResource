@@ -27,6 +27,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
+import java.util.Map;
 
 @Controller
 public class PayrollController {
@@ -317,7 +318,7 @@ public class PayrollController {
     }
 
 
-    @GetMapping("/payroll/report")
+    @GetMapping("/payroll/grouped-report")
     public String getReport(
             @RequestParam(defaultValue = "GRADE") String groupBy,
             Model model) {
@@ -331,12 +332,18 @@ public class PayrollController {
                 EmployeeGroupBy.valueOf(groupBy)
         );
 
+        Map<String, Object> grandTotals = reportingService.calculateGrandTotals(report);
+
         model.addAttribute("report", report);
+        model.addAttribute("totals", grandTotals);
         model.addAttribute("groupBy", groupBy);
         model.addAttribute("title", "Payroll Management");
         model.addAttribute("subTitle", "Manage employee payroll, salary details, and payment history");
         return "payroll/fragments/employee-payroll";
     }
+
+
+
 
 
 }

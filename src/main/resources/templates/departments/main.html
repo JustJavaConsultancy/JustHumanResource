@@ -118,6 +118,7 @@
     </div>
   </div>
 
+
   <!-- ORG CHART CARD -->
   <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-md mb-7">
     <div class="flex flex-wrap items-center justify-between gap-3 p-5 border-b border-gray-200 dark:border-gray-700">
@@ -351,6 +352,18 @@
           <label class="form-label">Company Code *</label>
           <input type="text" id="compCode" placeholder="e.g. JJH" class="form-input" maxlength="10" style="font-family:'DM Mono',monospace;">
         </div>
+        <!-- Logo upload -->
+        <div>
+          <label class="form-label">Logo <span class="text-gray-400 font-normal">(PNG or JPG, max 2 MB)</span></label>
+          <div class="mt-1 flex items-center gap-3">
+            <img id="logoPreview" src="" alt="" class="hidden w-12 h-12 object-contain rounded-lg border border-gray-200 dark:border-gray-700 flex-shrink-0">
+            <div class="flex-1 min-w-0">
+              <input type="file" id="compLogo" accept="image/png,image/jpeg" class="form-input text-sm text-gray-500 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100 cursor-pointer">
+              <p id="logoFileName" class="hidden mt-1 text-xs text-gray-500 dark:text-gray-400 truncate"></p>
+            </div>
+            <button id="clearLogoBtn" type="button" onclick="clearLogo()" class="hidden flex-shrink-0 text-red-500 hover:text-red-700"><span class="material-icons-round text-lg">cancel</span></button>
+          </div>
+        </div>
         <div id="companyError" class="api-error hidden"></div>
       </div>
       <div class="p-5 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
@@ -529,6 +542,48 @@
         <button onclick="closeModal('removeModal')" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition">Cancel</button>
         <button onclick="saveRemove()" id="saveRemoveBtn" class="px-5 py-2 bg-red-600 text-white text-sm font-semibold rounded-lg hover:bg-red-700 transition flex items-center gap-2">
           <span class="material-icons-round text-sm">person_remove</span> Remove Manager
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. Edit Company -->
+  <div id="editCompanyModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+    <div class="modal-backdrop absolute inset-0" onclick="closeModal('editCompanyModal')"></div>
+    <div class="modal-card relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md border border-gray-200 dark:border-gray-700">
+      <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+        <div class="flex justify-between items-center">
+          <h3 class="font-bold text-lg">Edit Company</h3>
+          <button onclick="closeModal('editCompanyModal')" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"><span class="material-icons-round text-gray-400">close</span></button>
+        </div>
+      </div>
+      <div class="p-6 space-y-4">
+        <input type="hidden" id="editCompId">
+        <div>
+          <label class="form-label">Company Name *</label>
+          <input type="text" id="editCompName" placeholder="e.g. JustJava Holdings" class="form-input">
+        </div>
+        <div>
+          <label class="form-label">Company Code *</label>
+          <input type="text" id="editCompCode" placeholder="e.g. JJH" class="form-input" maxlength="10" style="font-family:'DM Mono',monospace;">
+        </div>
+        <!-- Logo -->
+        <div>
+          <label class="form-label">Logo <span class="text-gray-400 font-normal">(PNG or JPG, max 2 MB — leave blank to keep existing)</span></label>
+          <div class="mt-1 flex items-center gap-3">
+            <img id="editLogoPreview" src="" alt="" class="hidden w-12 h-12 object-contain rounded-lg border border-gray-200 dark:border-gray-700 flex-shrink-0">
+            <div class="flex-1 min-w-0">
+              <input type="file" id="editCompLogo" accept="image/png,image/jpeg" class="form-input text-sm text-gray-500 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100 cursor-pointer">
+            </div>
+            <button id="editClearLogoBtn" type="button" onclick="clearEditLogo()" class="hidden flex-shrink-0 text-red-500 hover:text-red-700" title="Remove logo"><span class="material-icons-round text-lg">cancel</span></button>
+          </div>
+        </div>
+        <div id="editCompanyError" class="api-error hidden"></div>
+      </div>
+      <div class="p-5 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
+        <button onclick="closeModal('editCompanyModal')" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition">Cancel</button>
+        <button onclick="saveEditCompany()" id="saveEditCompanyBtn" class="px-5 py-2 bg-primary-600 text-white text-sm font-semibold rounded-lg hover:bg-primary-700 transition flex items-center gap-2">
+          <span class="material-icons-round text-sm">save</span> Save Changes
         </button>
       </div>
     </div>
@@ -947,20 +1002,37 @@
           const subsBadge = depth === 0
             ? '<span class="badge badge-info text-[9px] ml-auto flex-shrink-0">' + (company.subsidiaries || []).length + ' subs</span>'
             : '<span class="badge badge-success text-[9px] ml-auto flex-shrink-0">Active</span>';
+
+          // Avatar: logo image if available, otherwise initials
+          const avatarHtml = company.logoBase64
+            ? '<img src="data:' + escapeHtml(company.logoContentType || 'image/png') + ';base64,' + company.logoBase64 + '" ' +
+              'alt="' + escapeHtml(company.name) + '" ' +
+              'class="w-8 h-8 rounded-lg object-contain border border-gray-200 dark:border-gray-700 bg-white flex-shrink-0">'
+            : '<div class="w-8 h-8 rounded-lg ' + color + ' flex items-center justify-center text-[10px] font-bold font-mono flex-shrink-0">' + escapeHtml(initials) + '</div>';
+
           item.innerHTML =
             '<div class="flex items-center gap-2.5 py-1">' +
-              '<div class="w-8 h-8 rounded-lg ' + color + ' flex items-center justify-center text-[10px] font-bold font-mono flex-shrink-0">' + escapeHtml(initials) + '</div>' +
-              '<div class="min-w-0">' +
+              avatarHtml +
+              '<div class="min-w-0 flex-1">' +
                 '<p class="font-semibold text-sm truncate">' + escapeHtml(company.name || '—') + '</p>' +
                 '<p class="text-[10px] text-gray-500">' + (depth === 0 ? 'Parent' : 'Subsidiary') + ' · <span class="font-mono">' + escapeHtml(company.code || '—') + '</span></p>' +
               '</div>' +
               subsBadge +
+              '<button class="ml-2 p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-primary-600 flex-shrink-0 edit-company-btn" title="Edit company" ' +
+                'data-id="' + (company.companyId || company.id) + '" ' +
+                'data-name="' + escapeHtml(company.name || '') + '" ' +
+                'data-code="' + escapeHtml(company.code || '') + '" ' +
+                'data-logo="' + (company.logoBase64 ? escapeHtml(company.logoBase64) : '') + '" ' +
+                'data-logotype="' + escapeHtml(company.logoContentType || '') + '">' +
+                '<span class="material-icons-round text-[16px]">edit</span>' +
+              '</button>' +
             '</div>';
           panel.appendChild(item);
           (company.subsidiaries || []).forEach(function (sub) { renderCompany(sub, depth + 1); });
         }
         tree.forEach(function (c) { renderCompany(c, 0); });
       }
+
 
       // ── Reporting tree render ──────────────────────────────────────────
       function renderRepTree(node, container, depth) {
@@ -1156,6 +1228,148 @@
         }
       }
 
+      // ── Logo helpers ───────────────────────────────────────────────────
+      let _logoBase64      = null;
+      let _logoContentType = null;
+
+      document.getElementById('compLogo').addEventListener('change', function () {
+        const file = this.files[0];
+        if (!file) return;
+        if (!['image/png', 'image/jpeg'].includes(file.type)) {
+          this.value = '';
+          showError('companyError', 'Only PNG and JPG files are accepted for the logo.');
+          return;
+        }
+        if (file.size > 2 * 1024 * 1024) {
+          this.value = '';
+          showError('companyError', 'Logo file must be 2 MB or smaller.');
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          _logoBase64      = e.target.result;
+          _logoContentType = file.type;
+          document.getElementById('logoPreview').src = _logoBase64;
+          document.getElementById('logoPreview').classList.remove('hidden');
+          document.getElementById('clearLogoBtn').classList.remove('hidden');
+        };
+        reader.readAsDataURL(file);
+      });
+
+      window.clearLogo = function () {
+        _logoBase64 = _logoContentType = null;
+        document.getElementById('compLogo').value = '';
+        document.getElementById('logoPreview').src = '';
+        document.getElementById('logoPreview').classList.add('hidden');
+        document.getElementById('clearLogoBtn').classList.add('hidden');
+      };
+
+      // ── Edit Company logo state ────────────────────────────────────────
+      let _editLogoBase64      = null;  // null = unchanged, '' = clear, 'data:...' = new
+      let _editLogoContentType = null;
+      let _editLogoChanged     = false;
+
+      document.getElementById('editCompLogo').addEventListener('change', function () {
+        const file = this.files[0];
+        if (!file) return;
+        if (!['image/png', 'image/jpeg'].includes(file.type)) {
+          this.value = '';
+          showError('editCompanyError', 'Only PNG and JPG files are accepted for the logo.');
+          return;
+        }
+        if (file.size > 2 * 1024 * 1024) {
+          this.value = '';
+          showError('editCompanyError', 'Logo file must be 2 MB or smaller.');
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          _editLogoBase64      = e.target.result;
+          _editLogoContentType = file.type;
+          _editLogoChanged     = true;
+          document.getElementById('editLogoPreview').src = _editLogoBase64;
+          document.getElementById('editLogoPreview').classList.remove('hidden');
+          document.getElementById('editClearLogoBtn').classList.remove('hidden');
+        };
+        reader.readAsDataURL(file);
+      });
+
+      window.clearEditLogo = function () {
+        _editLogoBase64      = '';   // empty string signals "clear the logo"
+        _editLogoContentType = null;
+        _editLogoChanged     = true;
+        document.getElementById('editCompLogo').value = '';
+        document.getElementById('editLogoPreview').src = '';
+        document.getElementById('editLogoPreview').classList.add('hidden');
+        document.getElementById('editClearLogoBtn').classList.add('hidden');
+      };
+
+      // ── Open edit modal ────────────────────────────────────────────────
+      window.openEditCompany = function (id, name, code, logoBase64, logoContentType) {
+        _editLogoBase64      = null;
+        _editLogoContentType = null;
+        _editLogoChanged     = false;
+        document.getElementById('editCompId').value   = id;
+        document.getElementById('editCompName').value = name;
+        document.getElementById('editCompCode').value = code;
+        document.getElementById('editCompLogo').value = '';
+        hideError('editCompanyError');
+        const preview = document.getElementById('editLogoPreview');
+        const clearBtn = document.getElementById('editClearLogoBtn');
+        if (logoBase64) {
+          preview.src = 'data:' + (logoContentType || 'image/png') + ';base64,' + logoBase64;
+          preview.classList.remove('hidden');
+          clearBtn.classList.remove('hidden');
+        } else {
+          preview.src = '';
+          preview.classList.add('hidden');
+          clearBtn.classList.add('hidden');
+        }
+        document.getElementById('editCompanyModal').classList.remove('hidden');
+      };
+
+      // ── Save edit ──────────────────────────────────────────────────────
+      window.saveEditCompany = async function () {
+        hideError('editCompanyError');
+        const id   = document.getElementById('editCompId').value;
+        const name = document.getElementById('editCompName').value.trim();
+        const code = document.getElementById('editCompCode').value.trim();
+        if (!name || !code) {
+          showError('editCompanyError', 'Company name and code are required.');
+          return;
+        }
+        const body = { name: name, code: code };
+        if (_editLogoChanged) {
+          body.logoBase64      = _editLogoBase64 || '';   // '' = clear
+          body.logoContentType = _editLogoContentType || null;
+        }
+        setLoading('saveEditCompanyBtn', true);
+        try {
+          await apiFetch('/companies/' + id, { method: 'PUT', body: JSON.stringify(body) });
+          closeModal('editCompanyModal');
+          showToast('Company "' + name + '" updated successfully');
+          fetchCompanyTree();
+        } catch (e) {
+          showError('editCompanyError', e.message);
+        } finally {
+          setLoading('saveEditCompanyBtn', false);
+        }
+      };
+
+      // ── Delegate click on edit buttons in company panel ────────────────
+      document.getElementById('companyTreePanel').addEventListener('click', function (e) {
+        const btn = e.target.closest('.edit-company-btn');
+        if (!btn) return;
+        e.stopPropagation();
+        openEditCompany(
+          btn.dataset.id,
+          btn.dataset.name,
+          btn.dataset.code,
+          btn.dataset.logo,
+          btn.dataset.logotype
+        );
+      });
+
       // ── Company type toggle ────────────────────────────────────────────
       window.setCompanyType = function (type) {
         companyType   = type;
@@ -1188,11 +1402,15 @@
 
         setLoading('saveCompanyBtn', true);
         try {
-          await apiFetch(path, { method: 'POST', body: JSON.stringify({ name: name, code: code }) });
+          const body = { name: name, code: code };
+          if (_logoBase64)      body.logoBase64      = _logoBase64;
+          if (_logoContentType) body.logoContentType = _logoContentType;
+          await apiFetch(path, { method: 'POST', body: JSON.stringify(body) });
           closeModal('companyModal');
           showToast('Company "' + name + '" created successfully');
           document.getElementById('compName').value = '';
           document.getElementById('compCode').value = '';
+          clearLogo();
           fetchCompanyTree();
         } catch (e) {
           showError('companyError', e.message);

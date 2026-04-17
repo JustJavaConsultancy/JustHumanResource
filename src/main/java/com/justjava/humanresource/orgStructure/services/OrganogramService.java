@@ -15,6 +15,8 @@ public interface OrganogramService {
 
     CompanyDTO createCompany(CompanyDTO dto);
 
+    CompanyDTO updateCompany(Long companyId, CompanyDTO dto);
+
     /* =========================
        DEPARTMENT MANAGEMENT
        ========================= */

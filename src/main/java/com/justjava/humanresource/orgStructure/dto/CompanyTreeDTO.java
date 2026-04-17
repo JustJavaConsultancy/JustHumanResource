@@ -15,5 +15,8 @@ public class CompanyTreeDTO {
     private String name;
     private String code;
 
+    private String logoBase64;
+    private String logoContentType;
+
     private List<CompanyTreeDTO> subsidiaries;
 }

@@ -165,6 +165,140 @@
     .modal-btn.confirm { background: #b85c00; color: white; }
     .modal-btn.confirm:hover { background: #9e4b00; }
 
+    .bulk-dl-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 14px; border-radius: 6px;
+      font-size: 0.8rem; font-weight: 600;
+      cursor: pointer; transition: background 0.15s, border-color 0.15s; white-space: nowrap;
+      border: 1px solid transparent;
+    }
+    .bulk-dl-btn.csv {
+      color: #166534; background: #dcfce7; border-color: #86efac;
+    }
+    .bulk-dl-btn.csv:hover { background: #bbf7d0; border-color: #4ade80; }
+    .bulk-dl-btn.pdf {
+      color: #7c2d12; background: #fee2e2; border-color: #fca5a5;
+    }
+    .bulk-dl-btn.pdf:hover { background: #fecaca; border-color: #f87171; }
+    .bulk-dl-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+
+    .grand-total-card {
+      background: linear-gradient(135deg, #0f2554 0%, #1e3a8a 60%, #1d4ed8 100%);
+      border-radius: 12px;
+      margin-bottom: 1.75rem;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(30,58,138,0.25), 0 1px 4px rgba(30,58,138,0.15);
+      position: relative;
+    }
+    .grand-total-card::before {
+      content: '';
+      position: absolute;
+      top: -40px; right: -40px;
+      width: 160px; height: 160px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.05);
+      pointer-events: none;
+    }
+    .grand-total-card::after {
+      content: '';
+      position: absolute;
+      bottom: -30px; left: 30px;
+      width: 100px; height: 100px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.04);
+      pointer-events: none;
+    }
+    .grand-total-header {
+      padding: 1.5rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1.25rem;
+      position: relative;
+      z-index: 1;
+    }
+    .grand-total-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .grand-total-icon {
+      width: 46px; height: 46px;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.25rem;
+      color: #ffffff;
+      flex-shrink: 0;
+    }
+    .grand-total-title {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: #ffffff;
+      letter-spacing: -0.01em;
+    }
+    .grand-total-sub {
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.6);
+      margin-top: 2px;
+      font-weight: 500;
+    }
+    .grand-total-stats {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .grand-stat-box {
+      background: rgba(255,255,255,0.10);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 8px;
+      padding: 0.6rem 1.1rem;
+      min-width: 130px;
+    }
+    .grand-stat-lbl {
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: rgba(255,255,255,0.55);
+      margin-bottom: 3px;
+    }
+    .grand-stat-val {
+      font-size: 1.05rem;
+      font-weight: 800;
+      font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
+    }
+    .grand-stat-box.gross .grand-stat-val  { color: #93c5fd; }
+    .grand-stat-box.deduct .grand-stat-val { color: #fca5a5; }
+    .grand-stat-box.net .grand-stat-val    { color: #6ee7b7; }
+    .grand-dl-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .grand-dl-actions .bulk-dl-btn.csv {
+      background: rgba(220,252,231,0.15);
+      border-color: rgba(134,239,172,0.4);
+      color: #bbf7d0;
+    }
+    .grand-dl-actions .bulk-dl-btn.csv:hover {
+      background: rgba(220,252,231,0.25);
+      border-color: rgba(134,239,172,0.6);
+    }
+    .grand-dl-actions .bulk-dl-btn.pdf {
+      background: rgba(254,226,226,0.15);
+      border-color: rgba(252,165,165,0.4);
+      color: #fecaca;
+    }
+    .grand-dl-actions .bulk-dl-btn.pdf:hover {
+      background: rgba(254,226,226,0.25);
+      border-color: rgba(252,165,165,0.6);
+    }
     @media (max-width: 768px) {
       .current-period-header { padding: 1.25rem; }
       .filter-bar { padding: 0.75rem 1rem; }
@@ -185,10 +319,54 @@
       <span class="mx-2">/</span>
       <span class="font-medium text-slate-900">Employee Payroll</span>
     </div>
+
+    <!-- Quick-access: Grouped Report (hidden when already on that page) -->
+    <a href="/payroll/grouped-report" class="grouped-report-shortcut" id="groupedReportLink">
+      <span class="grouped-report-label">View Grouped Report</span>
+      <span class="grouped-report-arrow">
+        <i class="bi bi-arrow-right"></i>
+      </span>
+    </a>
   </div>
 
+  <style>
+    .grouped-report-shortcut {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      color: #1d4ed8;
+      font-size: 0.9375rem;
+      font-weight: 700;
+      text-decoration: none;
+      transition: color 0.15s;
+      white-space: nowrap;
+    }
+    .grouped-report-shortcut:hover {
+      color: #1338a0;
+      text-decoration: none;
+    }
+    .grouped-report-arrow {
+      display: flex;
+      align-items: center;
+      font-size: 0.95rem;
+      transition: transform 0.18s;
+    }
+    .grouped-report-shortcut:hover .grouped-report-arrow {
+      transform: translateX(4px);
+    }
+  </style>
 
-<!--  ERROR FOR EMPLOYEE BANK DETAILS-->
+  <script>
+    (function () {
+      const link = document.getElementById('groupedReportLink');
+      if (link && window.location.pathname === '/payroll/grouped-report') {
+        link.style.display = 'none';
+      }
+    })();
+  </script>
+
+
+  <!--  ERROR FOR EMPLOYEE BANK DETAILS-->
   <div th:if="${error}" style="background: #fef2f2; border: 1px solid #fee2e2; color: #991b1b; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; display: flex; align-items: flex-start; gap: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
     <i class="bi bi-exclamation-octagon-fill" style="font-size: 1.25rem; margin-top: 2px;"></i>
     <div>
@@ -207,6 +385,7 @@
   <!-- ==============================================================
        CURRENT PERIOD   model: payrollRuns  (List<PayrollRun>)
        ============================================================== -->
+  <div th:if="${report == null}">
   <div class="period-label">Current Payroll Period</div>
 
   <div th:if="${payrollRuns == null}" class="model-fallback">
@@ -235,6 +414,7 @@
             <div th:text="${#lists.size(payrollRuns)}" class="stat-val">0</div>
             <div class="stat-lbl">Employees</div>
           </div>
+
         </div>
       </div>
 
@@ -325,12 +505,14 @@
     </div>
 
   </th:block>
+  </div>
   <!-- /current period -->
 
 
   <!-- ==============================================================
        PAST RECORDS   model: previousPeriods  (List<PaySlipDTO>)
        ============================================================== -->
+  <div th:if="${report == null}">
   <div class="period-label" style="margin-top:2.5rem;">Past Payroll Records</div>
 
   <!-- Fallback: controller did not add the model at all -->
@@ -343,6 +525,10 @@
   <!-- Table -->
   <div th:if="${previousPeriods != null and not #lists.isEmpty(previousPeriods)}"
        class="past-period-card">
+    <!-- Past Payroll Header -->
+    <div style="padding: 1rem 1.5rem; background: #fafbfd; border-bottom: 1px solid #e6e9ef; display: flex; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+      <span class="text-sm font-semibold text-slate-600">All Past Records</span>
+    </div>
     <div class="overflow-x-auto custom-scrollbar">
       <table class="payroll-table">
         <thead>
@@ -357,39 +543,39 @@
           <th>Actions</th>
         </tr>
         </thead>
-        <tbody>
-        <tr th:each="paySlip : ${previousPeriods}">
-          <td>
-            <div class="flex items-center gap-3">
-              <div class="emp-avatar"
-                   th:text="${paySlip.employeeName != null and #strings.length(paySlip.employeeName) >= 2
+        <tbody id="pastPayrollBody">
+        <td>
+          <div class="flex items-center gap-3">
+            <div class="emp-avatar"
+                 th:text="${paySlip.employeeName != null and #strings.length(paySlip.employeeName) >= 2
                               ? #strings.toUpperCase(#strings.substring(paySlip.employeeName, 0, 2))
                               : 'NA'}">AA</div>
-              <div>
-                <div th:text="${paySlip.employeeName}" class="font-semibold text-slate-800 text-sm">—</div>
-                <div th:text="'ID · ' + ${paySlip.employeeId}" class="text-xs text-slate-400">—</div>
-              </div>
+            <div>
+              <div th:text="${paySlip.employeeName}" class="font-semibold text-slate-800 text-sm">—</div>
+              <div th:text="'ID · ' + ${paySlip.employeeId}" class="text-xs text-slate-400">—</div>
             </div>
-          </td>
-          <td th:text="${paySlip.payDate}" class="mono">—</td>
-          <td th:text="${paySlip.basicSalary}" class="mono amount-positive">—</td>
-          <td th:text="${paySlip.grossPay}" class="mono amount-positive">—</td>
-          <td th:text="${paySlip.totalDeductions}" class="mono amount-deduct">—</td>
-          <td th:text="${paySlip.netPay}" class="mono amount-positive">—</td>
-          <td>
-            <!-- bankName + bankAccountNumber both live on PaySlipDTO -->
-            <div th:text="${paySlip.bankName}" class="text-sm text-slate-700">—</div>
-            <div th:text="${paySlip.bankAccountNumber}" class="text-xs text-slate-400 mono">—</div>
-          </td>
-          <td>
-            <button class="dl-btn" onclick="downloadPayslip(this)">
-              <i class="bi bi-download"></i> Payslip
-            </button>
-          </td>
+          </div>
+        </td>
+        <td th:text="${paySlip.payDate}" class="mono">—</td>
+        <td th:text="${paySlip.basicSalary}" class="mono amount-positive">—</td>
+        <td th:text="${paySlip.grossPay}" class="mono amount-positive">—</td>
+        <td th:text="${paySlip.totalDeductions}" class="mono amount-deduct">—</td>
+        <td th:text="${paySlip.netPay}" class="mono amount-positive">—</td>
+        <td>
+          <!-- bankName + bankAccountNumber both live on PaySlipDTO -->
+          <div th:text="${paySlip.bankName}" class="text-sm text-slate-700">—</div>
+          <div th:text="${paySlip.bankAccountNumber}" class="text-xs text-slate-400 mono">—</div>
+        </td>
+        <td>
+          <button class="dl-btn" onclick="downloadPayslip(this)">
+            <i class="bi bi-download"></i> Payslip
+          </button>
+        </td>
         </tr>
         </tbody>
       </table>
     </div>
+  </div>
   </div>
   <!-- /previousPaySlips -->
 
@@ -402,11 +588,11 @@
   <div class="current-period-card mb-8">
     <div class="current-period-header">
       <div>
-        <h2 class="text-slate-800 font-bold text-xl">Employee Report</h2>
-        <p class="text-slate-500 text-sm mt-1">Grouped summary of employee payroll</p>
+        <h2 class="text-slate-800 font-bold text-xl">Employee Grouped Report</h2>
+        <p class="text-slate-500 text-sm mt-1">Grouped summary of employee payroll by selected category</p>
       </div>
       <!-- Group By selector -->
-      <form method="get" th:action="@{/payroll/report}" class="flex items-center gap-3">
+      <form method="get" th:action="@{/payroll/grouped-report}" class="flex items-center gap-3">
         <span class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Group By:</span>
         <select name="groupBy" class="filter-select" onchange="this.form.submit()">
           <option value="GRADE"     th:selected="${groupBy == 'GRADE'}">Grade</option>
@@ -420,13 +606,58 @@
     <div th:if="${report == null or #lists.isEmpty(report)}">
       <div class="empty-state">
         <i class="bi bi-bar-chart"></i>
-        <p>No report data available. Visit <a href="/payroll/report" class="text-blue-600 underline">the report page</a> to load the grouped report.</p>
+        <p>No report data available. Visit <a href="/payroll/grouped-report" class="text-blue-600 underline">the grouped report page</a> to load the grouped report.</p>
       </div>
     </div>
 
     <!-- Report groups -->
     <div th:if="${report != null and not #lists.isEmpty(report)}">
-      <div th:each="group : ${report}" class="border-2 border-blue-500 rounded-lg mb-6 overflow-hidden">
+
+      <!-- ── GRAND TOTAL CARD ── -->
+      <div class="grand-total-card" id="grandTotalCard" th:if="${totals != null}">
+        <div class="grand-total-header">
+          <div class="grand-total-left">
+            <div class="grand-total-icon">
+              <i class="bi bi-calculator-fill"></i>
+            </div>
+            <div>
+              <div class="grand-total-title">Grand Total</div>
+              <div class="grand-total-sub" id="grandTotalSubtitle">
+                <span th:text="${totals.totalGroups}">0</span> Groups,
+                <span th:text="${totals.totalEmployees}">0</span> Employees combined
+              </div>
+            </div>
+          </div>
+          <div class="grand-total-stats">
+            <div class="grand-stat-box gross">
+              <div class="grand-stat-lbl">Total Gross</div>
+              <div class="grand-stat-val" id="grandGross"
+                   th:text="${'₦' + #numbers.formatDecimal(totals.totalGross, 1, 'COMMA', 2, 'POINT')}">₦0.00</div>
+            </div>
+            <div class="grand-stat-box deduct">
+              <div class="grand-stat-lbl">Total Deductions</div>
+              <div class="grand-stat-val" id="grandDeductions"
+                   th:text="${'₦' + #numbers.formatDecimal(totals.totalDeductions, 1, 'COMMA', 2, 'POINT')}">₦0.00</div>
+            </div>
+            <div class="grand-stat-box net">
+              <div class="grand-stat-lbl">Total Net Pay</div>
+              <div class="grand-stat-val" id="grandNet"
+                   th:text="${'₦' + #numbers.formatDecimal(totals.totalNet, 1, 'COMMA', 2, 'POINT')}">₦0.00</div>
+            </div>
+            <div class="grand-dl-actions">
+              <button class="bulk-dl-btn csv" onclick="downloadGrandCSV()">
+                <i class="bi bi-filetype-csv"></i> Download All CSV
+              </button>
+              <button class="bulk-dl-btn pdf" onclick="downloadGrandPDF()">
+                <i class="bi bi-file-earmark-pdf"></i> Download All PDF
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div th:each="group : ${report}" class="group-report-card border-2 border-blue-500 rounded-lg mb-6 overflow-hidden"
+           th:attr="data-group-name=${group.groupName}, data-group-by=${groupBy}">
 
         <!-- Group header -->
         <div class="flex items-center justify-between px-6 py-4 bg-slate-50 border-b border-slate-200">
@@ -442,19 +673,27 @@
           </div>
           <div class="flex items-center gap-6 flex-wrap">
             <div class="header-stat">
-              <div th:text="${'₦' + #numbers.formatDecimal(group.totalGross, 1, 'COMMA', 2, 'POINT')}"
+              <div th:text="${'₦' + #numbers.formatDecimal(group.totalGross != null ? group.totalGross : 0, 1, 'COMMA', 2, 'POINT')}"
                    class="stat-val text-slate-800">₦0.00</div>
               <div class="stat-lbl">Total Gross</div>
             </div>
             <div class="header-stat">
-              <div th:text="${'₦' + #numbers.formatDecimal(group.totalDeductions, 1, 'COMMA', 2, 'POINT')}"
+              <div th:text="${'₦' + #numbers.formatDecimal(group.totalDeductions != null ? group.totalDeductions : 0, 1, 'COMMA', 2, 'POINT')}"
                    class="stat-val text-red-600">₦0.00</div>
               <div class="stat-lbl">Deductions</div>
             </div>
             <div class="header-stat">
-              <div th:text="${'₦' + #numbers.formatDecimal(group.totalNet, 1, 'COMMA', 2, 'POINT')}"
+              <div th:text="${'₦' + #numbers.formatDecimal(group.totalNet != null ? group.totalNet : 0, 1, 'COMMA', 2, 'POINT')}"
                    class="stat-val text-green-700">₦0.00</div>
               <div class="stat-lbl">Net Pay</div>
+            </div>
+            <div class="bulk-dl-actions">
+              <button class="bulk-dl-btn csv group-csv-btn">
+                <i class="bi bi-filetype-csv"></i> CSV
+              </button>
+              <button class="bulk-dl-btn pdf group-pdf-btn">
+                <i class="bi bi-file-earmark-pdf"></i> PDF
+              </button>
             </div>
           </div>
         </div>
@@ -477,24 +716,27 @@
               <td>
                 <div class="flex items-center gap-3">
                   <div class="emp-avatar"
-                       th:with="fullName=${emp.firstName + ' ' + emp.secondName}"
-                       th:text="${#strings.toUpperCase(#strings.substring(fullName, 0, 2))}">AA</div>
+                       th:with="fullName=${(emp.firstName != null ? emp.firstName : '') + ' ' + (emp.secondName != null ? emp.secondName : '')}"
+                       th:text="${#strings.length(fullName) >= 2 ? #strings.toUpperCase(#strings.substring(fullName, 0, 2)) : 'NA'}">AA</div>
                   <div>
-                    <div th:text="${emp.firstName + ' ' + emp.secondName}"
+                    <div th:text="${(emp.firstName != null ? emp.firstName : '') + ' ' + (emp.secondName != null ? emp.secondName : '')}"
                          class="font-semibold text-slate-800 text-sm">—</div>
                     <div th:text="'ID · ' + ${emp.employeeId}" class="text-xs text-slate-400">—</div>
                   </div>
                 </div>
               </td>
-              <td th:text="${'₦' + #numbers.formatDecimal(emp.gross, 1, 'COMMA', 2, 'POINT')}"
+              <td th:text="${'₦' + #numbers.formatDecimal(emp.gross   != null ? emp.gross   : 0, 1, 'COMMA', 2, 'POINT')}"
                   class="mono amount-positive">—</td>
-              <td th:text="${'₦' + #numbers.formatDecimal(emp.paye, 1, 'COMMA', 2, 'POINT')}"
+              <td th:text="${'₦' + #numbers.formatDecimal(emp.paye    != null ? emp.paye    : 0, 1, 'COMMA', 2, 'POINT')}"
                   class="mono amount-deduct">—</td>
-              <td th:text="${'₦' + #numbers.formatDecimal(emp.pension, 1, 'COMMA', 2, 'POINT')}"
+              <td th:text="${'₦' + #numbers.formatDecimal(emp.pension != null ? emp.pension : 0, 1, 'COMMA', 2, 'POINT')}"
                   class="mono amount-deduct">—</td>
-              <td th:text="${'₦' + #numbers.formatDecimal(emp.paye.add(emp.pension), 1, 'COMMA', 2, 'POINT')}"
+              <td th:text="${'₦' + #numbers.formatDecimal(
+                    (emp.paye != null ? emp.paye : T(java.math.BigDecimal).ZERO).add(
+                     emp.pension != null ? emp.pension : T(java.math.BigDecimal).ZERO),
+                    1, 'COMMA', 2, 'POINT')}"
                   class="mono amount-deduct">—</td>
-              <td th:text="${'₦' + #numbers.formatDecimal(emp.net, 1, 'COMMA', 2, 'POINT')}"
+              <td th:text="${'₦' + #numbers.formatDecimal(emp.net     != null ? emp.net     : 0, 1, 'COMMA', 2, 'POINT')}"
                   class="mono amount-positive">—</td>
             </tr>
             </tbody>
@@ -517,10 +759,6 @@
         <div>
           <div style="font-size:1.5rem;font-weight:800;color:#1e3a5f;letter-spacing:-0.03em;">PAYSLIP</div>
           <div style="font-size:0.8rem;color:#94a3b8;margin-top:4px;">Generated on <span id="ps-date"></span></div>
-        </div>
-        <div style="text-align:right;">
-          <div style="font-weight:700;color:#1e293b;">Your Company Name</div>
-          <div style="font-size:0.8rem;color:#94a3b8;">123 Business St., City</div>
         </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-bottom:1.5rem;">
@@ -593,6 +831,7 @@
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
   <script>
     /*
       Column index map (0-based) — 8 cols both tables:
@@ -643,7 +882,422 @@
     function closeModal()    { document.getElementById('lockModal').classList.remove('show'); }
     document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
-    /* Prevent double-submit */
+    /* ================================================================
+       BULK DOWNLOAD HELPERS
+       ================================================================ */
+
+    /* --- Shared utilities --- */
+    function getVisibleRows(tbodyId) {
+      return Array.from(document.querySelectorAll(`#${tbodyId} tr`))
+        .filter(r => r.style.display !== 'none');
+    }
+
+    function cellText(row, idx) {
+      return row.cells[idx]?.textContent.trim().replace(/\s+/g, ' ') || '—';
+    }
+
+    function triggerCSVDownload(csvContent, filename) {
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href = url; a.download = filename; a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    /* Strip currency symbol, commas → plain number string for CSV */
+    function stripCurrency(val) {
+      return val.replace(/[₦,\s]/g, '').trim();
+    }
+
+
+    /* --- GROUP REPORT — CSV per group (fix: ID own column, header "ID", no ₦ sign) --- */
+    function downloadGroupCSV(btn, groupCard) {
+      const groupName = groupCard.dataset.groupName || 'Group';
+      const groupBy   = groupCard.dataset.groupBy   || 'Group';
+      const tbody     = groupCard.querySelector('table tbody');
+      if (!tbody) return;
+
+      let csv = 'Employee,ID,Gross Pay,PAYE,Pension,Total Deductions,Net Pay\n';
+      Array.from(tbody.querySelectorAll('tr')).forEach(r => {
+        const name    = r.querySelector('.font-semibold')?.textContent.trim() || '—';
+        const empId   = r.querySelector('.text-slate-400')?.textContent.replace('ID · ','').trim() || '—';
+        const gross   = stripCurrency(cellText(r, 1));
+        const paye    = stripCurrency(cellText(r, 2));
+        const pension = stripCurrency(cellText(r, 3));
+        const deduct  = stripCurrency(cellText(r, 4));
+        const net     = stripCurrency(cellText(r, 5));
+        csv += `"${name}","${empId}",${gross},${paye},${pension},${deduct},${net}\n`;
+      });
+
+      const safeGroup = groupName.replace(/[^a-z0-9]/gi, '_');
+      triggerCSVDownload(csv, `payroll-report-${groupBy}-${safeGroup}-${new Date().toISOString().split('T')[0]}.csv`);
+    }
+
+    /* --- GROUP REPORT — PDF per group (fix: no company info, fix blank/misaligned pages) --- */
+    function downloadGroupPDF(btn, groupCard) {
+      const groupName = groupCard.dataset.groupName || 'Group';
+      const groupBy   = groupCard.dataset.groupBy   || 'Group';
+      const date      = new Date().toISOString().split('T')[0];
+      const tbody     = groupCard.querySelector('table tbody');
+      if (!tbody) return;
+
+      /* Pull totals from the header stat boxes */
+      const statVals    = groupCard.querySelectorAll('.header-stat .stat-val');
+      const totalGross  = statVals[0]?.textContent.trim() || '—';
+      const totalDeduct = statVals[1]?.textContent.trim() || '—';
+      const totalNet    = statVals[2]?.textContent.trim() || '—';
+      const empRows     = Array.from(tbody.querySelectorAll('tr'));
+
+      let tableRows = '';
+      empRows.forEach(r => {
+        const name    = r.querySelector('.font-semibold')?.textContent.trim() || '—';
+        const empId   = r.querySelector('.text-slate-400')?.textContent.replace('ID · ','').trim() || '—';
+        const gross   = cellText(r, 1), paye = cellText(r, 2);
+        const pension = cellText(r, 3), deduct = cellText(r, 4), net = cellText(r, 5);
+        tableRows += `<tr>
+          <td>${name}<br><span style="font-size:0.7rem;color:#94a3b8">ID: ${empId}</span></td>
+          <td style="font-weight:600">${gross}</td>
+          <td style="color:#b64343">${paye}</td>
+          <td style="color:#b64343">${pension}</td>
+          <td style="color:#b64343">${deduct}</td>
+          <td style="font-weight:700;color:#1e3a5f">${net}</td>
+        </tr>`;
+      });
+
+      const headers = '<th>Employee</th><th>Gross Pay</th><th>PAYE</th><th>Pension</th><th>Total Deductions</th><th>Net Pay</th>';
+      const summaryExtra = `
+        <div style="display:flex;gap:1rem;margin-bottom:1.25rem;flex-wrap:wrap;">
+          <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:0.6rem 1rem;min-width:130px;">
+            <div style="font-size:0.62rem;color:#94a3b8;text-transform:uppercase;letter-spacing:0.08em;font-weight:700;margin-bottom:3px;">Total Gross</div>
+            <div style="font-weight:700;font-size:0.95rem;color:#1e293b">${totalGross}</div>
+          </div>
+          <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:0.6rem 1rem;min-width:130px;">
+            <div style="font-size:0.62rem;color:#94a3b8;text-transform:uppercase;letter-spacing:0.08em;font-weight:700;margin-bottom:3px;">Total Deductions</div>
+            <div style="font-weight:700;font-size:0.95rem;color:#b64343">${totalDeduct}</div>
+          </div>
+          <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:0.6rem 1rem;min-width:130px;">
+            <div style="font-size:0.62rem;color:#94a3b8;text-transform:uppercase;letter-spacing:0.08em;font-weight:700;margin-bottom:3px;">Total Net Pay</div>
+            <div style="font-weight:700;font-size:0.95rem;color:#166534">${totalNet}</div>
+          </div>
+        </div>`;
+
+      const html = buildBulkPDFHTML(
+        `${groupBy}: ${groupName}`,
+        date,
+        headers,
+        tableRows,
+        empRows.length,
+        summaryExtra
+      );
+
+      const safeGroup = groupName.replace(/[^a-z0-9]/gi, '_');
+      renderBulkPDF(html, `payroll-report-${groupBy}-${safeGroup}-${date}.pdf`);
+    }
+
+    /* --- PDF BUILDER — no company name/address, compact padding to prevent blank pages --- */
+    function buildBulkPDFHTML(title, date, headers, tableRows, count, extra = '') {
+      return `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#fff;padding:1.5rem;width:100%;box-sizing:border-box;">
+        <div style="border-bottom:2px solid #e2e8f0;padding-bottom:1rem;margin-bottom:1.25rem;">
+          <div style="font-size:1.3rem;font-weight:800;color:#1e3a5f;letter-spacing:-0.02em;">${title}</div>
+          <div style="font-size:0.75rem;color:#94a3b8;margin-top:3px;">Generated: ${date} &nbsp;·&nbsp; ${count} employee${count !== 1 ? 's' : ''}</div>
+        </div>
+        ${extra}
+        <table style="width:100%;border-collapse:collapse;font-size:0.78rem;">
+          <thead>
+            <tr style="background:#f8fafc;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;">
+              ${headers.replace(/<th>/g,'<th style="padding:0.5rem 0.75rem;text-align:left;font-size:0.62rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#94a3b8;white-space:nowrap;">')}
+            </tr>
+          </thead>
+          <tbody>${tableRows.replace(/<td/g,'<td style="padding:0.6rem 0.75rem;border-bottom:1px solid #f1f5f9;vertical-align:top;"')}</tbody>
+        </table>
+        <div style="margin-top:1.5rem;text-align:center;font-size:0.68rem;color:#cbd5e1;border-top:1px solid #f1f5f9;padding-top:0.75rem;">
+          This is a computer-generated payroll report. No signature required.
+        </div>
+      </div>`;
+    }
+
+    function renderBulkPDF(html, filename) {
+      /* ── Canvas-size guard ──────────────────────────────────────────────
+         html2canvas has a ~16 384 px height limit per canvas (browser max).
+         For large tables we split the HTML into row-chunks and render each
+         chunk as a separate A4 page, then combine into one PDF file.
+         ─────────────────────────────────────────────────────────────────── */
+      const ROWS_PER_CHUNK = 80;   // rows per page (tune down if still blank)
+
+      /* Parse the built HTML string to extract header and rows */
+      const tmp = document.createElement('div');
+      tmp.innerHTML = html;
+
+      const theadHTML  = tmp.querySelector('thead')?.outerHTML || '';
+      const allRowEls  = Array.from(tmp.querySelectorAll('tbody tr'));
+      const headerHTML = tmp.querySelector('div[style*="border-bottom"]')?.outerHTML || '';
+      const extraHTML  = (() => {
+        /* The summaryExtra div sits between the header block and the table */
+        const nodes = Array.from(tmp.firstElementChild?.childNodes || []);
+        const summaryNodes = [];
+        let afterHeader = false;
+        for (const n of nodes) {
+          if (n.nodeName === 'DIV' && n.style && n.style.borderBottom) { afterHeader = true; continue; }
+          if (afterHeader && n.nodeName === 'TABLE') break;
+          if (afterHeader && n.nodeName === 'DIV') summaryNodes.push(n.outerHTML || '');
+        }
+        return summaryNodes.join('');
+      })();
+      const tableStyle = tmp.querySelector('table')?.getAttribute('style') || 'width:100%;border-collapse:collapse;font-size:0.78rem;';
+
+      /* Split all <tr> into page-sized chunks */
+      const chunks = [];
+      for (let i = 0; i < allRowEls.length; i += ROWS_PER_CHUNK) {
+        chunks.push(allRowEls.slice(i, i + ROWS_PER_CHUNK));
+      }
+      /* If there are no rows at all, fall back to single-page render */
+      if (chunks.length === 0) chunks.push([]);
+
+      const footerHTML = `<div style="margin-top:1.5rem;text-align:center;font-size:0.68rem;color:#cbd5e1;border-top:1px solid #f1f5f9;padding-top:0.75rem;">
+        This is a computer-generated payroll report. No signature required.
+      </div>`;
+
+      function buildChunkHTML(chunkRows, pageNum, totalPages) {
+        const rowsHTML = chunkRows.map(r => r.outerHTML).join('');
+        const pageNote = totalPages > 1
+          ? `<div style="font-size:0.68rem;color:#94a3b8;text-align:right;margin-bottom:4px;">Page ${pageNum} of ${totalPages}</div>`
+          : '';
+        /* Only show the summary/extra block on page 1 */
+        const extra = pageNum === 1 ? extraHTML : '';
+        return `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#fff;padding:1.5rem;width:100%;box-sizing:border-box;">
+          ${pageNum === 1 ? headerHTML : ''}
+          ${extra}
+          ${pageNote}
+          <table style="${tableStyle}">
+            ${theadHTML}
+            <tbody>${rowsHTML}</tbody>
+          </table>
+          ${footerHTML}
+        </div>`;
+      }
+
+      /* Render chunks one by one and combine into a single PDF */
+      const totalPages = chunks.length;
+
+      function renderChunk(index, pdfDoc) {
+        if (index >= chunks.length) {
+          /* All pages done — save */
+          pdfDoc.save(filename);
+          return;
+        }
+
+        const chunkHTML = buildChunkHTML(chunks[index], index + 1, totalPages);
+        const container = document.createElement('div');
+        container.style.cssText = 'position:fixed;left:-9999px;top:0;width:1122px;background:#fff;';
+        container.innerHTML = chunkHTML;
+        document.body.appendChild(container);
+
+        html2pdf()
+          .set({
+            margin: [8, 8, 8, 8],
+            filename,   // only used on single-page; we manage save() ourselves for multi
+            image: { type: 'jpeg', quality: 0.95 },
+            html2canvas: { scale: 1.5, useCORS: true, scrollX: 0, scrollY: 0, logging: false },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+          })
+          .from(container.firstElementChild)
+          .outputPdf('arraybuffer')
+          .then(async (buffer) => {
+            document.body.removeChild(container);
+
+            if (!pdfDoc) {
+              /* First chunk — use its PDF as the base */
+              const { jsPDF } = window.jspdf;
+              pdfDoc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'landscape' });
+            }
+
+            /* Import the rendered chunk page into pdfDoc */
+            const chunkPdf = await PDFLib.PDFDocument.load(buffer);
+            const basePdf  = await PDFLib.PDFDocument.create();
+
+            /* We build final via pdf-lib merge if available, else fall back to simple multi-call */
+            renderChunk(index + 1, pdfDoc);
+          })
+          .catch(err => {
+            document.body.removeChild(container);
+            console.error('PDF chunk render error:', err);
+          });
+      }
+
+      /* ── Simpler, more reliable approach: render all chunks then merge via pdf-lib ── */
+      const buffers = [];
+
+      function renderAllChunks(index) {
+        if (index >= chunks.length) {
+          mergeAndSave(buffers, filename);
+          return;
+        }
+
+        const chunkHTML = buildChunkHTML(chunks[index], index + 1, totalPages);
+        const container = document.createElement('div');
+        container.style.cssText = 'position:fixed;left:-9999px;top:0;width:1122px;background:#fff;';
+        container.innerHTML = chunkHTML;
+        document.body.appendChild(container);
+
+        html2pdf()
+          .set({
+            margin: [8, 8, 8, 8],
+            filename,
+            image: { type: 'jpeg', quality: 0.95 },
+            html2canvas: { scale: 1.5, useCORS: true, scrollX: 0, scrollY: 0, logging: false },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+          })
+          .from(container.firstElementChild)
+          .outputPdf('arraybuffer')
+          .then(buf => {
+            document.body.removeChild(container);
+            buffers.push(buf);
+            renderAllChunks(index + 1);
+          })
+          .catch(err => {
+            document.body.removeChild(container);
+            console.error('Chunk error:', err);
+            renderAllChunks(index + 1); // skip bad chunk and continue
+          });
+      }
+
+      async function mergeAndSave(bufs, fname) {
+        try {
+          const mergedPdf = await PDFLib.PDFDocument.create();
+          for (const buf of bufs) {
+            const srcDoc = await PDFLib.PDFDocument.load(buf);
+            const pages  = await mergedPdf.copyPages(srcDoc, srcDoc.getPageIndices());
+            pages.forEach(p => mergedPdf.addPage(p));
+          }
+          const mergedBytes = await mergedPdf.save();
+          const blob = new Blob([mergedBytes], { type: 'application/pdf' });
+          const url  = URL.createObjectURL(blob);
+          const a    = document.createElement('a');
+          a.href = url; a.download = fname; a.click();
+          URL.revokeObjectURL(url);
+        } catch (e) {
+          console.error('PDF merge error:', e);
+          alert('PDF generation failed. Please try downloading as CSV instead.');
+        }
+      }
+
+      renderAllChunks(0);
+    }
+
+
+    /* ── GRAND TOTAL: Download All CSV (every employee from every group) ── */
+    function downloadGrandCSV() {
+      const cards = document.querySelectorAll('.group-report-card');
+      const groupBy = cards[0]?.dataset.groupBy || 'Group';
+      let csv = 'Group,Employee,ID,Gross Pay,PAYE,Pension,Total Deductions,Net Pay\n';
+
+      cards.forEach(card => {
+        const groupName = card.dataset.groupName || '—';
+        const tbody = card.querySelector('table tbody');
+        if (!tbody) return;
+        Array.from(tbody.querySelectorAll('tr')).forEach(r => {
+          const name    = r.querySelector('.font-semibold')?.textContent.trim() || '—';
+          const empId   = r.querySelector('.text-slate-400')?.textContent.replace('ID · ','').trim() || '—';
+          const gross   = stripCurrency(cellText(r, 1));
+          const paye    = stripCurrency(cellText(r, 2));
+          const pension = stripCurrency(cellText(r, 3));
+          const deduct  = stripCurrency(cellText(r, 4));
+          const net     = stripCurrency(cellText(r, 5));
+          csv += `"${groupName}","${name}","${empId}",${gross},${paye},${pension},${deduct},${net}\n`;
+        });
+      });
+
+      const date = new Date().toISOString().split('T')[0];
+      triggerCSVDownload(csv, `payroll-grand-total-${groupBy.toLowerCase()}-${date}.csv`);
+    }
+
+    /* ── GRAND TOTAL: Download All PDF (every employee from every group) ── */
+    function downloadGrandPDF() {
+      const cards = document.querySelectorAll('.group-report-card');
+      const groupBy = cards[0]?.dataset.groupBy || 'Group';
+      const date = new Date().toISOString().split('T')[0];
+
+      const grossEl   = document.getElementById('grandGross');
+      const deductEl  = document.getElementById('grandDeductions');
+      const netEl     = document.getElementById('grandNet');
+      const totalGross  = grossEl?.textContent  || '—';
+      const totalDeduct = deductEl?.textContent  || '—';
+      const totalNet    = netEl?.textContent     || '—';
+
+      let tableRows = '';
+      let totalEmps = 0;
+
+      cards.forEach(card => {
+        const groupName = card.dataset.groupName || '—';
+        const tbody = card.querySelector('table tbody');
+        if (!tbody) return;
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        totalEmps += rows.length;
+
+        // Group separator row
+        tableRows += `<tr><td colspan="7" style="background:#f0f4ff;font-weight:700;font-size:0.72rem;color:#1e3a8a;letter-spacing:0.05em;text-transform:uppercase;padding:6px 12px;">${groupBy}: ${groupName}</td></tr>`;
+
+        rows.forEach(r => {
+          const name    = r.querySelector('.font-semibold')?.textContent.trim() || '—';
+          const empId   = r.querySelector('.text-slate-400')?.textContent.replace('ID · ','').trim() || '—';
+          const gross   = cellText(r, 1), paye = cellText(r, 2);
+          const pension = cellText(r, 3), deduct = cellText(r, 4), net = cellText(r, 5);
+          tableRows += `<tr>
+            <td>${name}<br><span style="font-size:0.7rem;color:#94a3b8">ID: ${empId}</span></td>
+            <td style="color:#64748b;font-size:0.75rem">${groupName}</td>
+            <td style="font-weight:600">${gross}</td>
+            <td style="color:#b64343">${paye}</td>
+            <td style="color:#b64343">${pension}</td>
+            <td style="color:#b64343">${deduct}</td>
+            <td style="font-weight:700;color:#1e3a5f">${net}</td>
+          </tr>`;
+        });
+      });
+
+      const summaryExtra = `
+        <div style="display:flex;gap:1rem;margin-bottom:1.25rem;flex-wrap:wrap;">
+          <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:0.6rem 1rem;min-width:130px;">
+            <div style="font-size:0.62rem;color:#3b82f6;text-transform:uppercase;letter-spacing:0.08em;font-weight:700;margin-bottom:3px;">Grand Total Gross</div>
+            <div style="font-weight:700;font-size:0.95rem;color:#1e3a8a">${totalGross}</div>
+          </div>
+          <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:0.6rem 1rem;min-width:130px;">
+            <div style="font-size:0.62rem;color:#ef4444;text-transform:uppercase;letter-spacing:0.08em;font-weight:700;margin-bottom:3px;">Grand Total Deductions</div>
+            <div style="font-weight:700;font-size:0.95rem;color:#b64343">${totalDeduct}</div>
+          </div>
+          <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:0.6rem 1rem;min-width:130px;">
+            <div style="font-size:0.62rem;color:#16a34a;text-transform:uppercase;letter-spacing:0.08em;font-weight:700;margin-bottom:3px;">Grand Total Net Pay</div>
+            <div style="font-weight:700;font-size:0.95rem;color:#166534">${totalNet}</div>
+          </div>
+        </div>`;
+
+      const headers = '<th>Employee</th><th>Group</th><th>Gross Pay</th><th>PAYE</th><th>Pension</th><th>Total Deductions</th><th>Net Pay</th>';
+      const html = buildBulkPDFHTML(
+        `Payroll Grand Total — ${groupBy}`,
+        date,
+        headers,
+        tableRows,
+        totalEmps,
+        summaryExtra
+      );
+
+      renderBulkPDF(html, `payroll-grand-total-${groupBy.toLowerCase()}-${date}.pdf`);
+    }
+
+
+
+    /* --- Wire up group buttons via delegation --- */
+    document.addEventListener('click', function(e) {
+      const csvBtn = e.target.closest('.group-csv-btn');
+      const pdfBtn = e.target.closest('.group-pdf-btn');
+      if (csvBtn) {
+        const card = csvBtn.closest('.group-report-card');
+        if (card) downloadGroupCSV(csvBtn, card);
+      }
+      if (pdfBtn) {
+        const card = pdfBtn.closest('.group-report-card');
+        if (card) downloadGroupPDF(pdfBtn, card);
+      }
+    });
     function disableSubmitButton(form) {
       const btn = form.querySelector('button[type="submit"]');
       if (btn) { btn.disabled = true; btn.classList.add('opacity-50', 'cursor-not-allowed'); btn.textContent = 'Submitting…'; }
