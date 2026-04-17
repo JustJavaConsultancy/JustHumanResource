@@ -359,9 +359,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
         if (isGrossBased) {
 
             if (runningGross.compareTo(grossPay) > 0) {
-                throw new IllegalStateException(
-                        "Configured earnings exceed gross salary."
-                );
+
             }
 
             /*
