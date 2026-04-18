@@ -15,6 +15,9 @@ import com.justjava.humanresource.payroll.service.PayrollSetupService;
 import com.justjava.humanresource.payroll.dto.EmployeeGroupedReportDTO;
 import com.justjava.humanresource.payroll.enums.EmployeeGroupBy;
 import com.justjava.humanresource.payroll.report.services.ReportingService;
+import com.justjava.humanresource.core.enums.PayrollRunStatus;
+import com.justjava.humanresource.payroll.dto.FutureEmployeeAllowanceDTO;
+
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -299,8 +302,36 @@ public class PayrollController {
     public String getEmployeePayroll(Model model) {
         List<PayrollRun> payrollRuns = paySlipService.getCurrentPeriodPayrollRuns(1L);
         List<PaySlipDTO> previousPaySlips = paySlipService.getAllClosedPeriodPaySlips(1L);
+
+        // Auto-generate payslips for any POSTED run that doesn't have one yet
+        for (PayrollRun run : payrollRuns) {
+            if (run.getStatus() == PayrollRunStatus.POSTED &&
+                    !paySlipService.existsForPayrollRun(run.getId())) {
+                try { paySlipService.generatePaySlip(run.getId()); } catch (Exception ignored) {}
+            }
+        }
+
+        List<PaySlipDTO> currentPaySlips = List.of();
+        try {
+            currentPaySlips = paySlipService.getCurrentPeriodPaySlips(1L);
+        } catch (Exception e) {  }
+
+
+        List<FutureEmployeeAllowanceDTO> futureAllowances = List.of();
+        try {
+            futureAllowances = payrollRuns.stream()
+                    .flatMap(run -> payrollSetupService
+                            .getFutureAllowancesForEmployee(run.getEmployee().getId())
+                            .stream())
+                    .distinct()
+                    .toList();
+        } catch (Exception ignored) {}
+
+
         model.addAttribute("payrollRuns", payrollRuns);
+        model.addAttribute("currentPaySlips", currentPaySlips);
         model.addAttribute("previousPeriods", previousPaySlips);
+        model.addAttribute("futureAllowances", futureAllowances);
         model.addAttribute("title", "Payroll Management");
         model.addAttribute("subTitle", "Manage employee payroll, salary details, and payment history");
         return "payroll/fragments/employee-payroll";
@@ -383,7 +414,6 @@ public class PayrollController {
         model.addAttribute("subTitle", "Manage employee payroll, salary details, and payment history");
         return "payroll/fragments/employee-payroll";
     }
-
 
 
 
