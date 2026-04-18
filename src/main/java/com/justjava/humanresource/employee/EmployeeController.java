@@ -39,6 +39,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import com.justjava.humanresource.payroll.dto.FutureEmployeeAllowanceDTO;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -303,12 +304,20 @@ public class EmployeeController {
         List<EmployeeAppraisal> employeeAppraisals =
                 appraisalService.findAppraisalByEmployeeID(loginEmployee.getId());
 
+        List<FutureEmployeeAllowanceDTO> futureAllowances = List.of();
+        try {
+            futureAllowances = payrollSetupService.getFutureAllowancesForEmployee(loginEmployee.getId());
+        } catch (Exception e) {
+
+        }
+
         model.addAttribute("tasks",            tasks);
         model.addAttribute("employeeAppraisals", employeeAppraisals);
         model.addAttribute("appraisalMap",
                 employeeAppraisals.stream()
                         .collect(Collectors.toMap(EmployeeAppraisal::getId, ea -> ea)));
         model.addAttribute("previousPaySlip", previousPaySlip);
+        model.addAttribute("futureAllowances", futureAllowances);
         model.addAttribute("employee",        employee);
         model.addAttribute("latestPaySlip",   currentPayrollRun);
         model.addAttribute("title",           "Employee Dashboard");
@@ -358,9 +367,19 @@ public class EmployeeController {
                 paySlipService.getPaySlipsByEmployee(loginEmployee.getId());
         Employee employee = employeeService.getEmployeeWithBankDetails(loginEmployee.getId());
 
+        //
+        List<FutureEmployeeAllowanceDTO> futureAllowances = List.of();
+        try {
+            futureAllowances = payrollSetupService.getFutureAllowancesForEmployee(loginEmployee.getId());
+        } catch (Exception e) {
+
+        }
+
+
         model.addAttribute("previousPaySlip", previousPaySlip);
         model.addAttribute("latestPaySlip",   latestPaySlip);
         model.addAttribute("employee",        employee);
+        model.addAttribute("futureAllowances", futureAllowances);
         model.addAttribute("title",           "Payroll");
         model.addAttribute("subTitle",        "View your pay stubs, tax information, and benefits");
         return "employees/payroll";

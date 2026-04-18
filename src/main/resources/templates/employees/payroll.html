@@ -348,6 +348,15 @@
         transform: scale(1);
     }
 
+    /* Scheduled allowance row styling */
+    .scheduled-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.4rem 0;
+        opacity: 0.85;
+    }
+
     /* ========== PRINT STYLES ========== */
     @media print {
         /* Hide everything except the modal being printed */
@@ -399,15 +408,18 @@
       <span class="px-3 py-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded-lg text-sm font-medium"
             th:text="${latestPaySlip.employeeName}">Akinrinde Akinyinka</span>
       <span class="text-sm text-gray-600 dark:text-gray-400">
-                Pay Date:
-                <span th:text="${#temporals.format(latestPaySlip.payrollDate, 'dd MMM yyyy')}">27 Feb 2026</span>
-            </span>
+        Pay Date:
+        <span th:text="${#temporals.format(latestPaySlip.payrollDate, 'dd MMM yyyy')}">27 Feb 2026</span>
+      </span>
     </div>
   </div>
 
   <!-- Main Summary Cards -->
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-    <!-- Earnings Summary Card -->
+
+    <!-- ================================================================
+         Earnings Summary Card (left, spans 2 cols)
+         ================================================================ -->
     <div class="lg:col-span-2">
       <div class="payroll-card p-5 md:p-6">
         <div class="flex items-center justify-between mb-4">
@@ -419,9 +431,8 @@
                 th:text="${#temporals.format(latestPaySlip.payrollDate, 'MMMM yyyy')}">February 2026</span>
         </div>
 
-        <!-- Basic Salary & Gross/Net -->
+        <!-- Gross / Net headline figures -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5 p-4 bg-gray-50 dark:bg-gray-750 rounded-xl">
-
           <div>
             <span class="text-xs text-gray-500 dark:text-gray-400">Gross Pay</span>
             <p class="text-xl font-bold text-green-600 dark:text-green-400">
@@ -440,88 +451,113 @@
 
         <!-- Allowances & Deductions side by side -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <!-- Allowances -->
+
+          <!-- ── Allowances column ── -->
           <div>
             <div class="flex items-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-2">
               <span class="material-icons-round text-sm mr-1 text-green-600">add_circle</span> Allowances
             </div>
             <div class="space-y-1.5">
-              <!-- Iterate over allowances from model -->
               <div th:each="allowance : ${latestPaySlip.allowances}"
                    th:unless="${allowance.description == 'Residual Adjustment' or allowance.code == 'RESIDUAL'}"
                    class="pay-item">
-                                <span class="flex items-center text-sm">
-                                    <span th:text="${allowance.description}">Allowance</span>
-                                    <span th:if="${allowance.taxable}" class="tax-badge ml-2">
-                                        <span class="material-icons-round text-xs mr-0.5">bolt</span> taxable
-                                    </span>
-                                </span>
+                <span class="flex items-center text-sm">
+                  <span th:text="${allowance.description}">Allowance</span>
+                  <span th:if="${allowance.taxable}" class="tax-badge ml-2">
+                    <span class="material-icons-round text-xs mr-0.5">bolt</span> taxable
+                  </span>
+                </span>
                 <span class="font-medium text-sm">
-                                    ₦<span th:text="${#numbers.formatDecimal(allowance.amount, 0, 'COMMA', 2, 'POINT')}">0.00</span>
-                                </span>
+                  ₦<span th:text="${#numbers.formatDecimal(allowance.amount, 0, 'COMMA', 2, 'POINT')}">0.00</span>
+                </span>
               </div>
-              <!-- Empty state when no allowances -->
               <div th:if="${#lists.isEmpty(latestPaySlip.allowances)}"
                    class="pay-item text-sm text-gray-400 dark:text-gray-500 italic">
                 No allowances for this period.
               </div>
             </div>
+
+            <!-- ── Scheduled Allowances (future effective dates) ── -->
+            <div th:if="${futureAllowances != null and not #lists.isEmpty(futureAllowances)}"
+                 class="mt-4 pt-3 border-t border-dashed border-amber-300 dark:border-amber-700">
+              <div class="flex items-center text-xs font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wider mb-2">
+                <span class="material-icons-round text-sm mr-1">schedule</span> Scheduled Allowances
+              </div>
+              <div class="space-y-1.5">
+                <div th:each="fa : ${futureAllowances}" class="scheduled-item">
+                  <span class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                    <span th:text="${fa.allowanceName}">Allowance Name</span>
+                    <span class="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs font-semibold
+                                 bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300">
+                      <span class="material-icons-round text-xs">event</span>
+                      Scheduled for <span th:text="${#temporals.format(fa.effectiveFrom, 'MMM yyyy')}">May 2026</span>
+                    </span>
+                  </span>
+                  <span class="font-medium text-sm text-amber-700 dark:text-amber-400">
+                    ₦<span th:text="${#numbers.formatDecimal(fa.amount, 0, 'COMMA', 2, 'POINT')}">0.00</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+            <!-- ── End Scheduled Allowances ── -->
           </div>
 
-          <!-- Deductions -->
+          <!-- ── Deductions column ── -->
           <div>
             <div class="flex items-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-2">
               <span class="material-icons-round text-sm mr-1 text-red-600">remove_circle</span> Deductions
             </div>
             <div class="space-y-1.5">
-              <!-- Iterate over deductions from model -->
               <div th:each="deduction : ${latestPaySlip.deductions}" class="pay-item">
-                                <span class="flex items-center text-sm">
-                                    <span th:text="${deduction.description}">Deduction</span>
-                                  <!-- Mark PAYE and Pension as statutory -->
-                                    <span th:if="${deduction.code == 'PAYE' or deduction.code == 'PENSION'}"
-                                          class="statutory-badge ml-2">
-                                        <span class="material-icons-round text-xs mr-0.5">gavel</span> statutory
-                                    </span>
-                                </span>
+                <span class="flex items-center text-sm">
+                  <span th:text="${deduction.description}">Deduction</span>
+                  <span th:if="${deduction.code == 'PAYE' or deduction.code == 'PENSION'}"
+                        class="statutory-badge ml-2">
+                    <span class="material-icons-round text-xs mr-0.5">gavel</span> statutory
+                  </span>
+                </span>
                 <span class="font-medium text-sm">
-                                    -₦<span th:text="${#numbers.formatDecimal(deduction.amount, 0, 'COMMA', 2, 'POINT')}">0.00</span>
-                                </span>
+                  -₦<span th:text="${#numbers.formatDecimal(deduction.amount, 0, 'COMMA', 2, 'POINT')}">0.00</span>
+                </span>
               </div>
-              <!-- Empty state when no deductions -->
               <div th:if="${#lists.isEmpty(latestPaySlip.deductions)}"
                    class="pay-item text-sm text-gray-400 dark:text-gray-500 italic">
                 No deductions for this period.
               </div>
             </div>
           </div>
-        </div>
+
+        </div><!-- end allowances/deductions grid -->
 
         <!-- Tax & Pension Summary -->
         <div class="mt-5 pt-4 border-t border-gray-200 dark:border-gray-700">
           <div class="flex items-center justify-between text-sm">
             <span class="text-gray-600 dark:text-gray-300">PAYE Tax</span>
             <span class="font-medium text-gray-900 dark:text-white">
-                            <th:block th:with="paye=${latestPaySlip.deductions.?[code == 'PAYE']}">
-                                ₦<span th:if="${not #lists.isEmpty(paye)}" th:text="${#numbers.formatDecimal(paye[0].amount, 0, 'COMMA', 2, 'POINT')}">1,500.00</span>
-                                <span th:unless="${not #lists.isEmpty(paye)}">—</span>
-                            </th:block>
-                        </span>
+              <th:block th:with="paye=${latestPaySlip.deductions.?[code == 'PAYE']}">
+                ₦<span th:if="${not #lists.isEmpty(paye)}"
+                       th:text="${#numbers.formatDecimal(paye[0].amount, 0, 'COMMA', 2, 'POINT')}">1,500.00</span>
+                <span th:unless="${not #lists.isEmpty(paye)}">—</span>
+              </th:block>
+            </span>
           </div>
-
           <div class="flex items-center justify-between text-sm mt-1">
             <span class="text-gray-600 dark:text-gray-300">Total Deductions</span>
             <span class="font-medium text-red-600 dark:text-red-400">
-                            -₦<span th:text="${#numbers.formatDecimal(latestPaySlip.totalDeductions, 0, 'COMMA', 2, 'POINT')}">1,500.00</span>
-                        </span>
+              -₦<span th:text="${#numbers.formatDecimal(latestPaySlip.totalDeductions, 0, 'COMMA', 2, 'POINT')}">1,500.00</span>
+            </span>
           </div>
         </div>
-      </div>
-    </div>
 
-    <!-- Right Column - Quick Info & Actions -->
+      </div>
+    </div><!-- end lg:col-span-2 -->
+
+    <!-- ================================================================
+         Right Column – Quick Info & Actions
+         ================================================================ -->
     <div class="lg:col-span-1 space-y-6">
-      <!-- Payment Method Card with null check for bank details -->
+
+      <!-- Payment Method Card -->
       <div class="payroll-card p-5 md:p-6">
         <div class="flex items-center space-x-2 mb-4">
           <span class="material-icons-round text-primary-600 dark:text-primary-400">account_balance</span>
@@ -533,23 +569,22 @@
           </div>
           <div>
             <p class="text-sm font-medium text-gray-900 dark:text-white">Bank Transfer</p>
-            <!-- Bank details with null check -->
             <th:block th:if="${employee.bankDetails != null and not #lists.isEmpty(employee.bankDetails)}">
               <p class="text-xs text-gray-500 dark:text-gray-400">
                 <span th:text="${employee.bankDetails[0].bankName}">First Bank</span> ·
                 <span th:text="'**** **** ' + ${#strings.substring(employee.bankDetails[0].accountNumber, employee.bankDetails[0].accountNumber.length()-4)}">**** 3456</span>
               </p>
             </th:block>
-            <th:block th:else>
+            <th:block th:unless="${employee.bankDetails != null and not #lists.isEmpty(employee.bankDetails)}">
               <p class="text-xs text-gray-500 dark:text-gray-400">No bank details on file</p>
             </th:block>
           </div>
         </div>
         <div class="mt-2 text-xs text-gray-500">
-                    <span class="flex items-center">
-                        <span class="material-icons-round text-xs mr-1">schedule</span>
-                        Payment processed on last working day
-                    </span>
+          <span class="flex items-center">
+            <span class="material-icons-round text-xs mr-1">schedule</span>
+            Payment processed on last working day
+          </span>
         </div>
       </div>
 
@@ -563,8 +598,8 @@
           <span th:text="${#temporals.format(latestPaySlip.payrollDate, 'MMMM yyyy')}">February 2026</span>
           · Payslip #<span th:text="${latestPaySlip.payrollRunId}">1</span>
         </p>
-        <!-- Updated: View/Download button now opens the modal, matching the eye button behavior -->
-        <button id="viewPayslipBtn" class="w-full px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center">
+        <button id="viewPayslipBtn"
+                class="w-full px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center">
           <span class="material-icons-round text-sm mr-2">visibility</span> View / Download
         </button>
         <div class="mt-3 flex justify-between text-xs text-gray-500">
@@ -572,17 +607,19 @@
           <span>Pay Date: <span th:text="${#temporals.format(latestPaySlip.payrollDate, 'dd MMM yyyy')}">27 Feb 2026</span></span>
         </div>
       </div>
-    </div>
-  </div>
 
-  <!-- Payslip History Table (dynamic) -->
+    </div><!-- end right column -->
+  </div><!-- end main 3-col grid -->
+
+  <!-- ================================================================
+       Payslip History Table
+       ================================================================ -->
   <div class="payroll-card p-5 md:p-6">
     <div class="flex items-center justify-between mb-4">
       <div class="flex items-center space-x-2">
         <span class="material-icons-round text-primary-600 dark:text-primary-400">history</span>
         <h4 class="section-title mb-0">Payslip History</h4>
       </div>
-
     </div>
 
     <div class="overflow-x-auto -mx-5 md:-mx-6 px-5 md:px-6 pb-1">
@@ -599,6 +636,7 @@
         </tr>
         </thead>
         <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+
         <!-- Current payslip row -->
         <tr class="table-row">
           <td class="px-4 py-3.5 text-sm font-medium"
@@ -609,10 +647,10 @@
           <td class="px-4 py-3.5 text-sm font-semibold text-primary-600 dark:text-primary-400">
             ₦<span th:text="${#numbers.formatDecimal(latestPaySlip.netPay, 0, 'COMMA', 2, 'POINT')}">398,500.00</span>
           </td>
-          <!-- Tax column: extract PAYE amount -->
           <td class="px-4 py-3.5 text-sm">
             <th:block th:with="paye=${latestPaySlip.deductions.?[code == 'PAYE']}">
-              <span th:if="${not #lists.isEmpty(paye)}" th:text="${#numbers.formatDecimal(paye[0].amount, 0, 'COMMA', 2, 'POINT')}">1,500.00</span>
+                <span th:if="${not #lists.isEmpty(paye)}"
+                      th:text="${#numbers.formatDecimal(paye[0].amount, 0, 'COMMA', 2, 'POINT')}">1,500.00</span>
               <span th:unless="${not #lists.isEmpty(paye)}">—</span>
             </th:block>
           </td>
@@ -625,22 +663,22 @@
           <td class="px-4 py-3.5">
             <div class="flex items-center space-x-2">
               <button class="text-gray-500 hover:text-primary-600 view-payslip-btn"
-                      th:attr="data-modal-id='viewPayslipModal'">
+                      data-modal-id="viewPayslipModal">
                 <span class="material-icons-round text-sm">visibility</span>
               </button>
-              <!-- Download button for current payslip in table row -->
               <button class="text-gray-500 hover:text-primary-600 download-payslip-btn"
-                      th:attr="data-modal-id='viewPayslipModal'">
+                      data-modal-id="viewPayslipModal">
                 <span class="material-icons-round text-sm">download</span>
               </button>
             </div>
           </td>
         </tr>
 
-        <!-- Previous payslip rows (iterate over list) -->
-        <tr class="table-row" th:each="payslip : ${previousPaySlips}">
+        <!-- Previous payslip rows -->
+        <!-- NOTE: controller passes "previousPaySlip" (no 's') from EmployeeController.getPayroll() -->
+        <tr class="table-row" th:each="payslip : ${previousPaySlip}">
           <td class="px-4 py-3.5 text-sm font-medium"
-              th:text="${#temporals.format(payslip.payrollDate, 'MMM yyyy')}">Jan 2026</td>
+              th:text="${#temporals.format(payslip.payDate, 'MMM yyyy')}">Jan 2026</td>
           <td class="px-4 py-3.5 text-sm">
             ₦<span th:text="${#numbers.formatDecimal(payslip.grossPay, 0, 'COMMA', 2, 'POINT')}">400,000.00</span>
           </td>
@@ -649,7 +687,8 @@
           </td>
           <td class="px-4 py-3.5 text-sm">
             <th:block th:with="paye=${payslip.deductions.?[code == 'PAYE']}">
-              <span th:if="${not #lists.isEmpty(paye)}" th:text="${#numbers.formatDecimal(paye[0].amount, 0, 'COMMA', 2, 'POINT')}">1,500.00</span>
+                <span th:if="${not #lists.isEmpty(paye)}"
+                      th:text="${#numbers.formatDecimal(paye[0].amount, 0, 'COMMA', 2, 'POINT')}">1,500.00</span>
               <span th:unless="${not #lists.isEmpty(paye)}">—</span>
             </th:block>
           </td>
@@ -657,8 +696,8 @@
             ₦<span th:text="${#numbers.formatDecimal(payslip.pensionAmount, 0, 'COMMA', 2, 'POINT')}">0.00</span>
           </td>
           <td class="px-4 py-3.5">
-                        <span th:if="${payslip.status == null or payslip.status == 'PROCESSED'}"
-                              class="badge badge-success">Processed</span>
+              <span th:if="${payslip.status == null or payslip.status == 'PROCESSED'}"
+                    class="badge badge-success">Processed</span>
             <span th:if="${payslip.status == 'PENDING'}"
                   class="badge badge-warning">Pending</span>
             <span th:if="${payslip.status == 'ARCHIVED'}"
@@ -666,12 +705,10 @@
           </td>
           <td class="px-4 py-3.5">
             <div class="flex items-center space-x-2">
-              <!-- Button opens unique modal for this payslip -->
               <button class="text-gray-500 hover:text-primary-600 view-payslip-btn"
                       th:attr="data-modal-id=${'viewPayslipModal_' + payslip.id}">
                 <span class="material-icons-round text-sm">visibility</span>
               </button>
-              <!-- Download button for previous payslip in table row -->
               <button class="text-gray-500 hover:text-primary-600 download-payslip-btn"
                       th:attr="data-modal-id=${'viewPayslipModal_' + payslip.id}">
                 <span class="material-icons-round text-sm">download</span>
@@ -679,20 +716,25 @@
             </div>
           </td>
         </tr>
+
         </tbody>
       </table>
     </div>
   </div>
 
-  <!-- Additional Information -->
+  <!-- Footer note -->
   <div class="mt-6 text-center text-xs text-gray-500 dark:text-gray-400">
     <span class="material-icons-round text-xs align-text-bottom mr-1">lock</span>
     Payroll information is updated monthly. For corrections, please contact HR.
   </div>
 
-  <!-- ========== MODAL: Current Payslip ========== -->
+  <!-- ================================================================
+       MODAL: Current Payslip
+       ================================================================ -->
   <div id="viewPayslipModal" class="modal-overlay">
     <div class="modal-container p-6">
+
+      <!-- Modal header -->
       <div class="flex items-center justify-between mb-4">
         <h3 class="text-lg font-bold text-gray-900 dark:text-white">
           Payslip ·
@@ -751,8 +793,8 @@
           <div class="flex justify-between text-sm">
             <span>Basic Salary</span>
             <span class="font-medium">
-                            ₦<span th:text="${#numbers.formatDecimal(latestPaySlip.grossPay, 0, 'COMMA', 2, 'POINT')}">400,000.00</span>
-                        </span>
+              ₦<span th:text="${#numbers.formatDecimal(latestPaySlip.grossPay, 0, 'COMMA', 2, 'POINT')}">400,000.00</span>
+            </span>
           </div>
           <div th:each="allowance : ${latestPaySlip.allowances}"
                th:unless="${allowance.description == 'Residual Adjustment' or allowance.code == 'RESIDUAL'}"
@@ -763,6 +805,29 @@
           <div th:if="${#lists.isEmpty(latestPaySlip.allowances)}"
                class="text-sm text-gray-400 italic">No allowances.</div>
         </div>
+
+        <!-- Scheduled Allowances in modal -->
+        <div th:if="${futureAllowances != null and not #lists.isEmpty(futureAllowances)}"
+             class="mt-3 pt-2 border-t border-dashed border-amber-300 dark:border-amber-700">
+          <p class="text-xs font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wider mb-2 flex items-center gap-1">
+            <span class="material-icons-round text-xs">schedule</span> Scheduled Allowances
+          </p>
+          <div th:each="fa : ${futureAllowances}" class="flex justify-between text-sm text-gray-500 dark:text-gray-400 py-0.5">
+            <span class="flex items-center gap-2">
+              <span th:text="${fa.allowanceName}">Allowance Name</span>
+              <span class="inline-flex items-center gap-0.5 text-xs font-semibold px-2 py-0.5 rounded-full
+                           bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300">
+                <span class="material-icons-round text-xs">event</span>
+                Scheduled for <span th:text="${#temporals.format(fa.effectiveFrom, 'MMM yyyy')}">May 2026</span>
+              </span>
+            </span>
+            <span class="font-medium text-amber-700 dark:text-amber-400">
+              ₦<span th:text="${#numbers.formatDecimal(fa.amount, 0, 'COMMA', 2, 'POINT')}">0.00</span>
+            </span>
+          </div>
+        </div>
+        <!-- End Scheduled Allowances -->
+
       </div>
 
       <!-- Deductions Section -->
@@ -791,8 +856,8 @@
         <div class="flex justify-between text-base font-bold mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
           <span>Net Pay</span>
           <span class="text-primary-600 dark:text-primary-400">
-                        ₦<span th:text="${#numbers.formatDecimal(latestPaySlip.netPay, 0, 'COMMA', 2, 'POINT')}">398,500.00</span>
-                    </span>
+            ₦<span th:text="${#numbers.formatDecimal(latestPaySlip.netPay, 0, 'COMMA', 2, 'POINT')}">398,500.00</span>
+          </span>
         </div>
       </div>
 
@@ -802,25 +867,30 @@
         Tax band: <span th:text="${latestPaySlip.paye}">Calculated via PAYE configuration</span>
       </div>
 
+      <!-- Modal action buttons -->
       <div class="flex justify-end space-x-3 mt-6">
-        <!-- Print button: triggers printPayslip for this modal -->
         <button class="print-payslip-btn px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700"
                 data-modal-id="viewPayslipModal">
           <span class="material-icons-round text-sm mr-1 align-middle">print</span> Print
         </button>
-        <!-- Download PDF button: triggers downloadPayslipPdf for this modal -->
         <button class="download-pdf-btn px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700"
                 data-modal-id="viewPayslipModal">
           <span class="material-icons-round text-sm mr-1 align-middle">download</span> Download PDF
         </button>
       </div>
+
     </div>
   </div>
 
-  <!-- ========== MODALS: Previous Payslips (generated for each) ========== -->
-  <th:block th:each="payslip : ${previousPaySlips}">
+  <!-- ================================================================
+       MODALS: Previous Payslips
+       NOTE: controller passes "previousPaySlip" (no trailing 's')
+       ================================================================ -->
+  <th:block th:each="payslip : ${previousPaySlip}">
     <div th:id="'viewPayslipModal_' + ${payslip.id}" class="modal-overlay">
       <div class="modal-container p-6">
+
+        <!-- Modal header -->
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-lg font-bold text-gray-900 dark:text-white">
             Payslip ·
@@ -879,8 +949,8 @@
             <div class="flex justify-between text-sm">
               <span>Basic Salary</span>
               <span class="font-medium">
-                                ₦<span th:text="${#numbers.formatDecimal(payslip.basicSalary, 0, 'COMMA', 2, 'POINT')}">400,000.00</span>
-                            </span>
+                ₦<span th:text="${#numbers.formatDecimal(payslip.basicSalary, 0, 'COMMA', 2, 'POINT')}">400,000.00</span>
+              </span>
             </div>
             <div th:each="allowance : ${payslip.allowances}"
                  th:unless="${allowance.description == 'Residual Adjustment' or allowance.code == 'RESIDUAL'}"
@@ -891,6 +961,7 @@
             <div th:if="${#lists.isEmpty(payslip.allowances)}"
                  class="text-sm text-gray-400 italic">No allowances.</div>
           </div>
+          <!-- No scheduled allowances in historical payslips — they are past records -->
         </div>
 
         <!-- Deductions Section -->
@@ -919,8 +990,8 @@
           <div class="flex justify-between text-base font-bold mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
             <span>Net Pay</span>
             <span class="text-primary-600 dark:text-primary-400">
-                            ₦<span th:text="${#numbers.formatDecimal(payslip.netPay, 0, 'COMMA', 2, 'POINT')}">398,500.00</span>
-                        </span>
+              ₦<span th:text="${#numbers.formatDecimal(payslip.netPay, 0, 'COMMA', 2, 'POINT')}">398,500.00</span>
+            </span>
           </div>
         </div>
 
@@ -930,18 +1001,18 @@
           Tax band: <span th:text="${payslip.appliedTaxBandSummary}">Calculated via PAYE configuration</span>
         </div>
 
+        <!-- Modal action buttons -->
         <div class="flex justify-end space-x-3 mt-6">
-          <!-- Print button for previous payslip modal -->
           <button class="print-payslip-btn px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700"
                   th:attr="data-modal-id=${'viewPayslipModal_' + payslip.id}">
             <span class="material-icons-round text-sm mr-1 align-middle">print</span> Print
           </button>
-          <!-- Download PDF button for previous payslip modal -->
           <button class="download-pdf-btn px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700"
                   th:attr="data-modal-id=${'viewPayslipModal_' + payslip.id}">
             <span class="material-icons-round text-sm mr-1 align-middle">download</span> Download PDF
           </button>
         </div>
+
       </div>
     </div>
   </th:block>
@@ -950,7 +1021,7 @@
   <div id="print-root" style="display:none;"></div>
 
   <script>
-    // ========== MODAL CONTROL (supports multiple modals) ==========
+    // ========== MODAL CONTROL ==========
     function openModal(modalId) {
         const modal = document.getElementById(modalId);
         if (modal) {
@@ -975,26 +1046,22 @@
 
     // Close handlers for all modals
     document.querySelectorAll('.modal-overlay').forEach(modal => {
-        // Close via close button
         modal.querySelectorAll('.close-modal').forEach(btn => {
             btn.addEventListener('click', () => closeModal(modal));
         });
 
-        // Close when clicking overlay
         modal.addEventListener('click', (e) => {
             if (e.target === modal) {
                 closeModal(modal);
             }
         });
 
-        // Prevent closing when clicking inside modal container
         modal.querySelector('.modal-container').addEventListener('click', (e) => {
             e.stopPropagation();
         });
     });
 
     // ========== PRINT PAYSLIP ==========
-    // Clones the modal's inner content into #print-root, triggers window.print(), then restores.
     function printPayslip(modalId) {
         const modal = document.getElementById(modalId);
         if (!modal) return;
@@ -1004,14 +1071,11 @@
 
         const printRoot = document.getElementById('print-root');
 
-        // Clone modal content into the print root
         printRoot.innerHTML = container.innerHTML;
 
-        // Hide the action buttons row inside the clone so they don't appear on print
         const actionBtns = printRoot.querySelectorAll('.flex.justify-end.space-x-3');
         actionBtns.forEach(el => el.style.display = 'none');
 
-        // Also hide the close button
         const closeBtns = printRoot.querySelectorAll('.close-modal');
         closeBtns.forEach(el => el.style.display = 'none');
 
@@ -1019,7 +1083,6 @@
 
         window.print();
 
-        // Restore after print dialog closes
         setTimeout(() => {
             printRoot.style.display = 'none';
             printRoot.innerHTML = '';
@@ -1027,9 +1090,6 @@
     }
 
     // ========== DOWNLOAD PAYSLIP AS PDF ==========
-    // Uses html2canvas to render the modal content to a canvas, then jsPDF
-    // to embed it as an image in a PDF file that is downloaded directly —
-    // NO print dialog is ever shown.
     async function downloadPayslipPdf(modalId) {
         const modal = document.getElementById(modalId);
         if (!modal) return;
@@ -1037,19 +1097,15 @@
         const container = modal.querySelector('.modal-container');
         if (!container) return;
 
-        // Derive filename from heading
         const headingEl = container.querySelector('h3');
         const headingText = headingEl ? headingEl.textContent.trim().replace(/\s+/g, ' ') : 'Payslip';
         const fileName = headingText.replace(/[^a-zA-Z0-9 ]/g, '').replace(/\s+/g, '_') + '.pdf';
 
-        // Temporarily make the modal container fully visible and off-screen
-        // so html2canvas can capture the full (unscrolled) content
         const originalOverflow = container.style.overflow;
         const originalMaxHeight = container.style.maxHeight;
         container.style.overflow = 'visible';
         container.style.maxHeight = 'none';
 
-        // Hide action buttons and close button during capture
         const actionRows = container.querySelectorAll('.flex.justify-end.space-x-3');
         const closeBtns = container.querySelectorAll('.close-modal');
         actionRows.forEach(el => el.style.visibility = 'hidden');
@@ -1059,7 +1115,7 @@
             const { jsPDF } = window.jspdf;
 
             const canvas = await html2canvas(container, {
-                scale: 2,           // 2x for sharpness
+                scale: 2,
                 useCORS: true,
                 backgroundColor: '#ffffff',
                 logging: false,
@@ -1069,28 +1125,24 @@
             const imgWidth = canvas.width;
             const imgHeight = canvas.height;
 
-            // A4 dimensions in mm
             const pageWidth = 210;
             const pageHeight = 297;
 
-            // Scale image to fit A4 width
-            const ratio = pageWidth / (imgWidth / 2);  // /2 because scale=2
+            const ratio = pageWidth / (imgWidth / 2);
             const scaledHeight = (imgHeight / 2) * ratio;
 
             const pdf = new jsPDF({
-                orientation: scaledHeight > pageHeight ? 'portrait' : 'portrait',
+                orientation: 'portrait',
                 unit: 'mm',
                 format: 'a4',
             });
 
-            // If content is taller than one A4 page, split across pages
             let yPosition = 0;
-            const pageHeightPx = (pageHeight / ratio);  // page height in original px
+            const pageHeightPx = (pageHeight / ratio);
 
             while (yPosition < imgHeight / 2) {
                 if (yPosition > 0) pdf.addPage();
 
-                // Create a temporary canvas for this page slice
                 const sliceCanvas = document.createElement('canvas');
                 sliceCanvas.width = imgWidth;
                 sliceCanvas.height = Math.min(pageHeightPx * 2, imgHeight - yPosition * 2);
@@ -1110,7 +1162,6 @@
             console.error('PDF generation failed:', err);
             alert('Sorry, PDF download failed. Please try again.');
         } finally {
-            // Restore original styles
             container.style.overflow = originalOverflow;
             container.style.maxHeight = originalMaxHeight;
             actionRows.forEach(el => el.style.visibility = '');
@@ -1119,8 +1170,6 @@
     }
 
     // ========== WIRE UP: Download buttons in table rows ==========
-    // These open the modal first (so the user sees what they're downloading),
-    // then immediately trigger the PDF download.
     document.querySelectorAll('.download-payslip-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.preventDefault();
@@ -1148,7 +1197,6 @@
     });
 
     // ========== WIRE UP: Top-level "View / Download" button ==========
-    // Opens the current payslip modal (consistent with the eye button in the table)
     const viewPayslipBtn = document.getElementById('viewPayslipBtn');
     if (viewPayslipBtn) {
         viewPayslipBtn.addEventListener('click', () => {
@@ -1185,7 +1233,6 @@
         localStorage.setItem('theme', isDark ? 'dark' : 'light');
     });
 
-    // Initialize theme
     if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
         document.documentElement.classList.add('dark');
         themeIcon.textContent = 'light_mode';
