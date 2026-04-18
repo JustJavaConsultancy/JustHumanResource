@@ -33,5 +33,25 @@ public interface PayGroupService {
             Long payGroupId,
             LocalDate date
     );
+
+    /* ============================================================
+       ALL ASSIGNED ITEMS (INCLUDING FUTURE EFFECTIVE DATES)
+       For UI display purposes
+       ============================================================ */
+
+    List<PayGroupAllowanceViewDTO> getAllAssignedAllowances(
+            Long payGroupId,
+            LocalDate date
+    );
+
+    List<PayGroupDeductionViewDTO> getAllAssignedDeductions(
+            Long payGroupId,
+            LocalDate date
+    );
+
+    List<PayGroupTaxReliefViewDTO> getAllAssignedTaxReliefs(
+            Long payGroupId,
+            LocalDate date
+    );
 }
 

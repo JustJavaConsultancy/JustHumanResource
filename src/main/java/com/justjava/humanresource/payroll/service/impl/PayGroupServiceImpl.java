@@ -151,4 +151,93 @@ public class PayGroupServiceImpl implements PayGroupService {
                 )
                 .toList();
     }
+
+    /* ============================================================
+       ALL ASSIGNED ITEMS (INCLUDING FUTURE EFFECTIVE DATES)
+       For UI display purposes
+       ============================================================ */
+
+    @Override
+    public List<PayGroupAllowanceViewDTO> getAllAssignedAllowances(
+            Long payGroupId,
+            LocalDate date) {
+
+        payGroupRepository.findById(payGroupId)
+                .orElseThrow();
+
+        return payGroupAllowanceRepository
+                .findAllAssignedAllowances(
+                        payGroupId,
+                        date,
+                        RecordStatus.ACTIVE
+                )
+                .stream()
+                .map(entity ->
+                        PayGroupAllowanceViewDTO.builder()
+                                .allowanceId(entity.getAllowance().getId())
+                                .allowanceCode(entity.getAllowance().getCode())
+                                .allowanceName(entity.getAllowance().getName())
+                                .overrideAmount(entity.getOverrideAmount())
+                                .effectiveFrom(entity.getEffectiveFrom())
+                                .effectiveTo(entity.getEffectiveTo())
+                                .build()
+                )
+                .toList();
+    }
+
+    @Override
+    public List<PayGroupDeductionViewDTO> getAllAssignedDeductions(
+            Long payGroupId,
+            LocalDate date) {
+
+        payGroupRepository.findById(payGroupId)
+                .orElseThrow();
+
+        return payGroupDeductionRepository
+                .findAllAssignedDeductions(
+                        payGroupId,
+                        date,
+                        RecordStatus.ACTIVE
+                )
+                .stream()
+                .map(entity ->
+                        PayGroupDeductionViewDTO.builder()
+                                .deductionId(entity.getDeduction().getId())
+                                .deductionCode(entity.getDeduction().getCode())
+                                .deductionName(entity.getDeduction().getName())
+                                .overrideAmount(entity.getOverrideAmount())
+                                .effectiveFrom(entity.getEffectiveFrom())
+                                .effectiveTo(entity.getEffectiveTo())
+                                .build()
+                )
+                .toList();
+    }
+
+    @Override
+    public List<PayGroupTaxReliefViewDTO> getAllAssignedTaxReliefs(
+            Long payGroupId,
+            LocalDate date) {
+
+        payGroupRepository.findById(payGroupId)
+                .orElseThrow();
+
+        return payGroupTaxReliefRepository
+                .findAllAssignedReliefs(
+                        payGroupId,
+                        date,
+                        RecordStatus.ACTIVE
+                )
+                .stream()
+                .map(entity ->
+                        PayGroupTaxReliefViewDTO.builder()
+                                .taxReliefId(entity.getTaxRelief().getId())
+                                .taxReliefCode(entity.getTaxRelief().getCode())
+                                .taxReliefName(entity.getTaxRelief().getName())
+                                .overrideAmount(entity.getOverrideAmount())
+                                .effectiveFrom(entity.getEffectiveFrom())
+                                .effectiveTo(entity.getEffectiveTo())
+                                .build()
+                )
+                .toList();
+    }
 }

@@ -35,4 +35,21 @@ public interface PayGroupAllowanceRepository
             @Param("date") LocalDate date,
             @Param("status") RecordStatus status
     );
+
+    /* ============================================================
+       ALL ASSIGNED ALLOWANCES (INCLUDING FUTURE EFFECTIVE DATES)
+       For UI display purposes - shows all assignments regardless of date
+       ============================================================ */
+
+    @Query("""
+        SELECT pga FROM PayGroupAllowance pga
+        WHERE pga.payGroup.id = :payGroupId
+          AND pga.status = :status
+          AND (pga.effectiveTo IS NULL OR pga.effectiveTo >= :date)
+    """)
+    List<PayGroupAllowance> findAllAssignedAllowances(
+            @Param("payGroupId") Long payGroupId,
+            @Param("date") LocalDate date,
+            @Param("status") RecordStatus status
+    );
 }
