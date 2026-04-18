@@ -547,7 +547,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
                         payrollDate
                 );
         BigDecimal fullGross= run.getGrossPay()
-                .add(run.getNonGrossEarnings()).add(run.getGrossDifference());
+                .add(run.getGrossDifference());
 
         System.out.println(" The Full Gross==="+fullGross);
         fullGross = fullGross.multiply(BigDecimal.valueOf(12));
