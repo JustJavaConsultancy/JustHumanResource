@@ -367,7 +367,8 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
              */
             System.out.println(" grossPay===="+grossPay +"  runningGross==="+runningGross+"  " +
                     " nonGrossEarnings==="+nonGrossEarnings);
-            BigDecimal difference = grossPay.subtract(runningGross.add(nonGrossEarnings));
+            BigDecimal difference = grossPay.subtract(runningGross);
+
 
             if (difference.compareTo(BigDecimal.ZERO) > 0) {
 
@@ -547,7 +548,8 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
                         payrollDate
                 );
         BigDecimal fullGross= run.getGrossPay()
-                .add(run.getNonGrossEarnings()).add(run.getGrossDifference());
+                .add(run.getGrossDifference());
+
 
         System.out.println(" The Full Gross 1==="+fullGross);
 /*        fullGross= run.getGrossPay()
@@ -579,10 +581,8 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
         }
 
         System.out.println(" The Total Relief==="+totalReliefs);
-        taxableIncome = fullGross.subtract
-                        (
-                            run.getNonGrossEarnings().multiply(BigDecimal.valueOf(12))
-                        ).subtract(totalReliefs);
+        taxableIncome = fullGross.subtract(totalReliefs);
+
 
         System.out.println(" The Final Taxable Income===="+taxableIncome);
         if (taxableIncome.compareTo(BigDecimal.ZERO) < 0) {
