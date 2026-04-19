@@ -550,8 +550,8 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
                 .add(run.getNonGrossEarnings()).add(run.getGrossDifference());
 
         System.out.println(" The Full Gross 1==="+fullGross);
-        fullGross= run.getGrossPay()
-                .add(run.getGrossDifference());
+/*        fullGross= run.getGrossPay()
+                .add(run.getGrossDifference());*/
 
         System.out.println(" The Full Gross 2==="+fullGross + "  run.getNonGrossEarnings()   "
         + run.getNonGrossEarnings());
@@ -579,7 +579,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
         }
 
         System.out.println(" The Total Relief==="+totalReliefs);
-        taxableIncome = fullGross
+        taxableIncome = fullGross.subtract(run.getNonGrossEarnings())
                 //.subtract(employeePension)
                 .subtract(totalReliefs);
 
