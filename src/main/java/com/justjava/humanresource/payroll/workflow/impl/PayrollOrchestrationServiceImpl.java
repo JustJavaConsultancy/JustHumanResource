@@ -579,9 +579,10 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
         }
 
         System.out.println(" The Total Relief==="+totalReliefs);
-        taxableIncome = fullGross.subtract(run.getNonGrossEarnings())
-                //.subtract(employeePension)
-                .subtract(totalReliefs);
+        taxableIncome = fullGross.subtract
+                        (
+                            run.getNonGrossEarnings().multiply(BigDecimal.valueOf(12))
+                        ).subtract(totalReliefs);
 
         System.out.println(" The Final Taxable Income===="+taxableIncome);
         if (taxableIncome.compareTo(BigDecimal.ZERO) < 0) {
