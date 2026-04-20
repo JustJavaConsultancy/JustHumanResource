@@ -104,7 +104,11 @@ public class EmployeeController {
         jobGrades.forEach(g ->
                 System.out.println("Job Grade: " + g.getSteps() + ", Description: " + g.getId()));
 
-        List<Employee> employees = employeeOnboardingService.getAllOnboardings();
+        // Sort employees by ID in ascending order
+        List<Employee> employees = employeeOnboardingService.getAllOnboardings().stream()
+                .sorted((a, b) -> a.getId().compareTo(b.getId()))
+                .toList();
+
         employees.forEach(e ->
                 System.out.println("Employee: " + e.getFirstName() + " " + e.getEmploymentStatus()
                         + ", Department: " + e.getDepartment().getName()));

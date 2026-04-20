@@ -59,7 +59,10 @@ public class KpiController {
     @GetMapping("/kpi")
     public String attendancePage(Model model) {
         List<KpiDefinition> kpiDefinitions = kpiDefinitionService.getAll();
-        List<Employee> employees = employeeOnboardingService.getAllOnboardings();
+        List<Employee> employees = employeeOnboardingService.getAllOnboardings()
+                .stream()
+                .sorted(Comparator.comparing(Employee::getId))
+                .collect(Collectors.toList());
         List<JobGradeResponseDTO> jobGrades = setupService.getAllJobGrades();
         List<Department> departments = setupService.getAllDepartments();
         List<Map<String, Object>> deptList = departments.stream()
@@ -273,8 +276,8 @@ public class KpiController {
     }
     @PostMapping("/kpi/definition")
     public String kpiDefinition(KpiDefinition kpi) {
-       kpiDefinitionService.create(kpi);
-         return "redirect:/kpi";
+        kpiDefinitionService.create(kpi);
+        return "redirect:/kpi";
     }
     @PostMapping("/kpi/assign")
     public String assignKpi(KpiBulkAssignmentRequestDTO request,Model model) {
@@ -382,9 +385,12 @@ public class KpiController {
         return "kpi/fragment/kpi-measurements-table";
     }
     @GetMapping("/fragments/stats-cards")
-        public String getStatsCards(Model model) {
+    public String getStatsCards(Model model) {
         List<KpiDefinition> kpiDefinitions = kpiDefinitionService.getAll();
-        List<Employee> employees = employeeOnboardingService.getAllOnboardings();
+        List<Employee> employees = employeeOnboardingService.getAllOnboardings()
+                .stream()
+                .sorted(Comparator.comparing(Employee::getId))
+                .collect(Collectors.toList());
         List<JobGradeResponseDTO> jobGrades = setupService.getAllJobGrades();
 
         List<KpiAssignment> assignments = kpiAssignmentService.getAllAssignments();
@@ -488,8 +494,8 @@ public class KpiController {
         model.addAttribute("assignmentsByJobStep", assignmentsByJobStep.size());
         model.addAttribute("totalAssignments",assignmentsByEmployee.size() + assignmentsByJobStep.size());
         model.addAttribute("definitionSize", kpiDefinitions.size());
-            // Return the fragment (the part inside th:fragment="stats-cards")
-            return "kpi/fragment/stats-cards :: stats-cards";
+        // Return the fragment (the part inside th:fragment="stats-cards")
+        return "kpi/fragment/stats-cards :: stats-cards";
     }
     @GetMapping("/fragments/kpi-appraisal")
     public String getAppraisalFragment(Model model) {
@@ -577,7 +583,7 @@ public class KpiController {
     }
     @PostMapping("/finalize-appraisal")
     public String finalizeAppraisal(@RequestParam String taskId,
-            @RequestParam Map<String, Object> formParams,
+                                    @RequestParam Map<String, Object> formParams,
                                     Model model) {
         System.out.println("Finalizing appraisal with ID: " + taskId + " and form parameters: " + formParams);
         formParams.put("managerComplete", true);
@@ -664,5 +670,5 @@ public class KpiController {
         model.addAttribute("completedAppraisals", completedAppraisals);
 
         return "kpi/fragment/appraisal-fragment :: appraisal-content";
-        }
+    }
 }

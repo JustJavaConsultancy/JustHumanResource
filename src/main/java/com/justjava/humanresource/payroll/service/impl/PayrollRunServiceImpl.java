@@ -151,6 +151,7 @@ public class PayrollRunServiceImpl implements PayrollRunService {
                 .grossPay(run.getGrossPay())
                 .totalDeductions(run.getTotalDeductions())
                 .netPay(run.getNetPay())
+                .nonGrossEarnings(run.getNonGrossEarnings())
                 .paye(java.math.BigDecimal.valueOf(paye))
                 .pension(java.math.BigDecimal.valueOf(pension))
                 .ytdGross(run.getYtdGross())

@@ -30,7 +30,7 @@ import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
-@Transactional
+
 public class EmployeeUploadServiceImpl implements EmployeeUploadService {
 
     private final CsvParserService csvParserService;
@@ -53,28 +53,31 @@ public class EmployeeUploadServiceImpl implements EmployeeUploadService {
     @Override
     public void uploadEmployees(MultipartFile file) {
 
-        List<EmployeeUploadDTO> records =
-                csvParserService.parse(file);
+        List<Long> newlyCreatedEmployeeIds = processUploadAndSave(file);
+
+        for (Long employeeId : newlyCreatedEmployeeIds) {
+            try {
+                payrollChangeOrchestrator.recalculateForEmployee(employeeId, LocalDate.now());
+            } catch (Exception e) {
+                System.err.println("Failed to recalculate for ID: " + employeeId + " - " + e.getMessage());
+            }
+        }
+    }
+
+    @Transactional
+    public List<Long> processUploadAndSave(MultipartFile file) {
+        List<EmployeeUploadDTO> records = csvParserService.parse(file);
+        java.util.ArrayList<Long> employeeIds = new java.util.ArrayList<>();
 
         Department department = departmentRepository.findById(DEFAULT_DEPARTMENT_ID)
                 .orElseThrow(() -> new IllegalStateException("Department not found"));
 
-        // ---------------------------------------------------------
-        // 🔥 NEW: FETCH PAYGROUP (FIXED = 2)
-        // ---------------------------------------------------------
-
         PayGroup payGroup = payGroupRepository.findById(1L)
                 .orElseThrow(() -> new IllegalStateException("PayGroup not found"));
-
-        // ---------------------------------------------------------
-        // 1. CACHE JOB GRADES BY GRADE NAME & JOB STEPS BY GROSS
-        // ---------------------------------------------------------
 
         Map<String, Map<BigDecimal, JobStep>> gradeStepCache = new HashMap<>();
 
         for (EmployeeUploadDTO dto : records) {
-
-            // Fetch or create job grade per grade name
             String gradeName = dto.getGrade();
             JobGrade jobGrade = jobGradeRepository
                     .findByName(gradeName)
@@ -84,10 +87,6 @@ public class EmployeeUploadServiceImpl implements EmployeeUploadService {
                         g.setDepartment(department);
                         return jobGradeRepository.save(g);
                     });
-
-            // ---------------------------------------------------------
-            // 2. CACHE JOB STEPS BY GROSS AND JOB GRADE (per grade)
-            // ---------------------------------------------------------
 
             Map<BigDecimal, JobStep> jobStepCache = gradeStepCache.computeIfAbsent(gradeName, k -> new HashMap<>());
 
@@ -103,9 +102,6 @@ public class EmployeeUploadServiceImpl implements EmployeeUploadService {
                                 return jobStepRepository.save(s);
                             })
             );
-            // -----------------------------------------------------
-            // 3. CREATE EMPLOYEE
-            // -----------------------------------------------------
 
             Employee employee = new Employee();
             employee.setFirstName(dto.getFirstName());
@@ -120,7 +116,6 @@ public class EmployeeUploadServiceImpl implements EmployeeUploadService {
 
             employee = employeeRepository.save(employee);
 
-            // Create Keycloak account using email as username
             String password = employeeService.generateInitialPassword(employee);
             String keycloakId = keycloakAdminService.createUser(
                     realmName,
@@ -133,11 +128,8 @@ public class EmployeeUploadServiceImpl implements EmployeeUploadService {
             );
             employee.setKeycloakUserId(keycloakId);
 
+            employeeService.changeEmploymentStatus(employee.getId(), EmploymentStatus.ACTIVE, LocalDate.now());
 
-            employeeService.changeEmploymentStatus(employee.getId(), EmploymentStatus.ACTIVE, LocalDate.now()); // added
-
-
-            // Added:  Create onboarding record so employee appears in getAllOnboardings()
             EmployeeOnboarding onboarding = EmployeeOnboarding.builder()
                     .employee(employee)
                     .status(OnboardingStatus.INITIATED)
@@ -145,7 +137,8 @@ public class EmployeeUploadServiceImpl implements EmployeeUploadService {
                     .build();
             onboardingRepository.save(onboarding);
 
-            payrollChangeOrchestrator.recalculateForEmployee(employee.getId(), LocalDate.now());
+            employeeIds.add(employee.getId());
         }
+        return employeeIds;
     }
 }
