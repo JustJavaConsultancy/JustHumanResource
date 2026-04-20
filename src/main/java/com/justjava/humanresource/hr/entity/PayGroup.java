@@ -1,5 +1,6 @@
 package com.justjava.humanresource.hr.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.justjava.humanresource.core.entity.BaseEntity;
 import com.justjava.humanresource.core.enums.PayFrequency;
 import com.justjava.humanresource.core.enums.RecordStatus;
@@ -32,6 +33,7 @@ public class PayGroup extends BaseEntity {
 
     @ManyToOne
     @JoinColumn(name = "parent_pay_group_id")
+    @JsonIgnore
     private PayGroup parent;
 
     @ManyToMany
@@ -40,5 +42,6 @@ public class PayGroup extends BaseEntity {
             joinColumns = @JoinColumn(name = "paygroup_id"),
             inverseJoinColumns = @JoinColumn(name = "tax_relief_id")
     )
+    @JsonIgnore
     private List<TaxRelief> taxReliefs;
 }

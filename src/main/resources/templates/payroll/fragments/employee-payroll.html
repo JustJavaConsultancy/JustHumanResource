@@ -1,297 +1,570 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout}">
 <head>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-  <style>
-    * { box-sizing: border-box; }
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <!-- PDF generation libraries (for payslip modal download) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        * { box-sizing: border-box; }
 
-    .period-label {
-      font-size: 0.75rem; font-weight: 600; letter-spacing: 0.03em;
-      text-transform: uppercase; color: #4b5565;
-      border-bottom: 1px solid #e2e4e8;
-      padding-bottom: 0.5rem;
-      margin-bottom: 1.25rem;
-    }
+        .period-label {
+          font-size: 0.75rem; font-weight: 600; letter-spacing: 0.03em;
+          text-transform: uppercase; color: #4b5565;
+          border-bottom: 1px solid #e2e4e8;
+          padding-bottom: 0.5rem;
+          margin-bottom: 1.25rem;
+        }
 
-    .current-period-card {
-      background: #ffffff;
-      border: 1px solid #e6e9ef;
-      border-radius: 8px;
-      overflow: hidden;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.02);
-    }
+        .current-period-card {
+          background: #ffffff;
+          border: 1px solid #e6e9ef;
+          border-radius: 8px;
+          overflow: hidden;
+          box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+        }
 
-    .current-period-header {
-      background: #f5f7fb;
-      padding: 1.5rem 2rem;
-      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;
-      border-bottom: 1px solid #e6e9ef;
-    }
+        .current-period-header {
+          background: #f5f7fb;
+          padding: 1.5rem 2rem;
+          display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;
+          border-bottom: 1px solid #e6e9ef;
+        }
 
-    .period-meta-pill {
-      background: transparent;
-      border: 1px solid #cbd0d9;
-      border-radius: 30px;
-      padding: 4px 14px;
-      font-size: 0.78rem; font-weight: 500; color: #2e3a4f;
-      display: inline-flex; align-items: center; gap: 6px;
-    }
-    .live-dot { width: 7px; height: 7px; border-radius: 50%; background: #6f8f9f; }
+        .period-meta-pill {
+          background: transparent;
+          border: 1px solid #cbd0d9;
+          border-radius: 30px;
+          padding: 4px 14px;
+          font-size: 0.78rem; font-weight: 500; color: #2e3a4f;
+          display: inline-flex; align-items: center; gap: 6px;
+        }
+        .live-dot { width: 7px; height: 7px; border-radius: 50%; background: #6f8f9f; }
 
-    .header-stat {
-      background: #ffffff;
-      border: 1px solid #dde1e7;
-      border-radius: 6px;
-      padding: 0.6rem 1.2rem;
-      color: #1f2a3e;
-    }
-    .header-stat .stat-val { font-size: 1.15rem; font-weight: 600; line-height: 1.2; }
-    .header-stat .stat-lbl { font-size: 0.7rem; color: #6b788b; font-weight: 500; text-transform: uppercase; letter-spacing: 0.02em; }
+        .header-stat {
+          background: #ffffff;
+          border: 1px solid #dde1e7;
+          border-radius: 6px;
+          padding: 0.6rem 1.2rem;
+          color: #1f2a3e;
+        }
+        .header-stat .stat-val { font-size: 1.15rem; font-weight: 600; line-height: 1.2; }
+        .header-stat .stat-lbl { font-size: 0.7rem; color: #6b788b; font-weight: 500; text-transform: uppercase; letter-spacing: 0.02em; }
 
-    .filter-bar {
-      padding: 1rem 2rem;
-      background: #fafbfd;
-      border-bottom: 1px solid #e6e9ef;
-      display: flex; align-items: center; flex-wrap: wrap; gap: 0.75rem;
-    }
-    .filter-select {
-      background: #ffffff;
-      border: 1px solid #d6dce5;
-      border-radius: 6px;
-      padding: 0.45rem 2rem 0.45rem 0.85rem;
-      font-size: 0.8125rem; color: #1f2a3e;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      cursor: pointer; transition: border-color 0.15s; appearance: none;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23758299' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
-      background-repeat: no-repeat; background-position: right 10px center;
-    }
-    .filter-select:focus { outline: none; border-color: #5f7daf; }
+        .filter-bar {
+          padding: 1rem 2rem;
+          background: #fafbfd;
+          border-bottom: 1px solid #e6e9ef;
+          display: flex; align-items: center; flex-wrap: wrap; gap: 0.75rem;
+        }
+        .filter-select {
+          background: #ffffff;
+          border: 1px solid #d6dce5;
+          border-radius: 6px;
+          padding: 0.45rem 2rem 0.45rem 0.85rem;
+          font-size: 0.8125rem; color: #1f2a3e;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          cursor: pointer; transition: border-color 0.15s; appearance: none;
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23758299' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+          background-repeat: no-repeat; background-position: right 10px center;
+        }
+        .filter-select:focus { outline: none; border-color: #5f7daf; }
 
-    .payroll-table { width: 100%; border-collapse: collapse; }
-    .payroll-table thead tr {
-      background: #f5f7fb;
-      border-top: 1px solid #e6e9ef;
-      border-bottom: 1px solid #e6e9ef;
-    }
-    .payroll-table th {
-      padding: 0.75rem 1.5rem;
-      text-align: left; font-size: 0.68rem; font-weight: 600;
-      letter-spacing: 0.03em; text-transform: uppercase; color: #5f6c80; white-space: nowrap;
-    }
-    .payroll-table tbody tr { border-bottom: 1px solid #edeff2; transition: background 0.1s; }
-    .payroll-table tbody tr:hover { background: #f9fafc; }
-    .payroll-table td { padding: 1rem 1.5rem; font-size: 0.875rem; color: #1f2a3e; white-space: nowrap; }
-    .payroll-table td.mono { font-family: ui-monospace, 'Cascadia Code', Consolas, monospace; font-size: 0.8125rem; }
+        .payroll-table { width: 100%; border-collapse: collapse; }
+        .payroll-table thead tr {
+          background: #f5f7fb;
+          border-top: 1px solid #e6e9ef;
+          border-bottom: 1px solid #e6e9ef;
+        }
+        .payroll-table th {
+          padding: 0.75rem 1.5rem;
+          text-align: left; font-size: 0.68rem; font-weight: 600;
+          letter-spacing: 0.03em; text-transform: uppercase; color: #5f6c80; white-space: nowrap;
+        }
+        .payroll-table tbody tr { border-bottom: 1px solid #edeff2; transition: background 0.1s; }
+        .payroll-table tbody tr:hover { background: #f9fafc; }
+        .payroll-table td { padding: 1rem 1.5rem; font-size: 0.875rem; color: #1f2a3e; white-space: nowrap; }
 
-    .emp-avatar {
-      width: 34px; height: 34px; border-radius: 50%;
-      background: #d9dee8;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 0.8rem; font-weight: 600; color: #2e3a4f; flex-shrink: 0;
-    }
+        /* Employee name column: allow wrapping so long names don't push Actions off-screen */
+        .payroll-table td:first-child { white-space: normal; min-width: 160px; }
+        .payroll-table td:first-child .font-semibold {
+          word-break: break-word;
+          overflow-wrap: anywhere;
+          white-space: normal;
+        }
 
-    .status-badge {
-      display: inline-flex; align-items: center; gap: 5px;
-      padding: 4px 10px; border-radius: 30px;
-      font-size: 0.72rem; font-weight: 500; border: 1px solid transparent;
-    }
-    .status-badge .dot { width: 6px; height: 6px; border-radius: 50%; }
-    .status-processed { background: #e7f3e9; color: #1e6641; border-color: #c6e0cc; }
-    .status-processed .dot { background: #2d7a4b; }
-    .status-pending { background: #fff1dd; color: #a76100; border-color: #fadcb3; }
-    .status-pending .dot { background: #b96f0e; }
-    .status-failed { background: #fae9eb; color: #b13e3e; border-color: #f3cfd3; }
-    .status-failed .dot { background: #b64343; }
-    .status-draft { background: #f0f2f5; color: #55657b; border-color: #d5dce5; }
-    .status-draft .dot { background: #73869c; }
+        /* Actions column: always visible, never shrinks */
+        .payroll-table th:last-child,
+        .payroll-table td:last-child {
+          position: sticky;
+          right: 0;
+          background: #ffffff;
+          z-index: 1;
+          box-shadow: -2px 0 6px rgba(0,0,0,0.05);
+        }
+        .payroll-table thead th:last-child {
+          background: #f5f7fb;
+        }
+        .payroll-table tbody tr:hover td:last-child {
+          background: #f9fafc;
+        }
+        .payroll-table td.mono { font-family: ui-monospace, 'Cascadia Code', Consolas, monospace; font-size: 0.8125rem; }
 
-    .amount-positive { color: #1f2a3e; font-weight: 600; }
-    .amount-deduct   { color: #b64343; font-weight: 500; }
+        .emp-avatar {
+          width: 34px; height: 34px; border-radius: 50%;
+          background: #d9dee8;
+          display: flex; align-items: center; justify-content: center;
+          font-size: 0.8rem; font-weight: 600; color: #2e3a4f; flex-shrink: 0;
+        }
 
-    .dl-btn {
-      display: inline-flex; align-items: center; gap: 5px;
-      padding: 5px 12px; border-radius: 6px;
-      font-size: 0.78rem; font-weight: 500; color: #2f4b7c;
-      border: 1px solid #cdd9e9; background: #ffffff;
-      cursor: pointer; transition: background 0.1s, border-color 0.1s; white-space: nowrap;
-    }
-    .dl-btn:hover { background: #f0f4fc; border-color: #96b2d4; }
+        .status-badge {
+          display: inline-flex; align-items: center; gap: 5px;
+          padding: 4px 10px; border-radius: 30px;
+          font-size: 0.72rem; font-weight: 500; border: 1px solid transparent;
+        }
+        .status-badge .dot { width: 6px; height: 6px; border-radius: 50%; }
+        .status-processed { background: #e7f3e9; color: #1e6641; border-color: #c6e0cc; }
+        .status-processed .dot { background: #2d7a4b; }
+        .status-pending { background: #fff1dd; color: #a76100; border-color: #fadcb3; }
+        .status-pending .dot { background: #b96f0e; }
+        .status-failed { background: #fae9eb; color: #b13e3e; border-color: #f3cfd3; }
+        .status-failed .dot { background: #b64343; }
+        .status-draft { background: #f0f2f5; color: #55657b; border-color: #d5dce5; }
+        .status-draft .dot { background: #73869c; }
 
-    .past-period-card {
-      background: #ffffff; border: 1px solid #e6e9ef;
-      border-radius: 8px; overflow: hidden; margin-bottom: 0.875rem;
-    }
+        .amount-positive { color: #1f2a3e; font-weight: 600; }
+        .amount-deduct   { color: #b64343; font-weight: 500; }
 
-    .custom-scrollbar::-webkit-scrollbar { height: 5px; width: 5px; }
-    .custom-scrollbar::-webkit-scrollbar-track { background: #f0f2f5; border-radius: 3px; }
-    .custom-scrollbar::-webkit-scrollbar-thumb { background: #b6c1cf; border-radius: 3px; }
+        .dl-btn {
+          display: inline-flex; align-items: center; gap: 5px;
+          padding: 5px 12px; border-radius: 6px;
+          font-size: 0.78rem; font-weight: 500; color: #2f4b7c;
+          border: 1px solid #cdd9e9; background: #ffffff;
+          cursor: pointer; transition: background 0.1s, border-color 0.1s; white-space: nowrap;
+        }
+        .dl-btn:hover { background: #f0f4fc; border-color: #96b2d4; }
 
-    .empty-state { padding: 3rem; text-align: center; color: #95a3b3; }
-    .empty-state i { font-size: 2.5rem; margin-bottom: 0.75rem; display: block; }
-    .empty-state p { margin: 0; font-size: 0.875rem; }
+        .past-period-card {
+          background: #ffffff; border: 1px solid #e6e9ef;
+          border-radius: 8px; overflow: hidden; margin-bottom: 0.875rem;
+        }
 
-    .model-fallback {
-      background: #fdf6ec; border: 1px solid #f5d89a; border-radius: 8px;
-      padding: 1.25rem 1.5rem; display: flex; align-items: center; gap: 12px;
-      color: #7c5000; font-size: 0.875rem; margin-bottom: 1.25rem;
-    }
-    .model-fallback i { font-size: 1.25rem; flex-shrink: 0; }
+        .custom-scrollbar::-webkit-scrollbar { height: 5px; width: 5px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f0f2f5; border-radius: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #b6c1cf; border-radius: 3px; }
 
-    .lock-period-message {
-      background: #e8f0fe; border: 1px solid #a0c0e4; border-radius: 8px;
-      padding: 12px 20px; margin-bottom: 20px;
-      display: flex; align-items: center; gap: 12px; color: #1e3a8a;
-    }
-    .lock-period-message i { font-size: 1.2rem; }
-    .lock-period-message .btn-lock {
-      margin-left: auto; background: #1e3a8a; border: 1px solid #1e3a8a;
-      color: white; border-radius: 6px; padding: 6px 18px;
-      font-size: 0.8rem; font-weight: 500; cursor: pointer;
-      transition: background 0.2s; white-space: nowrap;
-    }
-    .lock-period-message .btn-lock:hover { background: #15306b; }
+        .empty-state { padding: 3rem; text-align: center; color: #95a3b3; }
+        .empty-state i { font-size: 2.5rem; margin-bottom: 0.75rem; display: block; }
+        .empty-state p { margin: 0; font-size: 0.875rem; }
 
-    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1000; align-items: center; justify-content: center; }
-    .modal.show { display: flex; }
-    .modal-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); }
-    .modal-container { position: relative; background: white; border-radius: 12px; width: 90%; max-width: 450px; box-shadow: 0 20px 30px rgba(0,0,0,0.2); z-index: 1010; }
-    .modal-header { padding: 20px 24px; border-bottom: 1px solid #e6e9ef; display: flex; align-items: center; justify-content: space-between; }
-    .modal-header h3 { font-size: 1.2rem; font-weight: 600; color: #1f2a3e; margin: 0; }
-    .modal-close { background: none; border: none; font-size: 1.5rem; line-height: 1; cursor: pointer; color: #95a3b3; }
-    .modal-body { padding: 24px; color: #2e3a4f; }
-    .modal-footer { padding: 16px 24px; border-top: 1px solid #e6e9ef; display: flex; justify-content: flex-end; gap: 12px; }
-    .modal-btn { padding: 8px 20px; border-radius: 6px; font-size: 0.9rem; font-weight: 500; border: none; cursor: pointer; }
-    .modal-btn.cancel { background: #f0f2f5; color: #4b5565; }
-    .modal-btn.confirm { background: #b85c00; color: white; }
-    .modal-btn.confirm:hover { background: #9e4b00; }
+        .model-fallback {
+          background: #fdf6ec; border: 1px solid #f5d89a; border-radius: 8px;
+          padding: 1.25rem 1.5rem; display: flex; align-items: center; gap: 12px;
+          color: #7c5000; font-size: 0.875rem; margin-bottom: 1.25rem;
+        }
+        .model-fallback i { font-size: 1.25rem; flex-shrink: 0; }
 
-    @media (max-width: 768px) {
-      .current-period-header { padding: 1.25rem; }
-      .filter-bar { padding: 0.75rem 1rem; }
-      .payroll-table th, .payroll-table td { padding: 0.75rem 1rem; }
-    }
-  </style>
+        .lock-period-message {
+          background: #e8f0fe; border: 1px solid #a0c0e4; border-radius: 8px;
+          padding: 12px 20px; margin-bottom: 20px;
+          display: flex; align-items: center; gap: 12px; color: #1e3a8a;
+        }
+        .lock-period-message i { font-size: 1.2rem; }
+        .lock-period-message .btn-lock {
+          margin-left: auto; background: #1e3a8a; border: 1px solid #1e3a8a;
+          color: white; border-radius: 6px; padding: 6px 18px;
+          font-size: 0.8rem; font-weight: 500; cursor: pointer;
+          transition: background 0.2s; white-space: nowrap;
+        }
+        .lock-period-message .btn-lock:hover { background: #15306b; }
+
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1000; align-items: center; justify-content: center; }
+        .modal.show { display: flex; }
+        .modal-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); }
+        .modal-container { position: relative; background: white; border-radius: 12px; width: 90%; max-width: 450px; box-shadow: 0 20px 30px rgba(0,0,0,0.2); z-index: 1010; }
+        .modal-header { padding: 20px 24px; border-bottom: 1px solid #e6e9ef; display: flex; align-items: center; justify-content: space-between; }
+        .modal-header h3 { font-size: 1.2rem; font-weight: 600; color: #1f2a3e; margin: 0; }
+        .modal-close { background: none; border: none; font-size: 1.5rem; line-height: 1; cursor: pointer; color: #95a3b3; }
+        .modal-body { padding: 24px; color: #2e3a4f; }
+        .modal-footer { padding: 16px 24px; border-top: 1px solid #e6e9ef; display: flex; justify-content: flex-end; gap: 12px; }
+        .modal-btn { padding: 8px 20px; border-radius: 6px; font-size: 0.9rem; font-weight: 500; border: none; cursor: pointer; }
+        .modal-btn.cancel { background: #f0f2f5; color: #4b5565; }
+        .modal-btn.confirm { background: #b85c00; color: white; }
+        .modal-btn.confirm:hover { background: #9e4b00; }
+
+        .bulk-dl-btn {
+          display: inline-flex; align-items: center; gap: 6px;
+          padding: 7px 14px; border-radius: 6px;
+          font-size: 0.8rem; font-weight: 600;
+          cursor: pointer; transition: background 0.15s, border-color 0.15s; white-space: nowrap;
+          border: 1px solid transparent;
+        }
+        .bulk-dl-btn.csv {
+          color: #166534; background: #dcfce7; border-color: #86efac;
+        }
+        .bulk-dl-btn.csv:hover { background: #bbf7d0; border-color: #4ade80; }
+        .bulk-dl-btn.pdf {
+          color: #7c2d12; background: #fee2e2; border-color: #fca5a5;
+        }
+        .bulk-dl-btn.pdf:hover { background: #fecaca; border-color: #f87171; }
+        .bulk-dl-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+
+        .grand-total-card {
+          background: linear-gradient(135deg, #0f2554 0%, #1e3a8a 60%, #1d4ed8 100%);
+          border-radius: 12px;
+          margin-bottom: 1.75rem;
+          overflow: hidden;
+          box-shadow: 0 4px 20px rgba(30,58,138,0.25), 0 1px 4px rgba(30,58,138,0.15);
+          position: relative;
+        }
+        .grand-total-card::before {
+          content: '';
+          position: absolute;
+          top: -40px; right: -40px;
+          width: 160px; height: 160px;
+          border-radius: 50%;
+          background: rgba(255,255,255,0.05);
+          pointer-events: none;
+        }
+        .grand-total-card::after {
+          content: '';
+          position: absolute;
+          bottom: -30px; left: 30px;
+          width: 100px; height: 100px;
+          border-radius: 50%;
+          background: rgba(255,255,255,0.04);
+          pointer-events: none;
+        }
+        .grand-total-header {
+          padding: 1.5rem 2rem;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          flex-wrap: wrap;
+          gap: 1.25rem;
+          position: relative;
+          z-index: 1;
+        }
+        .grand-total-left {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+        }
+        .grand-total-icon {
+          width: 46px; height: 46px;
+          border-radius: 10px;
+          background: rgba(255,255,255,0.15);
+          border: 1px solid rgba(255,255,255,0.2);
+          display: flex; align-items: center; justify-content: center;
+          font-size: 1.25rem;
+          color: #ffffff;
+          flex-shrink: 0;
+        }
+        .grand-total-title {
+          font-size: 1.1rem;
+          font-weight: 800;
+          color: #ffffff;
+          letter-spacing: -0.01em;
+        }
+        .grand-total-sub {
+          font-size: 0.75rem;
+          color: rgba(255,255,255,0.6);
+          margin-top: 2px;
+          font-weight: 500;
+        }
+        .grand-total-stats {
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+          flex-wrap: wrap;
+        }
+        .grand-stat-box {
+          background: rgba(255,255,255,0.10);
+          border: 1px solid rgba(255,255,255,0.15);
+          border-radius: 8px;
+          padding: 0.6rem 1.1rem;
+          min-width: 130px;
+        }
+        .grand-stat-lbl {
+          font-size: 0.65rem;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+          color: rgba(255,255,255,0.55);
+          margin-bottom: 3px;
+        }
+        .grand-stat-val {
+          font-size: 1.05rem;
+          font-weight: 800;
+          font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
+        }
+        .grand-stat-box.gross .grand-stat-val  { color: #93c5fd; }
+        .grand-stat-box.deduct .grand-stat-val { color: #fca5a5; }
+        .grand-stat-box.net .grand-stat-val    { color: #6ee7b7; }
+        .grand-dl-actions {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+        .grand-dl-actions .bulk-dl-btn.csv {
+          background: rgba(220,252,231,0.15);
+          border-color: rgba(134,239,172,0.4);
+          color: #bbf7d0;
+        }
+        .grand-dl-actions .bulk-dl-btn.csv:hover {
+          background: rgba(220,252,231,0.25);
+          border-color: rgba(134,239,172,0.6);
+        }
+        .grand-dl-actions .bulk-dl-btn.pdf {
+          background: rgba(254,226,226,0.15);
+          border-color: rgba(252,165,165,0.4);
+          color: #fecaca;
+        }
+        .grand-dl-actions .bulk-dl-btn.pdf:hover {
+          background: rgba(254,226,226,0.25);
+          border-color: rgba(252,165,165,0.6);
+        }
+        @media (max-width: 768px) {
+          .current-period-header { padding: 1.25rem; }
+          .filter-bar { padding: 0.75rem 1rem; }
+          .payroll-table th, .payroll-table td { padding: 0.75rem 1rem; }
+        }
+
+        /* ── Payslip modal styles ── */
+        .payslip-modal-overlay {
+          position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+          background-color: rgba(0,0,0,0.5);
+          display: flex; align-items: center; justify-content: center;
+          z-index: 2000; padding: 1rem;
+          opacity: 0; visibility: hidden;
+          transition: opacity 0.2s ease, visibility 0.2s ease;
+        }
+        .payslip-modal-overlay.active { opacity: 1; visibility: visible; }
+        .payslip-modal-container {
+          max-width: 40rem; width: 100%; max-height: 90vh; overflow-y: auto;
+          background-color: white; border-radius: 1rem;
+          box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.02);
+          transform: scale(0.95); transition: transform 0.2s ease;
+        }
+        .payslip-modal-overlay.active .payslip-modal-container { transform: scale(1); }
+        .ps-pay-item {
+          display: flex; align-items: center; justify-content: space-between;
+          padding: 0.4rem 0; border-bottom: 1px solid #f3f4f6;
+        }
+        .ps-pay-item:last-child { border-bottom: none; }
+        .ps-tax-badge {
+          display: inline-flex; align-items: center; margin-left: 0.5rem;
+          font-size: 0.65rem; font-weight: 600; padding: 0.15rem 0.5rem;
+          border-radius: 999px; background-color: #dbeafe; color: #1e40af;
+          text-transform: uppercase; letter-spacing: 0.025em;
+        }
+        .ps-statutory-badge {
+          display: inline-flex; align-items: center; margin-left: 0.5rem;
+          font-size: 0.65rem; font-weight: 600; padding: 0.15rem 0.5rem;
+          border-radius: 999px; background-color: #fee2e2; color: #b91c1c;
+          text-transform: uppercase; letter-spacing: 0.025em;
+        }
+        .ps-scheduled-item {
+          display: flex; align-items: center; justify-content: space-between;
+          padding: 0.4rem 0; opacity: 0.85;
+        }
+        .payslip-action-btn {
+          display: inline-flex; align-items: center; gap: 5px;
+          padding: 5px 12px; border-radius: 6px;
+          font-size: 0.78rem; font-weight: 500;
+          border: 1px solid #cdd9e9; background: #ffffff;
+          cursor: pointer; transition: background 0.1s, border-color 0.1s; white-space: nowrap;
+        }
+        .payslip-action-btn.view-btn { color: #2f4b7c; }
+        .payslip-action-btn.view-btn:hover { background: #f0f4fc; border-color: #96b2d4; }
+        .payslip-action-btn.dl-payslip-btn { color: #166534; border-color: #86efac; background: #dcfce7; }
+        .payslip-action-btn.dl-payslip-btn:hover { background: #bbf7d0; }
+        .payslip-icon-btn {
+          display: inline-flex; align-items: center; justify-content: center;
+          width: 30px; height: 30px; border-radius: 6px;
+          font-size: 0.95rem; color: #4b5565;
+          border: 1px solid #d6dce5; background: #ffffff;
+          cursor: pointer; transition: background 0.1s, color 0.1s, border-color 0.1s;
+        }
+        .payslip-icon-btn:hover { background: #f0f4fc; border-color: #96b2d4; color: #2f4b7c; }
+        #payslip-print-root { display: none; }
+        @media print {
+          body > *:not(#payslip-print-root) { display: none !important; }
+          #payslip-print-root {
+            display: block !important; position: fixed; top: 0; left: 0;
+            width: 100%; background: white; padding: 2rem; z-index: 9999;
+          }
+        }
+    </style>
 </head>
 <body>
 <main layout:fragment="content">
 
-  <!-- Breadcrumb -->
-  <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
-    <div class="flex items-center gap-2 text-sm text-slate-500">
-      <a th:href="@{/payroll}" class="hover:text-primary transition-colors flex items-center gap-1">
-        <span class="material-icons-round">arrow_back</span>
-        Back to Dashboard
-      </a>
-      <span class="mx-2">/</span>
-      <span class="font-medium text-slate-900">Employee Payroll</span>
-    </div>
-  </div>
+    <!-- Breadcrumb -->
+    <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center gap-2 text-sm text-slate-500">
+            <a th:href="@{/payroll}" class="hover:text-primary transition-colors flex items-center gap-1">
+                <span class="material-icons-round">arrow_back</span>
+                Back to Dashboard
+            </a>
+            <span class="mx-2">/</span>
+            <span class="font-medium text-slate-900">Employee Payroll</span>
+        </div>
 
-
-<!--  ERROR FOR EMPLOYEE BANK DETAILS-->
-  <div th:if="${error}" style="background: #fef2f2; border: 1px solid #fee2e2; color: #991b1b; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; display: flex; align-items: flex-start; gap: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
-    <i class="bi bi-exclamation-octagon-fill" style="font-size: 1.25rem; margin-top: 2px;"></i>
-    <div>
-      <div style="font-weight: 700; margin-bottom: 2px;">Validation Error</div>
-      <div th:text="${error}" style="font-size: 0.9rem; line-height: 1.5;"></div>
-    </div>
-  </div>
-
-  <div th:if="${success}" style="background: #f0fdf4; border: 1px solid #dcfce7; color: #166534; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 12px;">
-    <i class="bi bi-check-circle-fill" style="font-size: 1.25rem;"></i>
-    <span th:text="${success}" style="font-weight: 600;"></span>
-  </div>
-
-
-
-  <!-- ==============================================================
-       CURRENT PERIOD   model: payrollRuns  (List<PayrollRun>)
-       ============================================================== -->
-  <div class="period-label">Current Payroll Period</div>
-
-  <div th:if="${payrollRuns == null}" class="model-fallback">
-    <i class="bi bi-exclamation-triangle-fill"></i>
-    <span>Current payroll data is unavailable. Please refresh the page or contact support.</span>
-  </div>
-
-  <th:block th:if="${payrollRuns != null}">
-
-    <div class="lock-period-message">
-      <i class="bi bi-lock"></i>
-      <span><strong>Lock Payroll Period</strong> — Prevent further changes once payroll is finalised.</span>
-      <button class="btn-lock" onclick="openLockModal()">Lock Period</button>
+        <!-- Quick-access: Grouped Report (hidden when already on that page) -->
+        <a href="/payroll/grouped-report" class="grouped-report-shortcut" id="groupedReportLink">
+            <span class="grouped-report-label">View Grouped Report</span>
+            <span class="grouped-report-arrow">
+        <i class="bi bi-arrow-right"></i>
+      </span>
+        </a>
     </div>
 
-    <div class="current-period-card mb-8">
-      <div class="current-period-header">
+    <style>
+        .grouped-report-shortcut {
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+          color: #1d4ed8;
+          font-size: 0.9375rem;
+          font-weight: 700;
+          text-decoration: none;
+          transition: color 0.15s;
+          white-space: nowrap;
+        }
+        .grouped-report-shortcut:hover {
+          color: #1338a0;
+          text-decoration: none;
+        }
+        .grouped-report-arrow {
+          display: flex;
+          align-items: center;
+          font-size: 0.95rem;
+          transition: transform 0.18s;
+        }
+        .grouped-report-shortcut:hover .grouped-report-arrow {
+          transform: translateX(4px);
+        }
+    </style>
+
+    <script>
+        (function () {
+          const link = document.getElementById('groupedReportLink');
+          if (link && window.location.pathname === '/payroll/grouped-report') {
+            link.style.display = 'none';
+          }
+        })();
+    </script>
+
+
+    <!--  ERROR FOR EMPLOYEE BANK DETAILS-->
+    <div th:if="${error}" style="background: #fef2f2; border: 1px solid #fee2e2; color: #991b1b; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; display: flex; align-items: flex-start; gap: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+        <i class="bi bi-exclamation-octagon-fill" style="font-size: 1.25rem; margin-top: 2px;"></i>
         <div>
-          <div class="flex items-center gap-3 mb-1">
-            <h2 class="text-slate-800 font-bold text-xl">Current Payroll</h2>
-            <span class="period-meta-pill"><span class="live-dot"></span> Active</span>
-          </div>
+            <div style="font-weight: 700; margin-bottom: 2px;">Validation Error</div>
+            <div th:text="${error}" style="font-size: 0.9rem; line-height: 1.5;"></div>
         </div>
-        <div class="flex items-center gap-3 flex-wrap">
-          <div class="header-stat">
-            <div th:text="${#lists.size(payrollRuns)}" class="stat-val">0</div>
-            <div class="stat-lbl">Employees</div>
-          </div>
+    </div>
+
+    <div th:if="${success}" style="background: #f0fdf4; border: 1px solid #dcfce7; color: #166534; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 12px;">
+        <i class="bi bi-check-circle-fill" style="font-size: 1.25rem;"></i>
+        <span th:text="${success}" style="font-weight: 600;"></span>
+    </div>
+
+
+
+    <!-- ==============================================================
+         CURRENT PERIOD   model: payrollRuns  (List<PayrollRun>)
+         ============================================================== -->
+    <div th:if="${report == null}">
+        <div class="period-label">Current Payroll Period</div>
+
+        <div th:if="${payrollRuns == null}" class="model-fallback">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <span>Current payroll data is unavailable. Please refresh the page or contact support.</span>
         </div>
-      </div>
 
-      <!-- Filter -->
-      <div class="filter-bar">
-        <span class="text-xs font-semibold text-slate-500 uppercase tracking-wide mr-1">Filter:</span>
-        <select class="filter-select" onchange="filterTable('currentPayrollBody', this.value)">
-          <option value="">All Statuses</option>
-          <option value="PROCESSED">Processed</option>
-          <option value="PENDING">Pending</option>
-          <option value="DRAFT">Draft</option>
-          <option value="FAILED">Failed</option>
-        </select>
-      </div>
+        <th:block th:if="${payrollRuns != null}">
 
-      <div class="overflow-x-auto custom-scrollbar">
-        <table class="payroll-table">
-          <thead>
-          <tr>
-            <th>Employee</th>
-            <th>Payroll Date</th>
-            <th>Period</th>
-            <th>Gross Pay</th>
-            <th>Total Deductions</th>
-            <th>Net Pay</th>
-            <th>Status</th>
-            <th>Actions</th>
-          </tr>
-          </thead>
+            <div class="lock-period-message">
+                <i class="bi bi-lock"></i>
+                <span><strong>Lock Payroll Period</strong> — Prevent further changes once payroll is finalised.</span>
+                <button class="btn-lock" onclick="openLockModal()">Lock Period</button>
+            </div>
 
-          <!-- Has records -->
-          <tbody th:if="${not #lists.isEmpty(payrollRuns)}" id="currentPayrollBody">
-          <tr th:each="run : ${payrollRuns}">
-            <td>
-              <div class="flex items-center gap-3">
-                <div class="emp-avatar"
-                     th:with="fullName=${run.employee.firstName + ' ' + run.employee.lastName}"
-                     th:text="${fullName != null and #strings.length(fullName) >= 2
+            <div class="current-period-card mb-8">
+                <div class="current-period-header">
+                    <div>
+                        <div class="flex items-center gap-3 mb-1">
+                            <h2 class="text-slate-800 font-bold text-xl">Current Payroll</h2>
+                            <span class="period-meta-pill"><span class="live-dot"></span> Active</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 flex-wrap">
+                        <div class="header-stat">
+                            <div th:text="${#lists.size(payrollRuns)}" class="stat-val">0</div>
+                            <div class="stat-lbl">Employees</div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Filter -->
+                <div class="filter-bar">
+                    <span class="text-xs font-semibold text-slate-500 uppercase tracking-wide mr-1">Filter:</span>
+                    <select class="filter-select" onchange="filterTable('currentPayrollBody', this.value)">
+                        <option value="">All Statuses</option>
+                        <option value="PROCESSED">Processed</option>
+                        <option value="PENDING">Pending</option>
+                        <option value="DRAFT">Draft</option>
+                        <option value="FAILED">Failed</option>
+                    </select>
+                </div>
+
+                <div class="overflow-x-auto custom-scrollbar">
+                    <table class="payroll-table">
+                        <thead>
+                        <tr>
+                            <th>Employee</th>
+                            <th>Payroll Date</th>
+                            <th>Period</th>
+                            <th>Gross Pay</th>
+                            <th>Total Deductions</th>
+                            <th>Net Pay</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                        </thead>
+
+                        <!-- Has records -->
+                        <tbody th:if="${not #lists.isEmpty(payrollRuns)}" id="currentPayrollBody">
+                        <tr th:each="run : ${payrollRuns}" th:attr="data-run-id=${run.id}">
+                            <td>
+                                <div class="flex items-center gap-3">
+                                    <div class="emp-avatar"
+                                         th:with="fullName=${run.employee.firstName + ' ' + run.employee.lastName}"
+                                         th:text="${fullName != null and #strings.length(fullName) >= 2
                                 ? #strings.toUpperCase(#strings.substring(fullName, 0, 2))
                                 : 'NA'}">AA</div>
-                <div>
-                  <div th:text="${run.employee.firstName + ' ' + run.employee.lastName}"
-                       class="font-semibold text-slate-800 text-sm">—</div>
-                  <div th:text="'ID · ' + ${run.employee.id}" class="text-xs text-slate-400">—</div>
-                </div>
-              </div>
-            </td>
-            <td th:text="${run.payrollDate}" class="mono">—</td>
-            <td class="mono text-xs text-slate-500">
+                                    <div>
+                                        <div th:text="${run.employee.firstName + ' ' + run.employee.lastName}"
+                                             class="font-semibold text-slate-800 text-sm">—</div>
+                                        <div th:text="'ID · ' + ${run.employee.id}" class="text-xs text-slate-400">—</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td th:text="${run.payrollDate}" class="mono">—</td>
+                            <td class="mono text-xs text-slate-500">
               <span th:if="${run.periodStart != null}"
                     th:text="${run.periodStart + ' – ' + run.periodEnd}">—</span>
-              <span th:if="${run.periodStart == null}" class="text-slate-400">—</span>
-            </td>
-            <td th:text="${run.grossPay}" class="mono amount-positive">—</td>
-            <td th:text="${run.totalDeductions}" class="mono amount-deduct">—</td>
-            <td th:text="${run.netPay}" class="mono amount-positive">—</td>
-            <td>
+                                <span th:if="${run.periodStart == null}" class="text-slate-400">—</span>
+                            </td>
+                            <td th:text="${run.grossPay}" class="mono amount-positive">—</td>
+                            <td th:text="${run.totalDeductions}" class="mono amount-deduct">—</td>
+                            <td th:text="${run.netPay}" class="mono amount-positive">—</td>
+                            <td>
               <span th:with="s=${run.status.name()}"
                     th:classappend="${s == 'PROCESSED'} ? 'status-processed' :
                                    (${s == 'PENDING'}   ? 'status-pending'   :
@@ -300,242 +573,1136 @@
                 <span class="dot"></span>
                 <span th:text="${run.status}">—</span>
               </span>
-            </td>
-            <td>
-              <button class="dl-btn" onclick="downloadPayslip(this)">
-                <i class="bi bi-download"></i> Payslip
-              </button>
-            </td>
-          </tr>
-          </tbody>
+                            </td>
+                            <td>
+                                <div style="display:flex;align-items:center;gap:4px;">
+                                    <button class="payslip-icon-btn open-payslip-modal" title="View payslip"
+                                            th:attr="data-modal-id=${'psModal_run_' + run.id}">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    <button class="payslip-icon-btn download-payslip-modal" title="Download payslip"
+                                            th:attr="data-modal-id=${'psModal_run_' + run.id}">
+                                        <i class="bi bi-download"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        </tbody>
 
-          <!-- Empty list -->
-          <tbody th:if="${#lists.isEmpty(payrollRuns)}">
-          <tr>
-            <td colspan="8">
-              <div class="empty-state">
-                <i class="bi bi-inbox"></i>
-                <p>No payroll records found for this period.</p>
-              </div>
-            </td>
-          </tr>
-          </tbody>
-        </table>
-      </div>
+                        <!-- Empty list -->
+                        <tbody th:if="${#lists.isEmpty(payrollRuns)}">
+                        <tr>
+                            <td colspan="8">
+                                <div class="empty-state">
+                                    <i class="bi bi-inbox"></i>
+                                    <p>No payroll records found for this period.</p>
+                                </div>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </th:block>
     </div>
-
-  </th:block>
-  <!-- /current period -->
+    <!-- /current period -->
 
 
-  <!-- ==============================================================
-       PAST RECORDS   model: previousPeriods  (List<PaySlipDTO>)
-       ============================================================== -->
-  <div class="period-label" style="margin-top:2.5rem;">Past Payroll Records</div>
+    <!-- ==============================================================
+         PAST RECORDS   model: previousPeriods  (List<PaySlipDTO>)
+         ============================================================== -->
+    <div th:if="${report == null}">
+        <div class="period-label" style="margin-top:2.5rem;">Past Payroll Records</div>
 
-  <!-- Fallback: controller did not add the model at all -->
-  <div th:if="${previousPeriods == null}" class="model-fallback">
-    <i class="bi bi-exclamation-triangle-fill"></i>
-    <span>Past payroll data is unavailable. Please refresh the page or contact support.</span>
-  </div>
+        <!-- Fallback: controller did not add the model at all -->
+        <div th:if="${previousPeriods == null}" class="model-fallback">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <span>Past payroll data is unavailable. Please refresh the page or contact support.</span>
+        </div>
 
 
-  <!-- Table -->
-  <div th:if="${previousPeriods != null and not #lists.isEmpty(previousPeriods)}"
-       class="past-period-card">
-    <div class="overflow-x-auto custom-scrollbar">
-      <table class="payroll-table">
-        <thead>
-        <tr>
-          <th>Employee</th>
-          <th>Pay Day</th>
-          <th>Basic Salary</th>
-          <th>Gross Pay</th>
-          <th>Total Deductions</th>
-          <th>Net Pay</th>
-          <th>Bank</th>
-          <th>Actions</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr th:each="paySlip : ${previousPeriods}">
-          <td>
-            <div class="flex items-center gap-3">
-              <div class="emp-avatar"
-                   th:text="${paySlip.employeeName != null and #strings.length(paySlip.employeeName) >= 2
+        <!-- Table -->
+        <div th:if="${previousPeriods != null and not #lists.isEmpty(previousPeriods)}"
+             class="past-period-card">
+            <!-- Past Payroll Header -->
+            <div style="padding: 1rem 1.5rem; background: #fafbfd; border-bottom: 1px solid #e6e9ef; display: flex; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+                <span class="text-sm font-semibold text-slate-600">All Past Records</span>
+            </div>
+            <div class="overflow-x-auto custom-scrollbar">
+                <table class="payroll-table">
+                    <thead>
+                    <tr>
+                        <th>Employee</th>
+                        <th>Pay Day</th>
+                        <th>Basic Salary</th>
+                        <th>Gross Pay</th>
+                        <th>Total Deductions</th>
+                        <th>Net Pay</th>
+                        <th>Bank</th>
+                        <th>Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody id="pastPayrollBody">
+                    <tr th:each="paySlip : ${previousPeriods}">
+                        <td>
+                            <div class="flex items-center gap-3">
+                                <div class="emp-avatar"
+                                     th:text="${paySlip.employeeName != null and #strings.length(paySlip.employeeName) >= 2
                               ? #strings.toUpperCase(#strings.substring(paySlip.employeeName, 0, 2))
                               : 'NA'}">AA</div>
-              <div>
-                <div th:text="${paySlip.employeeName}" class="font-semibold text-slate-800 text-sm">—</div>
-                <div th:text="'ID · ' + ${paySlip.employeeId}" class="text-xs text-slate-400">—</div>
-              </div>
+                                <div>
+                                    <div th:text="${paySlip.employeeName}" class="font-semibold text-slate-800 text-sm">—</div>
+                                    <div th:text="'ID · ' + ${paySlip.employeeId}" class="text-xs text-slate-400">—</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td th:text="${paySlip.payDate}" class="mono">—</td>
+                        <td th:text="${paySlip.basicSalary}" class="mono amount-positive">—</td>
+                        <td th:text="${paySlip.grossPay}" class="mono amount-positive">—</td>
+                        <td th:text="${paySlip.totalDeductions}" class="mono amount-deduct">—</td>
+                        <td th:text="${paySlip.netPay}" class="mono amount-positive">—</td>
+                        <td>
+                            <!-- bankName + bankAccountNumber both live on PaySlipDTO -->
+                            <div th:text="${paySlip.bankName}" class="text-sm text-slate-700">—</div>
+                            <div th:text="${paySlip.bankAccountNumber}" class="text-xs text-slate-400 mono">—</div>
+                        </td>
+                        <td>
+                            <div style="display:flex;align-items:center;gap:4px;">
+                                <button class="payslip-icon-btn open-payslip-modal" title="View payslip"
+                                        th:attr="data-modal-id=${'psModal_slip_' + paySlip.id}">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                                <button class="payslip-icon-btn download-payslip-modal" title="Download payslip"
+                                        th:attr="data-modal-id=${'psModal_slip_' + paySlip.id}">
+                                    <i class="bi bi-download"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
             </div>
-          </td>
-          <td th:text="${paySlip.payDate}" class="mono">—</td>
-          <td th:text="${paySlip.basicSalary}" class="mono amount-positive">—</td>
-          <td th:text="${paySlip.grossPay}" class="mono amount-positive">—</td>
-          <td th:text="${paySlip.totalDeductions}" class="mono amount-deduct">—</td>
-          <td th:text="${paySlip.netPay}" class="mono amount-positive">—</td>
-          <td>
-            <!-- bankName + bankAccountNumber both live on PaySlipDTO -->
-            <div th:text="${paySlip.bankName}" class="text-sm text-slate-700">—</div>
-            <div th:text="${paySlip.bankAccountNumber}" class="text-xs text-slate-400 mono">—</div>
-          </td>
-          <td>
-            <button class="dl-btn" onclick="downloadPayslip(this)">
-              <i class="bi bi-download"></i> Payslip
-            </button>
-          </td>
-        </tr>
-        </tbody>
-      </table>
+        </div>
     </div>
-  </div>
-  <!-- /previousPaySlips -->
+    <!-- /previousPaySlips -->
+
+    <!-- ================================================================
+         PAYSLIP MODALS — Current Payroll Runs
+         Driven by currentPaySlips (List<PaySlipDTO>) added by the controller.
+         Modal ID uses payrollRunId so the table-row buttons (data-modal-id="psModal_run_{run.id}") match.
+         ================================================================ -->
+    <th:block th:if="${currentPaySlips != null}" th:each="ps : ${currentPaySlips}">
+        <div th:id="'psModal_run_' + ${ps.payrollRunId}" class="payslip-modal-overlay">
+            <div class="payslip-modal-container p-6">
+
+                <!-- Header -->
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+                    <h3 style="font-size:1.1rem;font-weight:700;color:#1f2a3e;margin:0;">
+                        Payslip ·
+                        <span th:text="${#temporals.format(ps.payDate, 'MMMM yyyy')}">Month Year</span>
+                    </h3>
+                    <button class="ps-close-modal" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:#95a3b3;line-height:1;">&times;</button>
+                </div>
+
+                <!-- Payroll Period -->
+                <div style="border-bottom:1px solid #e6e9ef;padding-bottom:1rem;margin-bottom:1rem;">
+                    <p style="font-size:0.78rem;color:#6b788b;margin:0;">
+                        Payroll Period:
+                        <span th:text="${#temporals.format(ps.payDate, '01 MMM yyyy')}">01 Jan 2026</span>
+                        –
+                        <span th:text="${#temporals.format(ps.payDate, 'dd MMM yyyy')}">31 Jan 2026</span>
+                    </p>
+                </div>
+
+                <!-- Employee Info -->
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;font-size:0.875rem;">
+                    <div>
+                        <p style="font-size:0.72rem;color:#6b788b;margin:0 0 2px;">Employee Name</p>
+                        <p style="font-weight:500;margin:0;" th:text="${ps.employeeName}">—</p>
+                    </div>
+                    <div>
+                        <p style="font-size:0.72rem;color:#6b788b;margin:0 0 2px;">Employee ID</p>
+                        <p style="margin:0;" th:text="${ps.employeeId}">—</p>
+                    </div>
+                    <div>
+                        <p style="font-size:0.72rem;color:#6b788b;margin:0 0 2px;">Pay Date</p>
+                        <p style="margin:0;" th:text="${#temporals.format(ps.payDate, 'dd MMMM yyyy')}">—</p>
+                    </div>
+                    <div>
+                        <p style="font-size:0.72rem;color:#6b788b;margin:0 0 2px;">Pension Scheme</p>
+                        <p style="margin:0;" th:text="${ps.appliedPensionSchemeName}">—</p>
+                    </div>
+                </div>
+
+                <!-- Allowances Section -->
+                <div style="margin-bottom:1rem;">
+                    <h5 style="font-size:0.72rem;font-weight:600;color:#5f6c80;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 0.5rem;">Allowances</h5>
+                    <div th:each="allowance : ${ps.allowances}"
+                         th:unless="${allowance.description == 'Residual Adjustment' or allowance.code == 'RESIDUAL'}"
+                         class="ps-pay-item" style="font-size:0.875rem;">
+            <span style="display:flex;align-items:center;">
+              <span th:text="${allowance.description}">Allowance</span>
+              <span th:if="${allowance.taxable}" class="ps-tax-badge">
+                <i class="bi bi-lightning-fill" style="font-size:0.6rem;margin-right:2px;"></i> taxable
+              </span>
+            </span>
+                        <span style="font-weight:500;">
+              ₦<span th:text="${#numbers.formatDecimal(allowance.amount, 0, 'COMMA', 2, 'POINT')}">0.00</span>
+            </span>
+                    </div>
+                    <div th:if="${ps.allowances == null or #lists.isEmpty(ps.allowances)}"
+                         style="font-size:0.875rem;color:#95a3b3;font-style:italic;">No allowances.</div>
+                </div>
+
+                <!-- Scheduled Allowances (future) — from model attribute, same for all current-run modals -->
+                <div th:if="${futureAllowances != null and not #lists.isEmpty(futureAllowances)}"
+                     style="margin-bottom:1rem;padding-top:0.75rem;border-top:1px dashed #fcd34d;">
+                    <p style="font-size:0.72rem;font-weight:600;color:#92400e;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 0.5rem;display:flex;align-items:center;gap:4px;">
+                        <i class="bi bi-clock" style="font-size:0.75rem;"></i> Scheduled Allowances
+                    </p>
+                    <div th:each="fa : ${futureAllowances}" class="ps-scheduled-item" style="font-size:0.875rem;">
+            <span style="display:flex;align-items:center;gap:8px;color:#57534e;">
+              <span th:text="${fa.allowanceName}">Allowance Name</span>
+              <span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:999px;font-size:0.72rem;font-weight:600;background:#fef3c7;color:#92400e;">
+                <i class="bi bi-calendar-event" style="font-size:0.65rem;"></i>
+                Scheduled for <span th:text="${#temporals.format(fa.effectiveFrom, 'MMM yyyy')}">May 2026</span>
+              </span>
+            </span>
+                        <span style="font-weight:500;color:#92400e;">
+              ₦<span th:text="${#numbers.formatDecimal(fa.amount, 0, 'COMMA', 2, 'POINT')}">0.00</span>
+            </span>
+                    </div>
+                </div>
+
+                <!-- Deductions Section -->
+                <div style="margin-bottom:1rem;">
+                    <h5 style="font-size:0.72rem;font-weight:600;color:#5f6c80;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 0.5rem;">Deductions</h5>
+                    <div th:each="deduction : ${ps.deductions}" class="ps-pay-item" style="font-size:0.875rem;">
+            <span style="display:flex;align-items:center;">
+              <span th:text="${deduction.description}">Deduction</span>
+              <span th:if="${deduction.code == 'PAYE' or deduction.code == 'PENSION'}" class="ps-statutory-badge">
+                <i class="bi bi-shield-fill" style="font-size:0.6rem;margin-right:2px;"></i> statutory
+              </span>
+            </span>
+                        <span style="font-weight:500;">
+              -₦<span th:text="${#numbers.formatDecimal(deduction.amount, 0, 'COMMA', 2, 'POINT')}">0.00</span>
+            </span>
+                    </div>
+                    <div th:if="${ps.deductions == null or #lists.isEmpty(ps.deductions)}"
+                         style="font-size:0.875rem;color:#95a3b3;font-style:italic;">No deductions.</div>
+                </div>
+
+                <!-- Totals -->
+                <div style="border-top:1px solid #e6e9ef;padding-top:0.75rem;margin-top:0.5rem;">
+                    <div style="display:flex;justify-content:space-between;font-size:0.875rem;margin-bottom:4px;">
+                        <span style="font-weight:600;">Gross Pay</span>
+                        <span>₦<span th:text="${#numbers.formatDecimal(ps.grossPay, 0, 'COMMA', 2, 'POINT')}">0.00</span></span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;font-size:0.875rem;margin-bottom:4px;">
+                        <span style="font-weight:600;">Total Deductions</span>
+                        <span>-₦<span th:text="${#numbers.formatDecimal(ps.totalDeductions, 0, 'COMMA', 2, 'POINT')}">0.00</span></span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;font-size:1rem;font-weight:700;margin-top:0.5rem;padding-top:0.5rem;border-top:1px solid #e6e9ef;">
+                        <span>Net Pay</span>
+                        <span style="color:#1d4ed8;">₦<span th:text="${#numbers.formatDecimal(ps.netPay, 0, 'COMMA', 2, 'POINT')}">0.00</span></span>
+                    </div>
+                </div>
+
+                <!-- Bank / Payment Details -->
+                <div style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid #f3f4f6;font-size:0.78rem;color:#6b788b;">
+                    <span style="font-weight:600;">Bank:</span>
+                    <span th:if="${ps.bankName != null}"
+                          th:text="${ps.bankName + (ps.bankAccountNumber != null ? ' · ' + ps.bankAccountNumber : '')}">—</span>
+                    <span th:unless="${ps.bankName != null}">No bank details on file</span>
+                    &nbsp;·&nbsp;
+                    <span style="font-weight:600;">Pension Scheme:</span>
+                    <span th:text="${ps.appliedPensionSchemeName != null ? ps.appliedPensionSchemeName : '—'}">—</span>
+                </div>
+
+                <!-- Action Buttons -->
+                <div style="display:flex;justify-content:flex-end;gap:0.75rem;margin-top:1.5rem;" class="ps-modal-actions">
+                    <button class="ps-close-modal" style="padding:8px 16px;border:1px solid #d6dce5;border-radius:6px;font-size:0.875rem;font-weight:500;cursor:pointer;background:#fff;">
+                        <i class="bi bi-x-lg" style="margin-right:4px;"></i> Close
+                    </button>
+                    <button class="download-payslip-modal-btn" style="padding:8px 16px;background:#1d4ed8;color:white;border:none;border-radius:6px;font-size:0.875rem;font-weight:500;cursor:pointer;"
+                            th:attr="data-modal-id=${'psModal_run_' + ps.payrollRunId}">
+                        <i class="bi bi-download" style="margin-right:4px;"></i> Download PDF
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </th:block>
+
+    <!-- ================================================================
+         PAYSLIP MODALS — Past Payslips (previousPeriods / PaySlipDTO)
+         ================================================================ -->
+    <th:block th:if="${previousPeriods != null}" th:each="paySlip : ${previousPeriods}">
+        <div th:id="'psModal_slip_' + ${paySlip.id}" class="payslip-modal-overlay">
+            <div class="payslip-modal-container p-6">
+
+                <!-- Header -->
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+                    <h3 style="font-size:1.1rem;font-weight:700;color:#1f2a3e;margin:0;">
+                        Payslip ·
+                        <span th:text="${#temporals.format(paySlip.payDate, 'MMMM yyyy')}">Month Year</span>
+                    </h3>
+                    <button class="ps-close-modal" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:#95a3b3;line-height:1;">&times;</button>
+                </div>
+
+                <!-- Payroll Period -->
+                <div style="border-bottom:1px solid #e6e9ef;padding-bottom:1rem;margin-bottom:1rem;">
+                    <p style="font-size:0.78rem;color:#6b788b;margin:0;">
+                        Payroll Period:
+                        <span th:text="${#temporals.format(paySlip.payDate, '01 MMM yyyy')}">01 Jan 2026</span>
+                        –
+                        <span th:text="${#temporals.format(paySlip.payDate, 'dd MMM yyyy')}">31 Jan 2026</span>
+                    </p>
+                </div>
+
+                <!-- Employee Info -->
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;font-size:0.875rem;">
+                    <div>
+                        <p style="font-size:0.72rem;color:#6b788b;margin:0 0 2px;">Employee Name</p>
+                        <p style="font-weight:500;margin:0;" th:text="${paySlip.employeeName}">—</p>
+                    </div>
+                    <div>
+                        <p style="font-size:0.72rem;color:#6b788b;margin:0 0 2px;">Employee ID</p>
+                        <p style="margin:0;" th:text="${paySlip.employeeId}">—</p>
+                    </div>
+                    <div>
+                        <p style="font-size:0.72rem;color:#6b788b;margin:0 0 2px;">Pay Date</p>
+                        <p style="margin:0;" th:text="${#temporals.format(paySlip.payDate, 'dd MMMM yyyy')}">—</p>
+                    </div>
+                    <div>
+                        <p style="font-size:0.72rem;color:#6b788b;margin:0 0 2px;">Pension Scheme</p>
+                        <p style="margin:0;" th:text="${paySlip.appliedPensionSchemeName}">—</p>
+                    </div>
+                </div>
+
+                <!-- Allowances Section -->
+                <div style="margin-bottom:1rem;">
+                    <h5 style="font-size:0.72rem;font-weight:600;color:#5f6c80;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 0.5rem;">Allowances</h5>
+                    <div th:each="allowance : ${paySlip.allowances}"
+                         th:unless="${allowance.description == 'Residual Adjustment' or allowance.code == 'RESIDUAL'}"
+                         class="ps-pay-item" style="font-size:0.875rem;">
+            <span style="display:flex;align-items:center;">
+              <span th:text="${allowance.description}">Allowance</span>
+              <span th:if="${allowance.taxable}" class="ps-tax-badge">
+                <i class="bi bi-lightning-fill" style="font-size:0.6rem;margin-right:2px;"></i> taxable
+              </span>
+            </span>
+                        <span style="font-weight:500;">
+              ₦<span th:text="${#numbers.formatDecimal(allowance.amount, 0, 'COMMA', 2, 'POINT')}">0.00</span>
+            </span>
+                    </div>
+                    <div th:if="${paySlip.allowances == null or #lists.isEmpty(paySlip.allowances)}"
+                         style="font-size:0.875rem;color:#95a3b3;font-style:italic;">No allowances.</div>
+                </div>
+
+                <!-- Deductions Section -->
+                <div style="margin-bottom:1rem;">
+                    <h5 style="font-size:0.72rem;font-weight:600;color:#5f6c80;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 0.5rem;">Deductions</h5>
+                    <div th:each="deduction : ${paySlip.deductions}" class="ps-pay-item" style="font-size:0.875rem;">
+            <span style="display:flex;align-items:center;">
+              <span th:text="${deduction.description}">Deduction</span>
+              <span th:if="${deduction.code == 'PAYE' or deduction.code == 'PENSION'}" class="ps-statutory-badge">
+                <i class="bi bi-shield-fill" style="font-size:0.6rem;margin-right:2px;"></i> statutory
+              </span>
+            </span>
+                        <span style="font-weight:500;">
+              -₦<span th:text="${#numbers.formatDecimal(deduction.amount, 0, 'COMMA', 2, 'POINT')}">0.00</span>
+            </span>
+                    </div>
+                    <div th:if="${paySlip.deductions == null or #lists.isEmpty(paySlip.deductions)}"
+                         style="font-size:0.875rem;color:#95a3b3;font-style:italic;">No deductions.</div>
+                </div>
+
+                <!-- Totals -->
+                <div style="border-top:1px solid #e6e9ef;padding-top:0.75rem;margin-top:0.5rem;">
+                    <div style="display:flex;justify-content:space-between;font-size:0.875rem;margin-bottom:4px;">
+                        <span style="font-weight:600;">Gross Pay</span>
+                        <span>₦<span th:text="${#numbers.formatDecimal(paySlip.grossPay, 0, 'COMMA', 2, 'POINT')}">0.00</span></span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;font-size:0.875rem;margin-bottom:4px;">
+                        <span style="font-weight:600;">Total Deductions</span>
+                        <span>-₦<span th:text="${#numbers.formatDecimal(paySlip.totalDeductions, 0, 'COMMA', 2, 'POINT')}">0.00</span></span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;font-size:1rem;font-weight:700;margin-top:0.5rem;padding-top:0.5rem;border-top:1px solid #e6e9ef;">
+                        <span>Net Pay</span>
+                        <span style="color:#1d4ed8;">₦<span th:text="${#numbers.formatDecimal(paySlip.netPay, 0, 'COMMA', 2, 'POINT')}">0.00</span></span>
+                    </div>
+                </div>
+
+                <!-- Payment Details -->
+                <div style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid #f3f4f6;font-size:0.78rem;color:#6b788b;">
+                    <span style="font-weight:600;">Bank:</span>
+                    <span th:if="${paySlip.bankName != null}" th:text="${paySlip.bankName + (paySlip.bankAccountNumber != null ? ' · ' + paySlip.bankAccountNumber : '')}">—</span>
+                    <span th:unless="${paySlip.bankName != null}">No bank details on file</span>
+                </div>
+
+                <!-- Action Buttons -->
+                <div style="display:flex;justify-content:flex-end;gap:0.75rem;margin-top:1.5rem;" class="ps-modal-actions">
+                    <button class="ps-close-modal" style="padding:8px 16px;border:1px solid #d6dce5;border-radius:6px;font-size:0.875rem;font-weight:500;cursor:pointer;background:#fff;">
+                        <i class="bi bi-x-lg" style="margin-right:4px;"></i> Close
+                    </button>
+                    <button class="download-payslip-modal-btn" style="padding:8px 16px;background:#1d4ed8;color:white;border:none;border-radius:6px;font-size:0.875rem;font-weight:500;cursor:pointer;"
+                            th:attr="data-modal-id=${'psModal_slip_' + paySlip.id}">
+                        <i class="bi bi-download" style="margin-right:4px;"></i> Download PDF
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </th:block>
+
+    <!-- Hidden print root for payslip printing -->
+    <div id="payslip-print-root"></div>
 
 
-  <!-- ==============================================================
-       PAYSLIP PDF TEMPLATE  (hidden, used by html2pdf)
+    <!-- ==============================================================
+       GROUPED REPORT SECTION
        ============================================================== -->
-  <div id="payslip-template" style="display:none;">
-    <div id="payslip-content" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#fff;padding:2.5rem;max-width:680px;margin:0 auto;border:1px solid #e2e8f0;border-radius:12px;">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #e2e8f0;padding-bottom:1.25rem;margin-bottom:1.5rem;">
-        <div>
-          <div style="font-size:1.5rem;font-weight:800;color:#1e3a5f;letter-spacing:-0.03em;">PAYSLIP</div>
-          <div style="font-size:0.8rem;color:#94a3b8;margin-top:4px;">Generated on <span id="ps-date"></span></div>
+    <div class="period-label" style="margin-top:2.5rem;">Payroll Report</div>
+
+    <div class="current-period-card mb-8">
+        <div class="current-period-header">
+            <div>
+                <h2 class="text-slate-800 font-bold text-xl">Employee Grouped Report</h2>
+                <p class="text-slate-500 text-sm mt-1">Grouped summary of employee payroll by selected category</p>
+            </div>
+            <!-- Group By selector -->
+            <form method="get" th:action="@{/payroll/grouped-report}" class="flex items-center gap-3">
+                <span class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Group By:</span>
+                <select name="groupBy" class="filter-select" onchange="this.form.submit()">
+                    <option value="GRADE"     th:selected="${groupBy == 'GRADE'}">Grade</option>
+                    <option value="PAYGROUP"  th:selected="${groupBy == 'PAYGROUP'}">Pay Group</option>
+                    <option value="COMPANY"   th:selected="${groupBy == 'COMPANY'}">Company</option>
+                </select>
+            </form>
         </div>
-        <div style="text-align:right;">
-          <div style="font-weight:700;color:#1e293b;">Your Company Name</div>
-          <div style="font-size:0.8rem;color:#94a3b8;">123 Business St., City</div>
+
+        <!-- No report data -->
+        <div th:if="${report == null or #lists.isEmpty(report)}">
+            <div class="empty-state">
+                <i class="bi bi-bar-chart"></i>
+                <p>No report data available. Visit <a href="/payroll/grouped-report" class="text-blue-600 underline">the grouped report page</a> to load the grouped report.</p>
+            </div>
         </div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-bottom:1.5rem;">
-        <div>
-          <div style="font-size:0.65rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#94a3b8;margin-bottom:4px;">Employee</div>
-          <div style="font-weight:600;color:#1e293b;" id="ps-name"></div>
+
+        <!-- Report groups -->
+        <div th:if="${report != null and not #lists.isEmpty(report)}">
+
+            <!-- ── GRAND TOTAL CARD ── -->
+            <div class="grand-total-card" id="grandTotalCard" th:if="${totals != null}">
+                <div class="grand-total-header">
+                    <div class="grand-total-left">
+                        <div class="grand-total-icon">
+                            <i class="bi bi-calculator-fill"></i>
+                        </div>
+                        <div>
+                            <div class="grand-total-title">Grand Total</div>
+                            <div class="grand-total-sub" id="grandTotalSubtitle">
+                                <span th:text="${totals.totalGroups}">0</span> Groups,
+                                <span th:text="${totals.totalEmployees}">0</span> Employees combined
+                            </div>
+                        </div>
+                    </div>
+                    <div class="grand-total-stats">
+                        <div class="grand-stat-box gross">
+                            <div class="grand-stat-lbl">Total Gross</div>
+                            <div class="grand-stat-val" id="grandGross"
+                                 th:text="${'₦' + #numbers.formatDecimal(totals.totalGross, 1, 'COMMA', 2, 'POINT')}">₦0.00</div>
+                        </div>
+                        <div class="grand-stat-box deduct">
+                            <div class="grand-stat-lbl">Total Deductions</div>
+                            <div class="grand-stat-val" id="grandDeductions"
+                                 th:text="${'₦' + #numbers.formatDecimal(totals.totalDeductions, 1, 'COMMA', 2, 'POINT')}">₦0.00</div>
+                        </div>
+                        <div class="grand-stat-box net">
+                            <div class="grand-stat-lbl">Total Net Pay</div>
+                            <div class="grand-stat-val" id="grandNet"
+                                 th:text="${'₦' + #numbers.formatDecimal(totals.totalNet, 1, 'COMMA', 2, 'POINT')}">₦0.00</div>
+                        </div>
+                        <div class="grand-dl-actions">
+                            <button class="bulk-dl-btn csv" onclick="downloadGrandCSV()">
+                                <i class="bi bi-filetype-csv"></i> Download All CSV
+                            </button>
+                            <button class="bulk-dl-btn pdf" onclick="downloadGrandPDF()">
+                                <i class="bi bi-file-earmark-pdf"></i> Download All PDF
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div th:each="group : ${report}" class="group-report-card border-2 border-blue-500 rounded-lg mb-6 overflow-hidden"
+                 th:attr="data-group-name=${group.groupName}, data-group-by=${groupBy}">
+
+                <!-- Group header -->
+                <div class="flex items-center justify-between px-6 py-4 bg-slate-50 border-b border-slate-200">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                            <i class="bi bi-people-fill text-blue-600 text-sm"></i>
+                        </div>
+                        <div>
+                            <div th:text="${group.groupName}" class="font-bold text-slate-800 text-sm">Group</div>
+                            <div th:text="${group.employeeCount + ' employee' + (group.employeeCount != 1 ? 's' : '')}"
+                                 class="text-xs text-slate-400">0 employees</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-6 flex-wrap">
+                        <div class="header-stat">
+                            <div th:text="${'₦' + #numbers.formatDecimal(group.totalGross != null ? group.totalGross : 0, 1, 'COMMA', 2, 'POINT')}"
+                                 class="stat-val text-slate-800">₦0.00</div>
+                            <div class="stat-lbl">Total Gross</div>
+                        </div>
+                        <div class="header-stat">
+                            <div th:text="${'₦' + #numbers.formatDecimal(group.totalDeductions != null ? group.totalDeductions : 0, 1, 'COMMA', 2, 'POINT')}"
+                                 class="stat-val text-red-600">₦0.00</div>
+                            <div class="stat-lbl">Deductions</div>
+                        </div>
+                        <div class="header-stat">
+                            <div th:text="${'₦' + #numbers.formatDecimal(group.totalNet != null ? group.totalNet : 0, 1, 'COMMA', 2, 'POINT')}"
+                                 class="stat-val text-green-700">₦0.00</div>
+                            <div class="stat-lbl">Net Pay</div>
+                        </div>
+                        <div class="bulk-dl-actions">
+                            <button class="bulk-dl-btn csv group-csv-btn">
+                                <i class="bi bi-filetype-csv"></i> CSV
+                            </button>
+                            <button class="bulk-dl-btn pdf group-pdf-btn">
+                                <i class="bi bi-file-earmark-pdf"></i> PDF
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Employees in this group -->
+                <div class="overflow-x-auto custom-scrollbar">
+                    <table class="payroll-table">
+                        <thead>
+                        <tr>
+                            <th>Employee</th>
+                            <th>Gross Pay</th>
+                            <th>PAYE</th>
+                            <th>Pension</th>
+                            <th>Total Deductions</th>
+                            <th>Net Pay</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="emp : ${group.employees}">
+                            <td>
+                                <div class="flex items-center gap-3">
+                                    <div class="emp-avatar"
+                                         th:with="fullName=${(emp.firstName != null ? emp.firstName : '') + ' ' + (emp.secondName != null ? emp.secondName : '')}"
+                                         th:text="${#strings.length(fullName) >= 2 ? #strings.toUpperCase(#strings.substring(fullName, 0, 2)) : 'NA'}">AA</div>
+                                    <div>
+                                        <div th:text="${(emp.firstName != null ? emp.firstName : '') + ' ' + (emp.secondName != null ? emp.secondName : '')}"
+                                             class="font-semibold text-slate-800 text-sm">—</div>
+                                        <div th:text="'ID · ' + ${emp.employeeId}" class="text-xs text-slate-400">—</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td th:text="${'₦' + #numbers.formatDecimal(emp.gross   != null ? emp.gross   : 0, 1, 'COMMA', 2, 'POINT')}"
+                                class="mono amount-positive">—</td>
+                            <td th:text="${'₦' + #numbers.formatDecimal(emp.paye    != null ? emp.paye    : 0, 1, 'COMMA', 2, 'POINT')}"
+                                class="mono amount-deduct">—</td>
+                            <td th:text="${'₦' + #numbers.formatDecimal(emp.pension != null ? emp.pension : 0, 1, 'COMMA', 2, 'POINT')}"
+                                class="mono amount-deduct">—</td>
+                            <td th:text="${'₦' + #numbers.formatDecimal(
+                    (emp.paye != null ? emp.paye : T(java.math.BigDecimal).ZERO).add(
+                     emp.pension != null ? emp.pension : T(java.math.BigDecimal).ZERO),
+                    1, 'COMMA', 2, 'POINT')}"
+                                class="mono amount-deduct">—</td>
+                            <td th:text="${'₦' + #numbers.formatDecimal(emp.net     != null ? emp.net     : 0, 1, 'COMMA', 2, 'POINT')}"
+                                class="mono amount-positive">—</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
         </div>
-        <div>
-          <div style="font-size:0.65rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#94a3b8;margin-bottom:4px;">Payroll Date</div>
-          <div style="font-weight:600;color:#1e293b;" id="ps-payday"></div>
-        </div>
-        <div>
-          <div style="font-size:0.65rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#94a3b8;margin-bottom:4px;">Period</div>
-          <div style="font-weight:600;color:#1e293b;" id="ps-period"></div>
-        </div>
-      </div>
-      <table style="width:100%;border-collapse:collapse;margin-bottom:1.5rem;">
-        <thead>
-        <tr style="background:#f8fafc;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;">
-          <th style="padding:0.6rem 1rem;text-align:left;font-size:0.7rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#94a3b8;">Description</th>
-          <th style="padding:0.6rem 1rem;text-align:right;font-size:0.7rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#94a3b8;">Amount</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr style="border-bottom:1px solid #f1f5f9;">
-          <td style="padding:0.85rem 1rem;color:#334155;">Gross Pay</td>
-          <td style="padding:0.85rem 1rem;text-align:right;font-weight:600;font-family:ui-monospace,Consolas,monospace;color:#1e293b;" id="ps-gross"></td>
-        </tr>
-        <tr style="border-bottom:1px solid #f1f5f9;">
-          <td style="padding:0.85rem 1rem;color:#b64343;">Total Deductions</td>
-          <td style="padding:0.85rem 1rem;text-align:right;font-weight:600;font-family:ui-monospace,Consolas,monospace;color:#b64343;" id="ps-deductions"></td>
-        </tr>
-        </tbody>
-      </table>
-      <div style="display:flex;justify-content:flex-end;border-top:2px solid #e2e8f0;padding-top:1rem;">
-        <div style="min-width:220px;">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <span style="font-weight:600;color:#64748b;">Net Pay</span>
-            <span style="font-size:1.35rem;font-weight:800;color:#1e3a5f;font-family:ui-monospace,Consolas,monospace;" id="ps-net"></span>
-          </div>
-          <div style="font-size:0.72rem;color:#94a3b8;text-align:right;margin-top:4px;">After all deductions</div>
-        </div>
-      </div>
-      <div style="margin-top:2rem;text-align:center;font-size:0.72rem;color:#cbd5e1;border-top:1px solid #f1f5f9;padding-top:1rem;">
-        This is a computer-generated payslip. No signature required.
-      </div>
     </div>
-  </div>
+    <!-- /grouped report -->
 
-  <!-- ==============================================================
-       LOCK CONFIRMATION MODAL
-       ============================================================== -->
-  <div id="lockModal" class="modal">
-    <div class="modal-overlay" onclick="closeModal()"></div>
-    <div class="modal-container">
-      <div class="modal-header">
-        <h3>Confirm Lock Period</h3>
-        <button class="modal-close" onclick="closeModal()">&times;</button>
-      </div>
-      <div class="modal-body">
-        <p>Locking this payroll period will prevent any further edits or processing. Are you sure you want to lock it?</p>
-      </div>
-      <form method="post" th:action="@{/setup/payroll/close}" onsubmit="disableSubmitButton(this)">
-        <div class="modal-footer">
-          <button type="button" class="modal-btn cancel" onclick="closeModal()">Cancel</button>
-          <button type="submit" class="modal-btn confirm">Yes, Lock Period</button>
+
+
+    <!-- Lock confirmation modal -->
+    <div id="lockModal" class="modal">
+        <div class="modal-overlay" onclick="closeModal()"></div>
+        <div class="modal-container">
+            <div class="modal-header">
+                <h3>Confirm Lock Period</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Locking this payroll period will prevent any further edits or processing. Are you sure you want to lock it?</p>
+            </div>
+            <form method="post" th:action="@{/setup/payroll/close}" onsubmit="disableSubmitButton(this)">
+                <div class="modal-footer">
+                    <button type="button" class="modal-btn cancel" onclick="closeModal()">Cancel</button>
+                    <button type="submit" class="modal-btn confirm">Yes, Lock Period</button>
+                </div>
+            </form>
         </div>
-      </form>
     </div>
-  </div>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-  <script>
-    /*
-      Column index map (0-based) — 8 cols both tables:
-        0 Employee | 1 Payroll Date | 2 Period | 3 Gross | 4 Deductions | 5 Net | 6 Status | 7 Actions
-    */
-    function downloadPayslip(btn) {
-      const row = btn.closest('tr');
-      if (!row) return;
-      const c = row.cells;
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <script>
+        /* ================================================================
+           PAYSLIP MODALS — open / close / download PDF
+           ================================================================ */
+        function openPayslipModal(modalId) {
+          const modal = document.getElementById(modalId);
+          if (modal) { modal.classList.add('active'); document.body.style.overflow = 'hidden'; }
+        }
+        function closePayslipModal(modal) {
+          modal.classList.remove('active'); document.body.style.overflow = 'auto';
+        }
 
-      const name    = c[0]?.querySelector('.font-semibold')?.textContent.trim() || 'N/A';
-      const payday  = c[1]?.textContent.trim() || '—';
-      const period  = c[2]?.textContent.trim() || '—';
-      const gross   = c[3]?.textContent.trim() || '—';
-      const deduct  = c[4]?.textContent.trim() || '—';
-      const net     = c[5]?.textContent.trim() || '—';
+        // Wire: See buttons
+        document.querySelectorAll('.open-payslip-modal').forEach(btn => {
+          btn.addEventListener('click', e => {
+            e.preventDefault();
+            openPayslipModal(btn.getAttribute('data-modal-id'));
+          });
+        });
 
-      document.getElementById('ps-name').textContent       = name;
-      document.getElementById('ps-payday').textContent     = payday;
-      document.getElementById('ps-period').textContent     = period;
-      document.getElementById('ps-gross').textContent      = gross;
-      document.getElementById('ps-deductions').textContent = deduct;
-      document.getElementById('ps-net').textContent        = net;
-      document.getElementById('ps-date').textContent       = new Date().toISOString().split('T')[0];
+        // Wire: Download buttons in table rows (open modal then download)
+        document.querySelectorAll('.download-payslip-modal').forEach(btn => {
+          btn.addEventListener('click', e => {
+            e.preventDefault();
+            downloadPayslipModalPdf(btn.getAttribute('data-modal-id'));
+          });
+        });
 
-      html2pdf()
-        .set({
-          margin: [0.5, 0.5, 0.5, 0.5],
-          filename: `payslip-${name.replace(/\s+/g, '_')}.pdf`,
-          image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: { scale: 2 },
-          jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
-        })
-        .from(document.getElementById('payslip-content'))
-        .save();
-    }
+        // Wire: Download PDF buttons inside modals
+        document.querySelectorAll('.download-payslip-modal-btn').forEach(btn => {
+          btn.addEventListener('click', e => {
+            e.preventDefault();
+            downloadPayslipModalPdf(btn.getAttribute('data-modal-id'));
+          });
+        });
 
-    /* Simple status filter for current period */
-    function filterTable(tbodyId, status) {
-      document.querySelectorAll(`#${tbodyId} tr`).forEach(row => {
-        const label = row.querySelector('.status-badge span:last-child')?.textContent.trim();
-        row.style.display = (!status || label === status) ? '' : 'none';
-      });
-    }
+        // Wire: Close buttons inside modals
+        document.querySelectorAll('.payslip-modal-overlay').forEach(modal => {
+          modal.querySelectorAll('.ps-close-modal').forEach(btn => {
+            btn.addEventListener('click', () => closePayslipModal(modal));
+          });
+          modal.addEventListener('click', e => {
+            if (e.target === modal) closePayslipModal(modal);
+          });
+          const container = modal.querySelector('.payslip-modal-container');
+          if (container) container.addEventListener('click', e => e.stopPropagation());
+        });
 
-    /* Lock modal */
-    function openLockModal() { document.getElementById('lockModal').classList.add('show'); }
-    function closeModal()    { document.getElementById('lockModal').classList.remove('show'); }
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+        // Download payslip modal as PDF using html2canvas + jsPDF
+        async function downloadPayslipModalPdf(modalId) {
+          const modal = document.getElementById(modalId);
+          if (!modal) return;
+          const container = modal.querySelector('.payslip-modal-container');
+          if (!container) return;
 
-    /* Prevent double-submit */
-    function disableSubmitButton(form) {
-      const btn = form.querySelector('button[type="submit"]');
-      if (btn) { btn.disabled = true; btn.classList.add('opacity-50', 'cursor-not-allowed'); btn.textContent = 'Submitting…'; }
-      return true;
-    }
-  </script>
+          const headingEl = container.querySelector('h3');
+          const headingText = headingEl ? headingEl.textContent.trim().replace(/\s+/g, ' ') : 'Payslip';
+          const fileName = headingText.replace(/[^a-zA-Z0-9 ]/g, '').replace(/\s+/g, '_') + '.pdf';
+
+          // Temporarily show modal if not visible
+          const wasActive = modal.classList.contains('active');
+          if (!wasActive) { modal.classList.add('active'); }
+
+          const originalOverflow = container.style.overflow;
+          const originalMaxHeight = container.style.maxHeight;
+          container.style.overflow = 'visible';
+          container.style.maxHeight = 'none';
+
+          const actionRows = container.querySelectorAll('.ps-modal-actions');
+          const closeBtns  = container.querySelectorAll('.ps-close-modal');
+          actionRows.forEach(el => el.style.visibility = 'hidden');
+          closeBtns.forEach(el => el.style.visibility = 'hidden');
+
+          try {
+            const { jsPDF } = window.jspdf;
+            const canvas = await html2canvas(container, {
+              scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false
+            });
+
+            const imgData   = canvas.toDataURL('image/png');
+            const imgWidth  = canvas.width;
+            const imgHeight = canvas.height;
+            const pageWidth = 210;
+            const pageHeight= 297;
+            const ratio     = pageWidth / (imgWidth / 2);
+
+            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            let yPosition = 0;
+            const pageHeightPx = pageHeight / ratio;
+
+            while (yPosition < imgHeight / 2) {
+              if (yPosition > 0) pdf.addPage();
+              const sliceCanvas = document.createElement('canvas');
+              sliceCanvas.width  = imgWidth;
+              sliceCanvas.height = Math.min(pageHeightPx * 2, imgHeight - yPosition * 2);
+              const ctx = sliceCanvas.getContext('2d');
+              ctx.drawImage(canvas, 0, yPosition * 2, imgWidth, sliceCanvas.height, 0, 0, imgWidth, sliceCanvas.height);
+              const sliceData = sliceCanvas.toDataURL('image/png');
+              const sliceHeightMm = (sliceCanvas.height / 2) * ratio;
+              pdf.addImage(sliceData, 'PNG', 0, 0, pageWidth, sliceHeightMm);
+              yPosition += pageHeightPx;
+            }
+            pdf.save(fileName);
+          } catch (err) {
+            console.error('Payslip PDF generation failed:', err);
+            alert('Sorry, PDF download failed. Please try again.');
+          } finally {
+            container.style.overflow = originalOverflow;
+            container.style.maxHeight = originalMaxHeight;
+            actionRows.forEach(el => el.style.visibility = '');
+            closeBtns.forEach(el => el.style.visibility = '');
+            if (!wasActive) { modal.classList.remove('active'); }
+          }
+        }
+
+        /* Simple status filter for current period */
+        function filterTable(tbodyId, status) {
+          document.querySelectorAll(`#${tbodyId} tr`).forEach(row => {
+            const label = row.querySelector('.status-badge span:last-child')?.textContent.trim();
+            row.style.display = (!status || label === status) ? '' : 'none';
+          });
+        }
+
+        /* Lock modal */
+        function openLockModal() { document.getElementById('lockModal').classList.add('show'); }
+        function closeModal()    { document.getElementById('lockModal').classList.remove('show'); }
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+        /* ================================================================
+           BULK DOWNLOAD HELPERS
+           ================================================================ */
+
+        /* --- Shared utilities --- */
+        function getVisibleRows(tbodyId) {
+          return Array.from(document.querySelectorAll(`#${tbodyId} tr`))
+            .filter(r => r.style.display !== 'none');
+        }
+
+        function cellText(row, idx) {
+          return row.cells[idx]?.textContent.trim().replace(/\s+/g, ' ') || '—';
+        }
+
+        function triggerCSVDownload(csvContent, filename) {
+          const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+          const url  = URL.createObjectURL(blob);
+          const a    = document.createElement('a');
+          a.href = url; a.download = filename; a.click();
+          URL.revokeObjectURL(url);
+        }
+
+        /* Strip currency symbol, commas → plain number string for CSV */
+        function stripCurrency(val) {
+          return val.replace(/[₦,\s]/g, '').trim();
+        }
+
+
+        /* --- GROUP REPORT — CSV per group (fix: ID own column, header "ID", no ₦ sign) --- */
+        function downloadGroupCSV(btn, groupCard) {
+          const groupName = groupCard.dataset.groupName || 'Group';
+          const groupBy   = groupCard.dataset.groupBy   || 'Group';
+          const tbody     = groupCard.querySelector('table tbody');
+          if (!tbody) return;
+
+          let csv = 'Employee,ID,Gross Pay,PAYE,Pension,Total Deductions,Net Pay\n';
+          Array.from(tbody.querySelectorAll('tr')).forEach(r => {
+            const name    = r.querySelector('.font-semibold')?.textContent.trim() || '—';
+            const empId   = r.querySelector('.text-slate-400')?.textContent.replace('ID · ','').trim() || '—';
+            const gross   = stripCurrency(cellText(r, 1));
+            const paye    = stripCurrency(cellText(r, 2));
+            const pension = stripCurrency(cellText(r, 3));
+            const deduct  = stripCurrency(cellText(r, 4));
+            const net     = stripCurrency(cellText(r, 5));
+            csv += `"${name}","${empId}",${gross},${paye},${pension},${deduct},${net}\n`;
+          });
+
+          const safeGroup = groupName.replace(/[^a-z0-9]/gi, '_');
+          triggerCSVDownload(csv, `payroll-report-${groupBy}-${safeGroup}-${new Date().toISOString().split('T')[0]}.csv`);
+        }
+
+        /* --- GROUP REPORT — PDF per group (fix: no company info, fix blank/misaligned pages) --- */
+        function downloadGroupPDF(btn, groupCard) {
+          const groupName = groupCard.dataset.groupName || 'Group';
+          const groupBy   = groupCard.dataset.groupBy   || 'Group';
+          const date      = new Date().toISOString().split('T')[0];
+          const tbody     = groupCard.querySelector('table tbody');
+          if (!tbody) return;
+
+          /* Pull totals from the header stat boxes */
+          const statVals    = groupCard.querySelectorAll('.header-stat .stat-val');
+          const totalGross  = statVals[0]?.textContent.trim() || '—';
+          const totalDeduct = statVals[1]?.textContent.trim() || '—';
+          const totalNet    = statVals[2]?.textContent.trim() || '—';
+          const empRows     = Array.from(tbody.querySelectorAll('tr'));
+
+          let tableRows = '';
+          empRows.forEach(r => {
+            const name    = r.querySelector('.font-semibold')?.textContent.trim() || '—';
+            const empId   = r.querySelector('.text-slate-400')?.textContent.replace('ID · ','').trim() || '—';
+            const gross   = cellText(r, 1), paye = cellText(r, 2);
+            const pension = cellText(r, 3), deduct = cellText(r, 4), net = cellText(r, 5);
+            tableRows += `<tr>
+              <td>${name}<br><span style="font-size:0.7rem;color:#94a3b8">ID: ${empId}</span></td>
+              <td style="font-weight:600">${gross}</td>
+              <td style="color:#b64343">${paye}</td>
+              <td style="color:#b64343">${pension}</td>
+              <td style="color:#b64343">${deduct}</td>
+              <td style="font-weight:700;color:#1e3a5f">${net}</td>
+            </tr>`;
+          });
+
+          const headers = '<th>Employee</th><th>Gross Pay</th><th>PAYE</th><th>Pension</th><th>Total Deductions</th><th>Net Pay</th>';
+          const summaryExtra = `
+            <div style="display:flex;gap:1rem;margin-bottom:1.25rem;flex-wrap:wrap;">
+              <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:0.6rem 1rem;min-width:130px;">
+                <div style="font-size:0.62rem;color:#94a3b8;text-transform:uppercase;letter-spacing:0.08em;font-weight:700;margin-bottom:3px;">Total Gross</div>
+                <div style="font-weight:700;font-size:0.95rem;color:#1e293b">${totalGross}</div>
+              </div>
+              <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:0.6rem 1rem;min-width:130px;">
+                <div style="font-size:0.62rem;color:#94a3b8;text-transform:uppercase;letter-spacing:0.08em;font-weight:700;margin-bottom:3px;">Total Deductions</div>
+                <div style="font-weight:700;font-size:0.95rem;color:#b64343">${totalDeduct}</div>
+              </div>
+              <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:0.6rem 1rem;min-width:130px;">
+                <div style="font-size:0.62rem;color:#94a3b8;text-transform:uppercase;letter-spacing:0.08em;font-weight:700;margin-bottom:3px;">Total Net Pay</div>
+                <div style="font-weight:700;font-size:0.95rem;color:#166534">${totalNet}</div>
+              </div>
+            </div>`;
+
+          const html = buildBulkPDFHTML(
+            `${groupBy}: ${groupName}`,
+            date,
+            headers,
+            tableRows,
+            empRows.length,
+            summaryExtra
+          );
+
+          const safeGroup = groupName.replace(/[^a-z0-9]/gi, '_');
+          renderBulkPDF(html, `payroll-report-${groupBy}-${safeGroup}-${date}.pdf`);
+        }
+
+        /* --- PDF BUILDER — no company name/address, compact padding to prevent blank pages --- */
+        function buildBulkPDFHTML(title, date, headers, tableRows, count, extra = '') {
+          return `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#fff;padding:1.5rem;width:100%;box-sizing:border-box;">
+            <div style="border-bottom:2px solid #e2e8f0;padding-bottom:1rem;margin-bottom:1.25rem;">
+              <div style="font-size:1.3rem;font-weight:800;color:#1e3a5f;letter-spacing:-0.02em;">${title}</div>
+              <div style="font-size:0.75rem;color:#94a3b8;margin-top:3px;">Generated: ${date} &nbsp;·&nbsp; ${count} employee${count !== 1 ? 's' : ''}</div>
+            </div>
+            ${extra}
+            <table style="width:100%;border-collapse:collapse;font-size:0.78rem;">
+              <thead>
+                <tr style="background:#f8fafc;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;">
+                  ${headers.replace(/<th>/g,'<th style="padding:0.5rem 0.75rem;text-align:left;font-size:0.62rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#94a3b8;white-space:nowrap;">')}
+                </tr>
+              </thead>
+              <tbody>${tableRows.replace(/<td/g,'<td style="padding:0.6rem 0.75rem;border-bottom:1px solid #f1f5f9;vertical-align:top;"')}</tbody>
+            </table>
+            <div style="margin-top:1.5rem;text-align:center;font-size:0.68rem;color:#cbd5e1;border-top:1px solid #f1f5f9;padding-top:0.75rem;">
+              This is a computer-generated payroll report. No signature required.
+            </div>
+          </div>`;
+        }
+
+        function renderBulkPDF(html, filename) {
+          /* ── Canvas-size guard ──────────────────────────────────────────────
+             html2canvas has a ~16 384 px height limit per canvas (browser max).
+             For large tables we split the HTML into row-chunks and render each
+             chunk as a separate A4 page, then combine into one PDF file.
+             ─────────────────────────────────────────────────────────────────── */
+          const ROWS_PER_CHUNK = 80;   // rows per page (tune down if still blank)
+
+          /* Parse the built HTML string to extract header and rows */
+          const tmp = document.createElement('div');
+          tmp.innerHTML = html;
+
+          const theadHTML  = tmp.querySelector('thead')?.outerHTML || '';
+          const allRowEls  = Array.from(tmp.querySelectorAll('tbody tr'));
+          const headerHTML = tmp.querySelector('div[style*="border-bottom"]')?.outerHTML || '';
+          const extraHTML  = (() => {
+            /* The summaryExtra div sits between the header block and the table */
+            const nodes = Array.from(tmp.firstElementChild?.childNodes || []);
+            const summaryNodes = [];
+            let afterHeader = false;
+            for (const n of nodes) {
+              if (n.nodeName === 'DIV' && n.style && n.style.borderBottom) { afterHeader = true; continue; }
+              if (afterHeader && n.nodeName === 'TABLE') break;
+              if (afterHeader && n.nodeName === 'DIV') summaryNodes.push(n.outerHTML || '');
+            }
+            return summaryNodes.join('');
+          })();
+          const tableStyle = tmp.querySelector('table')?.getAttribute('style') || 'width:100%;border-collapse:collapse;font-size:0.78rem;';
+
+          /* Split all <tr> into page-sized chunks */
+          const chunks = [];
+          for (let i = 0; i < allRowEls.length; i += ROWS_PER_CHUNK) {
+            chunks.push(allRowEls.slice(i, i + ROWS_PER_CHUNK));
+          }
+          /* If there are no rows at all, fall back to single-page render */
+          if (chunks.length === 0) chunks.push([]);
+
+          const footerHTML = `<div style="margin-top:1.5rem;text-align:center;font-size:0.68rem;color:#cbd5e1;border-top:1px solid #f1f5f9;padding-top:0.75rem;">
+            This is a computer-generated payroll report. No signature required.
+          </div>`;
+
+          function buildChunkHTML(chunkRows, pageNum, totalPages) {
+            const rowsHTML = chunkRows.map(r => r.outerHTML).join('');
+            const pageNote = totalPages > 1
+              ? `<div style="font-size:0.68rem;color:#94a3b8;text-align:right;margin-bottom:4px;">Page ${pageNum} of ${totalPages}</div>`
+              : '';
+            /* Only show the summary/extra block on page 1 */
+            const extra = pageNum === 1 ? extraHTML : '';
+            return `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#fff;padding:1.5rem;width:100%;box-sizing:border-box;">
+              ${pageNum === 1 ? headerHTML : ''}
+              ${extra}
+              ${pageNote}
+              <table style="${tableStyle}">
+                ${theadHTML}
+                <tbody>${rowsHTML}</tbody>
+              </table>
+              ${footerHTML}
+            </div>`;
+          }
+
+          /* Render chunks one by one and combine into a single PDF */
+          const totalPages = chunks.length;
+
+          function renderChunk(index, pdfDoc) {
+            if (index >= chunks.length) {
+              /* All pages done — save */
+              pdfDoc.save(filename);
+              return;
+            }
+
+            const chunkHTML = buildChunkHTML(chunks[index], index + 1, totalPages);
+            const container = document.createElement('div');
+            container.style.cssText = 'position:fixed;left:-9999px;top:0;width:1122px;background:#fff;';
+            container.innerHTML = chunkHTML;
+            document.body.appendChild(container);
+
+            html2pdf()
+              .set({
+                margin: [8, 8, 8, 8],
+                filename,   // only used on single-page; we manage save() ourselves for multi
+                image: { type: 'jpeg', quality: 0.95 },
+                html2canvas: { scale: 1.5, useCORS: true, scrollX: 0, scrollY: 0, logging: false },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+              })
+              .from(container.firstElementChild)
+              .outputPdf('arraybuffer')
+              .then(async (buffer) => {
+                document.body.removeChild(container);
+
+                if (!pdfDoc) {
+                  /* First chunk — use its PDF as the base */
+                  const { jsPDF } = window.jspdf;
+                  pdfDoc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'landscape' });
+                }
+
+                /* Import the rendered chunk page into pdfDoc */
+                const chunkPdf = await PDFLib.PDFDocument.load(buffer);
+                const basePdf  = await PDFLib.PDFDocument.create();
+
+                /* We build final via pdf-lib merge if available, else fall back to simple multi-call */
+                renderChunk(index + 1, pdfDoc);
+              })
+              .catch(err => {
+                document.body.removeChild(container);
+                console.error('PDF chunk render error:', err);
+              });
+          }
+
+          /* ── Simpler, more reliable approach: render all chunks then merge via pdf-lib ── */
+          const buffers = [];
+
+          function renderAllChunks(index) {
+            if (index >= chunks.length) {
+              mergeAndSave(buffers, filename);
+              return;
+            }
+
+            const chunkHTML = buildChunkHTML(chunks[index], index + 1, totalPages);
+            const container = document.createElement('div');
+            container.style.cssText = 'position:fixed;left:-9999px;top:0;width:1122px;background:#fff;';
+            container.innerHTML = chunkHTML;
+            document.body.appendChild(container);
+
+            html2pdf()
+              .set({
+                margin: [8, 8, 8, 8],
+                filename,
+                image: { type: 'jpeg', quality: 0.95 },
+                html2canvas: { scale: 1.5, useCORS: true, scrollX: 0, scrollY: 0, logging: false },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+              })
+              .from(container.firstElementChild)
+              .outputPdf('arraybuffer')
+              .then(buf => {
+                document.body.removeChild(container);
+                buffers.push(buf);
+                renderAllChunks(index + 1);
+              })
+              .catch(err => {
+                document.body.removeChild(container);
+                console.error('Chunk error:', err);
+                renderAllChunks(index + 1); // skip bad chunk and continue
+              });
+          }
+
+          async function mergeAndSave(bufs, fname) {
+            try {
+              const mergedPdf = await PDFLib.PDFDocument.create();
+              for (const buf of bufs) {
+                const srcDoc = await PDFLib.PDFDocument.load(buf);
+                const pages  = await mergedPdf.copyPages(srcDoc, srcDoc.getPageIndices());
+                pages.forEach(p => mergedPdf.addPage(p));
+              }
+              const mergedBytes = await mergedPdf.save();
+              const blob = new Blob([mergedBytes], { type: 'application/pdf' });
+              const url  = URL.createObjectURL(blob);
+              const a    = document.createElement('a');
+              a.href = url; a.download = fname; a.click();
+              URL.revokeObjectURL(url);
+            } catch (e) {
+              console.error('PDF merge error:', e);
+              alert('PDF generation failed. Please try downloading as CSV instead.');
+            }
+          }
+
+          renderAllChunks(0);
+        }
+
+
+        /* ── GRAND TOTAL: Download All CSV (every employee from every group) ── */
+        function downloadGrandCSV() {
+          const cards = document.querySelectorAll('.group-report-card');
+          const groupBy = cards[0]?.dataset.groupBy || 'Group';
+          let csv = 'Group,Employee,ID,Gross Pay,PAYE,Pension,Total Deductions,Net Pay\n';
+
+          cards.forEach(card => {
+            const groupName = card.dataset.groupName || '—';
+            const tbody = card.querySelector('table tbody');
+            if (!tbody) return;
+            Array.from(tbody.querySelectorAll('tr')).forEach(r => {
+              const name    = r.querySelector('.font-semibold')?.textContent.trim() || '—';
+              const empId   = r.querySelector('.text-slate-400')?.textContent.replace('ID · ','').trim() || '—';
+              const gross   = stripCurrency(cellText(r, 1));
+              const paye    = stripCurrency(cellText(r, 2));
+              const pension = stripCurrency(cellText(r, 3));
+              const deduct  = stripCurrency(cellText(r, 4));
+              const net     = stripCurrency(cellText(r, 5));
+              csv += `"${groupName}","${name}","${empId}",${gross},${paye},${pension},${deduct},${net}\n`;
+            });
+          });
+
+          const date = new Date().toISOString().split('T')[0];
+          triggerCSVDownload(csv, `payroll-grand-total-${groupBy.toLowerCase()}-${date}.csv`);
+        }
+
+        /* ── GRAND TOTAL: Download All PDF (every employee from every group) ── */
+        function downloadGrandPDF() {
+          const cards = document.querySelectorAll('.group-report-card');
+          const groupBy = cards[0]?.dataset.groupBy || 'Group';
+          const date = new Date().toISOString().split('T')[0];
+
+          const grossEl   = document.getElementById('grandGross');
+          const deductEl  = document.getElementById('grandDeductions');
+          const netEl     = document.getElementById('grandNet');
+          const totalGross  = grossEl?.textContent  || '—';
+          const totalDeduct = deductEl?.textContent  || '—';
+          const totalNet    = netEl?.textContent     || '—';
+
+          let tableRows = '';
+          let totalEmps = 0;
+
+          cards.forEach(card => {
+            const groupName = card.dataset.groupName || '—';
+            const tbody = card.querySelector('table tbody');
+            if (!tbody) return;
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            totalEmps += rows.length;
+
+            // Group separator row
+            tableRows += `<tr><td colspan="7" style="background:#f0f4ff;font-weight:700;font-size:0.72rem;color:#1e3a8a;letter-spacing:0.05em;text-transform:uppercase;padding:6px 12px;">${groupBy}: ${groupName}</td></tr>`;
+
+            rows.forEach(r => {
+              const name    = r.querySelector('.font-semibold')?.textContent.trim() || '—';
+              const empId   = r.querySelector('.text-slate-400')?.textContent.replace('ID · ','').trim() || '—';
+              const gross   = cellText(r, 1), paye = cellText(r, 2);
+              const pension = cellText(r, 3), deduct = cellText(r, 4), net = cellText(r, 5);
+              tableRows += `<tr>
+                <td>${name}<br><span style="font-size:0.7rem;color:#94a3b8">ID: ${empId}</span></td>
+                <td style="color:#64748b;font-size:0.75rem">${groupName}</td>
+                <td style="font-weight:600">${gross}</td>
+                <td style="color:#b64343">${paye}</td>
+                <td style="color:#b64343">${pension}</td>
+                <td style="color:#b64343">${deduct}</td>
+                <td style="font-weight:700;color:#1e3a5f">${net}</td>
+              </tr>`;
+            });
+          });
+
+          const summaryExtra = `
+            <div style="display:flex;gap:1rem;margin-bottom:1.25rem;flex-wrap:wrap;">
+              <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:0.6rem 1rem;min-width:130px;">
+                <div style="font-size:0.62rem;color:#3b82f6;text-transform:uppercase;letter-spacing:0.08em;font-weight:700;margin-bottom:3px;">Grand Total Gross</div>
+                <div style="font-weight:700;font-size:0.95rem;color:#1e3a8a">${totalGross}</div>
+              </div>
+              <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:0.6rem 1rem;min-width:130px;">
+                <div style="font-size:0.62rem;color:#ef4444;text-transform:uppercase;letter-spacing:0.08em;font-weight:700;margin-bottom:3px;">Grand Total Deductions</div>
+                <div style="font-weight:700;font-size:0.95rem;color:#b64343">${totalDeduct}</div>
+              </div>
+              <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:0.6rem 1rem;min-width:130px;">
+                <div style="font-size:0.62rem;color:#16a34a;text-transform:uppercase;letter-spacing:0.08em;font-weight:700;margin-bottom:3px;">Grand Total Net Pay</div>
+                <div style="font-weight:700;font-size:0.95rem;color:#166534">${totalNet}</div>
+              </div>
+            </div>`;
+
+          const headers = '<th>Employee</th><th>Group</th><th>Gross Pay</th><th>PAYE</th><th>Pension</th><th>Total Deductions</th><th>Net Pay</th>';
+          const html = buildBulkPDFHTML(
+            `Payroll Grand Total — ${groupBy}`,
+            date,
+            headers,
+            tableRows,
+            totalEmps,
+            summaryExtra
+          );
+
+          renderBulkPDF(html, `payroll-grand-total-${groupBy.toLowerCase()}-${date}.pdf`);
+        }
+
+
+
+        /* --- Wire up group buttons via delegation --- */
+        document.addEventListener('click', function(e) {
+          const csvBtn = e.target.closest('.group-csv-btn');
+          const pdfBtn = e.target.closest('.group-pdf-btn');
+          if (csvBtn) {
+            const card = csvBtn.closest('.group-report-card');
+            if (card) downloadGroupCSV(csvBtn, card);
+          }
+          if (pdfBtn) {
+            const card = pdfBtn.closest('.group-report-card');
+            if (card) downloadGroupPDF(pdfBtn, card);
+          }
+        });
+        function disableSubmitButton(form) {
+          const btn = form.querySelector('button[type="submit"]');
+          if (btn) { btn.disabled = true; btn.classList.add('opacity-50', 'cursor-not-allowed'); btn.textContent = 'Submitting…'; }
+          return true;
+        }
+    </script>
 </main>
 </body>
 </html>

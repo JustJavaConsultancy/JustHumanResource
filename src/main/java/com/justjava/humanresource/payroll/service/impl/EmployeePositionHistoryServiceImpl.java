@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -94,15 +95,27 @@ public class EmployeePositionHistoryServiceImpl
                 .orElseThrow(() ->
                         new ResourceNotFoundException("PayGroup", payGroupId));
 
-        // Close existing position
-        EmployeePositionHistory current =
-                getCurrentPosition(employeeId);
+        // ---------------------------------------------------------
+        // 🔥 HANDLE EXISTING POSITION (SAFE)
+        // ---------------------------------------------------------
 
-        current.setEffectiveTo(effectiveDate.minusDays(1));
-        current.setCurrent(false);
-        positionRepository.save(current);
+        Optional<EmployeePositionHistory> currentOpt =
+                positionRepository.findCurrentPosition(employeeId);
 
-        // Create new position
+        if (currentOpt.isPresent()) {
+
+            EmployeePositionHistory current = currentOpt.get();
+
+            current.setEffectiveTo(effectiveDate.minusDays(1));
+            current.setCurrent(false);
+
+            positionRepository.save(current);
+        }
+
+        // ---------------------------------------------------------
+        // CREATE NEW POSITION
+        // ---------------------------------------------------------
+
         EmployeePositionHistory newPosition =
                 EmployeePositionHistory.builder()
                         .employee(employee)

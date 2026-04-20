@@ -26,4 +26,22 @@ public interface PayGroupTaxReliefRepository
             LocalDate date,
             RecordStatus status
     );
+
+    /* ============================================================
+       ALL ASSIGNED TAX RELIEFS (INCLUDING FUTURE EFFECTIVE DATES)
+       For UI display purposes - shows all assignments regardless of date
+       ============================================================ */
+
+    @Query("""
+        SELECT p
+        FROM PayGroupTaxRelief p
+        WHERE p.payGroup.id = :payGroupId
+          AND p.status = :status
+          AND (p.effectiveTo IS NULL OR p.effectiveTo >= :date)
+    """)
+    List<PayGroupTaxRelief> findAllAssignedReliefs(
+            Long payGroupId,
+            LocalDate date,
+            RecordStatus status
+    );
 }

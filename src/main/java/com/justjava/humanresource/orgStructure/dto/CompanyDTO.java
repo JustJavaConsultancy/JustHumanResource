@@ -15,4 +15,7 @@ public class CompanyDTO {
     private String code;
     private Long parentCompanyId;
     private RecordStatus status;
+
+    private String logoBase64;
+    private String logoContentType;
 }

@@ -34,4 +34,21 @@ public interface PayGroupDeductionRepository
             @Param("date") LocalDate date,
             @Param("status") RecordStatus status
     );
+
+    /* ============================================================
+       ALL ASSIGNED DEDUCTIONS (INCLUDING FUTURE EFFECTIVE DATES)
+       For UI display purposes - shows all assignments regardless of date
+       ============================================================ */
+
+    @Query("""
+        SELECT pgd FROM PayGroupDeduction pgd
+        WHERE pgd.payGroup.id = :payGroupId
+          AND pgd.status = :status
+          AND (pgd.effectiveTo IS NULL OR pgd.effectiveTo >= :date)
+    """)
+    List<PayGroupDeduction> findAllAssignedDeductions(
+            @Param("payGroupId") Long payGroupId,
+            @Param("date") LocalDate date,
+            @Param("status") RecordStatus status
+    );
 }

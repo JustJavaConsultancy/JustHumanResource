@@ -59,8 +59,7 @@ public class PayGroupResolutionServiceImpl implements PayGroupResolutionService 
 
                 Allowance allowance = mapping.getAllowance();
 
-                if (mapping.getOverrideAmount() != null
-                        && mapping.getOverrideAmount().compareTo(BigDecimal.ZERO) > 0) {
+                if (mapping.getOverrideAmount() != null) {
 
                     allowance = cloneAllowanceWithOverride(
                             allowance,
@@ -68,7 +67,7 @@ public class PayGroupResolutionServiceImpl implements PayGroupResolutionService 
                     );
                 }
 
-                allowanceMap.putIfAbsent(
+                allowanceMap.put(
                         allowance.getCode(),
                         allowance
                 );
@@ -98,7 +97,7 @@ public class PayGroupResolutionServiceImpl implements PayGroupResolutionService 
                     );
                 }
 
-                deductionMap.putIfAbsent(
+                deductionMap.put(
                         deduction.getCode(),
                         deduction
                 );
@@ -128,7 +127,7 @@ public class PayGroupResolutionServiceImpl implements PayGroupResolutionService 
                     );
                 }
 
-                taxReliefMap.putIfAbsent(
+                taxReliefMap.put(
                         relief.getCode(),
                         relief
                 );
@@ -150,6 +149,7 @@ public class PayGroupResolutionServiceImpl implements PayGroupResolutionService 
                         RecordStatus.ACTIVE
                 );
 
+        System.out.println(" The PayrollDate is in ResolvedComponent  : " + payrollDate );
         for (EmployeeAllowance mapping : employeeAllowances) {
 
             Allowance allowance = mapping.getAllowance();
@@ -270,20 +270,28 @@ public class PayGroupResolutionServiceImpl implements PayGroupResolutionService 
         clone.setAmount(overrideAmount);
         return clone;
     }*/
-    private Allowance cloneAllowanceWithOverride(
-            Allowance original,
-            BigDecimal overrideAmount) {
+private Allowance cloneAllowanceWithOverride(
+        Allowance original,
+        BigDecimal overrideAmount) {
 
-        Allowance clone = new Allowance();
-        clone.setCode(original.getCode());
-        clone.setName(original.getName());
-        clone.setTaxable(original.isTaxable());
-        clone.setPensionable(original.isPensionable());
-        clone.setCalculationType(original.getCalculationType());
-        clone.setPartOfGross(original.isPartOfGross());
-        clone.setAmount(overrideAmount);
-        return clone;
-    }
+    Allowance clone = new Allowance();
+
+    clone.setCode(original.getCode());
+    clone.setName(original.getName());
+
+    clone.setTaxable(original.isTaxable());
+    clone.setPensionable(original.isPensionable());
+    clone.setPartOfGross(original.isPartOfGross());
+
+    clone.setCalculationType(original.getCalculationType());
+    clone.setPercentageRate(original.getPercentageRate());   // ✅ ADD
+    clone.setFormulaExpression(original.getFormulaExpression()); // ✅ ADD
+    clone.setProratable(original.isProratable()); // ✅ ADD (if exists)
+
+    clone.setAmount(overrideAmount);
+
+    return clone;
+}
     private Deduction cloneDeductionWithOverride(
             Deduction original,
             BigDecimal overrideAmount) {

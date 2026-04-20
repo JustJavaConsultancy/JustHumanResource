@@ -1,6 +1,7 @@
 package com.justjava.humanresource.payroll.repositories;
 
 import com.justjava.humanresource.core.enums.PayrollRunStatus;
+import com.justjava.humanresource.payroll.dto.EmployeeReportItemDTO;
 import com.justjava.humanresource.payroll.dto.PayrollRunDTO;
 import com.justjava.humanresource.payroll.entity.PayrollRun;
 import com.justjava.humanresource.payroll.report.dto.*;
@@ -587,5 +588,57 @@ AND pr.versionNumber = (
             @Param("periodStart") LocalDate periodStart,
             @Param("periodEnd") LocalDate periodEnd
     );
+    @Query("""
+SELECT new com.justjava.humanresource.payroll.dto.EmployeeReportItemDTO(
+    e.id,
+    e.firstName,
+    e.lastName,
 
+    pr.grossPay,
+    pr.netPay,
+    SUM(CASE WHEN li.componentCode = 'PAYE' THEN li.amount END),
+    SUM(CASE WHEN li.componentCode = 'PENSION_EMP' THEN li.amount END),
+    CASE 
+        WHEN :groupBy = 'GRADE' THEN jg.name
+        WHEN :groupBy = 'PAYGROUP' THEN pg.name
+        WHEN :groupBy = 'COMPANY' THEN c.name
+    END
+)
+FROM PayrollRun pr
+JOIN pr.employee e
+JOIN e.department d
+JOIN d.company c
+JOIN EmployeePositionHistory eph ON eph.employee.id = e.id
+JOIN eph.jobStep js
+JOIN js.jobGrade jg
+JOIN eph.payGroup pg
+LEFT JOIN PayrollLineItem li ON li.payrollRun.id = pr.id
+
+WHERE c.id = :companyId
+AND pr.periodStart >= :start
+AND pr.periodEnd <= :end
+AND pr.status = com.justjava.humanresource.core.enums.PayrollRunStatus.POSTED
+
+
+AND pr.versionNumber = (
+    SELECT MAX(pr2.versionNumber)
+    FROM PayrollRun pr2
+    WHERE pr2.employee.id = pr.employee.id
+    AND pr2.periodStart = pr.periodStart
+    AND pr2.periodEnd = pr.periodEnd
+)
+
+AND eph.current = true
+
+GROUP BY 
+    e.id, e.firstName, e.lastName,
+    pr.grossPay, pr.netPay,
+    jg.name, pg.name, c.name
+""")
+    List<EmployeeReportItemDTO> getEmployeeReportRaw(
+            Long companyId,
+            LocalDate start,
+            LocalDate end,
+            String groupBy
+    );
 }

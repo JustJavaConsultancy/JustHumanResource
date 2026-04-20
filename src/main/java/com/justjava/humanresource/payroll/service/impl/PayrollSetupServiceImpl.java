@@ -4,15 +4,18 @@ package com.justjava.humanresource.payroll.service.impl;
 import com.justjava.humanresource.core.enums.RecordStatus;
 import com.justjava.humanresource.core.exception.InvalidOperationException;
 import com.justjava.humanresource.hr.entity.Employee;
+import com.justjava.humanresource.hr.entity.EmployeePositionHistory;
 import com.justjava.humanresource.hr.entity.PayGroup;
 import com.justjava.humanresource.hr.repository.EmployeeRepository;
 import com.justjava.humanresource.hr.repository.PayGroupRepository;
+import com.justjava.humanresource.payroll.dto.FutureEmployeeAllowanceDTO;
 import com.justjava.humanresource.payroll.entity.*;
 import com.justjava.humanresource.payroll.mapper.EmployeeAllowanceMapper;
 import com.justjava.humanresource.payroll.mapper.EmployeeDeductionMapper;
 import com.justjava.humanresource.payroll.mapper.PayGroupAllowanceMapper;
 import com.justjava.humanresource.payroll.mapper.PayGroupDeductionMapper;
 import com.justjava.humanresource.payroll.repositories.*;
+import com.justjava.humanresource.payroll.service.EmployeePositionHistoryService;
 import com.justjava.humanresource.payroll.service.PayrollChangeOrchestrator;
 import com.justjava.humanresource.payroll.service.PayrollPeriodService;
 import com.justjava.humanresource.payroll.service.PayrollSetupService;
@@ -28,9 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -51,6 +52,7 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
     private final PayGroupAllowanceMapper payGroupAllowanceMapper;
     private final PayGroupDeductionMapper payGroupDeductionMapper;
     private final PayrollChangeOrchestrator  payrollChangeOrchestrator;
+    private final EmployeePositionHistoryService employeePositionHistoryService;
 
     private final PayrollPeriodService payrollPeriodService;
     private final TaxReliefRepository taxReliefRepository;
@@ -589,6 +591,89 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
                         .build()
                 )
                 .toList();
+    }
+    @Override
+    public List<FutureEmployeeAllowanceDTO> getFutureAllowancesForEmployee(Long employeeId) {
+
+        LocalDate today = LocalDate.now();
+
+        // ---------------------------------------------------------
+        // 1. Get Employee + Position
+        // ---------------------------------------------------------
+
+        EmployeePositionHistory position =
+                employeePositionHistoryService.getCurrentPosition(employeeId);
+
+        Long payGroupId = position.getPayGroup().getId();
+
+        // ---------------------------------------------------------
+        // 2. Fetch BOTH SOURCES
+        // ---------------------------------------------------------
+
+        List<EmployeeAllowance> employeeAllowances =
+                employeeAllowanceRepository.findFutureAllowancesByEmployee(
+                        employeeId, today
+                );
+
+        List<PayGroupAllowance> payGroupAllowances =
+                employeeAllowanceRepository.findFutureAllowancesByPayGroup(
+                        payGroupId, today
+                );
+
+        // ---------------------------------------------------------
+        // 3. MERGE (Employee overrides PayGroup)
+        // ---------------------------------------------------------
+
+        Map<String, FutureEmployeeAllowanceDTO> map = new LinkedHashMap<>();
+
+        // 🔹 3A: Load PayGroup first
+        for (PayGroupAllowance pga : payGroupAllowances) {
+
+            Allowance a = pga.getAllowance();
+
+            BigDecimal amount = pga.getOverrideAmount() != null
+                    ? pga.getOverrideAmount()
+                    : a.getAmount();
+
+            map.put(a.getCode(),
+                    new FutureEmployeeAllowanceDTO(
+                            null, // employeeId optional here
+                            null,
+                            null,
+                            a.getCode(),
+                            a.getName(),
+                            amount,
+                            false,
+                            pga.getEffectiveFrom(),
+                            pga.getEffectiveTo()
+                    )
+            );
+        }
+
+        // 🔹 3B: Override with Employee allowances
+        for (EmployeeAllowance ea : employeeAllowances) {
+
+            Allowance a = ea.getAllowance();
+
+            BigDecimal amount = ea.getOverrideAmount() != null
+                    ? ea.getOverrideAmount()
+                    : a.getAmount();
+
+            map.put(a.getCode(),
+                    new FutureEmployeeAllowanceDTO(
+                            ea.getEmployee().getId(),
+                            ea.getEmployee().getFirstName(),
+                            ea.getEmployee().getLastName(),
+                            a.getCode(),
+                            a.getName(),
+                            amount,
+                            ea.isOverridden(),
+                            ea.getEffectiveFrom(),
+                            ea.getEffectiveTo()
+                    )
+            );
+        }
+        return new ArrayList<>(map.values());
     }
     private LocalDate determineAffectedPayrollDate(
             List<? extends Object> requests) {

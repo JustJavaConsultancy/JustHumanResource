@@ -358,18 +358,17 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
 
         if (isGrossBased) {
 
-            if (runningGross.compareTo(grossPay) > 0) {
-                throw new IllegalStateException(
-                        "Configured earnings exceed gross salary."
-                );
-            }
+/*            if (runningGross.compareTo(grossPay) > 0) {
+
+            }*/
 
             /*
              * Optional balancing (VERY IMPORTANT for production)
              */
             System.out.println(" grossPay===="+grossPay +"  runningGross==="+runningGross+"  " +
                     " nonGrossEarnings==="+nonGrossEarnings);
-            BigDecimal difference = grossPay.subtract(runningGross.add(nonGrossEarnings));
+            BigDecimal difference = grossPay.subtract(runningGross);
+
 
             if (difference.compareTo(BigDecimal.ZERO) > 0) {
 
@@ -402,6 +401,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
         System.out.println(" The grossPay ===="+grossPay);
 
         run.setGrossPay(runningGross.setScale(2, RoundingMode.HALF_UP));
+        run.setNetPay(runningGross.add(nonGrossEarnings).setScale(2, RoundingMode.HALF_UP));
         run.setNonGrossEarnings(nonGrossEarnings.setScale(2, RoundingMode.HALF_UP));
         run.setGrossDifference(grossDifference.setScale(2, RoundingMode.HALF_UP));
 
@@ -548,9 +548,15 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
                         payrollDate
                 );
         BigDecimal fullGross= run.getGrossPay()
-                .add(run.getNonGrossEarnings()).add(run.getGrossDifference());
+                .add(run.getGrossDifference());
 
-        System.out.println(" The Full Gross==="+fullGross);
+
+        System.out.println(" The Full Gross 1==="+fullGross);
+/*        fullGross= run.getGrossPay()
+                .add(run.getGrossDifference());*/
+
+        System.out.println(" The Full Gross 2==="+fullGross + "  run.getNonGrossEarnings()   "
+        + run.getNonGrossEarnings());
         fullGross = fullGross.multiply(BigDecimal.valueOf(12));
 
         for (TaxRelief relief : resolved.getTaxReliefs()) {
@@ -575,9 +581,8 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
         }
 
         System.out.println(" The Total Relief==="+totalReliefs);
-        taxableIncome = fullGross
-                //.subtract(employeePension)
-                .subtract(totalReliefs);
+        taxableIncome = fullGross.subtract(totalReliefs);
+
 
         System.out.println(" The Final Taxable Income===="+taxableIncome);
         if (taxableIncome.compareTo(BigDecimal.ZERO) < 0) {
@@ -615,7 +620,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
         run.setTotalDeductions(totalDeductions);
 
         run.setNetPay(
-                run.getGrossPay()
+                run.getGrossPay().add(run.getNonGrossEarnings())
                         .subtract(totalDeductions)
                         .setScale(2, RoundingMode.HALF_UP)
         );
@@ -793,7 +798,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
         run.setTotalDeductions(totalDeductions);
 
         run.setNetPay(
-                run.getGrossPay()
+                run.getGrossPay().add(run.getNonGrossEarnings())
                         .subtract(totalDeductions)
                         .setScale(2, RoundingMode.HALF_UP)
         );
