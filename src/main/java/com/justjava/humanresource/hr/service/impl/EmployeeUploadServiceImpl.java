@@ -6,6 +6,7 @@ import com.justjava.humanresource.hr.repository.*;
 import com.justjava.humanresource.hr.service.CsvParserService;
 import com.justjava.humanresource.hr.service.EmployeeUploadService;
 import com.justjava.humanresource.payroll.service.EmployeePositionHistoryService;
+import com.justjava.humanresource.payroll.service.PayrollChangeOrchestrator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,6 +43,7 @@ public class EmployeeUploadServiceImpl implements EmployeeUploadService {
     private final EmployeeService employeeService;
     private final EmployeeOnboardingRepository onboardingRepository;
     private final KeycloakAdminService keycloakAdminService;
+    private final PayrollChangeOrchestrator payrollChangeOrchestrator;
 
     @Value("${keycloak.realm}")
     private String realmName;
@@ -143,17 +145,7 @@ public class EmployeeUploadServiceImpl implements EmployeeUploadService {
                     .build();
             onboardingRepository.save(onboarding);
 
-            // -----------------------------------------------------
-            // 🔥 4. ASSIGN POSITION (WITH PAYGROUP)
-            // -----------------------------------------------------
-
-            positionHistoryService.changePosition(
-                    employee.getId(),
-                    department.getId(),
-                    step.getId(),
-                    payGroup.getId(),
-                    LocalDate.now()
-            );
+            payrollChangeOrchestrator.recalculateForEmployee(employee.getId(), LocalDate.now());
         }
     }
 }

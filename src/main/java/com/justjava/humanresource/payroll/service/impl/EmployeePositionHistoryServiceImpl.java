@@ -45,7 +45,13 @@ public class EmployeePositionHistoryServiceImpl
                 positionRepository.existsByEmployee_IdAndCurrentTrue(employeeId);
 
         if (alreadyExists) {
-            return getCurrentPosition(employeeId);
+            // Ensure status is ACTIVE for the existing record if it was somehow different
+            EmployeePositionHistory existing = getCurrentPosition(employeeId);
+            if (existing.getStatus() != com.justjava.humanresource.core.enums.RecordStatus.ACTIVE) {
+                existing.setStatus(com.justjava.humanresource.core.enums.RecordStatus.ACTIVE);
+                positionRepository.save(existing);
+            }
+            return existing;
         }
 
         LocalDate effectiveDate =
@@ -61,6 +67,7 @@ public class EmployeePositionHistoryServiceImpl
                         .payGroup(employee.getPayGroup())
                         .effectiveFrom(effectiveDate)
                         .current(true)
+                        .status(com.justjava.humanresource.core.enums.RecordStatus.ACTIVE)
                         .build();
 
         return positionRepository.save(history);
@@ -96,19 +103,27 @@ public class EmployeePositionHistoryServiceImpl
                         new ResourceNotFoundException("PayGroup", payGroupId));
 
         // ---------------------------------------------------------
-        // 🔥 HANDLE EXISTING POSITION (SAFE)
+        // 🔥 HANDLE EXISTING POSITION (SAFE & UNAMBIGUOUS)
         // ---------------------------------------------------------
 
-        Optional<EmployeePositionHistory> currentOpt =
-                positionRepository.findCurrentPosition(employeeId);
+        List<EmployeePositionHistory> currentPositions =
+                positionRepository.findAllByEmployee_IdAndCurrentTrue(employeeId);
 
-        if (currentOpt.isPresent()) {
-
-            EmployeePositionHistory current = currentOpt.get();
+        for (EmployeePositionHistory current : currentPositions) {
+            // If the current record started on the same day, update it instead of creating a new one
+            // This avoids unique constraint violations on (employee_id, effective_from)
+            if (current.getEffectiveFrom().equals(effectiveDate)) {
+                current.setDepartment(department);
+                current.setJobStep(jobStep);
+                current.setPayGroup(payGroup);
+                current.setStatus(com.justjava.humanresource.core.enums.RecordStatus.ACTIVE);
+                current.setCurrent(true); // Re-assert current just in case
+                return positionRepository.save(current);
+            }
 
             current.setEffectiveTo(effectiveDate.minusDays(1));
             current.setCurrent(false);
-
+            current.setStatus(com.justjava.humanresource.core.enums.RecordStatus.INACTIVE);
             positionRepository.save(current);
         }
 
@@ -124,6 +139,7 @@ public class EmployeePositionHistoryServiceImpl
                         .payGroup(payGroup)
                         .effectiveFrom(effectiveDate)
                         .current(true)
+                        .status(com.justjava.humanresource.core.enums.RecordStatus.ACTIVE)
                         .build();
 
         return positionRepository.save(newPosition);

@@ -14,7 +14,8 @@ import java.time.LocalDate;
                 name = "uk_employee_position_effective",
                 columnNames = {
                         "employee_id",
-                        "effective_from"
+                        "effective_from",
+                        "current"
                 }
         )
 )

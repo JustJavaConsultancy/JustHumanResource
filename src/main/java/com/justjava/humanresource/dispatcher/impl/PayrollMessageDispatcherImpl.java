@@ -52,16 +52,33 @@ public class PayrollMessageDispatcherImpl
             );
         }
 
-        Execution execution = runtimeService
-                .createExecutionQuery()
-                .processInstanceId(processInstance.getId())
-                .messageEventSubscriptionName("PAYROLL_MESSAGE")
-                .singleResult();
+        Execution execution = null;
+        int retries = 5;
+        while (retries > 0) {
+            execution = runtimeService
+                    .createExecutionQuery()
+                    .processInstanceId(processInstance.getId())
+                    .messageEventSubscriptionName("PAYROLL_MESSAGE")
+                    .singleResult();
+
+            if (execution != null) {
+                break;
+            }
+
+            try {
+                Thread.sleep(1000); // Wait 1 second for the process to reach the message catch event
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new RuntimeException("Interrupted while waiting for payroll execution", e);
+            }
+            retries--;
+        }
 
         if (execution == null) {
             throw new IllegalStateException(
                     "No waiting execution found for businessKey: "
                             + businessKey
+                            + " after retries. The process might be stuck or busy."
             );
         }
 

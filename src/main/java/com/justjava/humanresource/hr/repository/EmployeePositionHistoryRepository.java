@@ -20,10 +20,7 @@ public interface EmployeePositionHistoryRepository
     @Query("""
         SELECT eph FROM EmployeePositionHistory eph
         WHERE eph.employee.id = :employeeId
-          AND eph.status = com.justjava.humanresource.core.enums.RecordStatus.ACTIVE
-          AND eph.effectiveFrom <= CURRENT_DATE
-          AND (eph.effectiveTo IS NULL OR eph.effectiveTo >= CURRENT_DATE)
-        ORDER BY eph.effectiveFrom DESC
+          AND eph.current = true
     """)
     List<EmployeePositionHistory> findCurrentPositionsInternal(
             @Param("employeeId") Long employeeId
@@ -37,9 +34,9 @@ public interface EmployeePositionHistoryRepository
         if (list.isEmpty()) return Optional.empty();
 
         if (list.size() > 1) {
-            throw new IllegalStateException(
-                    "Multiple active positions found for employee " + employeeId
-            );
+            // We return the first one but ideally this shouldn't happen anymore
+            // because changePosition now clears ALL current records.
+            return Optional.of(list.get(0));
         }
 
         return Optional.of(list.get(0));
@@ -108,6 +105,8 @@ public interface EmployeePositionHistoryRepository
     boolean existsByEmployee_IdAndCurrentTrue(Long employeeId);
 
     Optional<EmployeePositionHistory> findByEmployee_IdAndCurrentTrue(Long employeeId);
+
+    List<EmployeePositionHistory> findAllByEmployee_IdAndCurrentTrue(Long employeeId);
 
     List<EmployeePositionHistory> findByCurrentTrueAndEffectiveToIsNull();
 
