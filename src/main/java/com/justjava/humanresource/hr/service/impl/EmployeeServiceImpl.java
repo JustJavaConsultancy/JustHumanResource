@@ -3,7 +3,7 @@ package com.justjava.humanresource.hr.service.impl;
 import com.justjava.humanresource.core.enums.EmploymentStatus;
 import com.justjava.humanresource.core.enums.RecordStatus;
 import com.justjava.humanresource.core.exception.ResourceNotFoundException;
-import com.justjava.humanresource.dispatcher.PayrollMessageDispatcher;
+import com.justjava.humanresource.payroll.service.PayrollChangeOrchestrator;
 import com.justjava.humanresource.hr.dto.EmployeeDTO;
 import com.justjava.humanresource.hr.entity.*;
 import com.justjava.humanresource.hr.mapper.EmployeeMapper;
@@ -27,7 +27,7 @@ public class EmployeeServiceImpl implements EmployeeService {
 
     private final EmployeeRepository employeeRepository;
     private final JobStepRepository jobStepRepository;
-    private final PayrollMessageDispatcher payrollMessageDispatcher;
+    private final PayrollChangeOrchestrator payrollChangeOrchestrator;
     private final EmployeeMapper employeeMapper;
     private final PayGroupRepository payGroupRepository;
     private final EmployeePositionHistoryRepository employeePositionHistoryRepository;
@@ -83,7 +83,7 @@ public class EmployeeServiceImpl implements EmployeeService {
         Employee employee = getById(employeeId);
         employee.setPayGroup(newPayGroup);
         Employee saved = employeeRepository.save(employee);
-        payrollMessageDispatcher.requestPayroll(saved.getId(), effectiveDate);
+        payrollChangeOrchestrator.recalculateForEmployee(saved.getId(), effectiveDate);
         return employeeMapper.toDto(saved);
     }
 
@@ -94,7 +94,7 @@ public class EmployeeServiceImpl implements EmployeeService {
                 .orElseThrow(() -> new ResourceNotFoundException("JobStep", newJobStepId));
         employee.setJobStep(newJobStep);
         Employee saved = employeeRepository.save(employee);
-        payrollMessageDispatcher.requestPayroll(saved.getId(), effectiveDate);
+        payrollChangeOrchestrator.recalculateForEmployee(saved.getId(), effectiveDate);
         return employeeMapper.toDto(saved);
     }
 
@@ -104,23 +104,11 @@ public class EmployeeServiceImpl implements EmployeeService {
         JobStep jobStep = jobStepRepository.findById(jobStepId).orElseThrow();
         PayGroup payGroup = payGroupRepository.findById(payGroupId).orElseThrow();
 
-        Optional<EmployeePositionHistory> current = employeePositionHistoryRepository.resolvePosition(
-                employeeId, effectiveFrom.minusDays(1), RecordStatus.ACTIVE);
-        current.ifPresent(existing -> {
-            existing.setEffectiveTo(effectiveFrom.minusDays(1));
-            existing.setStatus(RecordStatus.INACTIVE);
-            employeePositionHistoryRepository.save(existing);
-        });
+        employee.setJobStep(jobStep);
+        employee.setPayGroup(payGroup);
+        employeeRepository.save(employee);
 
-        EmployeePositionHistory newPosition = new EmployeePositionHistory();
-        newPosition.setEmployee(employee);
-        newPosition.setJobStep(jobStep);
-        newPosition.setPayGroup(payGroup);
-        newPosition.setEffectiveFrom(effectiveFrom);
-        newPosition.setStatus(RecordStatus.ACTIVE);
-        employeePositionHistoryRepository.save(newPosition);
-
-        payrollMessageDispatcher.requestPayroll(employeeId, effectiveFrom);
+        payrollChangeOrchestrator.recalculateForEmployee(employeeId, effectiveFrom);
     }
 
     @Override
@@ -128,7 +116,7 @@ public class EmployeeServiceImpl implements EmployeeService {
         Employee employee = getById(employeeId);
         employee.setEmploymentStatus(newStatus);
         Employee saved = employeeRepository.save(employee);
-        payrollMessageDispatcher.requestPayroll(saved.getId(), effectiveDate);
+        payrollChangeOrchestrator.recalculateForEmployee(saved.getId(), effectiveDate);
         return employeeMapper.toDto(saved);
     }
 

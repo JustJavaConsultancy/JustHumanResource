@@ -5,6 +5,7 @@ import com.justjava.humanresource.hr.entity.JobStep;
 import com.justjava.humanresource.hr.repository.EmployeeRepository;
 import com.justjava.humanresource.kpi.entity.KpiAssignment;
 import com.justjava.humanresource.kpi.repositories.KpiAssignmentRepository;
+import com.justjava.humanresource.payroll.service.PayrollChangeOrchestrator;
 import lombok.RequiredArgsConstructor;
 import org.flowable.engine.RuntimeService;
 import org.springframework.stereotype.Service;
@@ -23,6 +24,7 @@ public class JobRoleChangeService {
     private final KpiAssignmentRepository kpiAssignmentRepository;
     private final KpiAssignmentService kpiAssignmentService;
     private final RuntimeService runtimeService;
+    private final PayrollChangeOrchestrator payrollChangeOrchestrator;
 
     public void changeJobRole(Long employeeId, Long newRoleId) {
 
@@ -45,6 +47,8 @@ public class JobRoleChangeService {
         // 2. Change role
         employee.setJobStep(JobStep.builder().id(newRoleId).build());
         employeeRepository.save(employee);
+
+        payrollChangeOrchestrator.recalculateForEmployee(employeeId, LocalDate.now());
 
         // 3. Trigger Flowable KPI re-assignment
         runtimeService.startProcessInstanceByKey(

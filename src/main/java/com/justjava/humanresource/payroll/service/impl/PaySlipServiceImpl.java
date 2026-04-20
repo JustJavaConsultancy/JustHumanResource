@@ -406,6 +406,13 @@ public class PaySlipServiceImpl implements PaySlipService {
                 continue;
             }
 
+            // Skip employer-side entries — EMPLOYER_COST and TAX_RELIEF are not employee deductions
+            if (line.getComponentType() == PayComponentType.EMPLOYER_COST
+                    || line.getComponentType() == PayComponentType.TAX_RELIEF) {
+                continue;
+            }
+
+
             PaySlipLineDTO dto = PaySlipLineDTO.builder()
                     .code(line.getComponentCode())
                     .description(line.getDescription())
@@ -439,6 +446,7 @@ public class PaySlipServiceImpl implements PaySlipService {
                 .grossPay(paySlip.getGrossPay())
                 .totalDeductions(paySlip.getTotalDeductions())
                 .netPay(paySlip.getNetPay())
+                .nonGrossEarnings(run.getNonGrossEarnings()) // newly added
 
                 .allowances(allowances)
                 .deductions(deductions)

@@ -26,6 +26,7 @@ public class PaySlipDTO {
     BigDecimal grossPay;
     BigDecimal totalDeductions;
     BigDecimal netPay;
+    BigDecimal nonGrossEarnings;
 
     /* ======================
        BREAKDOWN

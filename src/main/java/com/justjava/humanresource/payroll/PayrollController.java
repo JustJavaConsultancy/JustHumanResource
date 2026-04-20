@@ -17,6 +17,7 @@ import com.justjava.humanresource.payroll.enums.EmployeeGroupBy;
 import com.justjava.humanresource.payroll.report.services.ReportingService;
 import com.justjava.humanresource.core.enums.PayrollRunStatus;
 import com.justjava.humanresource.payroll.dto.FutureEmployeeAllowanceDTO;
+import java.util.Comparator;
 
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -298,24 +299,37 @@ public class PayrollController {
         return "redirect:/payroll/pay-group";
     }
 
+
+
     @GetMapping("/payroll/employee-payroll")
     public String getEmployeePayroll(Model model) {
-        List<PayrollRun> payrollRuns = paySlipService.getCurrentPeriodPayrollRuns(1L);
-        List<PaySlipDTO> previousPaySlips = paySlipService.getAllClosedPeriodPaySlips(1L);
+        // Fetch and sort current payroll runs by Employee ID
+        List<PayrollRun> payrollRuns = paySlipService.getCurrentPeriodPayrollRuns(1L).stream()
+                .sorted((a, b) -> a.getEmployee().getId().compareTo(b.getEmployee().getId()))
+                .toList();
+
+        // Fetch and sort previous payslips by Employee ID
+        List<PaySlipDTO> previousPaySlips = paySlipService.getAllClosedPeriodPaySlips(1L).stream()
+                .sorted((a, b) -> a.getEmployeeId().compareTo(b.getEmployeeId()))
+                .toList();
 
         // Auto-generate payslips for any POSTED run that doesn't have one yet
         for (PayrollRun run : payrollRuns) {
             if (run.getStatus() == PayrollRunStatus.POSTED &&
                     !paySlipService.existsForPayrollRun(run.getId())) {
-                try { paySlipService.generatePaySlip(run.getId()); } catch (Exception ignored) {}
+                try {
+                    paySlipService.generatePaySlip(run.getId());
+                } catch (Exception ignored) {}
             }
         }
 
         List<PaySlipDTO> currentPaySlips = List.of();
         try {
-            currentPaySlips = paySlipService.getCurrentPeriodPaySlips(1L);
+            // Fetch and sort current period payslips
+            currentPaySlips = paySlipService.getCurrentPeriodPaySlips(1L).stream()
+                    .sorted((a, b) -> a.getEmployeeId().compareTo(b.getEmployeeId()))
+                    .toList();
         } catch (Exception e) {  }
-
 
         List<FutureEmployeeAllowanceDTO> futureAllowances = List.of();
         try {
@@ -327,15 +341,16 @@ public class PayrollController {
                     .toList();
         } catch (Exception ignored) {}
 
-
         model.addAttribute("payrollRuns", payrollRuns);
         model.addAttribute("currentPaySlips", currentPaySlips);
         model.addAttribute("previousPeriods", previousPaySlips);
         model.addAttribute("futureAllowances", futureAllowances);
         model.addAttribute("title", "Payroll Management");
         model.addAttribute("subTitle", "Manage employee payroll, salary details, and payment history");
+
         return "payroll/fragments/employee-payroll";
     }
+
 
     @PostMapping("/createPayGroup")
     public String createPayGroup(CreatePayGroupCommand command, RedirectAttributes redirectAttributes) {

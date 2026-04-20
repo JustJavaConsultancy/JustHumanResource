@@ -44,6 +44,8 @@ public class PayrollRunDTO {
     private BigDecimal totalDeductions = BigDecimal.ZERO;
     private BigDecimal netPay = BigDecimal.ZERO;
 
+    private BigDecimal nonGrossEarnings = BigDecimal.ZERO;
+
     /* =========================
        STATUTORY BREAKDOWN
        ========================= */

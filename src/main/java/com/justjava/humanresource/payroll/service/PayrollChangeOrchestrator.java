@@ -8,4 +8,5 @@ public interface PayrollChangeOrchestrator{
             Long employeeId, LocalDate effectiveDate);
     public void recalculateForPayGroup(
             Long payGroupId,LocalDate effectiveDate);
+    public void updateEmployeePositionHistory(Long employeeId, LocalDate effectiveDate);
 }

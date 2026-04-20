@@ -16,12 +16,14 @@ import com.justjava.humanresource.onboarding.entity.EmployeeOnboarding;
 import com.justjava.humanresource.onboarding.enums.OnboardingStatus;
 import com.justjava.humanresource.onboarding.repositories.EmployeeOnboardingRepository;
 
+import com.justjava.humanresource.payroll.service.PayrollChangeOrchestrator;
 import lombok.RequiredArgsConstructor;
 import org.flowable.engine.RuntimeService;
 import org.flowable.engine.runtime.ProcessInstance;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,6 +41,7 @@ public class EmployeeOnboardingService {
     private final DepartmentRepository departmentRepository;
     private final JobStepRepository jobStepRepository;
     private final PayGroupRepository payGroupRepository;
+    private final PayrollChangeOrchestrator payrollChangeOrchestrator;
 
     @Transactional
     public EmployeeOnboardingResponseDTO startOnboarding(
@@ -125,6 +128,8 @@ public class EmployeeOnboardingService {
         Employee employee = employeeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Employee not found",id));
 
+        boolean recalculationRequired = false;
+
         if (dto.getFirstName() != null) employee.setFirstName(dto.getFirstName());
         if (dto.getLastName() != null) employee.setLastName(dto.getLastName());
         if (dto.getEmail() != null) employee.setEmail(dto.getEmail());
@@ -144,11 +149,13 @@ public class EmployeeOnboardingService {
             JobStep step = jobStepRepository.findById(dto.getJobStepId())
                     .orElseThrow(() -> new ResourceNotFoundException("JobStep not found", dto.getJobStepId()));
             employee.setJobStep(step);
+            recalculationRequired = true;
         }
         if (dto.getPayGroupId() != null) {
             PayGroup payGroup = payGroupRepository.findById(dto.getPayGroupId())
                     .orElseThrow(() -> new ResourceNotFoundException("PayGroup not found", dto.getPayGroupId()));
             employee.setPayGroup(payGroup);
+            recalculationRequired = true;
         }
 
         // identity fields
@@ -169,6 +176,10 @@ public class EmployeeOnboardingService {
         if (dto.getGuarantorNinNumber() != null) employee.setGuarantorNinNumber(dto.getGuarantorNinNumber());
 
         employeeRepository.save(employee); // explicit save
+
+        if (recalculationRequired) {
+            payrollChangeOrchestrator.recalculateForEmployee(employee.getId(), LocalDate.now());
+        }
 
         // Handle bank details — delegate to EmployeeService which manages
         // deactivating old records and creating a new active one
