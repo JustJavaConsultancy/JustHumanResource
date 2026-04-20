@@ -32,7 +32,7 @@ public class Oauth2SecurityConfig {
                 )
                 .csrf(CsrfConfigurer::disable)
                 .oauth2Login(oauth2 -> oauth2
-//                        .loginPage("/login") // custom login page
+                        .loginPage("/login")
                         .authorizationEndpoint(Customizer.withDefaults())
                         .tokenEndpoint(Customizer.withDefaults())
                         .userInfoEndpoint(Customizer.withDefaults())
@@ -40,6 +40,7 @@ public class Oauth2SecurityConfig {
                         )
                 .authorizeHttpRequests(
                         authorize -> {
+                           authorize.requestMatchers(new AntPathRequestMatcher("/login")).permitAll();
                            authorize.requestMatchers(new AntPathRequestMatcher("/api/**")).permitAll();
                             authorize.anyRequest().authenticated();
                         }
