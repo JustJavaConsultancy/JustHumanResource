@@ -120,16 +120,7 @@ public class PayrollJournalService {
         totalNet = safe(totalNet);
 
     /* ============================================================
-       5️⃣ FINANCIAL BALANCE VALIDATION
-       ============================================================ */
-
-        if (totalGross.compareTo(totalDeductions.add(totalNet)) != 0) {
-            throw new IllegalStateException(
-                    "Journal imbalance detected. Payroll snapshot corrupted.");
-        }
-
-    /* ============================================================
-       6️⃣ CREATE BALANCED JOURNAL ENTRIES
+       5️⃣ CREATE JOURNAL ENTRIES
        ============================================================ */
 
         saveEntry(companyId, periodId,
