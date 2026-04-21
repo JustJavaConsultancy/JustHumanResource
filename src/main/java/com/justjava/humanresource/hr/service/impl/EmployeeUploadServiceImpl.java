@@ -44,6 +44,7 @@ public class EmployeeUploadServiceImpl implements EmployeeUploadService {
     private final EmployeeOnboardingRepository onboardingRepository;
     private final KeycloakAdminService keycloakAdminService;
     private final PayrollChangeOrchestrator payrollChangeOrchestrator;
+    private final EmployeeBankDetailRepository employeeBankDetailRepository;
 
     @Value("${keycloak.realm}")
     private String realmName;
@@ -136,6 +137,27 @@ public class EmployeeUploadServiceImpl implements EmployeeUploadService {
                     .initiatedBy("CSV-UPLOAD")
                     .build();
             onboardingRepository.save(onboarding);
+
+            // Save bank details if all three fields are provided in the CSV
+            String accountName   = dto.getAccountName();
+            String bankName      = dto.getBankName();
+            String accountNumber = dto.getAccountNumber();
+            boolean hasBankDetails = accountName != null && !accountName.isBlank()
+                    && bankName != null && !bankName.isBlank()
+                    && accountNumber != null && !accountNumber.isBlank();
+
+            if (hasBankDetails) {
+                EmployeeBankDetail bankDetail = EmployeeBankDetail.builder()
+                        .employee(employee)
+                        .accountName(accountName)
+                        .bankName(bankName)
+                        .accountNumber(accountNumber)
+                        .primaryAccount(true)
+                        .effectiveFrom(LocalDate.now())
+                        .status(RecordStatus.ACTIVE)
+                        .build();
+                employeeBankDetailRepository.save(bankDetail);
+            }
 
             employeeIds.add(employee.getId());
         }

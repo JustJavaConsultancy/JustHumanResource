@@ -39,6 +39,17 @@ public class CsvParserService {
                 dto.setGrade(parts[3].trim());
                 dto.setGross(new BigDecimal(parts[4].trim()));
 
+                // Optional bank details (columns 6, 7, 8)
+                if (parts.length > 5 && !parts[5].trim().isEmpty()) {
+                    dto.setAccountName(parts[5].trim());
+                }
+                if (parts.length > 6 && !parts[6].trim().isEmpty()) {
+                    dto.setBankName(parts[6].trim());
+                }
+                if (parts.length > 7 && !parts[7].trim().isEmpty()) {
+                    dto.setAccountNumber(parts[7].trim());
+                }
+
 
                 list.add(dto);
             }
