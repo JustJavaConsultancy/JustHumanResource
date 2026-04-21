@@ -12,4 +12,9 @@ public class EmployeeUploadDTO {
     private String email;
     private String grade;
     private BigDecimal gross;
+
+    // Optional bank details (from CSV columns 6–8)
+    private String accountName;
+    private String bankName;
+    private String accountNumber;
 }
