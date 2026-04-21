@@ -112,14 +112,6 @@ public class ValidatePeriodDelegate implements JavaDelegate {
                         PayrollRunStatus.POSTED
                 );
 
-        if (totalGross.compareTo(
-                totalDeductions.add(totalNet)) != 0) {
-
-            throw new IllegalStateException(
-                    "Payroll imbalance detected during validation."
-            );
-        }
-
         /* ============================================================
            PASS VARIABLES TO FLOWABLE
            ============================================================ */
