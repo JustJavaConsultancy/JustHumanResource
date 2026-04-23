@@ -1,6 +1,7 @@
 package com.justjava.humanresource.payroll.entity;
 
 import com.justjava.humanresource.core.enums.PayrollRunStatus;
+import com.justjava.humanresource.payroll.dto.FutureEmployeeAllowanceDTO;
 import lombok.Builder;
 import lombok.Value;
 
@@ -34,6 +35,7 @@ public class PaySlipDTO {
 
     List<PaySlipLineDTO> allowances;
     List<PaySlipLineDTO> deductions;
+    List<FutureEmployeeAllowanceDTO> futureAllowances;
 
     /* ======================
        STATUTORY SNAPSHOT

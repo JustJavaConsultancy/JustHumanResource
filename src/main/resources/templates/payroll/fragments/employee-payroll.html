@@ -766,13 +766,13 @@
                          style="font-size:0.875rem;color:#95a3b3;font-style:italic;">No allowances.</div>
                 </div>
 
-                <!-- Scheduled Allowances (future) — from model attribute, same for all current-run modals -->
-                <div th:if="${futureAllowances != null and not #lists.isEmpty(futureAllowances)}"
+                <!-- Scheduled Allowances (future) — scoped to this payslip's employee -->
+                <div th:if="${ps.futureAllowances != null and not #lists.isEmpty(ps.futureAllowances)}"
                      style="margin-bottom:1rem;padding-top:0.75rem;border-top:1px dashed #fcd34d;">
                     <p style="font-size:0.72rem;font-weight:600;color:#92400e;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 0.5rem;display:flex;align-items:center;gap:4px;">
                         <i class="bi bi-clock" style="font-size:0.75rem;"></i> Scheduled Allowances
                     </p>
-                    <div th:each="fa : ${futureAllowances}" class="ps-scheduled-item" style="font-size:0.875rem;">
+                    <div th:each="fa : ${ps.futureAllowances}" class="ps-scheduled-item" style="font-size:0.875rem;">
             <span style="display:flex;align-items:center;gap:8px;color:#57534e;">
               <span th:text="${fa.allowanceName}">Allowance Name</span>
               <span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:999px;font-size:0.72rem;font-weight:600;background:#fef3c7;color:#92400e;">
