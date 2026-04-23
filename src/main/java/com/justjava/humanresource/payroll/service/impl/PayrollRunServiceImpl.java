@@ -171,6 +171,7 @@ public class PayrollRunServiceImpl implements PayrollRunService {
                 .description(item.getDescription())
                 .amount(item.getAmount())
                 .taxable(item.isTaxable())
+                .outOfPayroll(item.isOutOfPayroll())
                 .build();
     }
     @Override

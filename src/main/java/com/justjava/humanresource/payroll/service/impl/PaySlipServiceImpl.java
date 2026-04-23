@@ -418,6 +418,7 @@ public class PaySlipServiceImpl implements PaySlipService {
                     .description(line.getDescription())
                     .amount(line.getAmount())
                     .taxable(line.isTaxable())
+                    .outOfPayroll(line.isOutOfPayroll())
                     .build();
 
             if (line.getComponentType() == PayComponentType.EARNING) {

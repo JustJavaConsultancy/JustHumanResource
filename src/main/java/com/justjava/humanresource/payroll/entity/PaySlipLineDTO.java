@@ -14,4 +14,5 @@ public class PaySlipLineDTO {
     String description;
     BigDecimal amount;
     boolean taxable;
+    boolean outOfPayroll;
 }

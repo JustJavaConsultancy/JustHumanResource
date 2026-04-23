@@ -5,6 +5,31 @@
 <head>
     <meta charset="UTF-8">
     <title>Dashboard · HRPro</title>
+    <style>
+        .oop-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-left: 0.5rem;
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 0.25rem 0.65rem;
+            border-radius: 5px;
+            background-color: #fef2f2;
+            color: #b91c1c;
+            border: 1.5px solid #fca5a5;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            white-space: nowrap;
+            box-shadow: 0 1px 2px rgba(185,28,28,0.08);
+            vertical-align: middle;
+        }
+        .dark .oop-badge {
+            background-color: #7f1d1d;
+            color: #fecaca;
+            border-color: #991b1b;
+        }
+    </style>
 </head>
 <body>
 <main layout:fragment="content">
@@ -167,7 +192,12 @@
                             <div th:each="allowance : ${latestPaySlip.allowances}"
                                  th:unless="${allowance.code == 'RESIDUAL'}"
                                  class="flex justify-between items-center py-1 border-b border-gray-50 dark:border-gray-800 last:border-0">
-                                <span class="text-sm text-gray-700 dark:text-gray-300" th:text="${allowance.description}">Allowance</span>
+                                <span class="flex items-center flex-wrap gap-1 text-sm text-gray-700 dark:text-gray-300">
+                                    <span th:text="${allowance.description}">Allowance</span>
+                                    <span th:if="${allowance.outOfPayroll}" class="oop-badge">
+                                        <span class="material-icons-round" style="font-size:0.8rem;">cancel</span> Out of Payroll
+                                    </span>
+                                </span>
                                 <span class="text-sm font-semibold text-gray-900 dark:text-white">
                             ₦<span th:text="${#numbers.formatDecimal(allowance.amount, 0, 'COMMA', 2, 'POINT')}">0.00</span>
                         </span>

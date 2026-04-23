@@ -133,6 +133,9 @@
                                         <!-- NEW: Proratable badge -->
                                         <span th:if="${allowance.proratable}"
                                               class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400">Proratable</span>
+                                        <!-- Out of Payroll badge -->
+                                        <span th:if="${allowance.outOfPayroll}"
+                                              class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400">Out of Payroll</span>
                                     </div>
                                     <!-- NEW: Percentage rate or formula indicator -->
                                     <div th:if="${allowance.calculationType == 'PERCENTAGE_OF_BASIC' or allowance.calculationType == 'PERCENTAGE_OF_GROSS' or allowance.calculationType == 'PERCENTAGE_OF_TAXABLE'}"
@@ -421,6 +424,12 @@
                                onchange="document.getElementById('addAllowancePartOfGrossHidden').value = this.checked ? 'false' : 'true'">
                         <span class="text-sm font-medium">Exclude from Gross Pay</span>
                     </label>
+                    <input type="hidden" name="outOfPayroll" id="addAllowanceOutOfPayrollHidden" value="false">
+                    <label class="flex items-center space-x-2">
+                        <input type="checkbox" id="addAllowanceOutOfPayroll" class="text-primary-600"
+                               onchange="document.getElementById('addAllowanceOutOfPayrollHidden').value = this.checked ? 'true' : 'false'">
+                        <span class="text-sm font-medium">Out of Payroll</span>
+                    </label>
                     <div>
                         <label class="block text-sm font-medium mb-2">Status</label>
                         <select name="status" class="form-input" required>
@@ -503,6 +512,12 @@
                         <input type="checkbox" id="editAllowancePartOfGrossCheck" class="text-primary-600"
                                onchange="document.getElementById('editAllowancePartOfGrossHidden').value = this.checked ? 'false' : 'true'">
                         <span class="text-sm font-medium">Exclude from Gross Pay</span>
+                    </label>
+                    <input type="hidden" name="outOfPayroll" id="editAllowanceOutOfPayrollHidden" value="false">
+                    <label class="flex items-center space-x-2">
+                        <input type="checkbox" id="editAllowanceOutOfPayroll" class="text-primary-600"
+                               onchange="document.getElementById('editAllowanceOutOfPayrollHidden').value = this.checked ? 'true' : 'false'">
+                        <span class="text-sm font-medium">Out of Payroll</span>
                     </label>
                     <div>
                         <label class="block text-sm font-medium mb-2">Status</label>
@@ -878,6 +893,7 @@
             document.getElementById('editAllowancePensionable').checked = !allowance.pensionable;
             document.getElementById('editAllowancePartOfGrossCheck').checked = !allowance.partOfGross;
             document.getElementById('editAllowancePartOfGrossHidden').value = allowance.partOfGross ? 'true' : 'false';
+            document.getElementById('editAllowanceOutOfPayroll').checked = allowance.outOfPayroll || false;
             document.getElementById('editAllowanceStatus').value = allowance.status || 'ACTIVE';
             const select = document.getElementById('editAllowanceCalcType');
             toggleCalculationFields(select, 'editAllowance');

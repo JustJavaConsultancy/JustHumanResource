@@ -366,6 +366,16 @@
           border-radius: 999px; background-color: #fee2e2; color: #b91c1c;
           text-transform: uppercase; letter-spacing: 0.025em;
         }
+        .ps-oop-badge {
+          display: inline-flex; align-items: center; gap: 4px; margin-left: 0.6rem;
+          font-size: 0.72rem; font-weight: 700; padding: 0.25rem 0.65rem;
+          border-radius: 5px;
+          background-color: #fef2f2; color: #b91c1c;
+          border: 1.5px solid #fca5a5;
+          text-transform: uppercase; letter-spacing: 0.04em;
+          white-space: nowrap;
+          box-shadow: 0 1px 2px rgba(185,28,28,0.08);
+        }
         .ps-scheduled-item {
           display: flex; align-items: center; justify-content: space-between;
           padding: 0.4rem 0; opacity: 0.85;
@@ -752,10 +762,13 @@
                     <div th:each="allowance : ${ps.allowances}"
                          th:unless="${allowance.description == 'Residual Adjustment' or allowance.code == 'RESIDUAL'}"
                          class="ps-pay-item" style="font-size:0.875rem;">
-            <span style="display:flex;align-items:center;">
+            <span style="display:flex;align-items:center;flex-wrap:wrap;gap:2px;">
               <span th:text="${allowance.description}">Allowance</span>
               <span th:if="${allowance.taxable}" class="ps-tax-badge">
                 <i class="bi bi-lightning-fill" style="font-size:0.6rem;margin-right:2px;"></i> taxable
+              </span>
+              <span th:if="${allowance.outOfPayroll}" class="ps-oop-badge">
+                <i class="bi bi-x-circle-fill" style="font-size:0.8rem;"></i> Out of Payroll
               </span>
             </span>
                         <span style="font-weight:500;">
@@ -766,13 +779,13 @@
                          style="font-size:0.875rem;color:#95a3b3;font-style:italic;">No allowances.</div>
                 </div>
 
-                <!-- Scheduled Allowances (future) — from model attribute, same for all current-run modals -->
-                <div th:if="${futureAllowances != null and not #lists.isEmpty(futureAllowances)}"
+                <!-- Scheduled Allowances (future) — scoped to this payslip's employee -->
+                <div th:if="${ps.futureAllowances != null and not #lists.isEmpty(ps.futureAllowances)}"
                      style="margin-bottom:1rem;padding-top:0.75rem;border-top:1px dashed #fcd34d;">
                     <p style="font-size:0.72rem;font-weight:600;color:#92400e;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 0.5rem;display:flex;align-items:center;gap:4px;">
                         <i class="bi bi-clock" style="font-size:0.75rem;"></i> Scheduled Allowances
                     </p>
-                    <div th:each="fa : ${futureAllowances}" class="ps-scheduled-item" style="font-size:0.875rem;">
+                    <div th:each="fa : ${ps.futureAllowances}" class="ps-scheduled-item" style="font-size:0.875rem;">
             <span style="display:flex;align-items:center;gap:8px;color:#57534e;">
               <span th:text="${fa.allowanceName}">Allowance Name</span>
               <span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:999px;font-size:0.72rem;font-weight:600;background:#fef3c7;color:#92400e;">
@@ -908,10 +921,13 @@
                     <div th:each="allowance : ${paySlip.allowances}"
                          th:unless="${allowance.description == 'Residual Adjustment' or allowance.code == 'RESIDUAL'}"
                          class="ps-pay-item" style="font-size:0.875rem;">
-            <span style="display:flex;align-items:center;">
+            <span style="display:flex;align-items:center;flex-wrap:wrap;gap:2px;">
               <span th:text="${allowance.description}">Allowance</span>
               <span th:if="${allowance.taxable}" class="ps-tax-badge">
                 <i class="bi bi-lightning-fill" style="font-size:0.6rem;margin-right:2px;"></i> taxable
+              </span>
+              <span th:if="${allowance.outOfPayroll}" class="ps-oop-badge">
+                <i class="bi bi-x-circle-fill" style="font-size:0.8rem;"></i> Out of Payroll
               </span>
             </span>
                         <span style="font-weight:500;">

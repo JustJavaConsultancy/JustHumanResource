@@ -325,26 +325,44 @@ public class PayrollController {
 
         List<PaySlipDTO> currentPaySlips = List.of();
         try {
-            // Fetch and sort current period payslips
+            // Fetch current period payslips and enrich each one with its employee's future allowances
             currentPaySlips = paySlipService.getCurrentPeriodPaySlips(1L).stream()
                     .sorted((a, b) -> a.getEmployeeId().compareTo(b.getEmployeeId()))
+                    .map(ps -> {
+                        List<FutureEmployeeAllowanceDTO> futureAllowances = List.of();
+                        try {
+                            futureAllowances = payrollSetupService
+                                    .getFutureAllowancesForEmployee(ps.getEmployeeId());
+                        } catch (Exception ignored) {}
+                        return PaySlipDTO.builder()
+                                .id(ps.getId())
+                                .employeeId(ps.getEmployeeId())
+                                .employeeName(ps.getEmployeeName())
+                                .payrollRunId(ps.getPayrollRunId())
+                                .payDate(ps.getPayDate())
+                                .versionNumber(ps.getVersionNumber())
+                                .basicSalary(ps.getBasicSalary())
+                                .grossPay(ps.getGrossPay())
+                                .totalDeductions(ps.getTotalDeductions())
+                                .netPay(ps.getNetPay())
+                                .nonGrossEarnings(ps.getNonGrossEarnings())
+                                .allowances(ps.getAllowances())
+                                .deductions(ps.getDeductions())
+                                .futureAllowances(futureAllowances)
+                                .appliedTaxBandSummary(ps.getAppliedTaxBandSummary())
+                                .appliedPensionSchemeName(ps.getAppliedPensionSchemeName())
+                                .pensionAmount(ps.getPensionAmount())
+                                .status(ps.getStatus())
+                                .bankName(ps.getBankName())
+                                .bankAccountNumber(ps.getBankAccountNumber())
+                                .build();
+                    })
                     .toList();
         } catch (Exception e) {  }
-
-        List<FutureEmployeeAllowanceDTO> futureAllowances = List.of();
-        try {
-            futureAllowances = payrollRuns.stream()
-                    .flatMap(run -> payrollSetupService
-                            .getFutureAllowancesForEmployee(run.getEmployee().getId())
-                            .stream())
-                    .distinct()
-                    .toList();
-        } catch (Exception ignored) {}
 
         model.addAttribute("payrollRuns", payrollRuns);
         model.addAttribute("currentPaySlips", currentPaySlips);
         model.addAttribute("previousPeriods", previousPaySlips);
-        model.addAttribute("futureAllowances", futureAllowances);
         model.addAttribute("title", "Payroll Management");
         model.addAttribute("subTitle", "Manage employee payroll, salary details, and payment history");
 
