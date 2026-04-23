@@ -1,6 +1,5 @@
 package com.justjava.humanresource.payroll.entity;
 
-
 import com.justjava.humanresource.core.entity.BaseEntity;
 import com.justjava.humanresource.hr.entity.Employee;
 import com.justjava.humanresource.payroll.enums.PayComponentType;
@@ -39,6 +38,7 @@ public class PayrollLineItem extends BaseEntity {
 
     @Column(nullable = false)
     private String description;
+
     @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal amount;
 
@@ -47,9 +47,13 @@ public class PayrollLineItem extends BaseEntity {
 
     @Column(name = "pensionable")
     private boolean pensionable;
+
     @Column(name = "tax_relief")
     private boolean taxRelief;
 
     @Column(name = "part_of_gross")
     private boolean partOfGross;
+
+    @Column(name = "out_of_payroll", nullable = false)
+    private boolean outOfPayroll = false;
 }

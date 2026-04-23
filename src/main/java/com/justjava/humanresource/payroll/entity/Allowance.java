@@ -53,4 +53,7 @@ public class Allowance extends BaseEntity {
 
     @Column(nullable = false)
     private boolean partOfGross = true;
+
+    @Column(nullable = false)
+    private boolean outOfPayroll = false;
 }

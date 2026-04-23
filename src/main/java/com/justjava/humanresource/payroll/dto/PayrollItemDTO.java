@@ -13,4 +13,5 @@ public class PayrollItemDTO {
     private String description;
     private BigDecimal amount;
     private boolean taxable;
+    private boolean outOfPayroll;
 }

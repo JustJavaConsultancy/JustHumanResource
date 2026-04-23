@@ -282,6 +282,7 @@ private Allowance cloneAllowanceWithOverride(
     clone.setTaxable(original.isTaxable());
     clone.setPensionable(original.isPensionable());
     clone.setPartOfGross(original.isPartOfGross());
+    clone.setOutOfPayroll(original.isOutOfPayroll());
 
     clone.setCalculationType(original.getCalculationType());
     clone.setPercentageRate(original.getPercentageRate());   // ✅ ADD
