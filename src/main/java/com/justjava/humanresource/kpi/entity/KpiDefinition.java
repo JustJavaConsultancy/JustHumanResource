@@ -42,5 +42,8 @@ public class KpiDefinition extends BaseEntity {
     private KpiUnit unit; // PERCENTAGE, NUMBER, HOURS
 
     private boolean active;
+
+    @Column(nullable = false)
+    private boolean impactSalary = false;
 }
 
