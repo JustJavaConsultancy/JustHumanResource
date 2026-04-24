@@ -121,9 +121,10 @@ public class KpiMeasurementService {
                             .build()
             );
         }
-        payrollMessageDispatcher.requestPayroll(employee.getId(),LocalDate.now());
+        payrollMessageDispatcher.requestPayroll(employee.getId(), LocalDate.now());
         return responseList;
     }
+
     /* =========================================================
        FETCH EFFECTIVE MEASUREMENTS FOR EMPLOYEE
        ========================================================= */
@@ -162,6 +163,7 @@ public class KpiMeasurementService {
                 .filter(m -> assignedKpiIds.contains(m.getKpi().getId()))
                 .collect(Collectors.toList());
     }
+
     /* =========================================================
        FETCH EFFECTIVE MEASUREMENTS FOR JOBSTEP
        ========================================================= */
@@ -175,6 +177,7 @@ public class KpiMeasurementService {
         return measurementRepository
                 .findByEmployee_JobStep_IdAndPeriod(jobStepId, period);
     }
+
     @Transactional(readOnly = true)
     public List<KpiMeasurementResponseDTO> getAllEffectiveMeasurements(
             YearMonth period
@@ -210,6 +213,8 @@ public class KpiMeasurementService {
                 )
                 .toList();
     }
+
+
     @Transactional(readOnly = true)
     public BigDecimal getEmployeeKpiScore(
             Long employeeId,
@@ -219,24 +224,32 @@ public class KpiMeasurementService {
         List<KpiMeasurement> measurements =
                 measurementRepository.findByEmployee_IdAndPeriod(employeeId, period);
 
-        System.out.println(" Is measurements empty? "+measurements.isEmpty() + " while period=="+period);
+        System.out.println(" Is measurements empty? " + measurements.isEmpty() + " while period==" + period);
 
-        if (measurements.isEmpty()) {
-            return BigDecimal.valueOf(100); // 🔥 fallback (no penalty)
+        // Filter to only the KPIs that are flagged to impact salary
+        List<KpiMeasurement> salaryImpacting = measurements.stream()
+                .filter(m -> m.getKpi().isImpactSalary())
+                .collect(Collectors.toList());
+
+        System.out.println(" Salary-impacting measurements count: " + salaryImpacting.size());
+
+        if (salaryImpacting.isEmpty()) {
+            return BigDecimal.valueOf(100); // neutral fallback – no penalty
         }
 
         BigDecimal total = BigDecimal.ZERO;
 
-        for (KpiMeasurement m : measurements) {
+        for (KpiMeasurement m : salaryImpacting) {
             total = total.add(m.getScore());
         }
 
         return total.divide(
-                BigDecimal.valueOf(measurements.size()),
+                BigDecimal.valueOf(salaryImpacting.size()),
                 2,
                 RoundingMode.HALF_UP
         );
     }
+
     /* =====================================================
        INTERNAL VALIDATION
        ===================================================== */
@@ -274,6 +287,7 @@ public class KpiMeasurementService {
                 .min(BigDecimal.valueOf(100));
     }
 }
+
 
 
 /*

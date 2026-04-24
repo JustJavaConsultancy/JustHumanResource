@@ -717,6 +717,7 @@
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Target Value</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Unit</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Impacts Salary</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
                     </tr>
                     </thead>
@@ -783,6 +784,20 @@
             </span>
                         </td>
 
+                        <!-- Impacts Salary Badge -->
+                        <td class="px-6 py-4 whitespace-nowrap">
+            <span th:if="${kpi.impactSalary}"
+                  class="px-2 py-1 text-xs rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 flex items-center w-fit gap-1">
+                <span class="material-icons-round text-xs">payments</span>
+                Yes
+            </span>
+                            <span th:unless="${kpi.impactSalary}"
+                                  class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400 flex items-center w-fit gap-1">
+                <span class="material-icons-round text-xs">block</span>
+                No
+            </span>
+                        </td>
+
                         <!-- Action Buttons -->
                         <td class="px-6 py-4 whitespace-nowrap text-sm">
                             <button th:onclick="'editKpiDefinition(' + ${kpi.id} + ')'"
@@ -805,7 +820,7 @@
 
                     <!-- Empty State -->
                     <tr th:if="${kpiDefinitions == null or #lists.isEmpty(kpiDefinitions)}">
-                        <td colspan="7"
+                        <td colspan="8"
                             class="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
                             No KPI definitions found.
                         </td>
@@ -959,6 +974,24 @@
                         </select>
                     </div>
                 </div>
+
+                <!-- Impact Salary Toggle -->
+                <div class="flex items-start space-x-3 p-4 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-lg">
+                    <div class="flex items-center h-5 mt-0.5">
+                        <input type="checkbox" name="impactSalary" id="kpiImpactSalary" value="true"
+                               class="w-4 h-4 text-amber-600 bg-gray-100 border-gray-300 rounded focus:ring-amber-500 dark:focus:ring-amber-600 dark:ring-offset-gray-800 dark:bg-gray-700 dark:border-gray-600">
+                    </div>
+                    <div>
+                        <label for="kpiImpactSalary" class="text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center gap-1 cursor-pointer">
+                            <span class="material-icons-round text-amber-600 text-base">payments</span>
+                            This KPI impacts salary calculation
+                        </label>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                            When checked, the measured score for this KPI will be factored into the employee's gross pay calculation. Leave unchecked for tracking-only KPIs.
+                        </p>
+                    </div>
+                </div>
+
                 <div class="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3">
                     <button onclick="closeModal('kpiDefinitionModal')" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
                         Cancel
