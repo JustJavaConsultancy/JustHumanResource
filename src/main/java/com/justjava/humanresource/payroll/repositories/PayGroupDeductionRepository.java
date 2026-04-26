@@ -8,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 public interface PayGroupDeductionRepository
         extends JpaRepository<PayGroupDeduction, Long> {
@@ -17,6 +18,13 @@ public interface PayGroupDeductionRepository
        ============================================================ */
 
     List<PayGroupDeduction> findByPayGroupId(Long payGroupId);
+
+    /* ============================================================
+       UPSERT LOOKUP — prevents duplicate key on re-submit
+       ============================================================ */
+
+    Optional<PayGroupDeduction> findByPayGroupIdAndDeductionIdAndEffectiveFrom(
+            Long payGroupId, Long deductionId, LocalDate effectiveFrom);
 
     /* ============================================================
        EFFECTIVE-DATED ACTIVE DEDUCTIONS
