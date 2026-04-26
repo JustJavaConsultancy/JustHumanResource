@@ -31,4 +31,6 @@ public interface SetupService {
     );*/
     PayGroupResponseDTO createPayGroup(CreatePayGroupCommand command);
 
+    PayGroupResponseDTO updatePayGroup(Long id, CreatePayGroupCommand command);
+
 }

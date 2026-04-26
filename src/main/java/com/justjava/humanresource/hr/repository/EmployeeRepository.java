@@ -19,6 +19,7 @@ public interface EmployeeRepository extends JpaRepository<Employee,Long> {
 """)
     long countByEmploymentStatusActive();
     List<Employee> findByPayGroup_Id(Long payGroupId);
+    List<Employee> findByJobStep_Id(Long jobStepId);
     @Query("""
        SELECT COUNT(e)
        FROM Employee e

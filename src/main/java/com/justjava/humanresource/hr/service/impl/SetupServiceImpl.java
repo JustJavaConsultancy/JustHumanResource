@@ -16,14 +16,16 @@ import com.justjava.humanresource.hr.repository.JobStepRepository;
 //import com.justjava.humanresource.hr.repository.LeaveTypeRepository;
 import com.justjava.humanresource.hr.repository.PayGroupRepository;
 import com.justjava.humanresource.hr.service.SetupService;
+import com.justjava.humanresource.payroll.service.PayrollChangeOrchestrator;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.math.RoundingMode;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -39,6 +41,7 @@ public class SetupServiceImpl implements SetupService {
     private final JobGradeRepository jobGradeRepository;
     private final JobStepRepository jobStepRepository;
     private final PayGroupRepository payGroupRepository;
+    private final PayrollChangeOrchestrator payrollChangeOrchestrator;
     //private final LeaveTypeRepository leaveTypeRepository;
 
     /* ============================================================
@@ -231,6 +234,35 @@ public class SetupServiceImpl implements SetupService {
                 .build();
     }
 
+    @Override
+    public PayGroupResponseDTO updatePayGroup(Long id, CreatePayGroupCommand command) {
+        PayGroup payGroup = payGroupRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("PayGroup", id));
+
+        PayGroup parent = null;
+        if (command.getParentId() != null) {
+            parent = payGroupRepository.findById(command.getParentId())
+                    .orElseThrow(() -> new ResourceNotFoundException("PayGroup", command.getParentId()));
+        }
+
+        payGroup.setName(command.getName());
+        payGroup.setPayFrequency(command.getPayFrequency());
+        payGroup.setParent(parent);
+
+        PayGroup saved = payGroupRepository.save(payGroup);
+
+        // Trigger recalculation for all employees in this pay group
+        payrollChangeOrchestrator.recalculateForPayGroup(saved.getId(), LocalDate.now());
+
+        return PayGroupResponseDTO.builder()
+                .id(saved.getId())
+                .code(saved.getCode())
+                .name(saved.getName())
+                .payFrequency(saved.getPayFrequency())
+                .parentId(parent != null ? parent.getId() : null)
+                .build();
+    }
+
 
 
     @Override
@@ -291,14 +323,22 @@ public class SetupServiceImpl implements SetupService {
             List<JobStep> toRemove = existingSteps.subList(incomingSteps.size(), existingSteps.size());
             for (JobStep surplus : toRemove) {
                 try {
+                    Long stepId = surplus.getId();
                     jobStepRepository.delete(surplus);
                     jobStepRepository.flush();
+                    payrollChangeOrchestrator.recalculateForJobStep(stepId, LocalDate.now());
                 } catch (Exception e) {
                     // Step is still referenced by employee history — leave it, just detach from grade
                     surplus.setJobGrade(null);
                     jobStepRepository.save(surplus);
+                    payrollChangeOrchestrator.recalculateForJobStep(surplus.getId(), LocalDate.now());
                 }
             }
+        }
+
+        // Trigger recalculations for all result steps
+        for (JobStep step : resultSteps) {
+            payrollChangeOrchestrator.recalculateForJobStep(step.getId(), LocalDate.now());
         }
 
         return JobGradeResponseDTO.builder()

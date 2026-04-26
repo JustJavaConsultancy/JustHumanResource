@@ -45,6 +45,18 @@ public class PayrollChangeOrchestratorImpl
     }
 
     @Override
+    public void recalculateForJobStep(Long jobStepId, LocalDate effectiveDate) {
+        employeeRepository.findByJobStep_Id(jobStepId)
+                .forEach(e -> {
+                    updateEmployeePositionHistory(e.getId(), effectiveDate);
+                    dispatcher.requestPayroll(
+                            e.getId(),
+                            effectiveDate
+                    );
+                });
+    }
+
+    @Override
     public void updateEmployeePositionHistory(Long employeeId, LocalDate effectiveDate) {
         Employee employee = employeeRepository.findById(employeeId).orElseThrow();
         positionHistoryService.changePosition(
