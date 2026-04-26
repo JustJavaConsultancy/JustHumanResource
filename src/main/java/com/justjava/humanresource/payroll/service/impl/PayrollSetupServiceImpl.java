@@ -106,8 +106,8 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
     @Override
     public List<PayeTaxBand> getActivePayeBands(LocalDate date) {
         return payeTaxBandRepository.findByEffectiveFromLessThanEqualAndEffectiveToIsNullAndStatusOrderByLowerBoundAsc(
-                        date, RecordStatus.ACTIVE
-                );
+                date, RecordStatus.ACTIVE
+        );
     }
 
     @Override
@@ -358,7 +358,11 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
         Allowance allowance = allowanceRepository.findById(allowanceId)
                 .orElseThrow();
 
-        PayGroupAllowance entity = new PayGroupAllowance();
+        // Upsert: update existing record if same (payGroup, allowance, effectiveFrom) already exists
+        PayGroupAllowance entity = payGroupAllowanceRepository
+                .findByPayGroupIdAndAllowanceIdAndEffectiveFrom(payGroupId, allowanceId, effectiveFrom)
+                .orElse(new PayGroupAllowance());
+
         entity.setPayGroup(payGroup);
         entity.setAllowance(allowance);
         entity.setOverrideAmount(overrideAmount);
@@ -383,7 +387,11 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
         Deduction deduction = deductionRepository.findById(deductionId)
                 .orElseThrow();
 
-        PayGroupDeduction entity = new PayGroupDeduction();
+        // Upsert: update existing record if same (payGroup, deduction, effectiveFrom) already exists
+        PayGroupDeduction entity = payGroupDeductionRepository
+                .findByPayGroupIdAndDeductionIdAndEffectiveFrom(payGroupId, deductionId, effectiveFrom)
+                .orElse(new PayGroupDeduction());
+
         entity.setPayGroup(payGroup);
         entity.setDeduction(deduction);
         entity.setOverrideAmount(overrideAmount);
@@ -415,7 +423,11 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
         Allowance allowance = allowanceRepository.findById(allowanceId)
                 .orElseThrow();
 
-        EmployeeAllowance entity = new EmployeeAllowance();
+        // Upsert: update existing record if same (employee, allowance, effectiveFrom) already exists
+        EmployeeAllowance entity = employeeAllowanceRepository
+                .findByEmployeeIdAndAllowanceIdAndEffectiveFrom(employeeId, allowanceId, effectiveFrom)
+                .orElse(new EmployeeAllowance());
+
         entity.setEmployee(employee);
         entity.setAllowance(allowance);
         entity.setOverridden(overridden);
@@ -442,7 +454,11 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
         Deduction deduction = deductionRepository.findById(deductionId)
                 .orElseThrow();
 
-        EmployeeDeduction entity = new EmployeeDeduction();
+        // Upsert: update existing record if same (employee, deduction, effectiveFrom) already exists
+        EmployeeDeduction entity = employeeDeductionRepository
+                .findByEmployeeIdAndDeductionIdAndEffectiveFrom(employeeId, deductionId, effectiveFrom)
+                .orElse(new EmployeeDeduction());
+
         entity.setEmployee(employee);
         entity.setDeduction(deduction);
         entity.setOverridden(overridden);
@@ -476,7 +492,11 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
         TaxRelief relief = taxReliefRepository.findById(taxReliefId)
                 .orElseThrow(() -> new IllegalStateException("TaxRelief not found"));
 
-        PayGroupTaxRelief mapping = new PayGroupTaxRelief();
+        // Upsert: update existing record if same (payGroup, taxRelief, effectiveFrom) already exists
+        PayGroupTaxRelief mapping = payGroupTaxReliefRepository
+                .findByPayGroupIdAndTaxReliefIdAndEffectiveFrom(payGroupId, taxReliefId, effectiveFrom)
+                .orElse(new PayGroupTaxRelief());
+
         mapping.setPayGroup(group);
         mapping.setTaxRelief(relief);
         mapping.setOverrideAmount(overrideAmount);
@@ -529,7 +549,11 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
         TaxRelief relief = taxReliefRepository.findById(taxReliefId)
                 .orElseThrow(() -> new IllegalStateException("TaxRelief not found"));
 
-        EmployeeTaxRelief mapping = new EmployeeTaxRelief();
+        // Upsert: update existing record if same (employee, taxRelief, effectiveFrom) already exists
+        EmployeeTaxRelief mapping = employeeTaxReliefRepository
+                .findByEmployeeIdAndTaxReliefIdAndEffectiveFrom(employeeId, taxReliefId, effectiveFrom)
+                .orElse(new EmployeeTaxRelief());
+
         mapping.setEmployeeId(employeeId);
         mapping.setTaxRelief(relief);
         mapping.setOverridden(overridden);
