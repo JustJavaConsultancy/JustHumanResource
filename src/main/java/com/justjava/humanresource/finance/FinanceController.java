@@ -102,6 +102,11 @@ public class FinanceController {
         flowableTaskService.completeTask(taskId, Map.of("approved", true));
         return "redirect:/finance/lockApproval";
     }
+    @PostMapping("/reject/lock")
+    public String rejectLock(String taskId) {
+        flowableTaskService.completeTask(taskId, Map.of("approved", false));
+        return "redirect:/finance/lockApproval";
+    }
     @GetMapping("/finance/lockedPeriods")
     public String getLockedPeriodsPage(Model model) {
         List<HistoricTaskInstance> completedProcess =  flowableTaskService.getCompletedTaskstaskDefinitionKey("financeOfficer");
