@@ -439,18 +439,21 @@
               <textarea rows="2"
                         class="w-full p-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-lg text-sm mb-4 focus:ring-2 focus:ring-primary-500"
                         placeholder="Reason for rejection (optional)..."></textarea>
-              <div class="flex justify-end space-x-3">
-                <button type="button"
-                        th:data-modal-id="|rejectModal-${request.taskId}|"
-                        onclick="closeModalFromData(this)"
-                        class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-sm font-medium">
-                  Cancel
-                </button>
-                <button type="button"
-                        class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium">
-                  Confirm rejection
-                </button>
-              </div>
+              <form th:action="@{/reject/lock}" method="post">
+                <input type="hidden" name="taskId" th:value="${request.taskId}" />
+                <div class="flex justify-end space-x-3">
+                  <button type="button"
+                          th:data-modal-id="|rejectModal-${request.taskId}|"
+                          onclick="closeModalFromData(this)"
+                          class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-sm font-medium">
+                    Cancel
+                  </button>
+                  <button type="submit"
+                          class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium">
+                    Confirm rejection
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </div>

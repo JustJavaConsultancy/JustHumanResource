@@ -19,6 +19,9 @@ import com.justjava.humanresource.core.enums.PayrollRunStatus;
 import com.justjava.humanresource.payroll.dto.FutureEmployeeAllowanceDTO;
 import java.util.Comparator;
 
+import com.justjava.humanresource.workflow.dto.FlowableTaskDTO;
+import com.justjava.humanresource.workflow.service.FlowableTaskService;
+
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -63,6 +66,9 @@ public class PayrollController {
 
     @Autowired
     private EmployeeService employeeService;
+
+    @Autowired
+    FlowableTaskService flowableTaskService;
 
     @GetMapping("/payroll")
     public String getPayroll(Model model) {
@@ -365,6 +371,12 @@ public class PayrollController {
         model.addAttribute("previousPeriods", previousPaySlips);
         model.addAttribute("title", "Payroll Management");
         model.addAttribute("subTitle", "Manage employee payroll, salary details, and payment history");
+
+        // Disable lock button when until finance approved/reject lock:
+        List<FlowableTaskDTO> pendingLockTasks = flowableTaskService
+                .getTasksByTaskDefinition("financeOfficer", "payrollPeriodCloseProcess");
+
+        model.addAttribute("lockPending", !pendingLockTasks.isEmpty());
 
         return "payroll/fragments/employee-payroll";
     }
