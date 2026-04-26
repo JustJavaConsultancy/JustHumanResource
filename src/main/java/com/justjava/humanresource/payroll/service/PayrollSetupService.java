@@ -54,6 +54,10 @@ public interface PayrollSetupService {
             List<DeductionAttachmentRequest> requests
     );
 
+    void deactivateRemovedAllowancesFromPayGroup(Long payGroupId, List<Long> activeAllowanceIds);
+    void deactivateRemovedDeductionsFromPayGroup(Long payGroupId, List<Long> activeDeductionIds);
+    void deactivateRemovedTaxReliefsFromPayGroup(Long payGroupId, List<Long> activeTaxReliefIds);
+
 /* ============================================================
    BULK EMPLOYEE CONFIGURATION
    ============================================================ */
@@ -68,6 +72,10 @@ public interface PayrollSetupService {
             List<DeductionAttachmentRequest> requests
     );
     List<EmployeeDeductionResponse> getDeductionsForEmployee(Long employeeId);
+
+    void deactivateRemovedAllowancesFromEmployee(Long employeeId, List<Long> activeAllowanceIds);
+    void deactivateRemovedDeductionsFromEmployee(Long employeeId, List<Long> activeDeductionIds);
+    void deactivateRemovedTaxReliefsFromEmployee(Long employeeId, List<Long> activeTaxReliefIds);
 
     List<PayGroup>getAllPayGroups();
 

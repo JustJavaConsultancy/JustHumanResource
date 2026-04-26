@@ -2404,18 +2404,36 @@
 
         /* ── REMOVE ──────────────────────────────────────────────────────── */
         function removePiItem(type, recordId, btn) {
-            if (!confirm('Remove this ' + type + '?')) return;
-
             const card = btn.closest('.pi-item-card');
             card.style.opacity = '0.4';
             card.style.pointerEvents = 'none';
 
-            // Determine endpoint — adjust to your actual API
-            const endpoint = '/setup/employee/' + piEmployeeId + '/' + type + 's/' + recordId;
+            // Build the current assigned list for this type, excluding the removed item
+            const typeToListKey = { allowance: 'allowances', deduction: 'deductions', taxrelief: 'taxreliefs' };
+            const idKeyMap      = { allowance: 'allowanceId', deduction: 'deductionId', taxrelief: 'taxReliefId' };
+            const listKey = typeToListKey[type];
+            const idKey   = idKeyMap[type];
 
-            fetch(endpoint, { method: 'DELETE' })
+            // Collect all remaining cards in this section
+            const allCards = Array.from(
+                document.querySelectorAll('#pi-' + listKey + '-list .pi-item-card')
+            );
+            const remaining = allCards
+                .filter(c => c !== card)
+                .map(c => ({ [idKey]: parseInt(c.dataset.itemId, 10) }));
+
+            const endpoint = '/setup/employee/' + piEmployeeId + '/' + type + 's';
+
+            fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(remaining)
+            })
             .then(r => {
-                if (!r.ok) throw new Error('Remove failed');
+                if (!r.ok) return r.text().then(t => { throw new Error(t || 'Remove failed'); });
+                return r.json();
+            })
+            .then(() => {
                 fetchPayItemsData(piEmployeeId);
                 const removeToastMap = { allowance: 'Allowance', deduction: 'Deduction', taxrelief: 'Tax Relief' };
                 showPiToast((removeToastMap[type] || type) + ' removed', 'success');

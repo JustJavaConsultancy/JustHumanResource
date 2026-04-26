@@ -226,8 +226,9 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
 
         List<PayGroupAllowanceResponse> response = new ArrayList<>();
 
-        for (AllowanceAttachmentRequest request : requests) {
+        if (requests == null || requests.isEmpty()) return response;
 
+        for (AllowanceAttachmentRequest request : requests) {
             response.add(payGroupAllowanceMapper.toResponse(
                     addAllowanceToPayGroup(
                             payGroupId,
@@ -255,8 +256,9 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
 
         List<PayGroupDeductionResponse> response = new ArrayList<>();
 
-        for (DeductionAttachmentRequest request : requests) {
+        if (requests == null || requests.isEmpty()) return response;
 
+        for (DeductionAttachmentRequest request : requests) {
             response.add(payGroupDeductionMapper.toResponse(
                     addDeductionToPayGroup(
                             payGroupId,
@@ -274,11 +276,131 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
         };
         return response;
     }
+    /* ============================================================
+       SOFT-DELETE: deactivate items removed from pay group
+       ============================================================ */
+
+    @Override
+    @Transactional
+    public void deactivateRemovedAllowancesFromPayGroup(Long payGroupId, List<Long> activeAllowanceIds) {
+        List<PayGroupAllowance> existing = payGroupAllowanceRepository.findByPayGroupId(payGroupId);
+        boolean anyDeactivated = false;
+        for (PayGroupAllowance a : existing) {
+            if (a.getStatus() == RecordStatus.ACTIVE
+                    && !activeAllowanceIds.contains(a.getAllowance().getId())) {
+                a.setStatus(RecordStatus.INACTIVE);
+                payGroupAllowanceRepository.save(a);
+                anyDeactivated = true;
+            }
+        }
+        if (anyDeactivated
+                && payrollPeriodService.isPayrollDateInOpenPeriod(1L, LocalDate.now())) {
+            payrollChangeOrchestrator.recalculateForPayGroup(payGroupId, LocalDate.now());
+        }
+    }
+
+    @Override
+    @Transactional
+    public void deactivateRemovedDeductionsFromPayGroup(Long payGroupId, List<Long> activeDeductionIds) {
+        List<PayGroupDeduction> existing = payGroupDeductionRepository.findByPayGroupId(payGroupId);
+        boolean anyDeactivated = false;
+        for (PayGroupDeduction d : existing) {
+            if (d.getStatus() == RecordStatus.ACTIVE
+                    && !activeDeductionIds.contains(d.getDeduction().getId())) {
+                d.setStatus(RecordStatus.INACTIVE);
+                payGroupDeductionRepository.save(d);
+                anyDeactivated = true;
+            }
+        }
+        if (anyDeactivated
+                && payrollPeriodService.isPayrollDateInOpenPeriod(1L, LocalDate.now())) {
+            payrollChangeOrchestrator.recalculateForPayGroup(payGroupId, LocalDate.now());
+        }
+    }
+
+    @Override
+    @Transactional
+    public void deactivateRemovedTaxReliefsFromPayGroup(Long payGroupId, List<Long> activeTaxReliefIds) {
+        List<PayGroupTaxRelief> existing = payGroupTaxReliefRepository.findByPayGroupId(payGroupId);
+        boolean anyDeactivated = false;
+        for (PayGroupTaxRelief t : existing) {
+            if (t.getStatus() == RecordStatus.ACTIVE
+                    && !activeTaxReliefIds.contains(t.getTaxRelief().getId())) {
+                t.setStatus(RecordStatus.INACTIVE);
+                payGroupTaxReliefRepository.save(t);
+                anyDeactivated = true;
+            }
+        }
+        if (anyDeactivated
+                && payrollPeriodService.isPayrollDateInOpenPeriod(1L, LocalDate.now())) {
+            payrollChangeOrchestrator.recalculateForPayGroup(payGroupId, LocalDate.now());
+        }
+    }
+
+    @Override
+    @Transactional
+    public void deactivateRemovedAllowancesFromEmployee(Long employeeId, List<Long> activeAllowanceIds) {
+        List<EmployeeAllowance> existing = employeeAllowanceRepository.findByEmployeeId(employeeId);
+        boolean anyDeactivated = false;
+        for (EmployeeAllowance a : existing) {
+            if (a.getStatus() == RecordStatus.ACTIVE
+                    && !activeAllowanceIds.contains(a.getAllowance().getId())) {
+                a.setStatus(RecordStatus.INACTIVE);
+                employeeAllowanceRepository.save(a);
+                anyDeactivated = true;
+            }
+        }
+        if (anyDeactivated
+                && payrollPeriodService.isPayrollDateInOpenPeriod(1L, LocalDate.now())) {
+            payrollChangeOrchestrator.recalculateForEmployee(employeeId, LocalDate.now());
+        }
+    }
+
+    @Override
+    @Transactional
+    public void deactivateRemovedDeductionsFromEmployee(Long employeeId, List<Long> activeDeductionIds) {
+        List<EmployeeDeduction> existing = employeeDeductionRepository.findByEmployeeId(employeeId);
+        boolean anyDeactivated = false;
+        for (EmployeeDeduction d : existing) {
+            if (d.getStatus() == RecordStatus.ACTIVE
+                    && !activeDeductionIds.contains(d.getDeduction().getId())) {
+                d.setStatus(RecordStatus.INACTIVE);
+                employeeDeductionRepository.save(d);
+                anyDeactivated = true;
+            }
+        }
+        if (anyDeactivated
+                && payrollPeriodService.isPayrollDateInOpenPeriod(1L, LocalDate.now())) {
+            payrollChangeOrchestrator.recalculateForEmployee(employeeId, LocalDate.now());
+        }
+    }
+
+    @Override
+    @Transactional
+    public void deactivateRemovedTaxReliefsFromEmployee(Long employeeId, List<Long> activeTaxReliefIds) {
+        List<EmployeeTaxRelief> existing = employeeTaxReliefRepository.findByEmployeeId(employeeId);
+        boolean anyDeactivated = false;
+        for (EmployeeTaxRelief t : existing) {
+            if (t.getStatus() == RecordStatus.ACTIVE
+                    && !activeTaxReliefIds.contains(t.getTaxRelief().getId())) {
+                t.setStatus(RecordStatus.INACTIVE);
+                employeeTaxReliefRepository.save(t);
+                anyDeactivated = true;
+            }
+        }
+        if (anyDeactivated
+                && payrollPeriodService.isPayrollDateInOpenPeriod(1L, LocalDate.now())) {
+            payrollChangeOrchestrator.recalculateForEmployee(employeeId, LocalDate.now());
+        }
+    }
+
     @Override
     @Transactional
     public List<EmployeeAllowanceResponse> addAllowancesToEmployee(
             Long employeeId,
             List<AllowanceAttachmentRequest> requests) {
+
+        if (requests == null || requests.isEmpty()) return List.of();
 
         List<EmployeeAllowanceResponse> responses = new ArrayList<>();
 
@@ -308,6 +430,8 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
             Long employeeId,
             List<DeductionAttachmentRequest> requests) {
 
+        if (requests == null || requests.isEmpty()) return List.of();
+
         List<EmployeeDeductionResponse> response = new ArrayList<>();
 
         for (DeductionAttachmentRequest request : requests) {
@@ -335,12 +459,14 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
     }
     @Override
     public List<EmployeeAllowanceResponse> getAllowancesForEmployee(Long employeeId) {
-        List<EmployeeAllowance> allowances = employeeAllowanceRepository.findByEmployeeId(employeeId);
+        List<EmployeeAllowance> allowances = employeeAllowanceRepository
+                .findActiveAllowances(employeeId, LocalDate.now(), RecordStatus.ACTIVE);
         return employeeAllowanceMapper.toResponseList(allowances);
     }
     @Override
     public List<EmployeeDeductionResponse> getDeductionsForEmployee(Long employeeId){
-        List<EmployeeDeduction> deductions = employeeDeductionRepository.findByEmployeeId(employeeId);
+        List<EmployeeDeduction> deductions = employeeDeductionRepository
+                .findActiveDeductions(employeeId, LocalDate.now(), RecordStatus.ACTIVE);
         return employeeDeductionMapper.toResponseList(deductions);
     }
     @Override
@@ -492,9 +618,10 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
         TaxRelief relief = taxReliefRepository.findById(taxReliefId)
                 .orElseThrow(() -> new IllegalStateException("TaxRelief not found"));
 
-        // Upsert: update existing record if same (payGroup, taxRelief, effectiveFrom) already exists
+        // Upsert: update existing record if same (payGroup, taxRelief) already exists
+        // NOTE: unique constraint is (paygroup_id, tax_relief_id) only — no effectiveFrom
         PayGroupTaxRelief mapping = payGroupTaxReliefRepository
-                .findByPayGroupIdAndTaxReliefIdAndEffectiveFrom(payGroupId, taxReliefId, effectiveFrom)
+                .findByPayGroupIdAndTaxReliefId(payGroupId, taxReliefId)
                 .orElse(new PayGroupTaxRelief());
 
         mapping.setPayGroup(group);
@@ -502,17 +629,20 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
         mapping.setOverrideAmount(overrideAmount);
         mapping.setEffectiveFrom(effectiveFrom);
         mapping.setEffectiveTo(effectiveTo);
+        mapping.setStatus(RecordStatus.ACTIVE); // reactivates if previously soft-deleted
 
         return payGroupTaxReliefRepository.save(mapping);
     }
     @Override
+    @Transactional
     public List<PayGroupTaxReliefResponse> addTaxReliefsToPayGroup(
             Long payGroupId,
             List<TaxReliefAttachmentRequest> requests) {
 
-        return requests.stream()
-                .map(req -> {
+        if (requests == null || requests.isEmpty()) return List.of();
 
+        List<PayGroupTaxReliefResponse> responses = requests.stream()
+                .map(req -> {
                     PayGroupTaxRelief mapping =
                             addTaxReliefToPayGroup(
                                     payGroupId,
@@ -533,6 +663,13 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
                             .build();
                 })
                 .toList();
+
+        LocalDate affectedDate = determineAffectedPayrollDate(requests);
+        if (payrollPeriodService.isPayrollDateInOpenPeriod(1L, affectedDate)) {
+            payrollChangeOrchestrator.recalculateForPayGroup(payGroupId, affectedDate);
+        }
+
+        return responses;
     }
     @Override
     public EmployeeTaxRelief addTaxReliefToEmployee(
@@ -560,18 +697,21 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
         mapping.setOverrideAmount(overrideAmount);
         mapping.setEffectiveFrom(effectiveFrom);
         mapping.setEffectiveTo(effectiveTo);
+        mapping.setStatus(RecordStatus.ACTIVE); // reactivates if previously soft-deleted
 
         return employeeTaxReliefRepository.save(mapping);
     }
 
     @Override
+    @Transactional
     public List<EmployeeTaxReliefResponse> addTaxReliefsToEmployee(
             Long employeeId,
             List<TaxReliefAttachmentRequest> requests) {
 
-        return requests.stream()
-                .map(req -> {
+        if (requests == null || requests.isEmpty()) return List.of();
 
+        List<EmployeeTaxReliefResponse> responses = requests.stream()
+                .map(req -> {
                     EmployeeTaxRelief mapping =
                             addTaxReliefToEmployee(
                                     employeeId,
@@ -595,12 +735,19 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
                             .build();
                 })
                 .toList();
+
+        LocalDate affectedDate = determineAffectedPayrollDate(requests);
+        if (payrollPeriodService.isPayrollDateInOpenPeriod(1L, affectedDate)) {
+            payrollChangeOrchestrator.recalculateForEmployee(employeeId, affectedDate);
+        }
+
+        return responses;
     }
     @Override
     public List<EmployeeTaxReliefResponse> getTaxReliefsForEmployee(Long employeeId) {
 
         return employeeTaxReliefRepository
-                .findByEmployeeId(employeeId)
+                .findActiveReliefs(employeeId, LocalDate.now(), RecordStatus.ACTIVE)
                 .stream()
                 .map(mapping -> EmployeeTaxReliefResponse.builder()
                         .id(mapping.getId())
@@ -709,6 +856,9 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
                     }
                     if (r instanceof DeductionAttachmentRequest d) {
                         return d.getEffectiveFrom();
+                    }
+                    if (r instanceof TaxReliefAttachmentRequest t) {
+                        return t.getEffectiveFrom();
                     }
                     return null;
                 })

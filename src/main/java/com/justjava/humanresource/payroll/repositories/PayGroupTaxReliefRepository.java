@@ -18,8 +18,12 @@ public interface PayGroupTaxReliefRepository
        UPSERT LOOKUP — prevents duplicate key on re-submit
        ============================================================ */
 
-    Optional<PayGroupTaxRelief> findByPayGroupIdAndTaxReliefIdAndEffectiveFrom(
-            Long payGroupId, Long taxReliefId, LocalDate effectiveFrom);
+    // NOTE: unique constraint is (paygroup_id, tax_relief_id) only — no effectiveFrom
+    // so we match on just those two columns to correctly upsert or reactivate
+    Optional<PayGroupTaxRelief> findByPayGroupIdAndTaxReliefId(
+            Long payGroupId, Long taxReliefId);
+
+    List<PayGroupTaxRelief> findByPayGroupId(Long payGroupId);
 
     @Query("""
         SELECT p
