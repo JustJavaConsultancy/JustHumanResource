@@ -456,11 +456,16 @@ public class PayrollController {
         YearMonth currentMonth = YearMonth.now();
 
         List<EmployeeGroupedReportDTO> report = reportingService.getGroupedReport(
-                1L,
-                currentMonth.atDay(1),
-                currentMonth.atEndOfMonth(),
-                EmployeeGroupBy.valueOf(groupBy)
-        );
+                        1L,
+                        currentMonth.atDay(1),
+                        currentMonth.atEndOfMonth(),
+                        EmployeeGroupBy.valueOf(groupBy)
+                ).stream()
+                .map(group -> {
+                    group.getEmployees().sort(Comparator.comparing(e -> e.getEmployeeId()));
+                    return group;
+                })
+                .toList();
 
         Map<String, Object> grandTotals = reportingService.calculateGrandTotals(report);
 
