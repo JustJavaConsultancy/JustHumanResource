@@ -224,6 +224,12 @@ public class EmployeeController {
             @PathVariable Long employeeId,
             @RequestBody List<AllowanceAttachmentRequest> requests) {
 
+        // Soft-delete allowances not present in the submitted list
+        List<Long> submittedIds = requests.stream()
+                .map(AllowanceAttachmentRequest::getAllowanceId)
+                .toList();
+        payrollSetupService.deactivateRemovedAllowancesFromEmployee(employeeId, submittedIds);
+
         List<EmployeeAllowanceResponse> result =
                 payrollSetupService.addAllowancesToEmployee(employeeId, requests);
         return ResponseEntity.ok(result);
@@ -244,6 +250,13 @@ public class EmployeeController {
             @PathVariable Long employeeId,
             @RequestBody List<DeductionAttachmentRequest> requests) {
         System.out.println("Received request to attach deductions to employee ID: " + employeeId);
+
+        // Soft-delete deductions not present in the submitted list
+        List<Long> submittedIds = requests.stream()
+                .map(DeductionAttachmentRequest::getDeductionId)
+                .toList();
+        payrollSetupService.deactivateRemovedDeductionsFromEmployee(employeeId, submittedIds);
+
         List<EmployeeDeductionResponse> result =
                 payrollSetupService.addDeductionsToEmployee(employeeId, requests);
         return ResponseEntity.ok(result);
@@ -264,6 +277,13 @@ public class EmployeeController {
             @PathVariable Long employeeId,
             @RequestBody List<TaxReliefAttachmentRequest> requests) {
         System.out.println("Received request to attach tax reliefs to employee ID: " + employeeId);
+
+        // Soft-delete tax reliefs not present in the submitted list
+        List<Long> submittedIds = requests.stream()
+                .map(TaxReliefAttachmentRequest::getTaxReliefId)
+                .toList();
+        payrollSetupService.deactivateRemovedTaxReliefsFromEmployee(employeeId, submittedIds);
+
         List<EmployeeTaxReliefResponse> result =
                 payrollSetupService.addTaxReliefsToEmployee(employeeId, requests);
         return ResponseEntity.ok(result);

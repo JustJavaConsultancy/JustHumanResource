@@ -8,10 +8,22 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface PayGroupTaxReliefRepository
         extends JpaRepository<PayGroupTaxRelief, Long> {
+
+    /* ============================================================
+       UPSERT LOOKUP — prevents duplicate key on re-submit
+       ============================================================ */
+
+    // NOTE: unique constraint is (paygroup_id, tax_relief_id) only — no effectiveFrom
+    // so we match on just those two columns to correctly upsert or reactivate
+    Optional<PayGroupTaxRelief> findByPayGroupIdAndTaxReliefId(
+            Long payGroupId, Long taxReliefId);
+
+    List<PayGroupTaxRelief> findByPayGroupId(Long payGroupId);
 
     @Query("""
         SELECT p

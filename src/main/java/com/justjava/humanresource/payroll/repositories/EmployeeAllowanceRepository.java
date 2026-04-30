@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 public interface EmployeeAllowanceRepository
         extends JpaRepository<EmployeeAllowance, Long> {
@@ -19,6 +20,13 @@ public interface EmployeeAllowanceRepository
        ============================================================ */
 
     List<EmployeeAllowance> findByEmployeeId(Long employeeId);
+
+    /* ============================================================
+       UPSERT LOOKUP — prevents duplicate key on re-submit
+       ============================================================ */
+
+    Optional<EmployeeAllowance> findByEmployeeIdAndAllowanceIdAndEffectiveFrom(
+            Long employeeId, Long allowanceId, LocalDate effectiveFrom);
 
     /* ============================================================
        EFFECTIVE-DATED ACTIVE ALLOWANCES

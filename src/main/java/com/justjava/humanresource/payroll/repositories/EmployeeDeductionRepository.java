@@ -8,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 public interface EmployeeDeductionRepository
         extends JpaRepository<EmployeeDeduction, Long> {
@@ -17,6 +18,13 @@ public interface EmployeeDeductionRepository
        ============================================================ */
 
     List<EmployeeDeduction> findByEmployeeId(Long employeeId);
+
+    /* ============================================================
+       UPSERT LOOKUP — prevents duplicate key on re-submit
+       ============================================================ */
+
+    Optional<EmployeeDeduction> findByEmployeeIdAndDeductionIdAndEffectiveFrom(
+            Long employeeId, Long deductionId, LocalDate effectiveFrom);
 
     /* ============================================================
        EFFECTIVE-DATED ACTIVE DEDUCTIONS

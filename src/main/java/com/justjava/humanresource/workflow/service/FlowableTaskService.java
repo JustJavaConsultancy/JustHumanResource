@@ -93,6 +93,7 @@ public class FlowableTaskService {
         return historyService.createHistoricTaskInstanceQuery()
                 .taskDefinitionKey(taskDefinitionKey)
                 .finished()
+                .processVariableValueEquals("approved", true)
                 .includeProcessVariables()
                 .orderByHistoricTaskInstanceEndTime()
                 .desc()

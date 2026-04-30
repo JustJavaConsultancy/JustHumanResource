@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 public interface PayGroupAllowanceRepository
         extends JpaRepository<PayGroupAllowance, Long> {
@@ -18,6 +19,13 @@ public interface PayGroupAllowanceRepository
        ============================================================ */
 
     List<PayGroupAllowance> findByPayGroupId(Long payGroupId);
+
+    /* ============================================================
+       UPSERT LOOKUP — prevents duplicate key on re-submit
+       ============================================================ */
+
+    Optional<PayGroupAllowance> findByPayGroupIdAndAllowanceIdAndEffectiveFrom(
+            Long payGroupId, Long allowanceId, LocalDate effectiveFrom);
 
     /* ============================================================
        EFFECTIVE-DATED ACTIVE ALLOWANCES

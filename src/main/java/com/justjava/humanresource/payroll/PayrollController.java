@@ -168,8 +168,12 @@ public class PayrollController {
             @RequestParam Map<String, String> allParams,
             RedirectAttributes redirectAttributes) {
 
-        if (allowanceIds == null || allowanceIds.isEmpty()) {
-            redirectAttributes.addFlashAttribute("info", "No allowances selected");
+        // Soft-delete allowances that were unchecked (not in the submitted list)
+        List<Long> submittedIds = allowanceIds != null ? allowanceIds : List.of();
+        payrollSetupService.deactivateRemovedAllowancesFromPayGroup(payGroupId, submittedIds);
+
+        if (submittedIds.isEmpty()) {
+            redirectAttributes.addFlashAttribute("info", "All allowances removed from pay group");
             return "redirect:/payroll/pay-group";
         }
 
@@ -178,7 +182,7 @@ public class PayrollController {
                 .stream()
                 .collect(Collectors.toMap(Allowance::getId, a -> a));
 
-        List<AllowanceAttachmentRequest> requests = allowanceIds.stream()
+        List<AllowanceAttachmentRequest> requests = submittedIds.stream()
                 .map(id -> {
                     Allowance allowance = allowanceMap.get(id);
                     if (allowance == null) return null;
@@ -216,8 +220,12 @@ public class PayrollController {
             @RequestParam Map<String, String> allParams,
             RedirectAttributes redirectAttributes) {
 
-        if (deductionIds == null || deductionIds.isEmpty()) {
-            redirectAttributes.addFlashAttribute("info", "No deductions selected");
+        // Soft-delete deductions that were unchecked (not in the submitted list)
+        List<Long> submittedIds = deductionIds != null ? deductionIds : List.of();
+        payrollSetupService.deactivateRemovedDeductionsFromPayGroup(payGroupId, submittedIds);
+
+        if (submittedIds.isEmpty()) {
+            redirectAttributes.addFlashAttribute("info", "All deductions removed from pay group");
             return "redirect:/payroll/pay-group";
         }
 
@@ -226,7 +234,7 @@ public class PayrollController {
                 .stream()
                 .collect(Collectors.toMap(Deduction::getId, d -> d));
 
-        List<DeductionAttachmentRequest> requests = deductionIds.stream()
+        List<DeductionAttachmentRequest> requests = submittedIds.stream()
                 .map(id -> {
                     Deduction deduction = deductionMap.get(id);
                     if (deduction == null) return null;
@@ -264,8 +272,12 @@ public class PayrollController {
             @RequestParam Map<String, String> allParams,
             RedirectAttributes redirectAttributes) {
 
-        if (taxReliefIds == null || taxReliefIds.isEmpty()) {
-            redirectAttributes.addFlashAttribute("info", "No tax reliefs selected");
+        // Soft-delete tax reliefs that were unchecked (not in the submitted list)
+        List<Long> submittedIds = taxReliefIds != null ? taxReliefIds : List.of();
+        payrollSetupService.deactivateRemovedTaxReliefsFromPayGroup(payGroupId, submittedIds);
+
+        if (submittedIds.isEmpty()) {
+            redirectAttributes.addFlashAttribute("info", "All tax reliefs removed from pay group");
             return "redirect:/payroll/pay-group";
         }
 
@@ -274,7 +286,7 @@ public class PayrollController {
                 .stream()
                 .collect(Collectors.toMap(TaxRelief::getId, t -> t));
 
-        List<TaxReliefAttachmentRequest> requests = taxReliefIds.stream()
+        List<TaxReliefAttachmentRequest> requests = submittedIds.stream()
                 .map(id -> {
                     TaxRelief taxRelief = taxReliefMap.get(id);
                     if (taxRelief == null) return null;
@@ -444,11 +456,16 @@ public class PayrollController {
         YearMonth currentMonth = YearMonth.now();
 
         List<EmployeeGroupedReportDTO> report = reportingService.getGroupedReport(
-                1L,
-                currentMonth.atDay(1),
-                currentMonth.atEndOfMonth(),
-                EmployeeGroupBy.valueOf(groupBy)
-        );
+                        1L,
+                        currentMonth.atDay(1),
+                        currentMonth.atEndOfMonth(),
+                        EmployeeGroupBy.valueOf(groupBy)
+                ).stream()
+                .map(group -> {
+                    group.getEmployees().sort(Comparator.comparing(e -> e.getEmployeeId()));
+                    return group;
+                })
+                .toList();
 
         Map<String, Object> grandTotals = reportingService.calculateGrandTotals(report);
 
