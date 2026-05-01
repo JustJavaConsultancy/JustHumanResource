@@ -28,6 +28,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Sort;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -183,7 +184,7 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
 
     @Override
     public List<Allowance> getActiveAllowances() {
-        return allowanceRepository.findByStatus(RecordStatus.ACTIVE);
+        return allowanceRepository.findByStatus(RecordStatus.ACTIVE, Sort.by(Sort.Direction.ASC, "id"));
     }
 //    @Override
 //    public List<Allowance> findAllowanceByID(){
@@ -203,7 +204,7 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
 
     @Override
     public List<Deduction> getActiveDeductions() {
-        return deductionRepository.findByStatus(RecordStatus.ACTIVE);
+        return deductionRepository.findByStatus(RecordStatus.ACTIVE, Sort.by(Sort.Direction.ASC, "id"));
     }
 
     /* =========================
@@ -602,7 +603,7 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
     }
     @Override
     public List<TaxRelief> getActiveTaxReliefs() {
-        return taxReliefRepository.findByActiveTrue();
+        return taxReliefRepository.findByActiveTrue(Sort.by(Sort.Direction.ASC, "id"));
     }
     @Override
     public PayGroupTaxRelief addTaxReliefToPayGroup(
