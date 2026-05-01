@@ -2270,7 +2270,7 @@
                     : `<span class="pi-amount" style="color:var(--pi-muted);font-size:0.75rem">Default</span>`;
 
                 return `
-                    <div class="pi-item-card" data-item-id="${masterId}" data-record-id="${item.id || ''}">
+                    <div class="pi-item-card" data-item-id="${masterId}" data-record-id="${item.id || ''}" data-effective-from="${item.effectiveFrom || ''}" data-effective-to="${item.effectiveTo || ''}" data-overridden="${item.overridden || false}" data-override-amount="${item.overrideAmount || ''}">
                         <div class="pi-item-left">
                             <div class="pi-item-icon ${typeClass}">
                                 <span class="material-icons-round">${iconName}</span>
@@ -2347,61 +2347,76 @@
         }
 
         /* ── SUBMIT ──────────────────────────────────────────────────────── */
-        function submitPayItem(type) {
-            const btn    = document.getElementById('pi-add-' + type + '-btn');
-            const selId  = document.getElementById('pi-' + type + '-select').value;
+ function submitPayItem(type) {
+    const btn    = document.getElementById('pi-add-' + type + '-btn');
+    const selId  = document.getElementById('pi-' + type + '-select').value;
 
-            if (!selId) {
-                shakeElement(document.getElementById('pi-' + type + '-select'));
-                return;
-            }
+    if (!selId) {
+        shakeElement(document.getElementById('pi-' + type + '-select'));
+        return;
+    }
 
-            const overridden = document.getElementById('pi-' + type + '-override-chk').checked;
-            let overrideAmount = null;
-            if (overridden) {
-                overrideAmount = parseFloat(document.getElementById('pi-' + type + '-amount').value);
-                if (isNaN(overrideAmount) || overrideAmount < 0) {
-                    shakeElement(document.getElementById('pi-' + type + '-amount'));
-                    return;
-                }
-            }
-
-            const effectiveFrom = document.getElementById('pi-' + type + '-from').value || null;
-            const effectiveTo   = document.getElementById('pi-' + type + '-to').value  || null;
-
-            const idKeyMap = { allowance: 'allowanceId', deduction: 'deductionId', taxrelief: 'taxReliefId' };
-            const idKey   = idKeyMap[type] || (type + 'Id');
-            const payload = [{ [idKey]: parseInt(selId, 10), overridden, overrideAmount, effectiveFrom, effectiveTo }];
-
-            const endpoint = '/setup/employee/' + piEmployeeId + '/' + type + 's';
-
-            // Loading state
-            const originalHTML = btn.innerHTML;
-            btn.disabled = true;
-            btn.innerHTML = `<span class="pi-spinner"></span> Adding…`;
-
-            fetch(endpoint, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            })
-            .then(r => { if (!r.ok) return r.text().then(t => { throw new Error(t || 'Failed'); }); return r.json(); })
-            .then(() => {
-                resetPiForm(type);
-                fetchPayItemsData(piEmployeeId);
-                const toastMap = { allowance: 'Allowance added ✓', deduction: 'Deduction added ✓', taxrelief: 'Tax Relief added ✓' };
-                showPiToast(toastMap[type] || (type + ' added ✓'), 'success');
-            })
-            .catch(err => {
-                console.error(err);
-                showPiToast('Failed: ' + err.message, 'error');
-            })
-            .finally(() => {
-                btn.disabled = false;
-                btn.innerHTML = originalHTML;
-            });
+    const overridden = document.getElementById('pi-' + type + '-override-chk').checked;
+    let overrideAmount = null;
+    if (overridden) {
+        overrideAmount = parseFloat(document.getElementById('pi-' + type + '-amount').value);
+        if (isNaN(overrideAmount) || overrideAmount < 0) {
+            shakeElement(document.getElementById('pi-' + type + '-amount'));
+            return;
         }
+    }
 
+    const effectiveFrom = document.getElementById('pi-' + type + '-from').value || null;
+    const effectiveTo   = document.getElementById('pi-' + type + '-to').value  || null;
+
+    const idKeyMap = { allowance: 'allowanceId', deduction: 'deductionId', taxrelief: 'taxReliefId' };
+    const typeToListKey = { allowance: 'allowances', deduction: 'deductions', taxrelief: 'taxreliefs' };
+    const idKey   = idKeyMap[type] || (type + 'Id');
+    const listKey = typeToListKey[type];
+
+    // ✅ FIX: Collect all existing assigned items first
+    const existingCards = Array.from(
+        document.querySelectorAll('#pi-' + listKey + '-list .pi-item-card')
+    );
+    const existingPayload = existingCards.map(c => ({
+        [idKey]: parseInt(c.dataset.itemId, 10),
+        effectiveFrom:  c.dataset.effectiveFrom  || null,
+        effectiveTo:    c.dataset.effectiveTo    || null,
+        overridden:     c.dataset.overridden === 'true',
+        overrideAmount: c.dataset.overrideAmount ? parseFloat(c.dataset.overrideAmount) : null
+    }));
+
+    // ✅ FIX: Append the new item to the existing ones
+    const newItem = { [idKey]: parseInt(selId, 10), overridden, overrideAmount, effectiveFrom, effectiveTo };
+    const payload = [...existingPayload, newItem];
+
+    const endpoint = '/setup/employee/' + piEmployeeId + '/' + type + 's';
+
+    const originalHTML = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = `<span class="pi-spinner"></span> Adding…`;
+
+    fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    })
+    .then(r => { if (!r.ok) return r.text().then(t => { throw new Error(t || 'Failed'); }); return r.json(); })
+    .then(() => {
+        resetPiForm(type);
+        fetchPayItemsData(piEmployeeId);
+        const toastMap = { allowance: 'Allowance added ✓', deduction: 'Deduction added ✓', taxrelief: 'Tax Relief added ✓' };
+        showPiToast(toastMap[type] || (type + ' added ✓'), 'success');
+    })
+    .catch(err => {
+        console.error(err);
+        showPiToast('Failed: ' + err.message, 'error');
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = originalHTML;
+    });
+}
         /* ── REMOVE ──────────────────────────────────────────────────────── */
         function removePiItem(type, recordId, btn) {
             const card = btn.closest('.pi-item-card');
@@ -2420,7 +2435,13 @@
             );
             const remaining = allCards
                 .filter(c => c !== card)
-                .map(c => ({ [idKey]: parseInt(c.dataset.itemId, 10) }));
+                .map(c => ({
+                    [idKey]: parseInt(c.dataset.itemId, 10),
+                    effectiveFrom:  c.dataset.effectiveFrom  || null,
+                    effectiveTo:    c.dataset.effectiveTo    || null,
+                    overridden:     c.dataset.overridden === 'true',
+                    overrideAmount: c.dataset.overrideAmount ? parseFloat(c.dataset.overrideAmount) : null
+                }));
 
             const endpoint = '/setup/employee/' + piEmployeeId + '/' + type + 's';
 
