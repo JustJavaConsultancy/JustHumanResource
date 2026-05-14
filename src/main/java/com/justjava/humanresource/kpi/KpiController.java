@@ -384,6 +384,21 @@ public class KpiController {
         model.addAttribute("measurements", measurements);
         return "kpi/fragment/kpi-measurements-table";
     }
+    @PostMapping("/kpi/measurements/{id}/edit")
+    public String editMeasurement(
+            @PathVariable("id") Long measurementId,
+            @RequestParam BigDecimal actualValue,
+            Model model
+    ) {
+        kpiMeasurementService.updateMeasurement(measurementId, actualValue);
+
+        List<KpiMeasurementResponseDTO> measurements =
+                kpiMeasurementService.getAllEffectiveMeasurements(YearMonth.now().minusMonths(1));
+        model.addAttribute("measurements", measurements);
+
+        return "kpi/fragment/kpi-measurements-table";
+    }
+
     @GetMapping("/fragments/stats-cards")
     public String getStatsCards(Model model) {
         List<KpiDefinition> kpiDefinitions = kpiDefinitionService.getAll();
