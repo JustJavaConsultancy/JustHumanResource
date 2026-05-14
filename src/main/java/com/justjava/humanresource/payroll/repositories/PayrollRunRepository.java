@@ -56,6 +56,11 @@ public interface PayrollRunRepository
     FROM PayrollRun p
     WHERE p.employee.department.company.id = :companyId
       AND p.payrollDate BETWEEN :start AND :end
+      AND (
+          p.employee.suspensionFrom IS NULL
+          OR p.employee.suspensionFrom > :end
+          OR (p.employee.suspensionTo IS NOT NULL AND p.employee.suspensionTo < :start)
+      )
       AND p.versionNumber = (
           SELECT MAX(p2.versionNumber)
           FROM PayrollRun p2
