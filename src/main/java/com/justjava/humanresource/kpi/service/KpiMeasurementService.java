@@ -125,6 +125,42 @@ public class KpiMeasurementService {
         return responseList;
     }
 
+    /* =====================================================
+       EDIT A SINGLE MEASUREMENT (triggers payroll recalc)
+       ===================================================== */
+
+    public KpiMeasurementResponseDTO updateMeasurement(Long measurementId, BigDecimal newActualValue) {
+
+        validateActualValue(newActualValue);
+
+        KpiMeasurement measurement = measurementRepository.findById(measurementId)
+                .orElseThrow(() -> new IllegalArgumentException("Measurement not found: " + measurementId));
+
+        BigDecimal newScore = calculateScore(newActualValue, measurement.getKpi().getTargetValue());
+
+        measurement.setActualValue(newActualValue);
+        measurement.setScore(newScore);
+        measurement.setRecordedAt(LocalDateTime.now());
+
+        KpiMeasurement saved = measurementRepository.save(measurement);
+
+        // Re-trigger payroll recalculation for the employee
+        payrollMessageDispatcher.requestPayroll(
+                saved.getEmployee().getId(),
+                LocalDate.now()
+        );
+
+        return KpiMeasurementResponseDTO.builder()
+                .measurementId(saved.getId())
+                .kpiId(saved.getKpi().getId())
+                .kpiCode(saved.getKpi().getCode())
+                .kpiName(saved.getKpi().getName())
+                .actualValue(saved.getActualValue())
+                .score(saved.getScore())
+                .period(saved.getPeriod())
+                .build();
+    }
+
     /* =========================================================
        FETCH EFFECTIVE MEASUREMENTS FOR EMPLOYEE
        ========================================================= */
