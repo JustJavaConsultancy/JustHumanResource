@@ -79,6 +79,7 @@ public class Employee extends BaseEntity {
 
 
     @OneToMany(mappedBy = "employee", fetch = FetchType.EAGER)
+    @OrderBy("status ASC, effectiveFrom DESC")
     private List<EmployeeBankDetail> bankDetails;
 
     private boolean payrollEnabled;
