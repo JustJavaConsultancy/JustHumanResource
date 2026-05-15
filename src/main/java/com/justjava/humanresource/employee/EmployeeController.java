@@ -40,6 +40,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import com.justjava.humanresource.payroll.dto.FutureEmployeeAllowanceDTO;
+import java.util.Optional;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -326,8 +327,12 @@ public class EmployeeController {
             Map<String, Object> variables = task.getVariables();
             if (variables.containsKey("appraisalId")) {
                 Long appraisalId = Long.valueOf(variables.get("appraisalId").toString());
-                EmployeeAppraisal appraisal = appraisalService.findAppraisalById(appraisalId);
-                enrichedAppraisals.add(new AppraisalTaskViewDTO(task, appraisal));
+                Optional<EmployeeAppraisal> appraisalOpt = appraisalService.findAppraisalById(appraisalId);
+                if (appraisalOpt.isEmpty()) {
+                    System.out.println("Skipping orphaned task, appraisalId not found: " + appraisalId);
+                    continue;
+                }
+                enrichedAppraisals.add(new AppraisalTaskViewDTO(task, appraisalOpt.get()));
             }
         }
         enrichedAppraisals.forEach(a ->
@@ -441,8 +446,12 @@ public class EmployeeController {
             Map<String, Object> variables = task.getVariables();
             if (variables.containsKey("appraisalId")) {
                 Long appraisalId = Long.valueOf(variables.get("appraisalId").toString());
-                EmployeeAppraisal appraisal = appraisalService.findAppraisalById(appraisalId);
-                enrichedAppraisals.add(new AppraisalTaskViewDTO(task, appraisal));
+                Optional<EmployeeAppraisal> appraisalOpt = appraisalService.findAppraisalById(appraisalId);
+                if (appraisalOpt.isEmpty()) {
+                    System.out.println("Skipping orphaned task, appraisalId not found: " + appraisalId);
+                    continue;
+                }
+                enrichedAppraisals.add(new AppraisalTaskViewDTO(task, appraisalOpt.get()));
             }
         }
         enrichedAppraisals.forEach(a ->
