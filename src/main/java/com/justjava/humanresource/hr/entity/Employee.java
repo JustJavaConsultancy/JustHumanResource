@@ -91,6 +91,8 @@ public class Employee extends BaseEntity {
 
     private LocalDateTime activatedAt;
     private String keycloakUserId;
+    private LocalDate suspensionFrom;
+    private LocalDate suspensionTo;
 
     // ---------- Emergency contact ----------
     @OneToOne(mappedBy = "employee", cascade = CascadeType.ALL, orphanRemoval = true)

@@ -2,15 +2,12 @@ package com.justjava.humanresource.payroll.workflow.delegates;
 
 
 import com.justjava.humanresource.hr.dto.EmployeeDTO;
-import com.justjava.humanresource.hr.entity.Employee;
-import com.justjava.humanresource.hr.repository.EmployeeRepository;
 import com.justjava.humanresource.hr.service.EmployeeService;
 import lombok.RequiredArgsConstructor;
 import org.flowable.engine.delegate.DelegateExecution;
 import org.flowable.engine.delegate.JavaDelegate;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -23,12 +20,20 @@ public class LoadEmployeesForPayrollDelegate implements JavaDelegate {
     @Override
     public void execute(DelegateExecution execution) {
 
-/*        Long companyId = (Long) execution.getVariable("companyId");
-        LocalDate periodStart = (LocalDate) execution.getVariable("periodStart");
-        LocalDate periodEnd = (LocalDate) execution.getVariable("periodEnd");*/
+        java.time.LocalDate payrollDate = java.time.LocalDate.now();
+        Object payrollDateVar = execution.getVariable("payrollDate");
+        if (payrollDateVar instanceof java.time.LocalDate date) {
+            payrollDate = date;
+        }
 
         List<EmployeeDTO> activeEmployees =
-                employeeService.getAllEmployees();
+                employeeService.getPayrollEligibleEmployees(payrollDate).stream()
+                        .map(employee -> {
+                            EmployeeDTO dto = new EmployeeDTO();
+                            dto.setId(employee.getId());
+                            return dto;
+                        })
+                        .toList();
 
         List<Long> employeeIds = activeEmployees.stream()
                 .map(EmployeeDTO::getId)

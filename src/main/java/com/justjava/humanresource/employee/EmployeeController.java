@@ -176,6 +176,14 @@ public class EmployeeController {
         return ResponseEntity.ok().build();
     }
 
+    @PostMapping("/employees/{id}/suspend")
+    public String suspendEmployee(@PathVariable Long id,
+                                  @RequestParam("fromDate") LocalDate fromDate,
+                                  @RequestParam(value = "toDate", required = false) LocalDate toDate) {
+        employeeService.suspendEmployee(id, fromDate, toDate);
+        return "redirect:/employees";
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     //  PAY ITEMS  – GET existing assignments for one employee
     // ─────────────────────────────────────────────────────────────────────────
