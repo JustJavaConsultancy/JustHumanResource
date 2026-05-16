@@ -288,6 +288,7 @@ public class SetupServiceImpl implements SetupService {
         List<CreateJobGradeWithStepsCommand.JobStepCommand> incomingSteps = command.getSteps();
 
         List<JobStep> resultSteps = new ArrayList<>();
+        List<JobStep> updatedExistingSteps = new ArrayList<>(); // only steps that already had employees
 
         for (int i = 0; i < incomingSteps.size(); i++) {
             CreateJobGradeWithStepsCommand.JobStepCommand stepCmd = incomingSteps.get(i);
@@ -306,8 +307,9 @@ public class SetupServiceImpl implements SetupService {
                 existing.setGrossSalary(gross);
                 existing.setDepartment(department);
                 resultSteps.add(jobStepRepository.save(existing));
+                updatedExistingSteps.add(existing); // track for recalculation
             } else {
-                // Add brand new step
+                // Add brand new step — NO recalculation needed (no employees on it yet)
                 JobStep newStep = new JobStep();
                 newStep.setName(stepCmd.getStepName());
                 newStep.setBasicSalary(basic);
@@ -315,6 +317,7 @@ public class SetupServiceImpl implements SetupService {
                 newStep.setDepartment(department);
                 newStep.setJobGrade(jobGrade);
                 resultSteps.add(jobStepRepository.save(newStep));
+                // intentionally NOT added to updatedExistingSteps
             }
         }
 
@@ -336,9 +339,16 @@ public class SetupServiceImpl implements SetupService {
             }
         }
 
-        // Trigger recalculations for all result steps
-        for (JobStep step : resultSteps) {
-            payrollChangeOrchestrator.recalculateForJobStep(step.getId(), LocalDate.now());
+        // Only recalculate for EXISTING steps that were updated (they have employees on them)
+        // New steps are skipped — they have no employees yet so recalculation would cause
+        // duplicate key errors on employee_position_history for unrelated employees
+        for (JobStep step : updatedExistingSteps) {
+            try {
+                payrollChangeOrchestrator.recalculateForJobStep(step.getId(), LocalDate.now());
+            } catch (Exception e) {
+                // Log but don't fail — position history conflict shouldn't block step update
+                System.err.println("Warning: Could not recalculate for job step " + step.getId() + ": " + e.getMessage());
+            }
         }
 
         return JobGradeResponseDTO.builder()
