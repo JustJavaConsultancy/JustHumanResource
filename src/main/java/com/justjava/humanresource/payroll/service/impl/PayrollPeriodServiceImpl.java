@@ -275,7 +275,11 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
             throw new IllegalStateException("No open payroll period found.");
         }
 
-        List<Employee> missingDetails = employeeRepository.findEmployeesMissingBankDetails(companyId);
+        List<Employee> missingDetails = employeeRepository.findEmployeesMissingBankDetails(
+                companyId,
+                open.getPeriodStart(),
+                open.getPeriodEnd()
+        );
 
         if (!missingDetails.isEmpty()) {
 

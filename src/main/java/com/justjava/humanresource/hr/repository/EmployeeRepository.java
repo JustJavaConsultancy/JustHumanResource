@@ -76,17 +76,32 @@ public interface EmployeeRepository extends JpaRepository<Employee,Long> {
 
     // CHECK EMPLOYEE BANK DETAILS
     @Query("""
-    SELECT e FROM Employee e 
-    LEFT JOIN e.bankDetails bd 
-    WHERE e.department.company.id = :companyId 
+    SELECT e FROM Employee e
+    LEFT JOIN e.bankDetails bd
+    WHERE e.department.company.id = :companyId
       AND e.status IN (com.justjava.humanresource.core.enums.RecordStatus.ACTIVE, com.justjava.humanresource.core.enums.RecordStatus.INACTIVE)
+      AND (
+          e.suspensionFrom IS NULL
+          OR e.suspensionFrom > :periodEnd
+          OR (e.suspensionTo IS NOT NULL AND e.suspensionTo < :periodStart)
+      )
       AND (bd IS NULL OR NOT EXISTS (
-          SELECT b FROM EmployeeBankDetail b 
-          WHERE b.employee = e 
+          SELECT b FROM EmployeeBankDetail b
+          WHERE b.employee = e
           AND b.status = com.justjava.humanresource.core.enums.RecordStatus.ACTIVE
-          AND b.accountNumber IS NOT NULL 
+          AND b.accountNumber IS NOT NULL
           AND b.accountNumber != ''
       ))
 """)
-    List<Employee> findEmployeesMissingBankDetails(@Param("companyId") Long companyId);
+    List<Employee> findEmployeesMissingBankDetails(@Param("companyId") Long companyId,
+                                                   @Param("periodStart") java.time.LocalDate periodStart,
+                                                   @Param("periodEnd") java.time.LocalDate periodEnd);
+
+    @Query("""
+    SELECT e FROM Employee e
+    WHERE e.employmentStatus = com.justjava.humanresource.core.enums.EmploymentStatus.ACTIVE
+      AND (e.suspensionFrom IS NULL OR e.suspensionFrom > :payrollDate
+           OR (e.suspensionTo IS NOT NULL AND e.suspensionTo < :payrollDate))
+""")
+    List<Employee> findPayrollEligibleEmployees(@Param("payrollDate") java.time.LocalDate payrollDate);
 }

@@ -728,7 +728,8 @@
                     <td th:text="${employee.jobStep != null ? employee.jobStep.jobGrade.name + ' - ' + employee.jobStep.name : 'Not Assigned'}" class="px-4 md:px-6 py-4"></td>
                     <td th:text="${employee.payGroup != null ? employee.payGroup.name : 'Not Assigned'}" class="px-4 md:px-6 py-4"></td>
                     <td class="px-4 md:px-6 py-4">
-                        <span class="status-badge status-active">Active</span>
+                        <span th:if="${employee.status != null and employee.status.name() == 'SUSPENDED'}" class="status-badge status-terminated">Suspended</span>
+                        <span th:unless="${employee.status != null and employee.status.name() == 'SUSPENDED'}" class="status-badge status-active">Active</span>
                     </td>
                     <td class="px-4 md:px-6 py-4">
                         <div class="flex space-x-2">
@@ -742,6 +743,11 @@
                                     th:onclick="'event.stopPropagation(); openPayItemsModal(' + ${employee.id} + ')'"
                                     class="text-blue-600 hover:text-blue-700 text-sm font-medium">
                                 Pay Items
+                            </button>
+                            <button type="button"
+                                    th:onclick="'event.stopPropagation(); openSuspendModal(' + ${employee.id} + ')'"
+                                    class="text-red-600 hover:text-red-700 text-sm font-medium">
+                                Suspend
                             </button>
                         </div>
                     </td>
@@ -1818,6 +1824,32 @@
         </div>
     </div>
 
+    <div id="suspendEmployeeModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4 modal-transition">
+        <div class="bg-white dark:bg-gray-800 w-full max-w-md rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700">
+                <h3 class="text-base font-semibold">Suspend Employee</h3>
+            </div>
+            <form id="suspendEmployeeForm" method="post" class="p-5 space-y-4">
+                <div>
+                    <label for="suspendFromDate" class="block text-sm font-medium mb-1">From Date</label>
+                    <input id="suspendFromDate" name="fromDate" type="date" required class="form-input">
+                </div>
+                <div>
+                    <label for="suspendToDate" class="block text-sm font-medium mb-1">To Date (Optional)</label>
+                    <input id="suspendToDate" name="toDate" type="date" class="form-input">
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeModal('suspendEmployeeModal')" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold">
+                        Suspend
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script th:inline="javascript">
         /*<![CDATA[*/
 
@@ -2847,6 +2879,14 @@
         })();
 
         /* ── EMPLOYEE SEARCH & FILTER ─────────────────────────────────────── */
+        function openSuspendModal(employeeId) {
+            const form = document.getElementById('suspendEmployeeForm');
+            form.action = '/employees/' + employeeId + '/suspend';
+            document.getElementById('suspendFromDate').value = '';
+            document.getElementById('suspendToDate').value = '';
+            openModal('suspendEmployeeModal');
+        }
+
         function applyEmployeeFilters() {
             const searchVal   = (document.getElementById('employeeSearch')?.value  || '').trim().toLowerCase();
             const jobGradeVal = (document.getElementById('jobGradeFilter')?.value  || '').toString();

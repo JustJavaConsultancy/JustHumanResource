@@ -31,6 +31,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import java.math.BigDecimal;
 import java.time.YearMonth;
 import java.util.*;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Controller
@@ -161,8 +162,15 @@ public class KpiController {
             Long appraisalId =
                     Long.valueOf(variables.get("appraisalId").toString());
 
-            EmployeeAppraisal appraisal =
+            Optional<EmployeeAppraisal> appraisalOpt =
                     appraisalService.findAppraisalById(appraisalId);
+
+            if (appraisalOpt.isEmpty()) {
+                System.out.println("Skipping deleted appraisal ID: " + appraisalId);
+                continue; // skip orphaned flowable tasks
+            }
+
+            EmployeeAppraisal appraisal = appraisalOpt.get();
 
             Boolean managerComplete =
                     Boolean.parseBoolean(
@@ -480,8 +488,15 @@ public class KpiController {
             Long appraisalId =
                     Long.valueOf(variables.get("appraisalId").toString());
 
-            EmployeeAppraisal appraisal =
+            Optional<EmployeeAppraisal> appraisalOpt =
                     appraisalService.findAppraisalById(appraisalId);
+
+            if (appraisalOpt.isEmpty()) {
+                System.out.println("Skipping deleted appraisal ID: " + appraisalId);
+                continue;
+            }
+
+            EmployeeAppraisal appraisal = appraisalOpt.get();
 
             Boolean managerComplete =
                     Boolean.parseBoolean(
@@ -543,8 +558,15 @@ public class KpiController {
             Long appraisalId =
                     Long.valueOf(variables.get("appraisalId").toString());
 
-            EmployeeAppraisal appraisal =
+            Optional<EmployeeAppraisal> appraisalOpt =
                     appraisalService.findAppraisalById(appraisalId);
+
+            if (appraisalOpt.isEmpty()) {
+                System.out.println("Skipping deleted appraisal ID: " + appraisalId);
+                continue;
+            }
+
+            EmployeeAppraisal appraisal = appraisalOpt.get();
 
             Boolean managerComplete =
                     Boolean.parseBoolean(
@@ -581,12 +603,16 @@ public class KpiController {
             Long appraisalId =
                     Long.valueOf(variables.get("appraisalId").toString());
 
-            EmployeeAppraisal appraisal =
+            Optional<EmployeeAppraisal> appraisalOpt =
                     appraisalService.findAppraisalById(appraisalId);
 
-            // For completed, task can be null or create another DTO if needed
+            if (appraisalOpt.isEmpty()) {
+                System.out.println("Skipping deleted appraisal ID (completed): " + appraisalId);
+                continue;
+            }
+
             completedAppraisals.add(
-                    new AppraisalTaskViewDTO(null, appraisal)
+                    new AppraisalTaskViewDTO(null, appraisalOpt.get())
             );
         }
 
@@ -633,8 +659,15 @@ public class KpiController {
             Long appraisalId =
                     Long.valueOf(variables.get("appraisalId").toString());
 
-            EmployeeAppraisal appraisal =
+            Optional<EmployeeAppraisal> appraisalOpt =
                     appraisalService.findAppraisalById(appraisalId);
+
+            if (appraisalOpt.isEmpty()) {
+                System.out.println("Skipping deleted appraisal ID: " + appraisalId);
+                continue;
+            }
+
+            EmployeeAppraisal appraisal = appraisalOpt.get();
 
             Boolean managerComplete =
                     Boolean.parseBoolean(
@@ -671,12 +704,16 @@ public class KpiController {
             Long appraisalId =
                     Long.valueOf(variables.get("appraisalId").toString());
 
-            EmployeeAppraisal appraisal =
+            Optional<EmployeeAppraisal> appraisalOpt =
                     appraisalService.findAppraisalById(appraisalId);
 
-            // For completed, task can be null or create another DTO if needed
+            if (appraisalOpt.isEmpty()) {
+                System.out.println("Skipping deleted appraisal ID (completed): " + appraisalId);
+                continue;
+            }
+
             completedAppraisals.add(
-                    new AppraisalTaskViewDTO(null, appraisal)
+                    new AppraisalTaskViewDTO(null, appraisalOpt.get())
             );
         }
 

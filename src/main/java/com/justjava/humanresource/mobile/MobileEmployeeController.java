@@ -31,6 +31,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
+import java.util.Optional;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -124,10 +125,14 @@ public class MobileEmployeeController {
                 Long appraisalId =
                         Long.valueOf(variables.get("appraisalId").toString());
 
-                EmployeeAppraisal appraisal =
+                Optional<EmployeeAppraisal> appraisalOpt =
                         appraisalService.findAppraisalById(appraisalId);
+                if (appraisalOpt.isEmpty()) {
+                    System.out.println("Skipping orphaned task, appraisalId not found: " + appraisalId);
+                    continue;
+                }
                 enrichedAppraisals.add(
-                        new AppraisalTaskViewDTO(task, appraisal)
+                        new AppraisalTaskViewDTO(task, appraisalOpt.get())
                 );
             }
         }
@@ -226,10 +231,14 @@ public class MobileEmployeeController {
                 Long appraisalId =
                         Long.valueOf(variables.get("appraisalId").toString());
 
-                EmployeeAppraisal appraisal =
+                Optional<EmployeeAppraisal> appraisalOpt =
                         appraisalService.findAppraisalById(appraisalId);
+                if (appraisalOpt.isEmpty()) {
+                    System.out.println("Skipping orphaned task, appraisalId not found: " + appraisalId);
+                    continue;
+                }
                 enrichedAppraisals.add(
-                        new AppraisalTaskViewDTO(task, appraisal)
+                        new AppraisalTaskViewDTO(task, appraisalOpt.get())
                 );
             }
         }

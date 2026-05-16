@@ -62,4 +62,6 @@ public interface EmployeeService {
 
     Employee save(Employee employee);
     String generateInitialPassword(Employee employee);
+    void suspendEmployee(Long employeeId, LocalDate fromDate, LocalDate toDate);
+    List<Employee> getPayrollEligibleEmployees(LocalDate payrollDate);
 }

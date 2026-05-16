@@ -12,6 +12,12 @@ import com.justjava.humanresource.hr.repository.EmployeePositionHistoryRepositor
 import com.justjava.humanresource.hr.repository.EmployeeRepository;
 import com.justjava.humanresource.hr.repository.JobStepRepository;
 import com.justjava.humanresource.hr.repository.PayGroupRepository;
+import com.justjava.humanresource.payroll.entity.EmployeeAllowance;
+import com.justjava.humanresource.payroll.entity.EmployeeDeduction;
+import com.justjava.humanresource.payroll.entity.EmployeeTaxRelief;
+import com.justjava.humanresource.payroll.repositories.EmployeeAllowanceRepository;
+import com.justjava.humanresource.payroll.repositories.EmployeeDeductionRepository;
+import com.justjava.humanresource.payroll.repositories.EmployeeTaxReliefRepository;
 import com.justjava.humanresource.hr.service.EmployeeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -32,6 +38,9 @@ public class EmployeeServiceImpl implements EmployeeService {
     private final PayGroupRepository payGroupRepository;
     private final EmployeePositionHistoryRepository employeePositionHistoryRepository;
     private final EmployeeBankDetailRepository bankDetailRepository;
+    private final EmployeeAllowanceRepository employeeAllowanceRepository;
+    private final EmployeeDeductionRepository employeeDeductionRepository;
+    private final EmployeeTaxReliefRepository employeeTaxReliefRepository;
 
     /* =========================
      * EXISTING METHODS (unchanged)
@@ -232,5 +241,51 @@ public class EmployeeServiceImpl implements EmployeeService {
     @Override
     public Employee save(Employee employee) {
         return employeeRepository.save(employee);
+    }
+
+    @Override
+    @Transactional
+    public void suspendEmployee(Long employeeId, LocalDate fromDate, LocalDate toDate) {
+        if (fromDate == null) {
+            throw new IllegalArgumentException("Suspension from date is required.");
+        }
+        if (toDate != null && toDate.isBefore(fromDate)) {
+            throw new IllegalArgumentException("Suspension to date cannot be before from date.");
+        }
+
+        Employee employee = getById(employeeId);
+        employee.setSuspensionFrom(fromDate);
+        employee.setSuspensionTo(toDate);
+        employee.setStatus(RecordStatus.SUSPENDED);
+        employee.setPayrollEnabled(false);
+        employeeRepository.save(employee);
+
+        bankDetailRepository.deactivateAllByEmployeeId(employeeId);
+
+        for (EmployeeAllowance a : employeeAllowanceRepository.findByEmployeeId(employeeId)) {
+            if (a.getStatus() == RecordStatus.ACTIVE) {
+                a.setStatus(RecordStatus.INACTIVE);
+                employeeAllowanceRepository.save(a);
+            }
+        }
+        for (EmployeeDeduction d : employeeDeductionRepository.findByEmployeeId(employeeId)) {
+            if (d.getStatus() == RecordStatus.ACTIVE) {
+                d.setStatus(RecordStatus.INACTIVE);
+                employeeDeductionRepository.save(d);
+            }
+        }
+        for (EmployeeTaxRelief t : employeeTaxReliefRepository.findByEmployeeId(employeeId)) {
+            if (t.getStatus() == RecordStatus.ACTIVE) {
+                t.setStatus(RecordStatus.INACTIVE);
+                employeeTaxReliefRepository.save(t);
+            }
+        }
+
+        payrollChangeOrchestrator.recalculateForEmployee(employeeId, fromDate);
+    }
+
+    @Override
+    public List<Employee> getPayrollEligibleEmployees(LocalDate payrollDate) {
+        return employeeRepository.findPayrollEligibleEmployees(payrollDate);
     }
 }

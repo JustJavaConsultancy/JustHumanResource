@@ -22,6 +22,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -40,11 +41,8 @@ public class AppraisalService {
     private final FlowableTaskService flowableTaskService;
 
 
-    public EmployeeAppraisal findAppraisalById(Long appraisalId) {
-        return appraisalRepository.findById(appraisalId)
-                .orElseThrow(() ->
-                        new IllegalStateException("Appraisal not found: " + appraisalId)
-                );
+    public Optional<EmployeeAppraisal> findAppraisalById(Long appraisalId) {
+        return appraisalRepository.findById(appraisalId);
     }
     public List<EmployeeAppraisal> findAppraisalByEmployeeID(Long employeeId){
         return appraisalRepository.findByEmployee_Id(employeeId);

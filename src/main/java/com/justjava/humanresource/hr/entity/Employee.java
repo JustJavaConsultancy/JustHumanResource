@@ -79,6 +79,7 @@ public class Employee extends BaseEntity {
 
 
     @OneToMany(mappedBy = "employee", fetch = FetchType.EAGER)
+    @OrderBy("status ASC, effectiveFrom DESC")
     private List<EmployeeBankDetail> bankDetails;
 
     private boolean payrollEnabled;
@@ -90,6 +91,8 @@ public class Employee extends BaseEntity {
 
     private LocalDateTime activatedAt;
     private String keycloakUserId;
+    private LocalDate suspensionFrom;
+    private LocalDate suspensionTo;
 
     // ---------- Emergency contact ----------
     @OneToOne(mappedBy = "employee", cascade = CascadeType.ALL, orphanRemoval = true)
