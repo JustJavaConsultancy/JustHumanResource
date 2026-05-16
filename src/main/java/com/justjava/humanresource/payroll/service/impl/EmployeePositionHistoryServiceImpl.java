@@ -1,11 +1,11 @@
 package com.justjava.humanresource.payroll.service.impl;
 
+import com.justjava.humanresource.core.enums.RecordStatus;
 import com.justjava.humanresource.core.exception.ResourceNotFoundException;
 import com.justjava.humanresource.hr.dto.EmployeePositionHistoryDTO;
 import com.justjava.humanresource.hr.entity.*;
 import com.justjava.humanresource.hr.mapper.EmployeePositionHistoryMapper;
 import com.justjava.humanresource.hr.repository.*;
-
 import com.justjava.humanresource.payroll.service.EmployeePositionHistoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -28,8 +28,6 @@ public class EmployeePositionHistoryServiceImpl
     private final EmployeePositionHistoryRepository positionRepository;
     private final EmployeePositionHistoryMapper mapper;
 
-
-
     /* =========================================================
        CREATE INITIAL POSITION (Onboarding)
        ========================================================= */
@@ -38,43 +36,38 @@ public class EmployeePositionHistoryServiceImpl
     public EmployeePositionHistory createInitialPosition(Long employeeId) {
 
         Employee employee = employeeRepository.findById(employeeId)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("Employee", employeeId));
+                .orElseThrow(() -> new ResourceNotFoundException("Employee", employeeId));
 
-        boolean alreadyExists =
-                positionRepository.existsByEmployee_IdAndCurrentTrue(employeeId);
+        boolean alreadyExists = positionRepository.existsByEmployee_IdAndCurrentTrue(employeeId);
 
         if (alreadyExists) {
-            // Ensure status is ACTIVE for the existing record if it was somehow different
             EmployeePositionHistory existing = getCurrentPosition(employeeId);
-            if (existing.getStatus() != com.justjava.humanresource.core.enums.RecordStatus.ACTIVE) {
-                existing.setStatus(com.justjava.humanresource.core.enums.RecordStatus.ACTIVE);
+            if (existing.getStatus() != RecordStatus.ACTIVE) {
+                existing.setStatus(RecordStatus.ACTIVE);
                 positionRepository.save(existing);
             }
             return existing;
         }
 
-        LocalDate effectiveDate =
-                employee.getDateOfHire() != null
-                        ? employee.getDateOfHire()
-                        : LocalDate.now();
+        LocalDate effectiveDate = employee.getDateOfHire() != null
+                ? employee.getDateOfHire()
+                : LocalDate.now();
 
-        EmployeePositionHistory history =
-                EmployeePositionHistory.builder()
-                        .employee(employee)
-                        .department(employee.getDepartment())
-                        .jobStep(employee.getJobStep())
-                        .payGroup(employee.getPayGroup())
-                        .effectiveFrom(effectiveDate)
-                        .current(true)
-                        .status(com.justjava.humanresource.core.enums.RecordStatus.ACTIVE)
-                        .build();
+        EmployeePositionHistory history = EmployeePositionHistory.builder()
+                .employee(employee)
+                .department(employee.getDepartment())
+                .jobStep(employee.getJobStep())
+                .payGroup(employee.getPayGroup())
+                .effectiveFrom(effectiveDate)
+                .current(true)
+                .status(RecordStatus.ACTIVE)
+                .build();
 
         return positionRepository.save(history);
     }
 
     /* =========================================================
-       CHANGE POSITION (Promotion / Transfer)
+       CHANGE POSITION (Promotion / Transfer / Recalculation)
        ========================================================= */
 
     @Override
@@ -85,100 +78,101 @@ public class EmployeePositionHistoryServiceImpl
             Long payGroupId,
             LocalDate effectiveDate
     ) {
-
         Employee employee = employeeRepository.findById(employeeId)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("Employee", employeeId));
+                .orElseThrow(() -> new ResourceNotFoundException("Employee", employeeId));
 
         Department department = departmentRepository.findById(departmentId)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("Department", departmentId));
+                .orElseThrow(() -> new ResourceNotFoundException("Department", departmentId));
 
         JobStep jobStep = jobStepRepository.findById(jobStepId)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("JobStep", jobStepId));
+                .orElseThrow(() -> new ResourceNotFoundException("JobStep", jobStepId));
 
         PayGroup payGroup = payGroupRepository.findById(payGroupId)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("PayGroup", payGroupId));
+                .orElseThrow(() -> new ResourceNotFoundException("PayGroup", payGroupId));
 
         // ---------------------------------------------------------
-        // 🔥 HANDLE EXISTING POSITION (SAFE & UNAMBIGUOUS)
+        // STEP 1: Load ALL records for this employee on this date
+        // (could be current=true, current=false, or both — we handle each case)
         // ---------------------------------------------------------
+        List<EmployeePositionHistory> recordsOnSameDate =
+                positionRepository.findAllByEmployeeIdAndEffectiveFrom(employeeId, effectiveDate);
 
+        // Is there already a current=true record starting on this exact date?
+        Optional<EmployeePositionHistory> existingCurrentOnDate = recordsOnSameDate.stream()
+                .filter(EmployeePositionHistory::isCurrent)
+                .findFirst();
+
+        if (existingCurrentOnDate.isPresent()) {
+            // Same-day update: just overwrite the existing current record in place.
+            // This is safe — no new row, no constraint violation.
+            EmployeePositionHistory existing = existingCurrentOnDate.get();
+            existing.setDepartment(department);
+            existing.setJobStep(jobStep);
+            existing.setPayGroup(payGroup);
+            existing.setStatus(RecordStatus.ACTIVE);
+            existing.setCurrent(true);
+            return positionRepository.save(existing);
+        }
+
+        // ---------------------------------------------------------
+        // STEP 2: Close any current=true records that started BEFORE today
+        // ---------------------------------------------------------
         List<EmployeePositionHistory> currentPositions =
                 positionRepository.findAllByEmployee_IdAndCurrentTrue(employeeId);
 
         for (EmployeePositionHistory current : currentPositions) {
-            // If the current record started on the same day, update it instead of creating a new one
-            // This avoids unique constraint violations on (employee_id, effective_from, current)
-            if (current.getEffectiveFrom().equals(effectiveDate)) {
-                current.setDepartment(department);
-                current.setJobStep(jobStep);
-                current.setPayGroup(payGroup);
-                current.setStatus(com.justjava.humanresource.core.enums.RecordStatus.ACTIVE);
-                current.setCurrent(true);
-                return positionRepository.save(current);
-            }
-
             current.setEffectiveTo(effectiveDate.minusDays(1));
             current.setCurrent(false);
-            current.setStatus(com.justjava.humanresource.core.enums.RecordStatus.INACTIVE);
+            current.setStatus(RecordStatus.INACTIVE);
             positionRepository.save(current);
         }
 
         // ---------------------------------------------------------
-        // CHECK FOR ORPHANED current=false RECORD ON SAME DATE
-        // (happens when a previous recalculation already closed a record
-        //  on today's date — inserting again would violate the unique constraint
-        //  on (employee_id, effective_from, current=false))
+        // STEP 3: Check if closing those records just produced a
+        // current=false record on this same date (the duplicate key scenario).
+        // If so, update it in place rather than inserting a new current=true row.
+        //
+        // WHY THIS HAPPENS: When recalculation loops over multiple job steps,
+        // the first pass already closed+saved a current=false for today.
+        // The second pass would try to insert another current=true for today,
+        // but Postgres sees (employee_id, effective_from, current=true) is new
+        // while (employee_id, effective_from, current=false) already exists —
+        // that part is fine. The real collision is when a THIRD pass tries to
+        // close the current=true from pass 2, creating a second current=false
+        // for the same date. We prevent that by reusing the existing one.
         // ---------------------------------------------------------
+        Optional<EmployeePositionHistory> existingInactiveOnDate = recordsOnSameDate.stream()
+                .filter(r -> !r.isCurrent())
+                .findFirst();
 
-        Optional<EmployeePositionHistory> existingInactiveToday =
-                positionRepository.findByEmployeeIdAndEffectiveFromAndCurrentFalse(
-                        employeeId, effectiveDate
-                );
-
-        if (existingInactiveToday.isPresent()) {
-            // Reuse and update the existing inactive record instead of inserting a new one
-            EmployeePositionHistory existing = existingInactiveToday.get();
+        if (existingInactiveOnDate.isPresent()) {
+            // A current=false record already exists for this date.
+            // That means a previous recalculation pass already closed a record here.
+            // We must NOT create another current=false. Instead, promote this
+            // existing inactive record back to current=true with the new values.
+            EmployeePositionHistory existing = existingInactiveOnDate.get();
             existing.setDepartment(department);
             existing.setJobStep(jobStep);
             existing.setPayGroup(payGroup);
-            existing.setEffectiveTo(effectiveDate.minusDays(1));
-            existing.setCurrent(false);
-            existing.setStatus(com.justjava.humanresource.core.enums.RecordStatus.INACTIVE);
-            positionRepository.save(existing);
-
-            // Still need to create the new current record
-            EmployeePositionHistory newPosition =
-                    EmployeePositionHistory.builder()
-                            .employee(employee)
-                            .department(department)
-                            .jobStep(jobStep)
-                            .payGroup(payGroup)
-                            .effectiveFrom(effectiveDate)
-                            .current(true)
-                            .status(com.justjava.humanresource.core.enums.RecordStatus.ACTIVE)
-                            .build();
-
-            return positionRepository.save(newPosition);
+            existing.setEffectiveTo(null);
+            existing.setCurrent(true);
+            existing.setStatus(RecordStatus.ACTIVE);
+            return positionRepository.save(existing);
         }
 
         // ---------------------------------------------------------
-        // CREATE NEW POSITION
+        // STEP 4: Clean path — no records exist for this date yet.
+        // Insert a fresh current=true record.
         // ---------------------------------------------------------
-
-        EmployeePositionHistory newPosition =
-                EmployeePositionHistory.builder()
-                        .employee(employee)
-                        .department(department)
-                        .jobStep(jobStep)
-                        .payGroup(payGroup)
-                        .effectiveFrom(effectiveDate)
-                        .current(true)
-                        .status(com.justjava.humanresource.core.enums.RecordStatus.ACTIVE)
-                        .build();
+        EmployeePositionHistory newPosition = EmployeePositionHistory.builder()
+                .employee(employee)
+                .department(department)
+                .jobStep(jobStep)
+                .payGroup(payGroup)
+                .effectiveFrom(effectiveDate)
+                .current(true)
+                .status(RecordStatus.ACTIVE)
+                .build();
 
         return positionRepository.save(newPosition);
     }
@@ -190,7 +184,6 @@ public class EmployeePositionHistoryServiceImpl
     @Override
     @Transactional(readOnly = true)
     public List<EmployeePositionHistoryDTO> getActivePositions() {
-
         return positionRepository
                 .findByCurrentTrueAndEffectiveToIsNull()
                 .stream()
@@ -206,20 +199,14 @@ public class EmployeePositionHistoryServiceImpl
                 .orElseThrow(() ->
                         new ResourceNotFoundException("Active Position for Employee", employeeId));
     }
+
     @Override
     @Transactional(readOnly = true)
     public EmployeePositionHistoryDTO getCurrentPositionAPI(Long employeeId) {
-
-        EmployeePositionHistory position =
-                positionRepository
-                        .findByEmployee_IdAndCurrentTrue(employeeId)
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "Active Position for Employee",
-                                        employeeId
-                                ));
-
+        EmployeePositionHistory position = positionRepository
+                .findByEmployee_IdAndCurrentTrue(employeeId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Active Position for Employee", employeeId));
         return mapper.toDto(position);
     }
-
 }

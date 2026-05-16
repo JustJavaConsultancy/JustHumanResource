@@ -27,18 +27,8 @@ public interface EmployeePositionHistoryRepository
     );
 
     default Optional<EmployeePositionHistory> findCurrentPosition(Long employeeId) {
-
-        List<EmployeePositionHistory> list =
-                findCurrentPositionsInternal(employeeId);
-
+        List<EmployeePositionHistory> list = findCurrentPositionsInternal(employeeId);
         if (list.isEmpty()) return Optional.empty();
-
-        if (list.size() > 1) {
-            // We return the first one but ideally this shouldn't happen anymore
-            // because changePosition now clears ALL current records.
-            return Optional.of(list.get(0));
-        }
-
         return Optional.of(list.get(0));
     }
 
@@ -65,19 +55,13 @@ public interface EmployeePositionHistoryRepository
             LocalDate date,
             RecordStatus status
     ) {
-
-        List<EmployeePositionHistory> list =
-                findEffectivePosition(employeeId, date, status);
-
+        List<EmployeePositionHistory> list = findEffectivePosition(employeeId, date, status);
         if (list.isEmpty()) return Optional.empty();
-
         if (list.size() > 1) {
             throw new IllegalStateException(
-                    "Multiple active positions found for employee "
-                            + employeeId + " on " + date
+                    "Multiple active positions found for employee " + employeeId + " on " + date
             );
         }
-
         return Optional.of(list.get(0));
     }
 
@@ -113,16 +97,16 @@ public interface EmployeePositionHistoryRepository
     long countByCurrentTrue();
 
     /* ============================================================
-       🛡️ UPSERT GUARD — prevents duplicate key on (employee_id, effective_from, current=false)
+       🛡️ DUPLICATE GUARD — finds any existing record for employee + date
+          regardless of current flag, to prevent constraint violations
        ============================================================ */
 
     @Query("""
         SELECT eph FROM EmployeePositionHistory eph
         WHERE eph.employee.id = :employeeId
           AND eph.effectiveFrom = :effectiveFrom
-          AND eph.current = false
     """)
-    Optional<EmployeePositionHistory> findByEmployeeIdAndEffectiveFromAndCurrentFalse(
+    List<EmployeePositionHistory> findAllByEmployeeIdAndEffectiveFrom(
             @Param("employeeId") Long employeeId,
             @Param("effectiveFrom") LocalDate effectiveFrom
     );
