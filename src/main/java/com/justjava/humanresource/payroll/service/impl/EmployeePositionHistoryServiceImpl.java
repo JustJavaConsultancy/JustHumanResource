@@ -111,13 +111,13 @@ public class EmployeePositionHistoryServiceImpl
 
         for (EmployeePositionHistory current : currentPositions) {
             // If the current record started on the same day, update it instead of creating a new one
-            // This avoids unique constraint violations on (employee_id, effective_from)
+            // This avoids unique constraint violations on (employee_id, effective_from, current)
             if (current.getEffectiveFrom().equals(effectiveDate)) {
                 current.setDepartment(department);
                 current.setJobStep(jobStep);
                 current.setPayGroup(payGroup);
                 current.setStatus(com.justjava.humanresource.core.enums.RecordStatus.ACTIVE);
-                current.setCurrent(true); // Re-assert current just in case
+                current.setCurrent(true);
                 return positionRepository.save(current);
             }
 
@@ -125,6 +125,44 @@ public class EmployeePositionHistoryServiceImpl
             current.setCurrent(false);
             current.setStatus(com.justjava.humanresource.core.enums.RecordStatus.INACTIVE);
             positionRepository.save(current);
+        }
+
+        // ---------------------------------------------------------
+        // CHECK FOR ORPHANED current=false RECORD ON SAME DATE
+        // (happens when a previous recalculation already closed a record
+        //  on today's date — inserting again would violate the unique constraint
+        //  on (employee_id, effective_from, current=false))
+        // ---------------------------------------------------------
+
+        Optional<EmployeePositionHistory> existingInactiveToday =
+                positionRepository.findByEmployeeIdAndEffectiveFromAndCurrentFalse(
+                        employeeId, effectiveDate
+                );
+
+        if (existingInactiveToday.isPresent()) {
+            // Reuse and update the existing inactive record instead of inserting a new one
+            EmployeePositionHistory existing = existingInactiveToday.get();
+            existing.setDepartment(department);
+            existing.setJobStep(jobStep);
+            existing.setPayGroup(payGroup);
+            existing.setEffectiveTo(effectiveDate.minusDays(1));
+            existing.setCurrent(false);
+            existing.setStatus(com.justjava.humanresource.core.enums.RecordStatus.INACTIVE);
+            positionRepository.save(existing);
+
+            // Still need to create the new current record
+            EmployeePositionHistory newPosition =
+                    EmployeePositionHistory.builder()
+                            .employee(employee)
+                            .department(department)
+                            .jobStep(jobStep)
+                            .payGroup(payGroup)
+                            .effectiveFrom(effectiveDate)
+                            .current(true)
+                            .status(com.justjava.humanresource.core.enums.RecordStatus.ACTIVE)
+                            .build();
+
+            return positionRepository.save(newPosition);
         }
 
         // ---------------------------------------------------------

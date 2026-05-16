@@ -111,4 +111,19 @@ public interface EmployeePositionHistoryRepository
     List<EmployeePositionHistory> findByCurrentTrueAndEffectiveToIsNull();
 
     long countByCurrentTrue();
+
+    /* ============================================================
+       🛡️ UPSERT GUARD — prevents duplicate key on (employee_id, effective_from, current=false)
+       ============================================================ */
+
+    @Query("""
+        SELECT eph FROM EmployeePositionHistory eph
+        WHERE eph.employee.id = :employeeId
+          AND eph.effectiveFrom = :effectiveFrom
+          AND eph.current = false
+    """)
+    Optional<EmployeePositionHistory> findByEmployeeIdAndEffectiveFromAndCurrentFalse(
+            @Param("employeeId") Long employeeId,
+            @Param("effectiveFrom") LocalDate effectiveFrom
+    );
 }
