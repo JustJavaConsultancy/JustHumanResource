@@ -26,6 +26,7 @@ import org.flowable.engine.history.HistoricProcessInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -75,6 +76,14 @@ public class MobileEmployeeController {
         model.addAttribute("title", "Employee Management");
         model.addAttribute("subTitle", "Manage employee records and data");
         return "mobile/main";
+    }
+
+    @GetMapping("/biometric/bootstrap")
+    public String biometricBootstrap(Authentication authentication) {
+        if (authentication != null && authentication.isAuthenticated()) {
+            return "redirect:/mobile/employee/dashboard";
+        }
+        return "redirect:/oauth2/authorization/keycloak-mobile";
     }
 
     @PostMapping("/onboarding")

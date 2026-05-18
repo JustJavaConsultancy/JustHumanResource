@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+    <meta charset="UTF-8">
+    <title>KPI &amp; Appraisal User Guide</title>
+    <style>
+        .ug-card { border: 1px solid #e5e7eb; border-radius: 14px; background: #fff; }
+        .dark .ug-card { border-color: #374151; background: #1f2937; }
+        .ug-pill { display: inline-flex; align-items: center; gap: .35rem; padding: .2rem .55rem; border-radius: 999px; font-size: .7rem; font-weight: 700; }
+        .ug-kpi { background: #dbeafe; color: #1e40af; }
+        .ug-appraisal { background: #e9d5ff; color: #6d28d9; }
+        .ug-report { background: #dcfce7; color: #166534; }
+        .ug-step { width: 1.8rem; height: 1.8rem; border-radius: 999px; background: #1d4ed8; color: #fff; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; font-size: .8rem; }
+        .ug-grid { display: grid; gap: 1rem; grid-template-columns: repeat(12, minmax(0,1fr)); }
+        .ug-col-6 { grid-column: span 12; }
+        @media (min-width: 1024px) { .ug-col-6 { grid-column: span 6; } }
+        .ug-code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; background:#f3f4f6; border-radius:6px; padding:.1rem .4rem; font-size:.78rem; }
+        .dark .ug-code { background:#374151; }
+    </style>
+</head>
+<body>
+<main layout:fragment="content" class="space-y-6">
+    <section class="rounded-2xl bg-blue-900 px-6 py-7 text-white">
+        <div class="flex flex-wrap items-center gap-2 mb-2">
+            <span class="ug-pill ug-kpi">KPI</span>
+            <span class="ug-pill ug-appraisal">Appraisal</span>
+            <span class="ug-pill ug-report">Reports</span>
+        </div>
+        <h1 class="text-2xl md:text-3xl font-bold tracking-tight">KPI &amp; Appraisal User Guide</h1>
+        <p class="text-blue-100 mt-2 text-sm md:text-base">
+            Complete operational guide for KPI definition, assignment, measurement, appraisal workflow, and KPI/appraisal reporting.
+        </p>
+    </section>
+
+    <section class="ug-card p-5">
+        <h2 class="text-lg font-bold mb-3">Module Overview</h2>
+        <p class="text-sm text-gray-600 dark:text-gray-300 mb-3">
+            The KPI module runs as a sequence: <strong>Definition</strong> → <strong>Assignment</strong> → <strong>Measurement</strong> → <strong>Appraisal</strong> → <strong>Reports</strong>.
+            The appraisal workflow includes manager review and employee self-review, then final outcome calculation.
+        </p>
+        <ul class="text-sm space-y-2 text-gray-700 dark:text-gray-200">
+            <li><strong>Primary screen:</strong> <span class="ug-code">/kpi</span> (tabs: Definitions, Assignments, Measurements, Appraisal)</li>
+            <li><strong>Reports screen:</strong> <span class="ug-code">/kpi-report/dashboard</span> and related report pages</li>
+            <li><strong>API workflow endpoints:</strong> <span class="ug-code">/api/appraisals/*</span></li>
+        </ul>
+    </section>
+
+    <section class="ug-grid">
+        <div class="ug-col-6 ug-card p-5">
+            <h3 class="text-base font-bold mb-3">1) KPI Definition</h3>
+            <ol class="space-y-2 text-sm text-gray-700 dark:text-gray-200">
+                <li><span class="ug-step">1</span> Open <span class="ug-code">KPI Definitions</span> tab.</li>
+                <li><span class="ug-step">2</span> Create KPI with: <strong>Code</strong>, <strong>Name</strong>, <strong>Description</strong>, <strong>Category</strong>, <strong>Target Value</strong>, <strong>Unit</strong>, and <strong>Impact Salary</strong>.</li>
+                <li><span class="ug-step">3</span> Submit. Newly created KPI is automatically marked <strong>active</strong>.</li>
+            </ol>
+            <p class="text-xs text-gray-500 mt-3">Categories include Productivty/Attendance/Quality and units include Percentage/Number/Hours.</p>
+        </div>
+
+        <div class="ug-col-6 ug-card p-5">
+            <h3 class="text-base font-bold mb-3">2) KPI Assignment</h3>
+            <ol class="space-y-2 text-sm text-gray-700 dark:text-gray-200">
+                <li><span class="ug-step">1</span> Open <span class="ug-code">KPI Assignments</span> tab and choose scope: <strong>Employee</strong>, <strong>Job Step</strong>, or <strong>Department</strong>.</li>
+                <li><span class="ug-step">2</span> Add one or more KPI rows with weight and mandatory flag.</li>
+                <li><span class="ug-step">3</span> Submit via <span class="ug-code">/kpi/assign</span>.</li>
+            </ol>
+            <div class="mt-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-3 text-sm">
+                <strong>Weight rule:</strong> total active weight for the selected scope cannot exceed <span class="ug-code">app.kpi.max-kpi-weight</span> (default <span class="ug-code">1.0</span>, environment override <span class="ug-code">MAX_KPI_WEIGHT</span>).
+            </div>
+        </div>
+    </section>
+
+    <section class="ug-grid">
+        <div class="ug-col-6 ug-card p-5">
+            <h3 class="text-base font-bold mb-3">3) KPI Measurement</h3>
+            <ol class="space-y-2 text-sm text-gray-700 dark:text-gray-200">
+                <li><span class="ug-step">1</span> Open <span class="ug-code">KPI Measurements</span>.</li>
+                <li><span class="ug-step">2</span> Select employee to load only effective assigned KPIs.</li>
+                <li><span class="ug-step">3</span> Enter period (<span class="ug-code">YYYY-MM</span>) and actual values; submit.</li>
+                <li><span class="ug-step">4</span> Existing same employee/KPI/period entries are skipped; values can be edited from the measurements table.</li>
+            </ol>
+            <p class="text-xs text-gray-500 mt-3">Actual value must be zero or positive.</p>
+        </div>
+
+        <div class="ug-col-6 ug-card p-5">
+            <h3 class="text-base font-bold mb-3">Measurement Scoring Logic</h3>
+            <ul class="space-y-2 text-sm text-gray-700 dark:text-gray-200">
+                <li><strong>Per KPI score:</strong> <span class="ug-code">(actual / target) * 100</span>, capped at <span class="ug-code">100</span>.</li>
+                <li><strong>If target ≤ 0:</strong> score is <span class="ug-code">0</span>.</li>
+                <li><strong>Salary-impact KPI score:</strong> average of KPIs where <span class="ug-code">impactSalary=true</span>; if none, fallback score = <span class="ug-code">100</span>.</li>
+            </ul>
+        </div>
+    </section>
+
+    <section class="ug-card p-5">
+        <h3 class="text-base font-bold mb-3">4) Appraisal Flow (Manager + Employee)</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+                <h4 class="font-semibold mb-2">A. Appraisal Cycle</h4>
+                <p>Create cycles via API <span class="ug-code">POST /api/appraisals/cycles</span> with year and quarter (Q1–Q4). A cycle spans 3 months.</p>
+            </div>
+            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+                <h4 class="font-semibold mb-2">B. Draft Appraisal</h4>
+                <p>Draft appraisal computes KPI score from measurements in cycle period. Endpoint: <span class="ug-code">POST /api/appraisals/draft</span>.</p>
+            </div>
+            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+                <h4 class="font-semibold mb-2">C. Manager Review</h4>
+                <p>Manager enters score/comment from the Appraisal tab panel and submits through workflow task completion.</p>
+            </div>
+            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+                <h4 class="font-semibold mb-2">D. Employee Self-Review</h4>
+                <p>Employee self-score/comment is captured in workflow and displayed in appraisal records for manager visibility.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="ug-grid">
+        <div class="ug-col-6 ug-card p-5">
+            <h3 class="text-base font-bold mb-3">Final Appraisal Calculation</h3>
+            <ul class="space-y-2 text-sm text-gray-700 dark:text-gray-200">
+                <li><strong>KPI score:</strong> average of measurement scores in cycle range.</li>
+                <li><strong>Final score formula:</strong> <span class="ug-code">(kpiScore * 0.7) + (managerScore * 0.3)</span>.</li>
+                <li>If manager score is missing, final score falls back to KPI score.</li>
+                <li>Finalization endpoint: <span class="ug-code">POST /api/appraisals/finalize</span>.</li>
+            </ul>
+        </div>
+        <div class="ug-col-6 ug-card p-5">
+            <h3 class="text-base font-bold mb-3">Outcome Bands</h3>
+            <ul class="space-y-2 text-sm text-gray-700 dark:text-gray-200">
+                <li><strong>EXCEEDS_EXPECTATION:</strong> score ≥ 85</li>
+                <li><strong>MEETS_EXPECTATION:</strong> score ≥ 70 and &lt; 85</li>
+                <li><strong>NEEDS_IMPROVEMENT:</strong> score ≥ 50 and &lt; 70</li>
+                <li><strong>UNDERPERFORMING:</strong> score &lt; 50</li>
+            </ul>
+        </div>
+    </section>
+
+    <section class="ug-card p-5">
+        <h3 class="text-base font-bold mb-3">5) KPI &amp; Appraisal Reports</h3>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                <tr class="border-b border-gray-200 dark:border-gray-700 text-left">
+                    <th class="py-2 pr-3 font-semibold">Report</th>
+                    <th class="py-2 pr-3 font-semibold">Route</th>
+                    <th class="py-2 pr-3 font-semibold">Purpose</th>
+                </tr>
+                </thead>
+                <tbody class="text-gray-700 dark:text-gray-200">
+                <tr class="border-b border-gray-100 dark:border-gray-800">
+                    <td class="py-2 pr-3">Dashboard</td>
+                    <td class="py-2 pr-3"><span class="ug-code">/kpi-report/dashboard</span></td>
+                    <td class="py-2 pr-3">Overall distribution, top/bottom performers, department KPI overview.</td>
+                </tr>
+                <tr class="border-b border-gray-100 dark:border-gray-800">
+                    <td class="py-2 pr-3">Top Performers</td>
+                    <td class="py-2 pr-3"><span class="ug-code">/kpi-report/top-performers</span></td>
+                    <td class="py-2 pr-3">Leaderboard by KPI and appraisal score.</td>
+                </tr>
+                <tr class="border-b border-gray-100 dark:border-gray-800">
+                    <td class="py-2 pr-3">Scorecard (All)</td>
+                    <td class="py-2 pr-3"><span class="ug-code">/kpi-report/scorecard</span></td>
+                    <td class="py-2 pr-3">All employee KPI lines with weight and weighted score.</td>
+                </tr>
+                <tr class="border-b border-gray-100 dark:border-gray-800">
+                    <td class="py-2 pr-3">Appraisal Summary</td>
+                    <td class="py-2 pr-3"><span class="ug-code">/kpi-report/appraisal</span></td>
+                    <td class="py-2 pr-3">Cycle appraisal outputs: KPI score, manager/self scores, final score, outcome.</td>
+                </tr>
+                <tr>
+                    <td class="py-2 pr-3">Employee Scorecard Detail</td>
+                    <td class="py-2 pr-3"><span class="ug-code">/kpi-report/employee-scorecard/{employeeId}</span></td>
+                    <td class="py-2 pr-3">Single employee detailed KPI scorecard for selected period.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="ug-card p-5">
+        <h3 class="text-base font-bold mb-3">Operational Checklist</h3>
+        <ol class="space-y-2 text-sm text-gray-700 dark:text-gray-200">
+            <li>1. Define KPIs with correct targets, units, and salary impact flags.</li>
+            <li>2. Assign KPIs by scope and confirm total active weight is within configured max.</li>
+            <li>3. Capture measurements each period for assigned KPIs only.</li>
+            <li>4. Create/maintain appraisal cycles and ensure measurement data exists for cycle period.</li>
+            <li>5. Complete manager and employee review tasks.</li>
+            <li>6. Review final scores, outcomes, and KPI reports for action planning.</li>
+        </ol>
+    </section>
+</main>
+</body>
+</html>

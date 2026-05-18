@@ -204,9 +204,17 @@ public class KpiController {
         model.addAttribute("jobGrades", jobGrades);
         model.addAttribute("employees", employees);
         model.addAttribute("kpiDefinitions", kpiDefinitions);
+        model.addAttribute("maxKpiWeight", kpiAssignmentService.getMaxKpiWeight());
         model.addAttribute("title","KPI Management");
         model.addAttribute("subTitle","Track and analyze employee performance metrics");
         return "kpi/main";
+    }
+
+    @GetMapping("/kpi/user-guide")
+    public String kpiUserGuide(Model model) {
+        model.addAttribute("title", "KPI User Guide");
+        model.addAttribute("subTitle", "Track and analyze employee performance metrics");
+        return "kpi/user-guide";
     }
     @GetMapping("/fragments/kpi-assignments")
     public String getKpiAssignmentsFragment(Model model) {
