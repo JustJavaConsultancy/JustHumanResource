@@ -8,12 +8,10 @@ import com.justjava.humanresource.hr.dto.PayGroupResponseDTO;
 import com.justjava.humanresource.hr.entity.Department;
 import com.justjava.humanresource.hr.entity.JobGrade;
 import com.justjava.humanresource.hr.entity.JobStep;
-//import com.justjava.humanresource.hr.entity.LeaveType;
 import com.justjava.humanresource.hr.entity.PayGroup;
 import com.justjava.humanresource.hr.repository.DepartmentRepository;
 import com.justjava.humanresource.hr.repository.JobGradeRepository;
 import com.justjava.humanresource.hr.repository.JobStepRepository;
-//import com.justjava.humanresource.hr.repository.LeaveTypeRepository;
 import com.justjava.humanresource.hr.repository.PayGroupRepository;
 import com.justjava.humanresource.hr.service.SetupService;
 import com.justjava.humanresource.payroll.service.PayrollChangeOrchestrator;
@@ -42,7 +40,6 @@ public class SetupServiceImpl implements SetupService {
     private final JobStepRepository jobStepRepository;
     private final PayGroupRepository payGroupRepository;
     private final PayrollChangeOrchestrator payrollChangeOrchestrator;
-    //private final LeaveTypeRepository leaveTypeRepository;
 
     /* ============================================================
        DEPARTMENT SETUP
@@ -50,7 +47,6 @@ public class SetupServiceImpl implements SetupService {
 
     @Override
     public Department createDepartment(String name) {
-        // Fetch next sequence value
         Long nextVal = ((Number) entityManager
                 .createNativeQuery("SELECT nextval('department_code_seq')")
                 .getSingleResult()).longValue();
@@ -63,11 +59,13 @@ public class SetupServiceImpl implements SetupService {
 
         return departmentRepository.save(department);
     }
+
     @Override
     @Transactional(readOnly = true)
     public List<Department> getAllDepartments() {
         return departmentRepository.findAll();
     }
+
     /* ============================================================
        JOB GRADE + JOB STEPS SETUP
        ============================================================ */
@@ -76,46 +74,28 @@ public class SetupServiceImpl implements SetupService {
     public JobGradeResponseDTO createJobGradeWithSteps(CreateJobGradeWithStepsCommand command) {
 
         if (command.getSteps() == null || command.getSteps().isEmpty()) {
-            throw new IllegalArgumentException(
-                    "JobGrade must contain at least one JobStep"
-            );
+            throw new IllegalArgumentException("JobGrade must contain at least one JobStep");
         }
 
         Department department = departmentRepository
                 .findById(command.getDepartmentId())
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Department",
-                                command.getDepartmentId()
-                        )
-                );
+                .orElseThrow(() -> new ResourceNotFoundException("Department", command.getDepartmentId()));
 
-        // 1️⃣ Create JobGrade
         JobGrade jobGrade = new JobGrade();
         jobGrade.setName(command.getGradeName());
         jobGrade.setDepartment(department);
-
         JobGrade savedGrade = jobGradeRepository.save(jobGrade);
 
-        // 2️⃣ Create JobSteps
         List<JobStep> steps = command.getSteps()
                 .stream()
                 .map(stepCommand -> {
-
                     JobStep step = new JobStep();
                     step.setName(stepCommand.getStepName());
                     BigDecimal divisor = stepCommand.isAnnual() ? BigDecimal.valueOf(12) : BigDecimal.ONE;
-
-                    step.setBasicSalary(
-                            stepCommand.getBasicSalary() != null
-                                    ? stepCommand.getBasicSalary().divide(divisor, 5, RoundingMode.HALF_UP)
-                                    : null
-                    );
-                    step.setGrossSalary(
-                            stepCommand.getGrossSalary() != null
-                                    ? stepCommand.getGrossSalary().divide(divisor, 5, RoundingMode.HALF_UP)
-                                    : null
-                    );
+                    step.setBasicSalary(stepCommand.getBasicSalary() != null
+                            ? stepCommand.getBasicSalary().divide(divisor, 5, RoundingMode.HALF_UP) : null);
+                    step.setGrossSalary(stepCommand.getGrossSalary() != null
+                            ? stepCommand.getGrossSalary().divide(divisor, 5, RoundingMode.HALF_UP) : null);
                     step.setDepartment(department);
                     step.setJobGrade(savedGrade);
                     return jobStepRepository.save(step);
@@ -124,97 +104,58 @@ public class SetupServiceImpl implements SetupService {
 
         savedGrade.setJobSteps(steps);
 
-        // 3️⃣ Map to Response DTO
         return JobGradeResponseDTO.builder()
                 .id(savedGrade.getId())
                 .name(savedGrade.getName())
-                .steps(
-                        steps.stream()
-                                .map(step ->
-                                        JobGradeResponseDTO.JobStepSummaryDTO.builder()
-                                                .id(step.getId())
-                                                .name(step.getName())
-                                                .basicSalary(step.getBasicSalary())
-                                                .build()
-                                )
-                                .toList()
-                )
+                .steps(steps.stream()
+                        .map(step -> JobGradeResponseDTO.JobStepSummaryDTO.builder()
+                                .id(step.getId())
+                                .name(step.getName())
+                                .basicSalary(step.getBasicSalary())
+                                .build())
+                        .toList())
                 .build();
     }
+
     @Override
     @Transactional(readOnly = true)
     public List<JobGradeResponseDTO> getAllJobGrades() {
-
-        List<JobGrade> allGrades = jobGradeRepository.findAll();
-
-        return allGrades.stream()
-                .map(grade ->
-                        JobGradeResponseDTO.builder()
-                                .id(grade.getId())
-                                .name(grade.getName())
-                                .departmentName(grade.getDepartment().getName())
-                                .steps(
-                                        grade.getJobSteps()
-                                                .stream()
-                                                .map(step ->
-                                                        JobGradeResponseDTO.JobStepSummaryDTO.builder()
-                                                                .id(step.getId())
-                                                                .name(step.getName())
-                                                                .basicSalary(step.getBasicSalary())
-                                                                .grossSalary(step.getGrossSalary())
-                                                                .build()
-                                                )
-                                                .toList()
-                                )
-                                .build()
-                )
+        return jobGradeRepository.findAll().stream()
+                .map(grade -> JobGradeResponseDTO.builder()
+                        .id(grade.getId())
+                        .name(grade.getName())
+                        .departmentName(grade.getDepartment().getName())
+                        .steps(grade.getJobSteps().stream()
+                                .map(step -> JobGradeResponseDTO.JobStepSummaryDTO.builder()
+                                        .id(step.getId())
+                                        .name(step.getName())
+                                        .basicSalary(step.getBasicSalary())
+                                        .grossSalary(step.getGrossSalary())
+                                        .build())
+                                .toList())
+                        .build())
                 .toList();
     }
 
-
     /* ============================================================
-       LEAVE TYPE SETUP
+       PAY GROUP SETUP
        ============================================================ */
 
-    /*   @Override
-       public LeaveType createLeaveType(
-               String code,
-               String name,
-               int entitlementDays,
-               boolean paid,
-               boolean requiresApproval) {
-
-           LeaveType leaveType = LeaveType.builder()
-                   .code(code)
-                   .name(name)
-                   .annualEntitlementDays(entitlementDays)
-                   .paid(paid)
-                   .requiresApproval(requiresApproval)
-                   .build();
-
-           return leaveTypeRepository.save(leaveType);
-       }*/
     @Override
     public PayGroupResponseDTO createPayGroup(CreatePayGroupCommand command) {
-        String uniqueCode = "PG-" + UUID.randomUUID().toString().substring(0,8).toUpperCase();
+        String uniqueCode = "PG-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
         command.setCode(uniqueCode);
         if (command.getPayFrequency() == null) {
             throw new IllegalArgumentException("PayFrequency is required");
         }
-
         if (payGroupRepository.existsByCode(command.getCode())) {
             throw new IllegalArgumentException("PayGroup with code already exists");
         }
 
         PayGroup parent = null;
-
         if (command.getParentId() != null) {
             parent = payGroupRepository.findById(command.getParentId())
-                    .orElseThrow(() ->
-                            new ResourceNotFoundException(
-                                    "PayGroup",
-                                    command.getParentId()
-                            ));
+                    .orElseThrow(() -> new ResourceNotFoundException("PayGroup", command.getParentId()));
         }
 
         PayGroup payGroup = new PayGroup();
@@ -222,7 +163,6 @@ public class SetupServiceImpl implements SetupService {
         payGroup.setName(command.getName());
         payGroup.setPayFrequency(command.getPayFrequency());
         payGroup.setParent(parent);
-
         PayGroup saved = payGroupRepository.save(payGroup);
 
         return PayGroupResponseDTO.builder()
@@ -248,10 +188,8 @@ public class SetupServiceImpl implements SetupService {
         payGroup.setName(command.getName());
         payGroup.setPayFrequency(command.getPayFrequency());
         payGroup.setParent(parent);
-
         PayGroup saved = payGroupRepository.save(payGroup);
 
-        // Trigger recalculation for all employees in this pay group
         payrollChangeOrchestrator.recalculateForPayGroup(saved.getId(), LocalDate.now());
 
         return PayGroupResponseDTO.builder()
@@ -263,7 +201,9 @@ public class SetupServiceImpl implements SetupService {
                 .build();
     }
 
-
+    /* ============================================================
+       UPDATE JOB GRADE WITH STEPS
+       ============================================================ */
 
     @Override
     public JobGradeResponseDTO updateJobGradeWithSteps(Long gradeId, CreateJobGradeWithStepsCommand command) {
@@ -278,16 +218,18 @@ public class SetupServiceImpl implements SetupService {
         Department department = departmentRepository.findById(command.getDepartmentId())
                 .orElseThrow(() -> new ResourceNotFoundException("Department", command.getDepartmentId()));
 
-        // Update grade-level fields
         jobGrade.setName(command.getGradeName());
         jobGrade.setDepartment(department);
         jobGradeRepository.save(jobGrade);
 
-        // Load existing steps as a mutable list
         List<JobStep> existingSteps = new ArrayList<>(jobStepRepository.findByJobGrade(jobGrade));
         List<CreateJobGradeWithStepsCommand.JobStepCommand> incomingSteps = command.getSteps();
 
         List<JobStep> resultSteps = new ArrayList<>();
+        // ✅ Track only updated (existing) steps that need recalculation.
+        // New steps have no employees so recalculating them is a no-op that
+        // still triggers the duplicate-key collision on other employees.
+        List<Long> stepIdsToRecalculate = new ArrayList<>();
 
         for (int i = 0; i < incomingSteps.size(); i++) {
             CreateJobGradeWithStepsCommand.JobStepCommand stepCmd = incomingSteps.get(i);
@@ -299,26 +241,30 @@ public class SetupServiceImpl implements SetupService {
                     ? stepCmd.getGrossSalary().divide(divisor, 5, RoundingMode.HALF_UP) : null;
 
             if (i < existingSteps.size()) {
-                // Update existing step in place (preserves FK references)
+                // Updating an existing step — employees may be on it, recalculate
                 JobStep existing = existingSteps.get(i);
                 existing.setName(stepCmd.getStepName());
                 existing.setBasicSalary(basic);
                 existing.setGrossSalary(gross);
                 existing.setDepartment(department);
-                resultSteps.add(jobStepRepository.save(existing));
+                JobStep saved = jobStepRepository.save(existing);
+                resultSteps.add(saved);
+                stepIdsToRecalculate.add(saved.getId()); // ← only existing steps
             } else {
-                // Add brand new step
+                // Brand new step — no employees on it yet, skip recalculation
                 JobStep newStep = new JobStep();
                 newStep.setName(stepCmd.getStepName());
                 newStep.setBasicSalary(basic);
                 newStep.setGrossSalary(gross);
                 newStep.setDepartment(department);
                 newStep.setJobGrade(jobGrade);
-                resultSteps.add(jobStepRepository.save(newStep));
+                JobStep saved = jobStepRepository.save(newStep);
+                resultSteps.add(saved);
+                // ✅ Do NOT add to stepIdsToRecalculate — new step has no employees
             }
         }
 
-        // If existing had MORE steps than incoming, only delete the unreferenced extras
+        // Handle surplus steps (grade had more steps than incoming)
         if (existingSteps.size() > incomingSteps.size()) {
             List<JobStep> toRemove = existingSteps.subList(incomingSteps.size(), existingSteps.size());
             for (JobStep surplus : toRemove) {
@@ -328,7 +274,6 @@ public class SetupServiceImpl implements SetupService {
                     jobStepRepository.flush();
                     payrollChangeOrchestrator.recalculateForJobStep(stepId, LocalDate.now());
                 } catch (Exception e) {
-                    // Step is still referenced by employee history — leave it, just detach from grade
                     surplus.setJobGrade(null);
                     jobStepRepository.save(surplus);
                     payrollChangeOrchestrator.recalculateForJobStep(surplus.getId(), LocalDate.now());
@@ -336,9 +281,9 @@ public class SetupServiceImpl implements SetupService {
             }
         }
 
-        // Trigger recalculations for all result steps
-        for (JobStep step : resultSteps) {
-            payrollChangeOrchestrator.recalculateForJobStep(step.getId(), LocalDate.now());
+        // ✅ Only recalculate for existing steps that were updated (not new ones)
+        for (Long stepId : stepIdsToRecalculate) {
+            payrollChangeOrchestrator.recalculateForJobStep(stepId, LocalDate.now());
         }
 
         return JobGradeResponseDTO.builder()
@@ -354,15 +299,4 @@ public class SetupServiceImpl implements SetupService {
                         .toList())
                 .build();
     }
-
-
 }
-
-
-
-// Use the below Query to create the SEQUENCE
-/*
-    CREATE SEQUENCE department_code_seq
-        START WITH 100001
-        INCREMENT BY 1;
-*/
