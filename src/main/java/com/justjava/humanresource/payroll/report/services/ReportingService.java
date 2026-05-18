@@ -44,11 +44,14 @@ public class ReportingService {
             BigDecimal rowPaye    = row.getPaye()    != null ? row.getPaye()    : BigDecimal.ZERO;
             BigDecimal rowPension = row.getPension() != null ? row.getPension() : BigDecimal.ZERO;
 
-
             row.setGross(rowGross);
             row.setNet(rowNet);
             row.setPaye(rowPaye);
             row.setPension(rowPension);
+
+            // Bank details are carried through from the query as-is.
+            // If the underlying query does not yet select them they will
+            // simply be null, which the template handles gracefully.
 
             // ── Get or create the group ──────────────────────────────────
             EmployeeGroupedReportDTO group =
@@ -103,9 +106,6 @@ public class ReportingService {
                 "totalGroups", report.size()
         );
     }
-
-
-
 }
 // Sample Response
 //[
