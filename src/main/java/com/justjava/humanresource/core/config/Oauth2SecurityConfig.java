@@ -41,6 +41,9 @@ public class Oauth2SecurityConfig {
                 .authorizeHttpRequests(
                         authorize -> {
                            authorize.requestMatchers(new AntPathRequestMatcher("/login")).permitAll();
+                           authorize.requestMatchers(new AntPathRequestMatcher("/mobile/biometric/bootstrap")).permitAll();
+                           authorize.requestMatchers(new AntPathRequestMatcher("/mobile/auth/refresh")).permitAll();
+                           authorize.requestMatchers(new AntPathRequestMatcher("/mobile/auth/session/login")).permitAll();
                            authorize.requestMatchers(new AntPathRequestMatcher("/api/**")).permitAll();
                             authorize.anyRequest().authenticated();
                         }

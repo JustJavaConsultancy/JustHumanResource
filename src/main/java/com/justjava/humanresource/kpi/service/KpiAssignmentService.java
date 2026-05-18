@@ -14,6 +14,7 @@ import com.justjava.humanresource.kpi.entity.KpiDefinition;
 import com.justjava.humanresource.kpi.repositories.KpiAssignmentRepository;
 import com.justjava.humanresource.kpi.repositories.KpiDefinitionRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +22,8 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -33,6 +36,8 @@ public class KpiAssignmentService {
     private final KpiDefinitionRepository kpiRepository;
     private final DepartmentRepository departmentRepository;
 
+    @Value("${app.kpi.max-kpi-weight:1.0}")
+    private BigDecimal maxKpiWeight;
 
     public List<KpiAssignmentResponseDTO> bulkAssign(KpiBulkAssignmentRequestDTO request) {
 
@@ -62,10 +67,24 @@ public class KpiAssignmentService {
                     .orElseThrow();
         }
 
-        validateTotalWeight(request);
+        validateKpiWeightSetting();
+        validateRequestKpis(request);
+
+        List<KpiAssignment> existingAssignments;
+        if (employee != null) {
+            existingAssignments = repository.findByEmployee_IdAndActiveTrue(employee.getId());
+        } else if (jobStep != null) {
+            existingAssignments = repository.findByJobStep_IdAndActiveTrue(jobStep.getId());
+        } else {
+            existingAssignments = repository.findByDepartment_IdAndActiveTrue(department.getId());
+        }
 
         List<KpiAssignment> toSave = new ArrayList<>();
         List<KpiAssignmentResponseDTO> response = new ArrayList<>();
+        BigDecimal incomingWeightToAdd = BigDecimal.ZERO;
+        Set<Long> existingKpiIds = existingAssignments.stream()
+                .map(a -> a.getKpi().getId())
+                .collect(Collectors.toSet());
 
         for (KpiAssignmentItemRequestDTO item : request.getKpis()) {
 
@@ -74,33 +93,14 @@ public class KpiAssignmentService {
             KpiDefinition kpi = kpiRepository.findById(item.getKpiId())
                     .orElseThrow();
 
-            boolean exists;
-
-            if (employee != null) {
-                exists = repository
-                        .findByEmployee_IdAndKpi_IdAndActiveTrue(
-                                employee.getId(),
-                                kpi.getId()
-                        ).isPresent();
-            } else if (jobStep != null) {
-                exists = repository
-                        .findByJobStep_IdAndKpi_IdAndActiveTrue(
-                                jobStep.getId(),
-                                kpi.getId()
-                        ).isPresent();
-            } else if (department != null) {
-                exists = repository
-                        .findByDepartment_IdAndKpi_IdAndActiveTrue(
-                                department.getId(),
-                                kpi.getId()
-                        ).isPresent();
-            } else {
-                exists = false;
-            }
+            boolean exists = existingKpiIds.contains(kpi.getId());
 
             if (exists) {
                 continue; // skip duplicate safely
             }
+
+            incomingWeightToAdd = incomingWeightToAdd.add(item.getWeight());
+            existingKpiIds.add(kpi.getId());
 
             KpiAssignment assignment = KpiAssignment.builder()
                     .kpi(kpi)
@@ -115,6 +115,8 @@ public class KpiAssignmentService {
 
             toSave.add(assignment);
         }
+
+        validateTotalWeight(existingAssignments, incomingWeightToAdd);
 
         List<KpiAssignment> saved = repository.saveAll(toSave);
 
@@ -230,22 +232,45 @@ public class KpiAssignmentService {
        ============================== */
 
     private void validateWeight(BigDecimal weight) {
-        if (weight == null || weight.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Weight must be positive.");
+        if (weight == null || weight.compareTo(BigDecimal.ZERO) <= 0
+                || weight.compareTo(maxKpiWeight) > 0) {
+            throw new IllegalArgumentException(
+                    "Weight must be greater than 0 and not exceed configured max: " + maxKpiWeight
+            );
         }
     }
 
-    private void validateTotalWeight(KpiBulkAssignmentRequestDTO request) {
-
-        BigDecimal total = request.getKpis().stream()
-                .map(KpiAssignmentItemRequestDTO::getWeight)
+    private void validateTotalWeight(
+            List<KpiAssignment> existingAssignments,
+            BigDecimal incomingWeightToAdd
+    ) {
+        BigDecimal existingWeight = existingAssignments.stream()
+                .map(KpiAssignment::getWeight)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal total = existingWeight.add(incomingWeightToAdd);
 
-        if (total.compareTo(BigDecimal.ONE) > 0) {
+        if (total.compareTo(maxKpiWeight) > 0) {
             throw new IllegalArgumentException(
-                    "Total KPI weight cannot exceed 1.0 (100%)"
+                    "Total KPI weight cannot exceed configured max: " + maxKpiWeight
             );
         }
+    }
+
+    private void validateKpiWeightSetting() {
+        if (maxKpiWeight == null || maxKpiWeight.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalStateException("Configured app.kpi.max-kpi-weight must be greater than zero.");
+        }
+    }
+
+    private void validateRequestKpis(KpiBulkAssignmentRequestDTO request) {
+        if (request.getKpis() == null || request.getKpis().isEmpty()) {
+            throw new IllegalArgumentException("At least one KPI assignment item is required.");
+        }
+    }
+
+    public BigDecimal getMaxKpiWeight() {
+        validateKpiWeightSetting();
+        return maxKpiWeight;
     }
 }
 
