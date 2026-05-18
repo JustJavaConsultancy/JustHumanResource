@@ -1913,11 +1913,9 @@
 
             fetch(form.action, { method: 'POST', body: formData })
                 .then(async response => {
-                    if (response.redirected || response.ok) {
-                        // Success — navigate using a relative URL to avoid
-                        // Mixed Content errors on HTTPS hosts (e.g. Railway)
-                        // where the server redirect may carry an http:// URL.
-                        window.location.href = '/employees';
+                    if (response.redirected) {
+                        // Success — server redirected to /employees
+                        window.location.href = response.url;
                         return;
                     }
                     if (response.status === 409) {
