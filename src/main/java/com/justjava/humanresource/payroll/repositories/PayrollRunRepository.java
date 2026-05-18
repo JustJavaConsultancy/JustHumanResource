@@ -557,10 +557,10 @@ GROUP BY e.id, e.firstName, e.lastName
             LocalDate end
     );    Optional<PayrollRun>
     findTopByEmployee_IdAndPeriodStartAndPeriodEndOrderByVersionNumberDesc(
-            Long employeeId,
-            LocalDate periodStart,
-            LocalDate periodEnd
-    );
+                    Long employeeId,
+                    LocalDate periodStart,
+                    LocalDate periodEnd
+            );
     @Query("""
 SELECT COALESCE(MAX(pr.versionNumber), 0)
 FROM PayrollRun pr
@@ -607,7 +607,9 @@ SELECT new com.justjava.humanresource.payroll.dto.EmployeeReportItemDTO(
         WHEN :groupBy = 'GRADE' THEN jg.name
         WHEN :groupBy = 'PAYGROUP' THEN pg.name
         WHEN :groupBy = 'COMPANY' THEN c.name
-    END
+    END,
+    MAX(bd.accountNumber),
+    MAX(bd.bankName)
 )
 FROM PayrollRun pr
 JOIN pr.employee e
@@ -618,6 +620,9 @@ JOIN eph.jobStep js
 JOIN js.jobGrade jg
 JOIN eph.payGroup pg
 LEFT JOIN PayrollLineItem li ON li.payrollRun.id = pr.id
+LEFT JOIN EmployeeBankDetail bd ON bd.employee.id = e.id
+    AND bd.primaryAccount = true
+    AND bd.status = com.justjava.humanresource.core.enums.RecordStatus.ACTIVE
 
 WHERE c.id = :companyId
 AND pr.periodStart >= :start

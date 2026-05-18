@@ -1147,6 +1147,7 @@
                             <th>Pension</th>
                             <th>Total Deductions</th>
                             <th>Net Pay</th>
+                            <th>Bank</th>
                         </tr>
                         </thead>
                         <tbody>
@@ -1176,6 +1177,10 @@
                                 class="mono amount-deduct">—</td>
                             <td th:text="${'₦' + #numbers.formatDecimal(emp.net     != null ? emp.net     : 0, 1, 'COMMA', 2, 'POINT')}"
                                 class="mono amount-positive">—</td>
+                            <td>
+                                <div th:text="${emp.bankAccountNumber != null ? emp.bankAccountNumber : '—'}" class="mono text-sm text-slate-700">—</div>
+                                <div th:text="${emp.bankName != null ? emp.bankName : ''}" class="text-xs text-slate-400"></div>
+                            </td>
                         </tr>
                         </tbody>
                     </table>
@@ -1388,7 +1393,7 @@
           const tbody     = groupCard.querySelector('table tbody');
           if (!tbody) return;
 
-          let csv = 'Employee,ID,Gross Pay,PAYE,Pension,Total Deductions,Net Pay\n';
+          let csv = 'Employee,ID,Gross Pay,PAYE,Pension,Total Deductions,Net Pay,Account Number,Bank Name\n';
           Array.from(tbody.querySelectorAll('tr')).forEach(r => {
             const name    = r.querySelector('.font-semibold')?.textContent.trim() || '—';
             const empId   = r.querySelector('.text-slate-400')?.textContent.replace('ID · ','').trim() || '—';
@@ -1397,7 +1402,10 @@
             const pension = stripCurrency(cellText(r, 3));
             const deduct  = stripCurrency(cellText(r, 4));
             const net     = stripCurrency(cellText(r, 5));
-            csv += `"${name}","${empId}",${gross},${paye},${pension},${deduct},${net}\n`;
+            const bankCell = r.cells[6];
+            const accountNumber = bankCell?.querySelector('.mono')?.textContent.trim() || '—';
+            const bankName      = bankCell?.querySelector('.text-xs')?.textContent.trim() || '—';
+            csv += `"${name}","${empId}",${gross},${paye},${pension},${deduct},${net},"${accountNumber}","${bankName}"\n`;
           });
 
           const safeGroup = groupName.replace(/[^a-z0-9]/gi, '_');
@@ -1425,6 +1433,9 @@
             const empId   = r.querySelector('.text-slate-400')?.textContent.replace('ID · ','').trim() || '—';
             const gross   = cellText(r, 1), paye = cellText(r, 2);
             const pension = cellText(r, 3), deduct = cellText(r, 4), net = cellText(r, 5);
+            const bankCell = r.cells[6];
+            const accountNumber = bankCell?.querySelector('.mono')?.textContent.trim() || '—';
+            const bankName      = bankCell?.querySelector('.text-xs')?.textContent.trim() || '';
             tableRows += `<tr>
               <td>${name}<br><span style="font-size:0.7rem;color:#94a3b8">ID: ${empId}</span></td>
               <td style="font-weight:600">${gross}</td>
@@ -1432,10 +1443,11 @@
               <td style="color:#b64343">${pension}</td>
               <td style="color:#b64343">${deduct}</td>
               <td style="font-weight:700;color:#1e3a5f">${net}</td>
+              <td style="font-size:0.78rem">${accountNumber}<br><span style="font-size:0.7rem;color:#94a3b8">${bankName}</span></td>
             </tr>`;
           });
 
-          const headers = '<th>Employee</th><th>Gross Pay</th><th>PAYE</th><th>Pension</th><th>Total Deductions</th><th>Net Pay</th>';
+          const headers = '<th>Employee</th><th>Gross Pay</th><th>PAYE</th><th>Pension</th><th>Total Deductions</th><th>Net Pay</th><th>Bank</th>';
           const summaryExtra = `
             <div style="display:flex;gap:1rem;margin-bottom:1.25rem;flex-wrap:wrap;">
               <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:0.6rem 1rem;min-width:130px;">
@@ -1660,7 +1672,7 @@
         function downloadGrandCSV() {
           const cards = document.querySelectorAll('.group-report-card');
           const groupBy = cards[0]?.dataset.groupBy || 'Group';
-          let csv = 'Group,Employee,ID,Gross Pay,PAYE,Pension,Total Deductions,Net Pay\n';
+          let csv = 'Group,Employee,ID,Gross Pay,PAYE,Pension,Total Deductions,Net Pay,Account Number,Bank Name\n';
 
           cards.forEach(card => {
             const groupName = card.dataset.groupName || '—';
@@ -1674,7 +1686,10 @@
               const pension = stripCurrency(cellText(r, 3));
               const deduct  = stripCurrency(cellText(r, 4));
               const net     = stripCurrency(cellText(r, 5));
-              csv += `"${groupName}","${name}","${empId}",${gross},${paye},${pension},${deduct},${net}\n`;
+              const bankCell = r.cells[6];
+              const accountNumber = bankCell?.querySelector('.mono')?.textContent.trim() || '—';
+              const bankName      = bankCell?.querySelector('.text-xs')?.textContent.trim() || '—';
+              csv += `"${groupName}","${name}","${empId}",${gross},${paye},${pension},${deduct},${net},"${accountNumber}","${bankName}"\n`;
             });
           });
 
@@ -1706,13 +1721,16 @@
             totalEmps += rows.length;
 
             // Group separator row
-            tableRows += `<tr><td colspan="7" style="background:#f0f4ff;font-weight:700;font-size:0.72rem;color:#1e3a8a;letter-spacing:0.05em;text-transform:uppercase;padding:6px 12px;">${groupBy}: ${groupName}</td></tr>`;
+            tableRows += `<tr><td colspan="8" style="background:#f0f4ff;font-weight:700;font-size:0.72rem;color:#1e3a8a;letter-spacing:0.05em;text-transform:uppercase;padding:6px 12px;">${groupBy}: ${groupName}</td></tr>`;
 
             rows.forEach(r => {
               const name    = r.querySelector('.font-semibold')?.textContent.trim() || '—';
               const empId   = r.querySelector('.text-slate-400')?.textContent.replace('ID · ','').trim() || '—';
               const gross   = cellText(r, 1), paye = cellText(r, 2);
               const pension = cellText(r, 3), deduct = cellText(r, 4), net = cellText(r, 5);
+              const bankCell = r.cells[6];
+              const accountNumber = bankCell?.querySelector('.mono')?.textContent.trim() || '—';
+              const bankName      = bankCell?.querySelector('.text-xs')?.textContent.trim() || '';
               tableRows += `<tr>
                 <td>${name}<br><span style="font-size:0.7rem;color:#94a3b8">ID: ${empId}</span></td>
                 <td style="color:#64748b;font-size:0.75rem">${groupName}</td>
@@ -1721,6 +1739,7 @@
                 <td style="color:#b64343">${pension}</td>
                 <td style="color:#b64343">${deduct}</td>
                 <td style="font-weight:700;color:#1e3a5f">${net}</td>
+                <td style="font-size:0.78rem">${accountNumber}<br><span style="font-size:0.7rem;color:#94a3b8">${bankName}</span></td>
               </tr>`;
             });
           });
@@ -1741,7 +1760,7 @@
               </div>
             </div>`;
 
-          const headers = '<th>Employee</th><th>Group</th><th>Gross Pay</th><th>PAYE</th><th>Pension</th><th>Total Deductions</th><th>Net Pay</th>';
+          const headers = '<th>Employee</th><th>Group</th><th>Gross Pay</th><th>PAYE</th><th>Pension</th><th>Total Deductions</th><th>Net Pay</th><th>Bank</th>';
           const html = buildBulkPDFHTML(
             `Payroll Grand Total — ${groupBy}`,
             date,
