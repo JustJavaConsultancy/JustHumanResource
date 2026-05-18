@@ -36,7 +36,7 @@ public class EmployeeOnboardingService {
 
     private final EmployeeRepository employeeRepository;
     private final RuntimeService runtimeService;
-    private final EmployeeService employeeService;   // domain service
+    private final EmployeeService employeeService;
     private final EmployeeOnboardingRepository onboardingRepository;
     private final DepartmentRepository departmentRepository;
     private final JobStepRepository jobStepRepository;
@@ -48,6 +48,14 @@ public class EmployeeOnboardingService {
             StartEmployeeOnboardingCommand command,
             String initiatedBy
     ) {
+        if (command.getEmail() != null) {
+            command.setEmail(command.getEmail().toLowerCase());
+            employeeRepository.findByEmail(command.getEmail()).ifPresent(existing -> {
+                throw new DuplicateEmailException(
+                        "An employee with the email address \"" + command.getEmail()
+                                + "\" already exists (employee ID: " + existing.getId() + ").");
+            });
+        }
 
         // 1️⃣ Create employee
         EmployeeDTO dto = new EmployeeDTO();
@@ -86,25 +94,21 @@ public class EmployeeOnboardingService {
 
         onboarding = onboardingRepository.save(onboarding);
 
-        // 🔥 IMPORTANT: Flush to DB
+        // 🔥 IMPORTANT: Flush to DB before starting Flowable process
         onboardingRepository.flush();
 
         // 3️⃣ Start Flowable process AFTER save
         Map<String, Object> variables = new HashMap<>();
-        variables.put("employeeId", employee.getId());
-        variables.put("initiator", initiatedBy);
-        variables.put("onboardingId", onboarding.getId());
+        variables.put("employeeId",       employee.getId());
+        variables.put("initiator",        initiatedBy);
+        variables.put("onboardingId",     onboarding.getId());
         variables.put("approvalRequired", false);
 
         ProcessInstance processInstance =
-                runtimeService.startProcessInstanceByKey(
-                        "onboardingProcess",
-                        variables
-                );
+                runtimeService.startProcessInstanceByKey("onboardingProcess", variables);
 
         // 4️⃣ Update onboarding with processInstanceId
         onboarding.setProcessInstanceId(processInstance.getProcessInstanceId());
-
         EmployeeOnboarding saved = onboardingRepository.save(onboarding);
 
         return EmployeeOnboardingResponseDTO.builder()
@@ -126,18 +130,29 @@ public class EmployeeOnboardingService {
     @Transactional
     public void updateEmployee(Long id, EmployeeDTO dto) {
         Employee employee = employeeRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Employee not found",id));
+                .orElseThrow(() -> new ResourceNotFoundException("Employee not found", id));
+
+
+        if (dto.getEmail() != null) {
+            dto.setEmail(dto.getEmail().toLowerCase());
+        }
+        if (dto.getEmail() != null && !dto.getEmail().equals(employee.getEmail())) {
+            employeeRepository.findByEmail(dto.getEmail()).ifPresent(conflict -> {
+                throw new DuplicateEmailException(
+                        "The email address \"" + dto.getEmail()
+                                + "\" is already used by employee ID " + conflict.getId() + ".");
+            });
+        }
 
         boolean recalculationRequired = false;
 
-        if (dto.getFirstName() != null) employee.setFirstName(dto.getFirstName());
-        if (dto.getLastName() != null) employee.setLastName(dto.getLastName());
-        if (dto.getEmail() != null) employee.setEmail(dto.getEmail());
-        if (dto.getPhoneNumber() != null) employee.setPhoneNumber(dto.getPhoneNumber());
+        if (dto.getFirstName()  != null) employee.setFirstName(dto.getFirstName());
+        if (dto.getLastName()   != null) employee.setLastName(dto.getLastName());
+        if (dto.getEmail()      != null) employee.setEmail(dto.getEmail());
+        if (dto.getPhoneNumber()!= null) employee.setPhoneNumber(dto.getPhoneNumber());
         if (dto.getEmploymentStatus() != null) {
             employee.setEmploymentStatus(
-                    EmploymentStatus.valueOf(dto.getEmploymentStatus().toUpperCase())
-            );
+                    EmploymentStatus.valueOf(dto.getEmploymentStatus().toUpperCase()));
         }
 
         if (dto.getDepartmentId() != null) {
@@ -163,32 +178,37 @@ public class EmployeeOnboardingService {
         if (dto.getBvnNumber() != null) employee.setBvnNumber(dto.getBvnNumber());
 
         // next of kin fields
-        if (dto.getNextOfKinName() != null) employee.setNextOfKinName(dto.getNextOfKinName());
+        if (dto.getNextOfKinName()        != null) employee.setNextOfKinName(dto.getNextOfKinName());
         if (dto.getNextOfKinPhoneNumber() != null) employee.setNextOfKinPhoneNumber(dto.getNextOfKinPhoneNumber());
-        if (dto.getNextOfKinEmail() != null) employee.setNextOfKinEmail(dto.getNextOfKinEmail());
-        if (dto.getNextOfKinAddress() != null) employee.setNextOfKinAddress(dto.getNextOfKinAddress());
+        if (dto.getNextOfKinEmail()       != null) employee.setNextOfKinEmail(dto.getNextOfKinEmail());
+        if (dto.getNextOfKinAddress()     != null) employee.setNextOfKinAddress(dto.getNextOfKinAddress());
 
         // guarantor fields
-        if (dto.getGuarantorName() != null) employee.setGuarantorName(dto.getGuarantorName());
+        if (dto.getGuarantorName()        != null) employee.setGuarantorName(dto.getGuarantorName());
         if (dto.getGuarantorPhoneNumber() != null) employee.setGuarantorPhoneNumber(dto.getGuarantorPhoneNumber());
-        if (dto.getGuarantorEmail() != null) employee.setGuarantorEmail(dto.getGuarantorEmail());
-        if (dto.getGuarantorAddress() != null) employee.setGuarantorAddress(dto.getGuarantorAddress());
-        if (dto.getGuarantorNinNumber() != null) employee.setGuarantorNinNumber(dto.getGuarantorNinNumber());
+        if (dto.getGuarantorEmail()       != null) employee.setGuarantorEmail(dto.getGuarantorEmail());
+        if (dto.getGuarantorAddress()     != null) employee.setGuarantorAddress(dto.getGuarantorAddress());
+        if (dto.getGuarantorNinNumber()   != null) employee.setGuarantorNinNumber(dto.getGuarantorNinNumber());
 
-        employeeRepository.save(employee); // explicit save
+        employeeRepository.save(employee);
 
         if (recalculationRequired) {
             payrollChangeOrchestrator.recalculateForEmployee(employee.getId(), LocalDate.now());
         }
 
-        // Handle bank details — delegate to EmployeeService which manages
-        // deactivating old records and creating a new active one
-        boolean hasBankData = (dto.getAccountName() != null && !dto.getAccountName().isBlank())
-                || (dto.getBankName() != null && !dto.getBankName().isBlank())
-                || (dto.getAccountNumber() != null && !dto.getAccountNumber().isBlank());
+        boolean hasBankData = (dto.getAccountName()   != null && !dto.getAccountName().isBlank())
+                || (dto.getBankName()       != null && !dto.getBankName().isBlank())
+                || (dto.getAccountNumber()  != null && !dto.getAccountNumber().isBlank());
 
         if (hasBankData) {
             employeeService.updateBankDetails(id, dto);
+        }
+    }
+
+
+    public static class DuplicateEmailException extends RuntimeException {
+        public DuplicateEmailException(String message) {
+            super(message);
         }
     }
 }

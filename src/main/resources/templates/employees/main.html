@@ -886,7 +886,8 @@
                                         <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
                                             <span class="material-icons-round text-sm">email</span>
                                         </span>
-                                            <input type="email" name="email" class="form-input pl-10" placeholder="john.doe@company.com" required>
+                                            <input type="email" name="email" id="addEmailInput" class="form-input pl-10" placeholder="john.doe@company.com" required
+                                                   oninput="this.value = this.value.toLowerCase()">
                                         </div>
                                     </div>
                                     <div>
@@ -1095,13 +1096,19 @@
 
                         </div><!-- end scrollable tab content -->
 
+                        <!-- Duplicate email error banner (shown by JS on 409) -->
+                        <div id="addEmailErrorBanner" class="hidden mx-1 mb-2 p-3 rounded-xl border flex items-start gap-2 text-sm bg-red-50 border-red-200 text-red-700 dark:bg-red-900/10 dark:border-red-800 dark:text-red-400 flex-shrink-0">
+                            <span class="material-icons-round text-base mt-0.5 flex-shrink-0">error</span>
+                            <span id="addEmailErrorText"></span>
+                        </div>
+
                         <!-- Footer Buttons -->
                         <div class="flex justify-end space-x-3 pt-5 mt-5 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
                             <button type="button" onclick="closeModal('addEmployeeModal')"
                                     class="px-5 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                                 Cancel
                             </button>
-                            <button type="submit"
+                            <button type="submit" id="addEmployeeSubmitBtn"
                                     class="px-5 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors shadow-sm hover:shadow flex items-center space-x-1">
                                 <span class="material-icons-round text-sm">save</span>
                                 <span>Add Employee</span>
@@ -1786,6 +1793,18 @@
                     <!-- Validation summary banner -->
                     <div id="csvValidationBanner" class="hidden mb-4 p-3 rounded-xl border flex items-start gap-2 text-sm"></div>
 
+                    <!-- Server-side duplicate email conflict panel (shown after a 409 response) -->
+                    <div id="csvConflictPanel" class="hidden mb-4 rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/10 overflow-hidden">
+                        <div class="flex items-center gap-2 px-4 py-3 bg-red-100 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800">
+                            <span class="material-icons-round text-red-600 dark:text-red-400">block</span>
+                            <span class="font-semibold text-red-700 dark:text-red-400 text-sm">Upload blocked — email conflicts found</span>
+                        </div>
+                        <div class="px-4 py-3">
+                            <p class="text-xs text-red-600 dark:text-red-400 mb-2">The following email addresses must be fixed in your CSV before you can upload. <strong>No employees were saved.</strong></p>
+                            <ul id="csvConflictList" class="space-y-1 text-xs text-red-700 dark:text-red-300 max-h-40 overflow-y-auto font-mono"></ul>
+                        </div>
+                    </div>
+
                     <div class="overflow-x-auto">
                         <table class="w-full text-sm border-collapse">
                             <thead>
@@ -1876,8 +1895,72 @@
                     return false;
                 }
             }
-            return disableSubmitButton(form);
+
+            // ── Intercept with fetch so we can catch the 409 duplicate-email
+            //    response inline instead of a blank page reload ────────────────
+            const submitBtn = document.getElementById('addEmployeeSubmitBtn');
+            const errorBanner = document.getElementById('addEmailErrorBanner');
+            const errorText   = document.getElementById('addEmailErrorText');
+
+            // Hide any previous error
+            errorBanner.classList.add('hidden');
+
+            // Disable button and show spinner
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="pi-spinner"></span> Saving...';
+
+            const formData = new FormData(form);
+
+            fetch(form.action, { method: 'POST', body: formData })
+                .then(async response => {
+                    if (response.redirected) {
+                        // Success — server redirected to /employees
+                        window.location.href = response.url;
+                        return;
+                    }
+                    if (response.status === 409) {
+                        const data = await response.json();
+                        // Show the inline error banner
+                        errorText.textContent = data.message || 'An employee with this email already exists.';
+                        errorBanner.classList.remove('hidden');
+                        // Highlight the email field and scroll it into view
+                        const emailInput = document.getElementById('addEmailInput');
+                        emailInput.classList.add('border-red-500', 'ring-1', 'ring-red-500');
+                        emailInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        // Switch back to the General tab so the user sees the email field
+                        const generalTabBtn = document.querySelector('#addEmployeeModal .tab-btn');
+                        if (generalTabBtn) generalTabBtn.click();
+                        // Reset button
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = '<span class="material-icons-round text-sm">save</span><span>Add Employee</span>';
+                        return;
+                    }
+                    if (!response.ok) {
+                        const text = await response.text();
+                        throw new Error(text || 'Failed to add employee');
+                    }
+                    // Fallback: non-redirect 2xx (shouldn't happen but just in case)
+                    window.location.reload();
+                })
+                .catch(err => {
+                    showPiToast('Error: ' + err.message, 'error');
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<span class="material-icons-round text-sm">save</span><span>Add Employee</span>';
+                });
+
+            return false; // always prevent native submit — fetch handles it
         }
+
+        // Clear the email error highlight when the user starts typing again
+        document.addEventListener('DOMContentLoaded', function() {
+            const emailInput = document.getElementById('addEmailInput');
+            if (emailInput) {
+                emailInput.addEventListener('input', function() {
+                    this.classList.remove('border-red-500', 'ring-1', 'ring-red-500');
+                    document.getElementById('addEmailErrorBanner').classList.add('hidden');
+                });
+            }
+        });
 
         // ---------- Data arrays from server ----------
         const jobGrades = [
@@ -2128,14 +2211,25 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             })
-            .then(response => {
-                if (!response.ok) return response.text().then(text => { throw new Error(text || 'Update failed'); });
+            .then(async response => {
+                if (response.status === 409) {
+                    const data = await response.json();
+                    showPiToast(data.message || 'Duplicate email address — another employee already uses this email.', 'error');
+                    submitBtn.disabled = false;
+                    submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    submitBtn.innerHTML = '<span class="material-icons-round text-sm">save</span><span>Update Employee</span>';
+                    return;
+                }
+                if (!response.ok) {
+                    const text = await response.text();
+                    throw new Error(text || 'Update failed');
+                }
                 closeModal('editEmployeeModal');
                 window.location.reload();
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('Failed to update employee: ' + error.message);
+                showPiToast('Failed to update employee: ' + error.message, 'error');
                 submitBtn.disabled = false;
                 submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
                 submitBtn.innerHTML = '<span class="material-icons-round text-sm">save</span><span>Update Employee</span>';
@@ -2727,6 +2821,10 @@
             }
             _csvFileForUpload = file;
 
+            // Reset the conflict panel whenever a new file is chosen
+            document.getElementById('csvConflictPanel').classList.add('hidden');
+            document.getElementById('csvValidationBanner').classList.add('hidden');
+
             const reader = new FileReader();
             reader.onload = function(e) {
                 const text = e.target.result;
@@ -2750,7 +2848,7 @@
                 const parts = line.split(',').map(p => p.trim());
                 const firstName    = parts[0] || '';
                 const secondName   = parts[1] || '';
-                const email        = parts[2] || '';
+                const email        = (parts[2] || '').toLowerCase();
                 const grade        = parts[3] || '';
                 const gross        = parts[4] || '';
                 const accountName  = parts[5] || '';
@@ -2848,11 +2946,32 @@
             btn.disabled = true;
             btn.innerHTML = '<span class="pi-spinner"></span> Uploading...';
 
+            // Hide any previous conflict panel
+            const conflictPanel = document.getElementById('csvConflictPanel');
+            conflictPanel.classList.add('hidden');
+
             const formData = new FormData();
             formData.append('file', _csvFileForUpload);
 
             fetch('/employees/upload-csv', { method: 'POST', body: formData })
                 .then(async r => {
+                    if (r.status === 409) {
+                        // Server found duplicate emails — show them all in the conflict panel
+                        const data = await r.json();
+                        const list = document.getElementById('csvConflictList');
+                        list.innerHTML = '';
+                        (data.conflictingEmails || []).forEach(function(entry) {
+                            const li = document.createElement('li');
+                            li.className = 'flex items-start gap-1.5';
+                            li.innerHTML = '<span class="material-icons-round text-xs mt-0.5 flex-shrink-0">close</span>' + esc(entry);
+                            list.appendChild(li);
+                        });
+                        conflictPanel.classList.remove('hidden');
+                        // Scroll up so user sees the panel
+                        conflictPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        // Keep the modal open so user can read the errors
+                        return;
+                    }
                     const text = await r.text();
                     if (!r.ok) throw new Error(text);
                     closeModal('csvPreviewModal');

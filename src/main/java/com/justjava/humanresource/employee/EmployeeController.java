@@ -14,6 +14,7 @@ import com.justjava.humanresource.hr.service.EmployeeService;
 import com.justjava.humanresource.hr.service.EmployeeUploadService;
 import com.justjava.humanresource.hr.service.SetupService;
 import com.justjava.humanresource.hr.service.EmployeeDocumentService;
+import com.justjava.humanresource.hr.service.impl.EmployeeUploadServiceImpl.DuplicateEmailUploadException;
 import com.justjava.humanresource.kpi.dto.AppraisalTaskViewDTO;
 import com.justjava.humanresource.kpi.entity.AppraisalCycle;
 import com.justjava.humanresource.kpi.entity.EmployeeAppraisal;
@@ -23,6 +24,7 @@ import com.justjava.humanresource.kpi.service.KpiDefinitionService;
 import com.justjava.humanresource.kpi.service.KpiMeasurementService;
 import com.justjava.humanresource.onboarding.dto.StartEmployeeOnboardingCommand;
 import com.justjava.humanresource.onboarding.service.EmployeeOnboardingService;
+import com.justjava.humanresource.onboarding.service.EmployeeOnboardingService.DuplicateEmailException;
 import com.justjava.humanresource.payroll.dto.PayrollRunDTO;
 import com.justjava.humanresource.payroll.entity.*;
 import com.justjava.humanresource.payroll.service.PaySlipService;
@@ -33,6 +35,7 @@ import com.justjava.humanresource.workflow.service.FlowableTaskService;
 import org.flowable.engine.history.HistoricProcessInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -40,10 +43,11 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import com.justjava.humanresource.payroll.dto.FutureEmployeeAllowanceDTO;
-import java.util.Optional;
 
+import java.util.Optional;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -51,47 +55,20 @@ import java.util.stream.Collectors;
 @Controller
 public class EmployeeController {
 
-    @Autowired
-    AuthenticationManager authenticationManager;
-
-    @Autowired
-    private SetupService setupService;
-
-    @Autowired
-    private EmployeeOnboardingService employeeOnboardingService;
-
-    @Autowired
-    private KpiAssignmentService kpiAssignmentService;
-
-    @Autowired
-    KpiMeasurementService kpiMeasurementService;
-
-    @Autowired
-    AppraisalService appraisalService;
-
-    @Autowired
-    private PayrollRunService payrollRunService;
-
-    @Autowired
-    private FlowableTaskService flowableTaskService;
-
-    @Autowired
-    private KpiDefinitionService kpiDefinitionService;
-
-    @Autowired
-    private EmployeeService employeeService;
-
-    @Autowired
-    private PayrollSetupService payrollSetupService;
-
-    @Autowired
-    private EmployeeDocumentService documentService;
-
-    @Autowired
-    private EmployeeUploadService employeeUploadService;
-
-    @Autowired
-    PaySlipService paySlipService;
+    @Autowired AuthenticationManager authenticationManager;
+    @Autowired private SetupService setupService;
+    @Autowired private EmployeeOnboardingService employeeOnboardingService;
+    @Autowired private KpiAssignmentService kpiAssignmentService;
+    @Autowired KpiMeasurementService kpiMeasurementService;
+    @Autowired AppraisalService appraisalService;
+    @Autowired private PayrollRunService payrollRunService;
+    @Autowired private FlowableTaskService flowableTaskService;
+    @Autowired private KpiDefinitionService kpiDefinitionService;
+    @Autowired private EmployeeService employeeService;
+    @Autowired private PayrollSetupService payrollSetupService;
+    @Autowired private EmployeeDocumentService documentService;
+    @Autowired private EmployeeUploadService employeeUploadService;
+    @Autowired PaySlipService paySlipService;
 
     // ─────────────────────────────────────────────────────────────────────────
     //  EMPLOYEES PAGE
@@ -99,13 +76,12 @@ public class EmployeeController {
 
     @GetMapping("/employees")
     public String getEmployees(Model model) {
-        List<Department> departments = setupService.getAllDepartments();
-        List<PayGroup> payGroups = payrollSetupService.getAllPayGroups();
-        List<JobGradeResponseDTO> jobGrades = setupService.getAllJobGrades();
+        List<Department>         departments = setupService.getAllDepartments();
+        List<PayGroup>           payGroups   = payrollSetupService.getAllPayGroups();
+        List<JobGradeResponseDTO> jobGrades  = setupService.getAllJobGrades();
         jobGrades.forEach(g ->
                 System.out.println("Job Grade: " + g.getSteps() + ", Description: " + g.getId()));
 
-        // Sort employees by ID in ascending order
         List<Employee> employees = employeeOnboardingService.getAllOnboardings().stream()
                 .sorted((a, b) -> a.getId().compareTo(b.getId()))
                 .toList();
@@ -114,9 +90,9 @@ public class EmployeeController {
                 System.out.println("Employee: " + e.getFirstName() + " " + e.getEmploymentStatus()
                         + ", Department: " + e.getDepartment().getName()));
 
-        List<Deduction> deductions = payrollSetupService.getActiveDeductions();
-        List<Allowance> allowances  = payrollSetupService.getActiveAllowances();
-        List<TaxRelief> taxReliefs  = payrollSetupService.getActiveTaxReliefs();
+        List<Deduction>  deductions = payrollSetupService.getActiveDeductions();
+        List<Allowance>  allowances = payrollSetupService.getActiveAllowances();
+        List<TaxRelief>  taxReliefs = payrollSetupService.getActiveTaxReliefs();
 
         model.addAttribute("deductions",  deductions);
         model.addAttribute("allowances",  allowances);
@@ -131,36 +107,48 @@ public class EmployeeController {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    //  ONBOARDING / CREATE
+    //  ONBOARDING / CREATE (single employee)
+    //  Returns a redirect on success, or a 409 JSON response on duplicate email
+    //  so the front-end modal can display the error without a full page reload.
     // ─────────────────────────────────────────────────────────────────────────
 
     @PostMapping("/onboarding")
-    public String startOnboarding(
+    public Object startOnboarding(
             StartEmployeeOnboardingCommand command,
             @RequestParam(defaultValue = "humanResource") String initiatedBy,
             @RequestParam(required = false) String accountName,
             @RequestParam(required = false) String bankName,
             @RequestParam(required = false) String accountNumber) {
 
-        EmployeeOnboardingResponseDTO dto =
-                employeeOnboardingService.startOnboarding(command, initiatedBy);
+        try {
+            EmployeeOnboardingResponseDTO dto =
+                    employeeOnboardingService.startOnboarding(command, initiatedBy);
 
-        employeeService.changeEmploymentStatus(dto.getEmployeeId(), EmploymentStatus.ACTIVE, LocalDate.now());
+            employeeService.changeEmploymentStatus(dto.getEmployeeId(), EmploymentStatus.ACTIVE, LocalDate.now());
 
-        // Save bank details if all three fields were provided
-        boolean hasBankData = accountName != null && !accountName.isBlank()
-                && bankName != null && !bankName.isBlank()
-                && accountNumber != null && !accountNumber.isBlank();
+            boolean hasBankData = accountName != null && !accountName.isBlank()
+                    && bankName != null && !bankName.isBlank()
+                    && accountNumber != null && !accountNumber.isBlank();
 
-        if (hasBankData) {
-            EmployeeDTO bankDto = new EmployeeDTO();
-            bankDto.setAccountName(accountName.trim());
-            bankDto.setBankName(bankName.trim());
-            bankDto.setAccountNumber(accountNumber.trim());
-            employeeService.updateBankDetails(dto.getEmployeeId(), bankDto);
+            if (hasBankData) {
+                EmployeeDTO bankDto = new EmployeeDTO();
+                bankDto.setAccountName(accountName.trim());
+                bankDto.setBankName(bankName.trim());
+                bankDto.setAccountNumber(accountNumber.trim());
+                employeeService.updateBankDetails(dto.getEmployeeId(), bankDto);
+            }
+
+            // Standard form submit — redirect on success
+            return "redirect:/employees";
+
+        } catch (DuplicateEmailException ex) {
+            // The modal submitted via fetch() / AJAX — return JSON so the UI
+            // can show the error inline without losing the form data.
+            Map<String, Object> body = new LinkedHashMap<>();
+            body.put("error",   "DUPLICATE_EMAIL");
+            body.put("message", ex.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
         }
-
-        return "redirect:/employees";
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -169,12 +157,19 @@ public class EmployeeController {
 
     @PostMapping("/employees/{id}")
     @ResponseBody
-    public ResponseEntity<Void> updateEmployee(@PathVariable Long id,
-                                               @RequestBody EmployeeDTO incomingEmployee) {
-        System.out.println("Received update for employee ID: " + id + " with data: " + incomingEmployee);
-        employeeOnboardingService.updateEmployee(id, incomingEmployee);
-        System.out.println("Employee updated successfully for ID: " + id);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<?> updateEmployee(@PathVariable Long id,
+                                            @RequestBody EmployeeDTO incomingEmployee) {
+        try {
+            System.out.println("Received update for employee ID: " + id + " with data: " + incomingEmployee);
+            employeeOnboardingService.updateEmployee(id, incomingEmployee);
+            System.out.println("Employee updated successfully for ID: " + id);
+            return ResponseEntity.ok().build();
+        } catch (DuplicateEmailException ex) {
+            Map<String, Object> body = new LinkedHashMap<>();
+            body.put("error",   "DUPLICATE_EMAIL");
+            body.put("message", ex.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+        }
     }
 
     @PostMapping("/employees/{id}/suspend")
@@ -186,30 +181,16 @@ public class EmployeeController {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    //  PAY ITEMS  – GET existing assignments for one employee
+    //  PAY ITEMS
     // ─────────────────────────────────────────────────────────────────────────
 
-    /**
-     * Returns the allowances and deductions currently assigned to an employee
-     * so the Pay-Items modal can pre-tick the right rows.
-     *
-     * Response shape:
-     * {
-     *   "allowances": [ ... EmployeeAllowanceResponse objects ... ],
-     *   "deductions": [ ... EmployeeDeductionResponse objects ... ]
-     * }
-     */
     @GetMapping("/employees/{id}/pay-items")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> getEmployeePayItems(@PathVariable Long id) {
-        List<EmployeeAllowanceResponse> allowances =
-                payrollSetupService.getAllowancesForEmployee(id);
-        List<EmployeeDeductionResponse> deductions =
-                payrollSetupService.getDeductionsForEmployee(id);
-        List<EmployeeTaxReliefResponse> taxReliefs =
-                payrollSetupService.getTaxReliefsForEmployee(id);
-        allowances.forEach(
-                a -> System.out.println("Allowance for employee ID " + id + ": " + a));
+        List<EmployeeAllowanceResponse>  allowances = payrollSetupService.getAllowancesForEmployee(id);
+        List<EmployeeDeductionResponse>  deductions = payrollSetupService.getDeductionsForEmployee(id);
+        List<EmployeeTaxReliefResponse>  taxReliefs = payrollSetupService.getTaxReliefsForEmployee(id);
+        allowances.forEach(a -> System.out.println("Allowance for employee ID " + id + ": " + a));
         System.out.println("Deductions for employee ID " + id + ": " + deductions);
         return ResponseEntity.ok(Map.of(
                 "allowances", allowances,
@@ -218,84 +199,64 @@ public class EmployeeController {
         ));
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    //  PAY ITEMS  – Attach allowances to an employee
-    // ─────────────────────────────────────────────────────────────────────────
-
-    /**
-     * Replaces / adds the allowance assignments for an employee.
-     *
-     * Request body: List of { "allowanceId": <Long>, ... }
-     */
     @PostMapping("/setup/employee/{employeeId}/allowances")
     @ResponseBody
     public ResponseEntity<List<EmployeeAllowanceResponse>> attachAllowancesToEmployee(
             @PathVariable Long employeeId,
             @RequestBody List<AllowanceAttachmentRequest> requests) {
 
-        // Soft-delete allowances not present in the submitted list
         List<Long> submittedIds = requests.stream()
-                .map(AllowanceAttachmentRequest::getAllowanceId)
-                .toList();
+                .map(AllowanceAttachmentRequest::getAllowanceId).toList();
         payrollSetupService.deactivateRemovedAllowancesFromEmployee(employeeId, submittedIds);
-
-        List<EmployeeAllowanceResponse> result =
-                payrollSetupService.addAllowancesToEmployee(employeeId, requests);
-        return ResponseEntity.ok(result);
+        return ResponseEntity.ok(payrollSetupService.addAllowancesToEmployee(employeeId, requests));
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    //  PAY ITEMS  – Attach deductions to an employee
-    // ─────────────────────────────────────────────────────────────────────────
-
-    /**
-     * Replaces / adds the deduction assignments for an employee.
-     *
-     * Request body: List of { "deductionId": <Long>, ... }
-     */
     @PostMapping("/setup/employee/{employeeId}/deductions")
     @ResponseBody
     public ResponseEntity<List<EmployeeDeductionResponse>> attachDeductionsToEmployee(
             @PathVariable Long employeeId,
             @RequestBody List<DeductionAttachmentRequest> requests) {
         System.out.println("Received request to attach deductions to employee ID: " + employeeId);
-
-        // Soft-delete deductions not present in the submitted list
         List<Long> submittedIds = requests.stream()
-                .map(DeductionAttachmentRequest::getDeductionId)
-                .toList();
+                .map(DeductionAttachmentRequest::getDeductionId).toList();
         payrollSetupService.deactivateRemovedDeductionsFromEmployee(employeeId, submittedIds);
-
-        List<EmployeeDeductionResponse> result =
-                payrollSetupService.addDeductionsToEmployee(employeeId, requests);
-        return ResponseEntity.ok(result);
+        return ResponseEntity.ok(payrollSetupService.addDeductionsToEmployee(employeeId, requests));
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    //  PAY ITEMS  – Attach tax reliefs to an employee
-    // ─────────────────────────────────────────────────────────────────────────
-
-    /**
-     * Replaces / adds the tax relief assignments for an employee.
-     *
-     * Request body: List of { "taxReliefId": <Long>, ... }
-     */
     @PostMapping("/setup/employee/{employeeId}/taxreliefs")
     @ResponseBody
     public ResponseEntity<List<EmployeeTaxReliefResponse>> attachTaxReliefsToEmployee(
             @PathVariable Long employeeId,
             @RequestBody List<TaxReliefAttachmentRequest> requests) {
         System.out.println("Received request to attach tax reliefs to employee ID: " + employeeId);
-
-        // Soft-delete tax reliefs not present in the submitted list
         List<Long> submittedIds = requests.stream()
-                .map(TaxReliefAttachmentRequest::getTaxReliefId)
-                .toList();
+                .map(TaxReliefAttachmentRequest::getTaxReliefId).toList();
         payrollSetupService.deactivateRemovedTaxReliefsFromEmployee(employeeId, submittedIds);
+        return ResponseEntity.ok(payrollSetupService.addTaxReliefsToEmployee(employeeId, requests));
+    }
 
-        List<EmployeeTaxReliefResponse> result =
-                payrollSetupService.addTaxReliefsToEmployee(employeeId, requests);
-        return ResponseEntity.ok(result);
+    // ─────────────────────────────────────────────────────────────────────────
+    //  BULK CSV UPLOAD
+    //  Returns 200 on success, 409 with a structured JSON body on duplicate
+    //  emails (the UI can display the full conflict list to the user).
+    // ─────────────────────────────────────────────────────────────────────────
+
+    @PostMapping("/employees/upload-csv")
+    @ResponseBody
+    public ResponseEntity<?> uploadCsv(@RequestParam("file") MultipartFile file) {
+        try {
+            employeeUploadService.uploadEmployees(file);
+            return ResponseEntity.ok("Employees uploaded successfully");
+
+        } catch (DuplicateEmailUploadException ex) {
+            // Return the full list of conflicts — the front-end should display
+            // every entry so the user can fix the CSV in one go.
+            Map<String, Object> body = new LinkedHashMap<>();
+            body.put("error",            "DUPLICATE_EMAIL");
+            body.put("message",          ex.getMessage());
+            body.put("conflictingEmails", ex.getConflictingEmails());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -304,9 +265,9 @@ public class EmployeeController {
 
     @GetMapping("/employee/dashboard")
     public String getEmployeeDashboard(Model model) {
-        String email = (String) authenticationManager.get("email");
+        String   email         = (String) authenticationManager.get("email");
         Employee loginEmployee = employeeService.getByEmail(email);
-        Employee employee = employeeService.getEmployeeWithBankDetails(loginEmployee.getId());
+        Employee employee      = employeeService.getEmployeeWithBankDetails(loginEmployee.getId());
         PayrollRunDTO currentPayrollRun =
                 payrollRunService.getEmployeePayrollRun(loginEmployee.getId(), 1L);
 
@@ -344,20 +305,18 @@ public class EmployeeController {
         List<FutureEmployeeAllowanceDTO> futureAllowances = List.of();
         try {
             futureAllowances = payrollSetupService.getFutureAllowancesForEmployee(loginEmployee.getId());
-        } catch (Exception e) {
+        } catch (Exception ignored) {}
 
-        }
-
-        model.addAttribute("tasks",            tasks);
+        model.addAttribute("tasks",              tasks);
         model.addAttribute("employeeAppraisals", employeeAppraisals);
         model.addAttribute("appraisalMap",
                 employeeAppraisals.stream()
                         .collect(Collectors.toMap(EmployeeAppraisal::getId, ea -> ea)));
-        model.addAttribute("previousPaySlip", previousPaySlip);
+        model.addAttribute("previousPaySlip",  previousPaySlip);
         model.addAttribute("futureAllowances", futureAllowances);
-        model.addAttribute("employee",        employee);
-        model.addAttribute("latestPaySlip",   currentPayrollRun);
-        model.addAttribute("title",           "Employee Dashboard");
+        model.addAttribute("employee",         employee);
+        model.addAttribute("latestPaySlip",    currentPayrollRun);
+        model.addAttribute("title",            "Employee Dashboard");
         model.addAttribute("subTitle",
                 "View your profile, performance metrics, and payroll information");
         return "employees/dashboard";
@@ -369,9 +328,9 @@ public class EmployeeController {
 
     @GetMapping("employee/profile")
     public String getEmployeeProfile(Model model) {
-        String email = (String) authenticationManager.get("email");
+        String   email         = (String) authenticationManager.get("email");
         Employee loginEmployee = employeeService.getByEmail(email);
-        Employee employee = employeeService.getEmployeeWithBankDetails(loginEmployee.getId());
+        Employee employee      = employeeService.getEmployeeWithBankDetails(loginEmployee.getId());
         PayrollRun currentPayrollRun =
                 paySlipService.getEmployeeCurrentPayrollRun(1L, loginEmployee.getId());
 
@@ -396,7 +355,7 @@ public class EmployeeController {
 
     @GetMapping("employee/payroll")
     public String getPayroll(Model model) {
-        String email = (String) authenticationManager.get("email");
+        String   email         = (String) authenticationManager.get("email");
         Employee loginEmployee = employeeService.getByEmail(email);
         PayrollRunDTO latestPaySlip =
                 payrollRunService.getEmployeePayrollRun(loginEmployee.getId(), 1L);
@@ -404,21 +363,17 @@ public class EmployeeController {
                 paySlipService.getPaySlipsByEmployee(loginEmployee.getId());
         Employee employee = employeeService.getEmployeeWithBankDetails(loginEmployee.getId());
 
-        //
         List<FutureEmployeeAllowanceDTO> futureAllowances = List.of();
         try {
             futureAllowances = payrollSetupService.getFutureAllowancesForEmployee(loginEmployee.getId());
-        } catch (Exception e) {
+        } catch (Exception ignored) {}
 
-        }
-
-
-        model.addAttribute("previousPaySlip", previousPaySlip);
-        model.addAttribute("latestPaySlip",   latestPaySlip);
-        model.addAttribute("employee",        employee);
+        model.addAttribute("previousPaySlip",  previousPaySlip);
+        model.addAttribute("latestPaySlip",    latestPaySlip);
+        model.addAttribute("employee",         employee);
         model.addAttribute("futureAllowances", futureAllowances);
-        model.addAttribute("title",           "Payroll");
-        model.addAttribute("subTitle",        "View your pay stubs, tax information, and benefits");
+        model.addAttribute("title",            "Payroll");
+        model.addAttribute("subTitle",         "View your pay stubs, tax information, and benefits");
         return "employees/payroll";
     }
 
@@ -432,7 +387,7 @@ public class EmployeeController {
 
     @GetMapping("employee/performance")
     public String getPerformance(Model model) {
-        String email = (String) authenticationManager.get("email");
+        String   email         = (String) authenticationManager.get("email");
         Employee loginEmployee = employeeService.getByEmail(email);
 
         List<HistoricProcessInstance> completedProcesses =
@@ -460,7 +415,7 @@ public class EmployeeController {
         List<EmployeeAppraisal> employeeAppraisals =
                 appraisalService.findAppraisalByEmployeeID(loginEmployee.getId());
 
-        model.addAttribute("tasks",            tasks);
+        model.addAttribute("tasks",              tasks);
         model.addAttribute("employeeAppraisals", employeeAppraisals);
         model.addAttribute("appraisalMap",
                 employeeAppraisals.stream()
@@ -483,14 +438,12 @@ public class EmployeeController {
 
     @GetMapping("employee/documents")
     public String getDocuments(Model model) {
-        String email = (String) authenticationManager.get("email");
-
+        String   email         = (String) authenticationManager.get("email");
         Employee loginEmployee = employeeService.getByEmail(email);
-
         model.addAttribute("employee", loginEmployee);
-        model.addAttribute("title", "Document Management");
-        model.addAttribute("subTitle", "View and manage your important documents such as contracts and certifications");
-
+        model.addAttribute("title",    "Document Management");
+        model.addAttribute("subTitle",
+                "View and manage your important documents such as contracts and certifications");
         return "employees/documents";
     }
 
@@ -512,7 +465,10 @@ public class EmployeeController {
         return "redirect:/employee/profile";
     }
 
-    // FOR EMPLOYEE DOCUMENTS
+    // ─────────────────────────────────────────────────────────────────────────
+    //  EMPLOYEE DOCUMENTS
+    // ─────────────────────────────────────────────────────────────────────────
+
     @PostMapping("/employees/{id}/documents/upload")
     @ResponseBody
     public ResponseEntity<?> uploadDoc(@PathVariable Long id,
@@ -556,11 +512,4 @@ public class EmployeeController {
         documentService.deleteDocument(docId);
         return ResponseEntity.ok().build();
     }
-
-    @PostMapping("/employees/upload-csv")
-    public ResponseEntity<String> uploadCsv(@RequestParam("file") MultipartFile file) {
-        employeeUploadService.uploadEmployees(file);
-        return ResponseEntity.ok("Employees uploaded successfully");
-    }
-
 }
