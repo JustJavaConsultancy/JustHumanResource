@@ -733,31 +733,34 @@
                         <span th:unless="${employee.status != null and employee.status.name() == 'SUSPENDED'}" class="status-badge status-active">Active</span>
                     </td>
                     <td class="px-4 md:px-6 py-4">
-                        <div class="grid grid-cols-2 gap-1">
+                        <div class="flex space-x-3">
                             <button type="button"
                                     th:onclick="'event.stopPropagation(); editEmployee(' + ${employee.id} + ')'"
-                                    class="text-green-600 hover:text-green-700 text-sm font-medium">
-                                Edit
+                                    title="Edit"
+                                    class="text-green-600 hover:text-green-700">
+                                <span class="material-icons-round text-sm">edit</span>
                             </button>
-                            <!-- NEW: Pay Items button -->
                             <button type="button"
                                     th:onclick="'event.stopPropagation(); openPayItemsModal(' + ${employee.id} + ')'"
-                                    class="text-blue-600 hover:text-blue-700 text-sm font-medium">
-                                Pay Items
+                                    title="Pay Items"
+                                    class="text-blue-600 hover:text-blue-700">
+                                <span class="material-icons-round text-sm">payments</span>
                             </button>
                             <button type="button"
                                     th:onclick="'event.stopPropagation(); openSuspendModal(' + ${employee.id} + ')'"
-                                    class="text-red-600 hover:text-red-700 text-sm font-medium">
-                                Suspend
+                                    title="Suspend"
+                                    class="text-red-600 hover:text-red-700">
+                                <span class="material-icons-round text-sm">block</span>
                             </button>
                             <button type="button"
-                                    th:onclick="'event.stopPropagation(); openRestrictModal(' + ${employee.id} + ', ' + ${employee.restrictedVisibility} + ')'"
                                     th:if="${!isRestrictedHr}"
+                                    th:onclick="'event.stopPropagation(); openRestrictModal(' + ${employee.id} + ', ' + ${employee.restrictedVisibility} + ')'"
+                                    th:title="${employee.restrictedVisibility ? 'Unrestrict' : 'Restrict'}"
                                     th:class="${employee.restrictedVisibility}
-                                      ? 'text-black hover:text-gray-800 text-sm font-medium flex items-center gap-1'
-                                      : 'text-red-600 hover:text-red-700 text-sm font-medium flex items-center gap-1'">
-                                <span class="material-icons-round text-sm" th:text="${employee.restrictedVisibility ? 'lock' : 'lock_open'}"></span>
-                                <span th:text="${employee.restrictedVisibility ? 'Restricted' : 'Restrict'}"></span>
+                    ? 'text-black hover:text-gray-800'
+                    : 'text-red-600 hover:text-red-700'">
+            <span class="material-icons-round text-sm"
+                  th:text="${employee.restrictedVisibility ? 'lock' : 'lock_open'}"></span>
                             </button>
                         </div>
                     </td>
