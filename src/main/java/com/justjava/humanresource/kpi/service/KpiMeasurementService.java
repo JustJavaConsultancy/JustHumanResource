@@ -12,6 +12,7 @@ import com.justjava.humanresource.kpi.repositories.KpiMeasurementRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.justjava.humanresource.core.config.AuthenticationManager;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -23,6 +24,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+
 
 @Service
 @RequiredArgsConstructor
@@ -36,6 +38,7 @@ public class KpiMeasurementService {
 
     private final JobStepRepository jobStepRepository;
     private final PayrollMessageDispatcher payrollMessageDispatcher;
+    private final AuthenticationManager authenticationManager;
 
     /* =====================================================
        BULK MEASUREMENT ENTRY
@@ -236,6 +239,8 @@ public class KpiMeasurementService {
         }
 
         return measurements.stream()
+                .filter(m -> !authenticationManager.isRestrictedHr()
+                        || !m.getEmployee().isRestrictedVisibility())
                 .map(m -> KpiMeasurementResponseDTO.builder()
                         .employee(m.getEmployee())
                         .measurementId(m.getId())

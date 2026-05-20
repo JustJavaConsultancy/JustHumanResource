@@ -424,7 +424,7 @@
         </div>
 
         <!-- Quick-access: Grouped Report (hidden when already on that page) -->
-        <a href="/payroll/grouped-report" class="grouped-report-shortcut" id="groupedReportLink">
+        <a th:if="${!isRestrictedHr}" href="/payroll/grouped-report" class="grouped-report-shortcut" id="groupedReportLink">
             <span class="grouped-report-label">View Grouped Report</span>
             <span class="grouped-report-arrow">
         <i class="bi bi-arrow-right"></i>
@@ -498,7 +498,7 @@
 
         <th:block th:if="${payrollRuns != null}">
 
-            <div class="lock-period-message">
+            <div class="lock-period-message" th:if="${!isRestrictedHr}">
                 <i class="bi bi-lock"></i>
                 <th:block th:if="${lockPending}">
         <span>
@@ -1021,9 +1021,10 @@
     <!-- ==============================================================
        GROUPED REPORT SECTION
        ============================================================== -->
-    <div class="period-label" style="margin-top:2.5rem;">Payroll Report</div>
+    <th:block th:if="${!isRestrictedHr}">
+        <div class="period-label" style="margin-top:2.5rem;">Payroll Report</div>
 
-    <div class="current-period-card mb-8">
+        <div class="current-period-card mb-8">
         <div class="current-period-header">
             <div>
                 <h2 class="text-slate-800 font-bold text-xl">Employee Grouped Report</h2>
@@ -1189,6 +1190,7 @@
             </div>
         </div>
     </div>
+    </th:block>
     <!-- /grouped report -->
 
 

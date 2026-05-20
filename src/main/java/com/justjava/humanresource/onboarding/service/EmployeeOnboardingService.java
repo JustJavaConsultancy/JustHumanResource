@@ -15,6 +15,7 @@ import com.justjava.humanresource.onboarding.dto.StartEmployeeOnboardingCommand;
 import com.justjava.humanresource.onboarding.entity.EmployeeOnboarding;
 import com.justjava.humanresource.onboarding.enums.OnboardingStatus;
 import com.justjava.humanresource.onboarding.repositories.EmployeeOnboardingRepository;
+import com.justjava.humanresource.core.config.AuthenticationManager;
 
 import com.justjava.humanresource.payroll.service.PayrollChangeOrchestrator;
 import lombok.RequiredArgsConstructor;
@@ -42,6 +43,7 @@ public class EmployeeOnboardingService {
     private final JobStepRepository jobStepRepository;
     private final PayGroupRepository payGroupRepository;
     private final PayrollChangeOrchestrator payrollChangeOrchestrator;
+    private final AuthenticationManager authenticationManager;
 
     @Transactional
     public EmployeeOnboardingResponseDTO startOnboarding(
@@ -123,6 +125,9 @@ public class EmployeeOnboardingService {
 
     @Transactional
     public List<Employee> getAllOnboardings() {
+        if (authenticationManager.isRestrictedHr()) {
+            return employeeRepository.findAllVisible();
+        }
         return employeeRepository.findAll();
     }
 

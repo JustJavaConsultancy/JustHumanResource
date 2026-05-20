@@ -1,5 +1,6 @@
-package com.justjava.humanresource.payroll.controller;
+package com.justjava.humanresource.report;
 
+import com.justjava.humanresource.core.config.AuthenticationManager;
 import com.justjava.humanresource.payroll.report.dto.*;
 import com.justjava.humanresource.payroll.service.PayrollRunService;
 import org.springframework.stereotype.Controller;
@@ -7,11 +8,14 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
+
 
 @Controller
 public class PayrollReportingController {
@@ -22,14 +26,18 @@ public class PayrollReportingController {
     private static final LocalDate END_DATE   = LocalDate.of(LocalDate.now().getYear(), 12, 31);
 
     private final PayrollRunService payrollRunService;
+    private final AuthenticationManager authenticationManager;
 
-    public PayrollReportingController(PayrollRunService payrollRunService) {
+    public PayrollReportingController(PayrollRunService payrollRunService,
+                                      AuthenticationManager authenticationManager) {
         this.payrollRunService = payrollRunService;
+        this.authenticationManager = authenticationManager;
     }
 
     @GetMapping("/reporting")
     public String payrollReporting(Model model,
                                    Map map) {
+        if (authenticationManager.isRestrictedHr()) return "redirect:/employees";
 
         // ── 1. Payroll Summary → summary cards + group focus bars ────────────────
         List<PayrollSummaryDTO> payrollSummary =

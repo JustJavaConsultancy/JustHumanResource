@@ -12,23 +12,23 @@ import java.util.Optional;
 public interface EmployeeRepository extends JpaRepository<Employee,Long> {
 
     Optional<Employee> findByEmployeeNumber(String employeeNumber);
+
     @Query("""
    SELECT COUNT(e)
    FROM Employee e
    WHERE e.employmentStatus = 'ACTIVE'
 """)
     long countByEmploymentStatusActive();
+
     List<Employee> findByPayGroup_Id(Long payGroupId);
     List<Employee> findByJobStep_Id(Long jobStepId);
+
     @Query("""
        SELECT COUNT(e)
        FROM Employee e
        WHERE e.department.id = :departmentId
        """)
     Long countEmployeesByDepartment(@Param("departmentId") Long departmentId);
-/* =========================================================
-   EMPLOYEES WITH ANY KPI MEASUREMENT
-   ========================================================= */
 
     @Query("""
        SELECT DISTINCT e
@@ -41,11 +41,6 @@ public interface EmployeeRepository extends JpaRepository<Employee,Long> {
        """)
     Page<Employee> findEmployeesWithAnyKpiMeasurement(Pageable pageable);
 
-/* =========================================================
-   EMPLOYEES WITH KPI MEASUREMENT FOR A PERIOD
-   (Recommended for Appraisal / Monthly Processing)
-   ========================================================= */
-
     @Query("""
        SELECT DISTINCT e
        FROM Employee e
@@ -57,7 +52,7 @@ public interface EmployeeRepository extends JpaRepository<Employee,Long> {
        )
        """)
     Page<Employee> findEmployeesWithKpiMeasurementForPeriod(
-            @Param("period") java.time.YearMonth period,Pageable pageable
+            @Param("period") java.time.YearMonth period, Pageable pageable
     );
 
     Optional<Employee> findByEmail(String email);
@@ -66,6 +61,7 @@ public interface EmployeeRepository extends JpaRepository<Employee,Long> {
             "LEFT JOIN FETCH e.bankDetails " +
             "WHERE e.id = :id")
     Optional<Employee> findByIdWithBankDetails(@Param("id") Long id);
+
     @Query("""
        SELECT e.department.id, COUNT(e)
        FROM Employee e
@@ -73,8 +69,6 @@ public interface EmployeeRepository extends JpaRepository<Employee,Long> {
        """)
     List<Object[]> countEmployeesByDepartmentGroup();
 
-
-    // CHECK EMPLOYEE BANK DETAILS
     @Query("""
     SELECT e FROM Employee e
     LEFT JOIN e.bankDetails bd
@@ -104,4 +98,8 @@ public interface EmployeeRepository extends JpaRepository<Employee,Long> {
            OR (e.suspensionTo IS NOT NULL AND e.suspensionTo < :payrollDate))
 """)
     List<Employee> findPayrollEligibleEmployees(@Param("payrollDate") java.time.LocalDate payrollDate);
+
+    // Filtered variant — excludes employees marked as restricted
+    @Query("SELECT e FROM Employee e WHERE e.restrictedVisibility = false")
+    List<Employee> findAllVisible();
 }
