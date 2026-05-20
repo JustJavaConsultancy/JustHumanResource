@@ -25,6 +25,8 @@ public class HomeController {
             return "redirect:/finance/dashboard";
         } else if (authenticationManager.isAdmin()) {
             return "redirect:/admin/users";
+        } else if (authenticationManager.isRestrictedHr()) {
+            return "redirect:/departments";
         } else if (authenticationManager.isHumanResource()) {
             return "redirect:/departments";
         }

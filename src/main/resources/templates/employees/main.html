@@ -706,7 +706,8 @@
                         data-guarantor-nin=${employee.guarantorNinNumber},
                         data-account-name=${employee.bankDetails != null and !#lists.isEmpty(employee.bankDetails) ? employee.bankDetails[0].accountName : ''},
                         data-bank-name=${employee.bankDetails != null and !#lists.isEmpty(employee.bankDetails) ? employee.bankDetails[0].bankName : ''},
-                        data-account-number=${employee.bankDetails != null and !#lists.isEmpty(employee.bankDetails) ? employee.bankDetails[0].accountNumber : ''}
+                        data-account-number=${employee.bankDetails != null and !#lists.isEmpty(employee.bankDetails) ? employee.bankDetails[0].accountNumber : ''},
+                        data-restricted-visibility=${employee.restrictedVisibility}
                     "
                     th:onclick="'viewEmployee(' + ${employee.id} + ')'">
 
@@ -732,7 +733,7 @@
                         <span th:unless="${employee.status != null and employee.status.name() == 'SUSPENDED'}" class="status-badge status-active">Active</span>
                     </td>
                     <td class="px-4 md:px-6 py-4">
-                        <div class="flex space-x-2">
+                        <div class="grid grid-cols-2 gap-1">
                             <button type="button"
                                     th:onclick="'event.stopPropagation(); editEmployee(' + ${employee.id} + ')'"
                                     class="text-green-600 hover:text-green-700 text-sm font-medium">
@@ -748,6 +749,15 @@
                                     th:onclick="'event.stopPropagation(); openSuspendModal(' + ${employee.id} + ')'"
                                     class="text-red-600 hover:text-red-700 text-sm font-medium">
                                 Suspend
+                            </button>
+                            <button type="button"
+                                    th:onclick="'event.stopPropagation(); openRestrictModal(' + ${employee.id} + ', ' + ${employee.restrictedVisibility} + ')'"
+                                    th:if="${!isRestrictedHr}"
+                                    th:class="${employee.restrictedVisibility}
+                                      ? 'text-black hover:text-gray-800 text-sm font-medium flex items-center gap-1'
+                                      : 'text-red-600 hover:text-red-700 text-sm font-medium flex items-center gap-1'">
+                                <span class="material-icons-round text-sm" th:text="${employee.restrictedVisibility ? 'lock' : 'lock_open'}"></span>
+                                <span th:text="${employee.restrictedVisibility ? 'Restricted' : 'Restrict'}"></span>
                             </button>
                         </div>
                     </td>
@@ -1765,6 +1775,40 @@
             </div>
         </div>
     </div>
+
+
+    <!-- ========== RESTRICT VISIBILITY CONFIRMATION MODAL ========== -->
+    <div id="restrictVisibilityModal" class="fixed inset-0 z-50 hidden modal-transition" onclick="if(event.target === this) closeModal('restrictVisibilityModal')">
+        <div class="modal-backdrop fixed inset-0 bg-black bg-opacity-50"></div>
+        <div class="fixed inset-0 flex items-center justify-center p-4">
+            <div class="modal-content bg-white dark:bg-gray-800 rounded-2xl w-full max-w-sm shadow-2xl p-6">
+
+                <div class="flex items-center gap-3 mb-4">
+                    <div id="restrictModalIcon" class="p-2 rounded-full bg-orange-100 dark:bg-orange-900/30">
+                        <span class="material-icons-round text-orange-500 text-2xl">lock</span>
+                    </div>
+                    <h3 id="restrictModalTitle" class="text-lg font-bold text-gray-900 dark:text-white">Restrict Employee Visibility</h3>
+                </div>
+
+                <p id="restrictModalBody" class="text-sm text-gray-600 dark:text-gray-400 mb-6">
+                    This employee will be hidden from all Restricted HR users across the entire system — employee list, KPI, and payroll. Are you sure?
+                </p>
+
+                <div class="flex justify-end gap-3">
+                    <button onclick="closeModal('restrictVisibilityModal')"
+                            class="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                        Cancel
+                    </button>
+                    <button id="restrictConfirmBtn" onclick="confirmToggleVisibility()"
+                            class="px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors bg-orange-500 hover:bg-orange-600">
+                        Confirm
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
 
     <!-- ========== CSV PREVIEW MODAL ========== -->
     <div id="csvPreviewModal" class="fixed inset-0 z-50 hidden modal-transition" onclick="if(event.target===this)closeModal('csvPreviewModal')">
@@ -2996,6 +3040,69 @@
                 setTimeout(function() { fetchDocuments(id); }, 100);
             };
         })();
+
+ /* ── RESTRICTED BUTTON AREA ─────────────────────────────────────── */
+        let _restrictEmployeeId = null;
+        let _restrictCurrentState = false;
+
+function openRestrictModal(employeeId, isCurrentlyRestricted) {
+    _restrictEmployeeId = employeeId;
+    _restrictCurrentState = isCurrentlyRestricted;
+
+    const icon = document.getElementById('restrictModalIcon');
+    const title = document.getElementById('restrictModalTitle');
+    const body = document.getElementById('restrictModalBody');
+    const btn = document.getElementById('restrictConfirmBtn');
+
+    if (isCurrentlyRestricted) {
+        // Unrestricting
+        icon.className = 'p-2 rounded-full bg-green-100 dark:bg-green-900/30';
+        icon.innerHTML = '<span class="material-icons-round text-green-600 text-2xl">lock_open</span>';
+        title.textContent = 'Remove Restriction';
+        body.textContent = 'This employee will become visible again to all Restricted HR users. Are you sure?';
+        btn.className = 'px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors bg-green-600 hover:bg-green-700';
+        btn.textContent = 'Confirm';
+    } else {
+        // Restricting
+        icon.className = 'p-2 rounded-full bg-orange-100 dark:bg-orange-900/30';
+        icon.innerHTML = '<span class="material-icons-round text-orange-500 text-2xl">lock</span>';
+        title.textContent = 'Restrict Employee Visibility';
+        body.textContent = 'This employee will be hidden from all Restricted HR users across the entire system — employee list, KPI, and payroll. Are you sure?';
+        btn.className = 'px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors bg-orange-500 hover:bg-orange-600';
+        btn.textContent = 'Confirm';
+    }
+
+    openModal('restrictVisibilityModal');
+}
+
+function confirmToggleVisibility() {
+    if (!_restrictEmployeeId) return;
+
+    const btn = document.getElementById('restrictConfirmBtn');
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+
+    fetch('/employees/' + _restrictEmployeeId + '/toggle-visibility', { method: 'POST' })
+        .then(async r => {
+            if (!r.ok) throw new Error(await r.text());
+            return r.json();
+        })
+        .then(data => {
+            closeModal('restrictVisibilityModal');
+            showPiToast(
+                data.restrictedVisibility ? 'Employee restricted from Restricted HR users.' : 'Restriction removed.',
+                data.restrictedVisibility ? 'warning' : 'success'
+            );
+            setTimeout(() => window.location.reload(), 1200);
+        })
+        .catch(err => {
+            showPiToast('Failed: ' + err.message, 'error');
+            btn.disabled = false;
+            btn.textContent = 'Confirm';
+        });
+}
+
+
 
         /* ── EMPLOYEE SEARCH & FILTER ─────────────────────────────────────── */
         function openSuspendModal(employeeId) {

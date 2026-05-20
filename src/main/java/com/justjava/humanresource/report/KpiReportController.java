@@ -1,5 +1,6 @@
 package com.justjava.humanresource.report;
 
+import com.justjava.humanresource.core.config.AuthenticationManager;
 import com.justjava.humanresource.kpi.report.dto.*;
 import com.justjava.humanresource.kpi.report.service.KPIReportService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +20,9 @@ public class KpiReportController {
     @Autowired
     private KPIReportService kpiReportService;
 
+    @Autowired
+    private AuthenticationManager authenticationManager;
+
     private static final Long   COMPANY_ID = 1L;
     private static final int    TOP_N      = 10;
 
@@ -28,6 +32,7 @@ public class KpiReportController {
     // ─────────────────────────────────────────────────────────────────────────
     @GetMapping("/dashboard")
     public String dashboard(Model model) {
+        if (authenticationManager.isRestrictedHr()) return "redirect:/employees";
         YearMonth now = YearMonth.now();
 
         // Main dashboard data
@@ -84,6 +89,7 @@ public class KpiReportController {
     // ─────────────────────────────────────────────────────────────────────────
     @GetMapping("/top-performers")
     public String topPerformers(Model model) {
+        if (authenticationManager.isRestrictedHr()) return "redirect:/employees";
         YearMonth now = YearMonth.now();
 
         List<TopPerformerDTO> byKpi       = kpiReportService.getTopPerformersByKpi(now, TOP_N);
@@ -105,6 +111,7 @@ public class KpiReportController {
     // ─────────────────────────────────────────────────────────────────────────
     @GetMapping("/scorecard")
     public String scorecard(Model model) {
+        if (authenticationManager.isRestrictedHr()) return "redirect:/employees";
         YearMonth now = YearMonth.now();
 
         List<EmployeeKpiScorecardDTO> scorecard =
@@ -144,6 +151,7 @@ public class KpiReportController {
     // ─────────────────────────────────────────────────────────────────────────
     @GetMapping("/appraisal")
     public String appraisalSummary(Model model) {
+        if (authenticationManager.isRestrictedHr()) return "redirect:/employees";
         List<AppraisalSummaryDTO> appraisals =
                 kpiReportService.getAppraisalSummary(COMPANY_ID);
         model.addAttribute("appraisals", appraisals);
@@ -186,6 +194,7 @@ public class KpiReportController {
     // ─────────────────────────────────────────────────────────────────────────
     @GetMapping("/employee-scorecard/{employeeId}")
     public String employeeScorecard(@PathVariable Long employeeId, Model model) {
+        if (authenticationManager.isRestrictedHr()) return "redirect:/employees";
         YearMonth now = YearMonth.now();
 
         List<EmployeeKpiScorecardDTO> lines =
