@@ -12,6 +12,7 @@ import com.justjava.humanresource.hr.entity.EmployeeDocument;
 import com.justjava.humanresource.hr.entity.PayGroup;
 import com.justjava.humanresource.hr.service.EmployeeService;
 import com.justjava.humanresource.hr.service.EmployeeUploadService;
+import com.justjava.humanresource.hr.service.JobHrEmployeeAccessService;
 import com.justjava.humanresource.hr.service.SetupService;
 import com.justjava.humanresource.hr.service.EmployeeDocumentService;
 import com.justjava.humanresource.hr.service.impl.EmployeeUploadServiceImpl.DuplicateEmailUploadException;
@@ -68,6 +69,7 @@ public class EmployeeController {
     @Autowired private PayrollSetupService payrollSetupService;
     @Autowired private EmployeeDocumentService documentService;
     @Autowired private EmployeeUploadService employeeUploadService;
+    @Autowired private JobHrEmployeeAccessService jobHrEmployeeAccessService;
     @Autowired PaySlipService paySlipService;
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -85,6 +87,7 @@ public class EmployeeController {
         List<Employee> employees = employeeOnboardingService.getAllOnboardings().stream()
                 .sorted((a, b) -> a.getId().compareTo(b.getId()))
                 .toList();
+        employees = jobHrEmployeeAccessService.filterEmployeesByScope(employees);
 
         employees.forEach(e ->
                 System.out.println("Employee: " + e.getFirstName() + " " + e.getEmploymentStatus()
@@ -119,6 +122,7 @@ public class EmployeeController {
             @RequestParam(required = false) String accountName,
             @RequestParam(required = false) String bankName,
             @RequestParam(required = false) String accountNumber) {
+        jobHrEmployeeAccessService.assertCanUseJobStep(command.getJobStepId());
 
         try {
             EmployeeOnboardingResponseDTO dto =
@@ -159,6 +163,8 @@ public class EmployeeController {
     @ResponseBody
     public ResponseEntity<?> updateEmployee(@PathVariable Long id,
                                             @RequestBody EmployeeDTO incomingEmployee) {
+        jobHrEmployeeAccessService.assertCanAccessEmployee(id);
+        jobHrEmployeeAccessService.assertCanUseJobStep(incomingEmployee.getJobStepId());
         try {
             System.out.println("Received update for employee ID: " + id + " with data: " + incomingEmployee);
             employeeOnboardingService.updateEmployee(id, incomingEmployee);
@@ -176,6 +182,7 @@ public class EmployeeController {
     public String suspendEmployee(@PathVariable Long id,
                                   @RequestParam("fromDate") LocalDate fromDate,
                                   @RequestParam(value = "toDate", required = false) LocalDate toDate) {
+        jobHrEmployeeAccessService.assertCanAccessEmployee(id);
         employeeService.suspendEmployee(id, fromDate, toDate);
         return "redirect:/employees";
     }
@@ -187,6 +194,7 @@ public class EmployeeController {
     @GetMapping("/employees/{id}/pay-items")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> getEmployeePayItems(@PathVariable Long id) {
+        jobHrEmployeeAccessService.assertCanAccessEmployee(id);
         List<EmployeeAllowanceResponse>  allowances = payrollSetupService.getAllowancesForEmployee(id);
         List<EmployeeDeductionResponse>  deductions = payrollSetupService.getDeductionsForEmployee(id);
         List<EmployeeTaxReliefResponse>  taxReliefs = payrollSetupService.getTaxReliefsForEmployee(id);
@@ -204,6 +212,7 @@ public class EmployeeController {
     public ResponseEntity<List<EmployeeAllowanceResponse>> attachAllowancesToEmployee(
             @PathVariable Long employeeId,
             @RequestBody List<AllowanceAttachmentRequest> requests) {
+        jobHrEmployeeAccessService.assertCanAccessEmployee(employeeId);
 
         List<Long> submittedIds = requests.stream()
                 .map(AllowanceAttachmentRequest::getAllowanceId).toList();
@@ -216,6 +225,7 @@ public class EmployeeController {
     public ResponseEntity<List<EmployeeDeductionResponse>> attachDeductionsToEmployee(
             @PathVariable Long employeeId,
             @RequestBody List<DeductionAttachmentRequest> requests) {
+        jobHrEmployeeAccessService.assertCanAccessEmployee(employeeId);
         System.out.println("Received request to attach deductions to employee ID: " + employeeId);
         List<Long> submittedIds = requests.stream()
                 .map(DeductionAttachmentRequest::getDeductionId).toList();
@@ -228,6 +238,7 @@ public class EmployeeController {
     public ResponseEntity<List<EmployeeTaxReliefResponse>> attachTaxReliefsToEmployee(
             @PathVariable Long employeeId,
             @RequestBody List<TaxReliefAttachmentRequest> requests) {
+        jobHrEmployeeAccessService.assertCanAccessEmployee(employeeId);
         System.out.println("Received request to attach tax reliefs to employee ID: " + employeeId);
         List<Long> submittedIds = requests.stream()
                 .map(TaxReliefAttachmentRequest::getTaxReliefId).toList();
@@ -474,6 +485,7 @@ public class EmployeeController {
     public ResponseEntity<?> uploadDoc(@PathVariable Long id,
                                        @RequestParam("documentName") String name,
                                        @RequestParam("file") MultipartFile file) {
+        jobHrEmployeeAccessService.assertCanAccessEmployee(id);
         try {
             documentService.uploadDocument(id, name, file);
             return ResponseEntity.ok().build();
@@ -485,12 +497,16 @@ public class EmployeeController {
     @GetMapping("/employees/{id}/documents")
     @ResponseBody
     public List<EmployeeDocumentDTO> listDocs(@PathVariable Long id) {
+        jobHrEmployeeAccessService.assertCanAccessEmployee(id);
         return documentService.getEmployeeDocuments(id);
     }
 
     @GetMapping("/documents/view/{docId}")
     public ResponseEntity<byte[]> viewDoc(@PathVariable Long docId) {
         EmployeeDocument doc = documentService.getDocumentFile(docId);
+        if (doc.getEmployee() != null) {
+            jobHrEmployeeAccessService.assertCanAccessEmployee(doc.getEmployee().getId());
+        }
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(doc.getFileType()))
                 .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + doc.getFileName() + "\"")
@@ -500,6 +516,9 @@ public class EmployeeController {
     @GetMapping("/documents/download/{docId}")
     public ResponseEntity<byte[]> downloadDoc(@PathVariable Long docId) {
         EmployeeDocument doc = documentService.getDocumentFile(docId);
+        if (doc.getEmployee() != null) {
+            jobHrEmployeeAccessService.assertCanAccessEmployee(doc.getEmployee().getId());
+        }
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(doc.getFileType()))
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + doc.getFileName() + "\"")
@@ -509,6 +528,10 @@ public class EmployeeController {
     @DeleteMapping("/documents/{docId}")
     @ResponseBody
     public ResponseEntity<?> deleteDoc(@PathVariable Long docId) {
+        EmployeeDocument doc = documentService.getDocumentFile(docId);
+        if (doc.getEmployee() != null) {
+            jobHrEmployeeAccessService.assertCanAccessEmployee(doc.getEmployee().getId());
+        }
         documentService.deleteDocument(docId);
         return ResponseEntity.ok().build();
     }

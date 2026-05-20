@@ -45,6 +45,13 @@ public class AuthenticationManager {
         }
         return groups.contains("/humanResource");
     }
+    public boolean isJobHR() {
+        List<String> groups = (List<String>) this.get("groups");
+        if (groups == null) {
+            return false;
+        }
+        return groups.contains("/jobHR");
+    }
 
     public Object getAllAttributes() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
