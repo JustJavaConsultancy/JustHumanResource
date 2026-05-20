@@ -5,6 +5,7 @@ import com.justjava.humanresource.hr.dto.CreatePayGroupCommand;
 import com.justjava.humanresource.hr.entity.Employee;
 import com.justjava.humanresource.hr.entity.PayGroup;
 import com.justjava.humanresource.hr.service.EmployeeService;
+import com.justjava.humanresource.hr.service.JobHrEmployeeAccessService;
 import com.justjava.humanresource.hr.service.SetupService;
 import com.justjava.humanresource.onboarding.service.EmployeeOnboardingService;
 import com.justjava.humanresource.payroll.entity.*;
@@ -70,6 +71,11 @@ public class PayrollController {
 
     @Autowired
     FlowableTaskService flowableTaskService;
+
+    @Autowired
+    JobHrEmployeeAccessService jobHrEmployeeAccessService;
+
+
 
     @GetMapping("/payroll")
     public String getPayroll(Model model) {
@@ -328,16 +334,27 @@ public class PayrollController {
         // Fetch and sort current payroll runs by Employee ID,
         // excluding restricted employees if caller is restrictedHr
         List<PayrollRun> payrollRuns = paySlipService.getCurrentPeriodPayrollRuns(1L).stream()
-                .filter(r -> !isRestrictedHr || !r.getEmployee().isRestrictedVisibility())
+                .filter(r -> {
+                    Employee emp = r.getEmployee();
+                    if (isRestrictedHr && emp.isRestrictedVisibility()) return false;
+                    if (jobHrEmployeeAccessService.isJobHrScopedUser()) {
+                        Long actorGradeId = jobHrEmployeeAccessService.getLoggedInJobGradeId();
+                        Long empGradeId = emp.getJobStep() != null && emp.getJobStep().getJobGrade() != null
+                                ? emp.getJobStep().getJobGrade().getId() : null;
+                        return java.util.Objects.equals(actorGradeId, empGradeId);
+                    }
+                    return true;
+                })
                 .sorted((a, b) -> a.getEmployee().getId().compareTo(b.getEmployee().getId()))
                 .toList();
 
         // Build a set of visible employee IDs for fast DTO filtering
-        Set<Long> visibleEmployeeIds = isRestrictedHr
+        boolean needsFiltering = isRestrictedHr || jobHrEmployeeAccessService.isJobHrScopedUser();
+        Set<Long> visibleEmployeeIds = needsFiltering
                 ? payrollRuns.stream()
                 .map(r -> r.getEmployee().getId())
                 .collect(Collectors.toSet())
-                : null; // null means unrestricted — no filtering needed
+                : null;
 
         // Fetch and sort previous payslips, excluding restricted employees
         List<PaySlipDTO> previousPaySlips = paySlipService.getAllClosedPeriodPaySlips(1L).stream()
@@ -402,6 +419,8 @@ public class PayrollController {
                 .getTasksByTaskDefinition("financeOfficer", "payrollPeriodCloseProcess");
 
         model.addAttribute("lockPending", !pendingLockTasks.isEmpty());
+        model.addAttribute("isRestrictedHr", isRestrictedHr);                                    // ADD THIS
+        model.addAttribute("isJobHr", jobHrEmployeeAccessService.isJobHrScopedUser());
 
         return "payroll/fragments/employee-payroll";
     }
@@ -465,11 +484,26 @@ public class PayrollController {
     public String getReport(
             @RequestParam(defaultValue = "GRADE") String groupBy,
             Model model) {
+
         if (authenticationManager.isRestrictedHr()) {
             return "redirect:/payroll/employee-payroll";
         }
 
         YearMonth currentMonth = YearMonth.now();
+
+        // Build scoped employee ID set for jobHR
+        final Set<Long> scopedIds;
+        if (jobHrEmployeeAccessService.isJobHrScopedUser()) {
+            Long actorGradeId = jobHrEmployeeAccessService.getLoggedInJobGradeId();
+            scopedIds = employeeOnboardingService.getAllOnboardings().stream()
+                    .filter(e -> e.getJobStep() != null
+                            && e.getJobStep().getJobGrade() != null
+                            && Objects.equals(e.getJobStep().getJobGrade().getId(), actorGradeId))
+                    .map(Employee::getId)
+                    .collect(Collectors.toSet());
+        } else {
+            scopedIds = null;
+        }
 
         List<EmployeeGroupedReportDTO> report = reportingService.getGroupedReport(
                         1L,
@@ -478,9 +512,13 @@ public class PayrollController {
                         EmployeeGroupBy.valueOf(groupBy)
                 ).stream()
                 .map(group -> {
+                    if (scopedIds != null) {
+                        group.getEmployees().removeIf(e -> !scopedIds.contains(e.getEmployeeId()));
+                    }
                     group.getEmployees().sort(Comparator.comparing(e -> e.getEmployeeId()));
                     return group;
                 })
+                .filter(group -> !group.getEmployees().isEmpty()) // remove empty groups
                 .toList();
 
         Map<String, Object> grandTotals = reportingService.calculateGrandTotals(report);

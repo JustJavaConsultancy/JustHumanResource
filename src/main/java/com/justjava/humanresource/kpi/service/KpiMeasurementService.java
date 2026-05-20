@@ -5,6 +5,7 @@ import com.justjava.humanresource.hr.entity.Employee;
 import com.justjava.humanresource.hr.entity.JobStep;
 import com.justjava.humanresource.hr.repository.EmployeeRepository;
 import com.justjava.humanresource.hr.repository.JobStepRepository;
+import com.justjava.humanresource.hr.service.JobHrEmployeeAccessService;
 import com.justjava.humanresource.kpi.entity.*;
 import com.justjava.humanresource.kpi.repositories.KpiAssignmentRepository;
 import com.justjava.humanresource.kpi.repositories.KpiDefinitionRepository;
@@ -39,6 +40,7 @@ public class KpiMeasurementService {
     private final JobStepRepository jobStepRepository;
     private final PayrollMessageDispatcher payrollMessageDispatcher;
     private final AuthenticationManager authenticationManager;
+    private final JobHrEmployeeAccessService jobHrEmployeeAccessService;
 
     /* =====================================================
        BULK MEASUREMENT ENTRY
@@ -239,8 +241,17 @@ public class KpiMeasurementService {
         }
 
         return measurements.stream()
-                .filter(m -> !authenticationManager.isRestrictedHr()
-                        || !m.getEmployee().isRestrictedVisibility())
+                .filter(m -> {
+                    Employee emp = m.getEmployee();
+                    if (authenticationManager.isRestrictedHr() && emp.isRestrictedVisibility()) return false;
+                    if (jobHrEmployeeAccessService.isJobHrScopedUser()) {
+                        Long actorGradeId = jobHrEmployeeAccessService.getLoggedInJobGradeId();
+                        Long empGradeId = emp.getJobStep() != null && emp.getJobStep().getJobGrade() != null
+                                ? emp.getJobStep().getJobGrade().getId() : null;
+                        return java.util.Objects.equals(actorGradeId, empGradeId);
+                    }
+                    return true;
+                })
                 .map(m -> KpiMeasurementResponseDTO.builder()
                         .employee(m.getEmployee())
                         .measurementId(m.getId())

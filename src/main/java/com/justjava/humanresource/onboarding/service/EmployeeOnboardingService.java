@@ -11,11 +11,13 @@ import com.justjava.humanresource.hr.service.EmployeeService;
 import com.justjava.humanresource.hr.repository.DepartmentRepository;
 import com.justjava.humanresource.hr.repository.JobStepRepository;
 import com.justjava.humanresource.hr.repository.PayGroupRepository;
+import com.justjava.humanresource.hr.service.JobHrEmployeeAccessService;
 import com.justjava.humanresource.onboarding.dto.StartEmployeeOnboardingCommand;
 import com.justjava.humanresource.onboarding.entity.EmployeeOnboarding;
 import com.justjava.humanresource.onboarding.enums.OnboardingStatus;
 import com.justjava.humanresource.onboarding.repositories.EmployeeOnboardingRepository;
 import com.justjava.humanresource.core.config.AuthenticationManager;
+
 
 import com.justjava.humanresource.payroll.service.PayrollChangeOrchestrator;
 import lombok.RequiredArgsConstructor;
@@ -44,6 +46,7 @@ public class EmployeeOnboardingService {
     private final PayGroupRepository payGroupRepository;
     private final PayrollChangeOrchestrator payrollChangeOrchestrator;
     private final AuthenticationManager authenticationManager;
+    private final JobHrEmployeeAccessService jobHrEmployeeAccessService;
 
     @Transactional
     public EmployeeOnboardingResponseDTO startOnboarding(
@@ -127,6 +130,11 @@ public class EmployeeOnboardingService {
     public List<Employee> getAllOnboardings() {
         if (authenticationManager.isRestrictedHr()) {
             return employeeRepository.findAllVisible();
+        }
+        if (jobHrEmployeeAccessService.isJobHrScopedUser()) {
+            return jobHrEmployeeAccessService.filterEmployeesByScope(
+                    employeeRepository.findAll()
+            );
         }
         return employeeRepository.findAll();
     }

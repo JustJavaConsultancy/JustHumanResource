@@ -234,4 +234,37 @@ public class PayrollRunServiceImpl implements PayrollRunService {
 
         return payrollRunRepository.getPensionReport(companyId, start, end);
     }
+
+
+    //  FOR THE NEW JOBHR SORTING
+    @Override
+    public List<PayrollSummaryDTO> getPayrollSummaryForEmployees(
+            Long companyId, LocalDate start, LocalDate end, List<Long> employeeIds) {
+        return payrollRunRepository.getPayrollSummaryForEmployees(companyId, start, end, employeeIds);
+    }
+
+    @Override
+    public List<ComponentBreakdownDTO> getEarningsBreakdownForEmployees(
+            Long companyId, LocalDate start, LocalDate end, List<Long> employeeIds) {
+        return payrollRunRepository.getEarningsBreakdownForEmployees(companyId, start, end, employeeIds);
+    }
+
+    @Override
+    public List<ComponentBreakdownDTO> getDeductionBreakdownForEmployees(
+            Long companyId, LocalDate start, LocalDate end, List<Long> employeeIds) {
+        return payrollRunRepository.getDeductionBreakdownForEmployees(companyId, start, end, employeeIds);
+    }
+
+    @Override
+    public List<ComponentTrendDTO> getComponentTrendForEmployees(
+            Long companyId, List<Long> employeeIds) {
+        List<Object[]> rows = payrollRunRepository.getComponentTrendRawForEmployees(companyId, employeeIds);
+        return rows.stream()
+                .map(r -> new ComponentTrendDTO(
+                        (String) r[0],
+                        (String) r[1],
+                        (BigDecimal) r[2]
+                ))
+                .toList();
+    }
 }

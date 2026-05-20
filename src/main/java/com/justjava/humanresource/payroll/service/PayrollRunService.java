@@ -40,4 +40,18 @@ public interface PayrollRunService {
             Long companyId,
             LocalDate start,
             LocalDate end);
+
+
+//  FOR THE NEW JOBHR SORTING
+    List<PayrollSummaryDTO> getPayrollSummaryForEmployees(
+            Long companyId, LocalDate start, LocalDate end, List<Long> employeeIds);
+
+    List<ComponentBreakdownDTO> getEarningsBreakdownForEmployees(
+            Long companyId, LocalDate start, LocalDate end, List<Long> employeeIds);
+
+    List<ComponentBreakdownDTO> getDeductionBreakdownForEmployees(
+            Long companyId, LocalDate start, LocalDate end, List<Long> employeeIds);
+
+    List<ComponentTrendDTO> getComponentTrendForEmployees(
+            Long companyId, List<Long> employeeIds);
 }

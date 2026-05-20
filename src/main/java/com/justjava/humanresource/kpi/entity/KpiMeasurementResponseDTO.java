@@ -1,13 +1,19 @@
 package com.justjava.humanresource.kpi.entity;
 
 import com.justjava.humanresource.hr.entity.Employee;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.YearMonth;
 
-@Data
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 @Builder
 public class KpiMeasurementResponseDTO {
 
