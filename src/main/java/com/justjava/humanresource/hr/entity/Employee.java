@@ -94,6 +94,9 @@ public class Employee extends BaseEntity {
     private LocalDate suspensionFrom;
     private LocalDate suspensionTo;
 
+    @Builder.Default
+    private boolean restrictedVisibility = false;
+
     // ---------- Emergency contact ----------
     @OneToOne(mappedBy = "employee", cascade = CascadeType.ALL, orphanRemoval = true)
     private EmergencyContact emergencyContact;

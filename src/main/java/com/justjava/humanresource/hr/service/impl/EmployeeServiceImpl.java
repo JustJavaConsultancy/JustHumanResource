@@ -285,6 +285,14 @@ public class EmployeeServiceImpl implements EmployeeService {
     }
 
     @Override
+    @Transactional
+    public Employee toggleRestrictedVisibility(Long employeeId) {
+        Employee employee = getById(employeeId);
+        employee.setRestrictedVisibility(!employee.isRestrictedVisibility());
+        return employeeRepository.save(employee);
+    }
+
+    @Override
     public List<Employee> getPayrollEligibleEmployees(LocalDate payrollDate) {
         return employeeRepository.findPayrollEligibleEmployees(payrollDate);
     }

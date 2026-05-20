@@ -106,6 +106,7 @@ public class EmployeeController {
         model.addAttribute("payGroups",   payGroups);
         model.addAttribute("title",       "Employee Management");
         model.addAttribute("subTitle",    "Manage employee records, payroll, and performance data");
+        model.addAttribute("isRestrictedHr", authenticationManager.isRestrictedHr());
         return "employees/main";
     }
 
@@ -186,6 +187,23 @@ public class EmployeeController {
         employeeService.suspendEmployee(id, fromDate, toDate);
         return "redirect:/employees";
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
+//  TOGGLE RESTRICTED VISIBILITY
+// ─────────────────────────────────────────────────────────────────────────
+
+    @PostMapping("/employees/{id}/toggle-visibility")
+    @ResponseBody
+    public ResponseEntity<?> toggleVisibility(@PathVariable Long id) {
+        // Only regular HR and admin can call this — restrictedHr cannot
+        if (authenticationManager.isRestrictedHr()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "Access denied"));
+        }
+        Employee employee = employeeService.toggleRestrictedVisibility(id);
+        return ResponseEntity.ok(Map.of("restrictedVisibility", employee.isRestrictedVisibility()));
+    }
+
 
     // ─────────────────────────────────────────────────────────────────────────
     //  PAY ITEMS

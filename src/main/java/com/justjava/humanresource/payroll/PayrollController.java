@@ -37,6 +37,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import java.util.Set;
 
 @Controller
 public class PayrollController {
@@ -321,13 +322,26 @@ public class PayrollController {
 
     @GetMapping("/payroll/employee-payroll")
     public String getEmployeePayroll(Model model) {
-        // Fetch and sort current payroll runs by Employee ID
+
+        boolean isRestrictedHr = authenticationManager.isRestrictedHr();
+
+        // Fetch and sort current payroll runs by Employee ID,
+        // excluding restricted employees if caller is restrictedHr
         List<PayrollRun> payrollRuns = paySlipService.getCurrentPeriodPayrollRuns(1L).stream()
+                .filter(r -> !isRestrictedHr || !r.getEmployee().isRestrictedVisibility())
                 .sorted((a, b) -> a.getEmployee().getId().compareTo(b.getEmployee().getId()))
                 .toList();
 
-        // Fetch and sort previous payslips by Employee ID
+        // Build a set of visible employee IDs for fast DTO filtering
+        Set<Long> visibleEmployeeIds = isRestrictedHr
+                ? payrollRuns.stream()
+                .map(r -> r.getEmployee().getId())
+                .collect(Collectors.toSet())
+                : null; // null means unrestricted — no filtering needed
+
+        // Fetch and sort previous payslips, excluding restricted employees
         List<PaySlipDTO> previousPaySlips = paySlipService.getAllClosedPeriodPaySlips(1L).stream()
+                .filter(ps -> visibleEmployeeIds == null || visibleEmployeeIds.contains(ps.getEmployeeId()))
                 .sorted((a, b) -> a.getEmployeeId().compareTo(b.getEmployeeId()))
                 .toList();
 
@@ -343,8 +357,8 @@ public class PayrollController {
 
         List<PaySlipDTO> currentPaySlips = List.of();
         try {
-            // Fetch current period payslips and enrich each one with its employee's future allowances
             currentPaySlips = paySlipService.getCurrentPeriodPaySlips(1L).stream()
+                    .filter(ps -> visibleEmployeeIds == null || visibleEmployeeIds.contains(ps.getEmployeeId()))
                     .sorted((a, b) -> a.getEmployeeId().compareTo(b.getEmployeeId()))
                     .map(ps -> {
                         List<FutureEmployeeAllowanceDTO> futureAllowances = List.of();
@@ -376,7 +390,7 @@ public class PayrollController {
                                 .build();
                     })
                     .toList();
-        } catch (Exception e) {  }
+        } catch (Exception e) {}
 
         model.addAttribute("payrollRuns", payrollRuns);
         model.addAttribute("currentPaySlips", currentPaySlips);
@@ -384,7 +398,6 @@ public class PayrollController {
         model.addAttribute("title", "Payroll Management");
         model.addAttribute("subTitle", "Manage employee payroll, salary details, and payment history");
 
-        // Disable lock button when until finance approved/reject lock:
         List<FlowableTaskDTO> pendingLockTasks = flowableTaskService
                 .getTasksByTaskDefinition("financeOfficer", "payrollPeriodCloseProcess");
 
@@ -452,6 +465,9 @@ public class PayrollController {
     public String getReport(
             @RequestParam(defaultValue = "GRADE") String groupBy,
             Model model) {
+        if (authenticationManager.isRestrictedHr()) {
+            return "redirect:/payroll/employee-payroll";
+        }
 
         YearMonth currentMonth = YearMonth.now();
 

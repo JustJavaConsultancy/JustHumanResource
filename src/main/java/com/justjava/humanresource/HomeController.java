@@ -27,6 +27,8 @@ public class HomeController {
             return "redirect:/admin/users";
         } else if (authenticationManager.isJobHR()) {
             return "redirect:/departments";
+        } else if (authenticationManager.isRestrictedHr()) {
+            return "redirect:/departments";
         } else if (authenticationManager.isHumanResource()) {
             return "redirect:/departments";
         }

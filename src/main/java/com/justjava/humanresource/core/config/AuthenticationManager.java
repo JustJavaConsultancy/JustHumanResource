@@ -52,6 +52,11 @@ public class AuthenticationManager {
         }
         return groups.contains("/jobHR");
     }
+    public boolean isRestrictedHr() {
+        List<String> groups = (List<String>) this.get("groups");
+        if (groups == null) return false;
+        return groups.contains("/restrictedHr");
+    }
 
     public Object getAllAttributes() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
