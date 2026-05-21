@@ -878,10 +878,37 @@
                                 hx-trigger="change"
                                 hx-indicator="#kpi-loading-spinner"
                                 required
-                                class="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+                                class="hidden">
                             <option value="">Select Employee</option>
                             <option th:each="emp : ${employees}" th:value="${emp.id}" th:text="${emp.firstName + ' ' + emp.lastName}">Employee Name</option>
                         </select>
+                        <div class="searchable-select-container" id="measurementEmployeeSearchContainer">
+                            <input type="text"
+                                   class="searchable-select-input"
+                                   id="measurementEmployeeSearchInput"
+                                   placeholder="Search and select employee..."
+                                   readonly
+                                   autocomplete="off">
+                            <span class="searchable-select-clear material-icons-round" onclick="clearMeasurementEmployeeSelection(event)">close</span>
+                            <span class="searchable-select-chevron material-icons-round">expand_more</span>
+
+                            <div class="searchable-select-dropdown" id="measurementEmployeeDropdown">
+                                <div class="searchable-select-search">
+                                    <div style="position: relative;">
+                                        <span class="searchable-select-search-icon material-icons-round">search</span>
+                                        <input type="text"
+                                               id="measurementEmployeeFilterInput"
+                                               placeholder="Type to search employees..."
+                                               autocomplete="off">
+                                    </div>
+                                </div>
+                                <div class="searchable-select-options" id="measurementEmployeeOptions"></div>
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1.5 flex items-center gap-1">
+                            <span class="material-icons-round text-xs">info</span>
+                            Click to search and select an employee
+                        </p>
                         <span id="kpi-loading-spinner" class="htmx-indicator text-sm text-primary-600">Loading KPIs...</span>
                     </div>
                     <div>
@@ -1867,6 +1894,8 @@ function handleAssignmentResponse(event) {
         // ========== SEARCHABLE EMPLOYEE SELECT ==========
         let employeesList = [];
         let highlightedIndex = -1;
+        let measurementEmployeesList = [];
+        let measurementHighlightedIndex = -1;
 
         function initializeEmployeeSearchableSelect() {
             const originalSelect = document.getElementById('assignmentEmployee');
@@ -2057,10 +2086,190 @@ function handleAssignmentResponse(event) {
             });
         }
 
+        function initializeMeasurementEmployeeSearchableSelect() {
+            const originalSelect = document.getElementById('measurementEmployee');
+            const container = document.getElementById('measurementEmployeeSearchContainer');
+            const input = document.getElementById('measurementEmployeeSearchInput');
+            const dropdown = document.getElementById('measurementEmployeeDropdown');
+            const filterInput = document.getElementById('measurementEmployeeFilterInput');
+            const form = document.getElementById('measurementForm');
+
+            if (!originalSelect || !container || !input || !dropdown || !filterInput) return;
+
+            measurementEmployeesList = [];
+            Array.from(originalSelect.options).forEach((option) => {
+                if (option.value) {
+                    measurementEmployeesList.push({
+                        id: option.value,
+                        name: option.textContent,
+                        initials: getInitials(option.textContent)
+                    });
+                }
+            });
+
+            renderMeasurementEmployeeOptions('');
+
+            input.addEventListener('click', (e) => {
+                e.stopPropagation();
+                toggleMeasurementEmployeeDropdown();
+            });
+
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    toggleMeasurementEmployeeDropdown();
+                }
+            });
+
+            filterInput.addEventListener('input', (e) => {
+                renderMeasurementEmployeeOptions(e.target.value);
+                measurementHighlightedIndex = -1;
+            });
+
+            filterInput.addEventListener('keydown', handleMeasurementEmployeeKeydown);
+
+            document.addEventListener('click', (e) => {
+                if (!container.contains(e.target)) {
+                    closeMeasurementEmployeeDropdown();
+                }
+            });
+
+            if (form) {
+                form.addEventListener('reset', () => {
+                    input.value = '';
+                    container.classList.remove('has-value');
+                    closeMeasurementEmployeeDropdown();
+                    renderMeasurementEmployeeOptions('');
+                });
+            }
+        }
+
+        function toggleMeasurementEmployeeDropdown() {
+            const container = document.getElementById('measurementEmployeeSearchContainer');
+            const dropdown = document.getElementById('measurementEmployeeDropdown');
+            const filterInput = document.getElementById('measurementEmployeeFilterInput');
+
+            if (dropdown.classList.contains('show')) {
+                closeMeasurementEmployeeDropdown();
+            } else {
+                dropdown.classList.add('show');
+                container.classList.add('open');
+                filterInput.value = '';
+                filterInput.focus();
+                renderMeasurementEmployeeOptions('');
+                measurementHighlightedIndex = -1;
+            }
+        }
+
+        function closeMeasurementEmployeeDropdown() {
+            const container = document.getElementById('measurementEmployeeSearchContainer');
+            const dropdown = document.getElementById('measurementEmployeeDropdown');
+            if (!container || !dropdown) return;
+            dropdown.classList.remove('show');
+            container.classList.remove('open');
+            measurementHighlightedIndex = -1;
+        }
+
+        function renderMeasurementEmployeeOptions(searchTerm) {
+            const optionsContainer = document.getElementById('measurementEmployeeOptions');
+            const originalSelect = document.getElementById('measurementEmployee');
+            if (!optionsContainer || !originalSelect) return;
+            const currentValue = originalSelect.value;
+
+            const filtered = measurementEmployeesList.filter(emp =>
+                emp.name.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+
+            if (filtered.length === 0) {
+                optionsContainer.innerHTML = `
+                    <div class="searchable-select-no-results">
+                        <span class="material-icons-round" style="font-size: 2rem; display: block; margin-bottom: 0.5rem; opacity: 0.5;">person_search</span>
+                        No employees found matching "${searchTerm}"
+                    </div>
+                `;
+                return;
+            }
+
+            optionsContainer.innerHTML = filtered.map((emp, index) => `
+                <div class="searchable-select-option ${emp.id === currentValue ? 'selected' : ''}"
+                     data-value="${emp.id}"
+                     data-index="${index}"
+                     onclick="selectMeasurementEmployee('${emp.id}', '${emp.name.replace(/'/g, "\\'")}')">
+                    <div class="searchable-select-avatar">${emp.initials}</div>
+                    <div class="searchable-select-option-text">
+                        <span class="searchable-select-option-name">${highlightMatch(emp.name, searchTerm)}</span>
+                    </div>
+                    ${emp.id === currentValue ? '<span class="material-icons-round text-primary-600" style="margin-left: auto;">check</span>' : ''}
+                </div>
+            `).join('');
+        }
+
+        function selectMeasurementEmployee(id, name) {
+            const originalSelect = document.getElementById('measurementEmployee');
+            const input = document.getElementById('measurementEmployeeSearchInput');
+            const container = document.getElementById('measurementEmployeeSearchContainer');
+            if (!originalSelect || !input || !container) return;
+
+            originalSelect.value = id;
+            input.value = name;
+            container.classList.add('has-value');
+            closeMeasurementEmployeeDropdown();
+            originalSelect.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+
+        function clearMeasurementEmployeeSelection(event) {
+            event.stopPropagation();
+            const originalSelect = document.getElementById('measurementEmployee');
+            const input = document.getElementById('measurementEmployeeSearchInput');
+            const container = document.getElementById('measurementEmployeeSearchContainer');
+            if (!originalSelect || !input || !container) return;
+
+            originalSelect.value = '';
+            input.value = '';
+            container.classList.remove('has-value');
+            renderMeasurementEmployeeOptions('');
+            originalSelect.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+
+        function handleMeasurementEmployeeKeydown(e) {
+            const optionsContainer = document.getElementById('measurementEmployeeOptions');
+            if (!optionsContainer) return;
+            const options = optionsContainer.querySelectorAll('.searchable-select-option');
+            if (options.length === 0) return;
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                measurementHighlightedIndex = Math.min(measurementHighlightedIndex + 1, options.length - 1);
+                updateMeasurementHighlight(options);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                measurementHighlightedIndex = Math.max(measurementHighlightedIndex - 1, 0);
+                updateMeasurementHighlight(options);
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                if (measurementHighlightedIndex >= 0 && measurementHighlightedIndex < options.length) {
+                    options[measurementHighlightedIndex].click();
+                }
+            } else if (e.key === 'Escape') {
+                closeMeasurementEmployeeDropdown();
+            }
+        }
+
+        function updateMeasurementHighlight(options) {
+            options.forEach((opt, idx) => {
+                opt.classList.remove('highlighted');
+                if (idx === measurementHighlightedIndex) {
+                    opt.classList.add('highlighted');
+                    opt.scrollIntoView({ block: 'nearest' });
+                }
+            });
+        }
+
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
             setupGradeStepListener();
             initializeEmployeeSearchableSelect(); // Initialize searchable select
+            initializeMeasurementEmployeeSearchableSelect();
 
             window.onclick = function(event) {
                 if (event.target.classList.contains('modal')) {
