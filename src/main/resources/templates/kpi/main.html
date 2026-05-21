@@ -2214,7 +2214,11 @@ function handleAssignmentResponse(event) {
             input.value = name;
             container.classList.add('has-value');
             closeMeasurementEmployeeDropdown();
-            originalSelect.dispatchEvent(new Event('change', { bubbles: true }));
+            if (window.htmx) {
+                htmx.trigger(originalSelect, 'change');
+            } else {
+                originalSelect.dispatchEvent(new Event('change', { bubbles: true }));
+            }
         }
 
         function clearMeasurementEmployeeSelection(event) {
@@ -2228,7 +2232,11 @@ function handleAssignmentResponse(event) {
             input.value = '';
             container.classList.remove('has-value');
             renderMeasurementEmployeeOptions('');
-            originalSelect.dispatchEvent(new Event('change', { bubbles: true }));
+            if (window.htmx) {
+                htmx.trigger(originalSelect, 'change');
+            } else {
+                originalSelect.dispatchEvent(new Event('change', { bubbles: true }));
+            }
         }
 
         function handleMeasurementEmployeeKeydown(e) {
