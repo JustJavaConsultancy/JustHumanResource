@@ -62,7 +62,8 @@ public class KpiController {
         List<KpiDefinition> kpiDefinitions = kpiDefinitionService.getAll();
         List<Employee> employees = employeeOnboardingService.getAllOnboardings()
                 .stream()
-                .sorted(Comparator.comparing(Employee::getId))
+                .sorted(Comparator.comparing(Employee::getFirstName, String.CASE_INSENSITIVE_ORDER)
+                        .thenComparing(Employee::getLastName, String.CASE_INSENSITIVE_ORDER))
                 .collect(Collectors.toList());
         List<JobGradeResponseDTO> jobGrades = setupService.getAllJobGrades();
         List<Department> departments = setupService.getAllDepartments();
@@ -420,7 +421,8 @@ public class KpiController {
         List<KpiDefinition> kpiDefinitions = kpiDefinitionService.getAll();
         List<Employee> employees = employeeOnboardingService.getAllOnboardings()
                 .stream()
-                .sorted(Comparator.comparing(Employee::getId))
+                .sorted(Comparator.comparing(Employee::getFirstName, String.CASE_INSENSITIVE_ORDER)
+                        .thenComparing(Employee::getLastName, String.CASE_INSENSITIVE_ORDER))
                 .collect(Collectors.toList());
         List<JobGradeResponseDTO> jobGrades = setupService.getAllJobGrades();
 

@@ -60,7 +60,6 @@
 
             <!-- Actions -->
             <td class="px-4 py-3" th:id="'actions-cell-' + ${measurement.measurementId}">
-                <!-- Edit button (view button removed) -->
                 <button
                         th:onclick="'startEditMeasurement(' + ${measurement.measurementId} + ', ' + ${measurement.actualValue} + ')'"
                         class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
@@ -86,14 +85,12 @@
 <script>
     /**
      * Switches a row into inline-edit mode.
-     * Replaces the Actual Value cell and Actions cell with an input + save/cancel.
      */
     function startEditMeasurement(measurementId, currentActualValue) {
         const actualCell   = document.getElementById('actual-cell-'  + measurementId);
         const scoreCell    = document.getElementById('score-cell-'   + measurementId);
         const actionsCell  = document.getElementById('actions-cell-' + measurementId);
 
-        // --- Actual Value cell: swap to input ---
         actualCell.innerHTML = `
             <input
                 id="edit-input-${measurementId}"
@@ -107,14 +104,12 @@
             />
         `;
 
-        // --- Score cell: show a saving indicator placeholder ---
         scoreCell.innerHTML = `
             <span id="score-preview-${measurementId}" class="text-xs text-gray-400 italic">
                 Enter value →
             </span>
         `;
 
-        // --- Actions cell: save + cancel ---
         actionsCell.innerHTML = `
             <button onclick="saveMeasurement(${measurementId})"
                     class="text-green-600 hover:text-green-800 dark:text-green-400 mr-2"
@@ -128,22 +123,19 @@
             </button>
         `;
 
-        // Focus the input
         const input = document.getElementById('edit-input-' + measurementId);
         input.focus();
         input.select();
 
-        // Allow pressing Enter to save
         input.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') saveMeasurement(measurementId);
+            if (e.key === 'Enter')  saveMeasurement(measurementId);
             if (e.key === 'Escape') cancelEditMeasurement(measurementId);
         });
     }
 
     /**
      * POSTs the new actualValue to the backend, then refreshes
-     * the whole measurements table via HTMX so updated score
-     * and the payroll recalculation are reflected.
+     * only #measurementsTable via HTMX (search bar is untouched).
      */
     function saveMeasurement(measurementId) {
         const input = document.getElementById('edit-input-' + measurementId);
@@ -156,7 +148,6 @@
             return;
         }
 
-        // Visual feedback while saving
         const actionsCell = document.getElementById('actions-cell-' + measurementId);
         actionsCell.innerHTML = `
             <span class="text-xs text-gray-400 flex items-center gap-1">
@@ -179,10 +170,9 @@
             if (!response.ok) {
                 return response.text().then(text => { throw new Error(text || 'Save failed'); });
             }
-            // Refresh the entire measurements table fragment via HTMX
             htmx.ajax('GET', '/fragments/kpi-measurements-table', {
                 target: '#measurementsTable',
-                swap: 'outerHTML'
+                swap: 'innerHTML'
             });
         })
         .catch(err => {
@@ -201,7 +191,7 @@
     function cancelEditMeasurement(measurementId) {
         htmx.ajax('GET', '/fragments/kpi-measurements-table', {
             target: '#measurementsTable',
-            swap: 'outerHTML'
+            swap: 'innerHTML'
         });
     }
 </script>
