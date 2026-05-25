@@ -6,7 +6,9 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface AllowanceRepository extends JpaRepository<Allowance, Long> {
     List<Allowance> findByStatus(RecordStatus status, Sort sort);
+    Optional<Allowance> findByCode(String code);
 }

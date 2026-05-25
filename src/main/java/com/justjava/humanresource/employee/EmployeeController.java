@@ -11,11 +11,13 @@ import com.justjava.humanresource.hr.entity.Employee;
 import com.justjava.humanresource.hr.entity.EmployeeDocument;
 import com.justjava.humanresource.hr.entity.PayGroup;
 import com.justjava.humanresource.hr.service.EmployeeService;
+import com.justjava.humanresource.hr.service.EmployeePayItemUploadService;
 import com.justjava.humanresource.hr.service.EmployeeUploadService;
 import com.justjava.humanresource.hr.service.JobHrEmployeeAccessService;
 import com.justjava.humanresource.hr.service.SetupService;
 import com.justjava.humanresource.hr.service.EmployeeDocumentService;
 import com.justjava.humanresource.hr.service.impl.EmployeeUploadServiceImpl.DuplicateEmailUploadException;
+import com.justjava.humanresource.hr.service.impl.EmployeePayItemUploadServiceImpl.PayItemUploadValidationException;
 import com.justjava.humanresource.kpi.dto.AppraisalTaskViewDTO;
 import com.justjava.humanresource.kpi.entity.AppraisalCycle;
 import com.justjava.humanresource.kpi.entity.EmployeeAppraisal;
@@ -69,6 +71,7 @@ public class EmployeeController {
     @Autowired private PayrollSetupService payrollSetupService;
     @Autowired private EmployeeDocumentService documentService;
     @Autowired private EmployeeUploadService employeeUploadService;
+    @Autowired private EmployeePayItemUploadService employeePayItemUploadService;
     @Autowired private JobHrEmployeeAccessService jobHrEmployeeAccessService;
     @Autowired PaySlipService paySlipService;
 
@@ -284,6 +287,27 @@ public class EmployeeController {
             body.put("error",            "DUPLICATE_EMAIL");
             body.put("message",          ex.getMessage());
             body.put("conflictingEmails", ex.getConflictingEmails());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+        }
+    }
+
+    @PostMapping("/employees/pay-items/upload-csv")
+    @ResponseBody
+    public ResponseEntity<?> uploadEmployeePayItemsCsv(@RequestParam("file") MultipartFile file) {
+        try {
+            EmployeePayItemUploadService.UploadSummary summary = employeePayItemUploadService.uploadPayItems(file);
+            return ResponseEntity.ok(Map.of(
+                    "message", "Employee pay items uploaded successfully",
+                    "totalRows", summary.totalRows(),
+                    "successRows", summary.successRows()
+            ));
+        } catch (PayItemUploadValidationException ex) {
+            Map<String, Object> body = new LinkedHashMap<>();
+            body.put("error", "PAY_ITEM_UPLOAD_VALIDATION_FAILED");
+            body.put("message", "Upload blocked due to validation errors");
+            body.put("totalRows", ex.getTotalRows());
+            body.put("invalidRowCount", ex.getRowErrors().size());
+            body.put("rowErrors", ex.getRowErrors());
             return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
         }
     }
