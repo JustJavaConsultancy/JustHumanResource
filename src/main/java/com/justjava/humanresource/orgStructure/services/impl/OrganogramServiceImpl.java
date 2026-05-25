@@ -186,11 +186,30 @@ public class OrganogramServiceImpl implements OrganogramService {
                               ReportingType type,
                               LocalDate effectiveFrom) {
 
+        if (employeeId.equals(managerId)) {
+            throw new IllegalArgumentException("Employee cannot report to self.");
+        }
+
+        if (reportingRepository.wouldCreateCycle(employeeId, managerId)) {
+            throw new IllegalStateException("This reporting assignment would create a cycle.");
+        }
+
         Employee employee = employeeRepository.findById(employeeId)
                 .orElseThrow();
 
         Employee manager = employeeRepository.findById(managerId)
                 .orElseThrow();
+
+        var activeOpt = reportingRepository.findActiveLine(employeeId, type);
+        if (activeOpt.isPresent()) {
+            var active = activeOpt.get();
+            if (active.getManager().getId().equals(managerId)) {
+                return;
+            }
+            active.setEffectiveTo(effectiveFrom.minusDays(1));
+            active.setStatus(RecordStatus.INACTIVE);
+            reportingRepository.save(active);
+        }
 
         EmployeeReportingLine line = EmployeeReportingLine.builder()
                 .employee(employee)

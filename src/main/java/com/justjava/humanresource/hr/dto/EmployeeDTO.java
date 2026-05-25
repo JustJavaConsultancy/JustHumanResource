@@ -17,6 +17,7 @@ public class EmployeeDTO {
     private Long departmentId;
     private Long jobStepId;
     private Long payGroupId;
+    private Long lineManagerId;
     private boolean payrollEnabled;
     private boolean kpiEnabled;
 

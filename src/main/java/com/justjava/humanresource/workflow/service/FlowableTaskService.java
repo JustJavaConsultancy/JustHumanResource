@@ -131,6 +131,14 @@ public class FlowableTaskService {
         taskService.complete(taskId);
     }
 
+    public boolean isTaskAssignedTo(String taskId, String assignee) {
+        Task task = taskService.createTaskQuery()
+                .taskId(taskId)
+                .taskAssignee(assignee)
+                .singleResult();
+        return task != null;
+    }
+
     /* =====================================================
        INTERNAL MAPPER
        ===================================================== */
