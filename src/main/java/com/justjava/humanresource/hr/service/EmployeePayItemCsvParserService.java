@@ -34,12 +34,12 @@ public class EmployeePayItemCsvParserService {
                 List<String> parts = parseCsvLine(line);
                 EmployeePayItemUploadDTO dto = new EmployeePayItemUploadDTO();
                 dto.setRowNumber(lineNumber);
-                dto.setEmployeeNumber(value(parts, 0));
-                dto.setEmployeeEmail(value(parts, 1));
-                dto.setItemType(value(parts, 2));
-                dto.setItemCode(value(parts, 3));
+                dto.setEmployeeId(Long.parseLong(value(parts, 0)));
+                dto.setItemType(value(parts, 1));
+                dto.setItemCode(value(parts, 2));
 
-                String overrideAmount = value(parts, 4);
+
+                String overrideAmount = value(parts, 3);
                 if (!overrideAmount.isBlank()) {
                     dto.setOverrideAmount(new BigDecimal(overrideAmount));
                 }
