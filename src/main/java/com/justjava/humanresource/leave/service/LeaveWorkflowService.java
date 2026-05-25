@@ -95,6 +95,9 @@ public class LeaveWorkflowService {
 
     @Transactional(readOnly = true)
     public List<LeaveRequest> getMyLeaveRequests() {
+        if (isHrUser()) {
+            return leaveRequestRepository.findAllByOrderByCreatedAtDesc();
+        }
         Employee current = tryGetCurrentEmployee();
         if (current == null) {
             return List.of();
@@ -104,6 +107,9 @@ public class LeaveWorkflowService {
 
     @Transactional(readOnly = true)
     public List<FlowableTaskDTO> getMyPendingApprovalTasks() {
+        if (isHrUser()) {
+            return flowableTaskService.getTasksByProcessDefinition("leaveApprovalProcess");
+        }
         Employee current = getCurrentEmployee();
         return flowableTaskService.getTasksForAssignee(
                 String.valueOf(current.getId()),
@@ -186,5 +192,12 @@ public class LeaveWorkflowService {
         } catch (Exception ex) {
             return null;
         }
+    }
+
+    private boolean isHrUser() {
+        return authenticationManager.isHumanResource()
+                || authenticationManager.isJobHR()
+                || authenticationManager.isAdmin()
+                || authenticationManager.isRestrictedHr();
     }
 }

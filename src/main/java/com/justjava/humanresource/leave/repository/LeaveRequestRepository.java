@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, Long> {
     List<LeaveRequest> findByEmployeeIdOrderByCreatedAtDesc(Long employeeId);
+    List<LeaveRequest> findAllByOrderByCreatedAtDesc();
 }
