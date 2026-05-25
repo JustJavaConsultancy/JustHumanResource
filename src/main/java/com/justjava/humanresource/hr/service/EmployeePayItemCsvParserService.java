@@ -7,7 +7,6 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -39,21 +38,10 @@ public class EmployeePayItemCsvParserService {
                 dto.setEmployeeEmail(value(parts, 1));
                 dto.setItemType(value(parts, 2));
                 dto.setItemCode(value(parts, 3));
-                dto.setOverridden(value(parts, 4));
 
-                String overrideAmount = value(parts, 5);
+                String overrideAmount = value(parts, 4);
                 if (!overrideAmount.isBlank()) {
                     dto.setOverrideAmount(new BigDecimal(overrideAmount));
-                }
-
-                String effectiveFrom = value(parts, 6);
-                if (!effectiveFrom.isBlank()) {
-                    dto.setEffectiveFrom(LocalDate.parse(effectiveFrom));
-                }
-
-                String effectiveTo = value(parts, 7);
-                if (!effectiveTo.isBlank()) {
-                    dto.setEffectiveTo(LocalDate.parse(effectiveTo));
                 }
 
                 rows.add(dto);

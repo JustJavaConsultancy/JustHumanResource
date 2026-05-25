@@ -609,7 +609,7 @@
             </div>
             <div>
                 <p class="text-sm font-semibold text-gray-700 dark:text-gray-200">Bulk Upload Employee Pay Items</p>
-                <p class="text-xs text-gray-500 dark:text-gray-400">CSV: employeeNumber, employeeEmail, itemType, itemCode, overridden, overrideAmount, effectiveFrom, effectiveTo</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">CSV: employeeNumber, employeeEmail, itemType, itemCode, overrideAmount</p>
             </div>
         </div>
         <div class="flex flex-wrap items-center gap-3 md:ml-auto">
@@ -1962,10 +1962,7 @@
                                 <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-200 dark:border-gray-600">Employee Email</th>
                                 <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-200 dark:border-gray-600">Item Type</th>
                                 <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-200 dark:border-gray-600">Item Code</th>
-                                <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-200 dark:border-gray-600">Overridden</th>
                                 <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-200 dark:border-gray-600">Override Amount</th>
-                                <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-200 dark:border-gray-600">Effective From</th>
-                                <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-200 dark:border-gray-600">Effective To</th>
                                 <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-200 dark:border-gray-600">Status</th>
                             </tr>
                             </thead>
@@ -3138,11 +3135,11 @@
 
         function downloadPayItemCsvTemplate() {
             const template =
-                'employeeNumber,employeeEmail,itemType,itemCode,overridden,overrideAmount,effectiveFrom,effectiveTo\n' +
-                'EMP-1001,,ALLOWANCE,ALL-HOUSING,true,50000,2026-06-01,\n' +
-                'EMP-1001,,DEDUCTION,DED-PENSION,false,,2026-06-01,\n' +
-                'EMP-1002,,TAX_RELIEF,TR-CRA,false,,2026-06-01,2026-12-31\n' +
-                ',ada.okafor@company.com,ALLOWANCE,ALL-TRANSPORT,true,25000,2026-07-01,\n';
+                'employeeNumber,employeeEmail,itemType,itemCode,overrideAmount\n' +
+                'EMP-1001,,ALLOWANCE,ALL-HOUSING,50000\n' +
+                'EMP-1001,,DEDUCTION,DED-PENSION,15000\n' +
+                'EMP-1002,,TAX_RELIEF,TR-CRA,10000\n' +
+                ',ada.okafor@company.com,ALLOWANCE,ALL-TRANSPORT,25000\n';
             const blob = new Blob([template], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -3189,30 +3186,22 @@
                 const employeeEmail = (parts[1] || '').toLowerCase();
                 const itemType = (parts[2] || '').toUpperCase();
                 const itemCode = (parts[3] || '').toUpperCase();
-                const overridden = (parts[4] || '').toLowerCase();
-                const overrideAmount = parts[5] || '';
-                const effectiveFrom = parts[6] || '';
-                const effectiveTo = parts[7] || '';
+                const overrideAmount = parts[4] || '';
 
                 const errors = [];
                 if (!employeeNumber && !employeeEmail) errors.push('employeeNumber or employeeEmail is required');
                 if (employeeEmail && !employeeEmail.includes('@')) errors.push('Invalid employeeEmail');
                 if (!validTypes.includes(itemType)) errors.push('itemType must be ALLOWANCE, DEDUCTION, or TAX_RELIEF');
                 if (!itemCode) errors.push('itemCode is required');
-                if (!(overridden === 'true' || overridden === 'false')) errors.push('overridden must be true or false');
-                if (overridden === 'true' && (!overrideAmount || isNaN(Number(overrideAmount)) || Number(overrideAmount) < 0)) {
-                    errors.push('overrideAmount must be >= 0 when overridden=true');
+                if (!overrideAmount || isNaN(Number(overrideAmount)) || Number(overrideAmount) < 0) {
+                    errors.push('overrideAmount must be provided and >= 0');
                 }
-                if (!effectiveFrom || !/^\d{4}-\d{2}-\d{2}$/.test(effectiveFrom)) errors.push('effectiveFrom must be YYYY-MM-DD');
-                if (effectiveTo && !/^\d{4}-\d{2}-\d{2}$/.test(effectiveTo)) errors.push('effectiveTo must be YYYY-MM-DD');
-                if (effectiveFrom && effectiveTo && effectiveTo < effectiveFrom) errors.push('effectiveTo cannot be before effectiveFrom');
-
-                const uniqueKey = (employeeNumber || employeeEmail) + '|' + itemType + '|' + itemCode + '|' + effectiveFrom;
+                const uniqueKey = (employeeNumber || employeeEmail) + '|' + itemType + '|' + itemCode;
                 if (seen.has(uniqueKey)) errors.push('Duplicate row in file');
                 seen.add(uniqueKey);
 
                 if (errors.length > 0) hasErrors = true;
-                rows.push({ idx: idx + 1, employeeNumber, employeeEmail, itemType, itemCode, overridden, overrideAmount, effectiveFrom, effectiveTo, errors });
+                rows.push({ idx: idx + 1, employeeNumber, employeeEmail, itemType, itemCode, overrideAmount, errors });
             });
 
             const tbody = document.getElementById('payItemCsvPreviewTableBody');
@@ -3227,10 +3216,7 @@
                     '<td class="px-3 py-2 text-xs text-gray-700 dark:text-gray-300">' + esc(row.employeeEmail) + '</td>' +
                     '<td class="px-3 py-2 text-xs font-semibold text-gray-700 dark:text-gray-300">' + esc(row.itemType) + '</td>' +
                     '<td class="px-3 py-2 text-xs text-gray-700 dark:text-gray-300">' + esc(row.itemCode) + '</td>' +
-                    '<td class="px-3 py-2 text-xs text-gray-700 dark:text-gray-300">' + esc(row.overridden) + '</td>' +
                     '<td class="px-3 py-2 text-xs font-mono text-gray-700 dark:text-gray-300">' + esc(row.overrideAmount) + '</td>' +
-                    '<td class="px-3 py-2 text-xs text-gray-700 dark:text-gray-300">' + esc(row.effectiveFrom) + '</td>' +
-                    '<td class="px-3 py-2 text-xs text-gray-700 dark:text-gray-300">' + esc(row.effectiveTo) + '</td>' +
                     '<td class="px-3 py-2">' + (ok
                         ? '<span class="flex items-center gap-1 text-green-600 text-xs font-medium"><span class="material-icons-round text-sm">check_circle</span>OK</span>'
                         : '<span class="text-red-600 text-xs" title="' + esc(row.errors.join(', ')) + '"><span class="material-icons-round text-sm align-bottom">error</span> ' + esc(row.errors[0]) + (row.errors.length > 1 ? ' +' + (row.errors.length - 1) + ' more' : '') + '</span>'

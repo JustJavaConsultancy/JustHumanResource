@@ -44,6 +44,8 @@ public class EmployeePayItemUploadServiceImpl implements EmployeePayItemUploadSe
     @Override
     @Transactional
     public UploadSummary uploadPayItems(MultipartFile file) {
+        LocalDate effectiveFrom = LocalDate.now();
+        LocalDate effectiveTo = null;
         List<EmployeePayItemUploadDTO> rows = parserService.parse(file);
         if (rows.isEmpty()) {
             return new UploadSummary(0, 0);
@@ -82,7 +84,7 @@ public class EmployeePayItemUploadServiceImpl implements EmployeePayItemUploadSe
             Employee employee = resolveEmployee(row, employeeByNumber, employeeByEmail);
             Long employeeId = employee.getId();
             String type = row.getItemType().trim().toUpperCase();
-            boolean overridden = Boolean.parseBoolean(row.getOverridden().trim().toLowerCase());
+            boolean overridden = true;
 
             if ("ALLOWANCE".equals(type)) {
                 Allowance allowance = allowanceByCode.get(row.getItemCode().trim().toUpperCase());
@@ -90,8 +92,8 @@ public class EmployeePayItemUploadServiceImpl implements EmployeePayItemUploadSe
                 request.setAllowanceId(allowance.getId());
                 request.setOverridden(overridden);
                 request.setOverrideAmount(overridden ? row.getOverrideAmount() : null);
-                request.setEffectiveFrom(row.getEffectiveFrom());
-                request.setEffectiveTo(row.getEffectiveTo());
+                request.setEffectiveFrom(effectiveFrom);
+                request.setEffectiveTo(effectiveTo);
                 allowanceRequests.computeIfAbsent(employeeId, k -> new ArrayList<>()).add(request);
             } else if ("DEDUCTION".equals(type)) {
                 Deduction deduction = deductionByCode.get(row.getItemCode().trim().toUpperCase());
@@ -99,8 +101,8 @@ public class EmployeePayItemUploadServiceImpl implements EmployeePayItemUploadSe
                 request.setDeductionId(deduction.getId());
                 request.setOverridden(overridden);
                 request.setOverrideAmount(overridden ? row.getOverrideAmount() : null);
-                request.setEffectiveFrom(row.getEffectiveFrom());
-                request.setEffectiveTo(row.getEffectiveTo());
+                request.setEffectiveFrom(effectiveFrom);
+                request.setEffectiveTo(effectiveTo);
                 deductionRequests.computeIfAbsent(employeeId, k -> new ArrayList<>()).add(request);
             } else {
                 TaxRelief taxRelief = taxReliefByCode.get(row.getItemCode().trim().toUpperCase());
@@ -108,8 +110,8 @@ public class EmployeePayItemUploadServiceImpl implements EmployeePayItemUploadSe
                 request.setTaxReliefId(taxRelief.getId());
                 request.setOverridden(overridden);
                 request.setOverrideAmount(overridden ? row.getOverrideAmount() : null);
-                request.setEffectiveFrom(row.getEffectiveFrom());
-                request.setEffectiveTo(row.getEffectiveTo());
+                request.setEffectiveFrom(effectiveFrom);
+                request.setEffectiveTo(effectiveTo);
                 taxReliefRequests.computeIfAbsent(employeeId, k -> new ArrayList<>()).add(request);
             }
         }
@@ -137,7 +139,6 @@ public class EmployeePayItemUploadServiceImpl implements EmployeePayItemUploadSe
             String employeeEmail = safe(row.getEmployeeEmail()).toLowerCase();
             String itemType = safe(row.getItemType()).toUpperCase();
             String itemCode = safe(row.getItemCode()).toUpperCase();
-            String overriddenText = safe(row.getOverridden()).toLowerCase();
 
             if (employeeNumber.isBlank() && employeeEmail.isBlank()) {
                 errors.add(err(row, "Either employeeNumber or employeeEmail is required"));
@@ -165,20 +166,8 @@ public class EmployeePayItemUploadServiceImpl implements EmployeePayItemUploadSe
                 errors.add(err(row, "itemCode is required"));
                 continue;
             }
-            if (row.getEffectiveFrom() == null) {
-                errors.add(err(row, "effectiveFrom is required"));
-                continue;
-            }
-            if (row.getEffectiveTo() != null && row.getEffectiveTo().isBefore(row.getEffectiveFrom())) {
-                errors.add(err(row, "effectiveTo cannot be before effectiveFrom"));
-                continue;
-            }
-            if (!"true".equals(overriddenText) && !"false".equals(overriddenText)) {
-                errors.add(err(row, "overridden must be true or false"));
-                continue;
-            }
-            if ("true".equals(overriddenText) && (row.getOverrideAmount() == null || row.getOverrideAmount().compareTo(BigDecimal.ZERO) < 0)) {
-                errors.add(err(row, "overrideAmount must be provided and >= 0 when overridden=true"));
+            if (row.getOverrideAmount() == null || row.getOverrideAmount().compareTo(BigDecimal.ZERO) < 0) {
+                errors.add(err(row, "overrideAmount must be provided and >= 0"));
                 continue;
             }
 
@@ -195,9 +184,9 @@ public class EmployeePayItemUploadServiceImpl implements EmployeePayItemUploadSe
                 continue;
             }
 
-            String dedupeKey = employee.getId() + "|" + itemType + "|" + itemCode + "|" + row.getEffectiveFrom();
+            String dedupeKey = employee.getId() + "|" + itemType + "|" + itemCode;
             if (!duplicateGuard.add(dedupeKey)) {
-                errors.add(err(row, "Duplicate row detected for employee + item + effectiveFrom"));
+                errors.add(err(row, "Duplicate row detected for employee + item"));
             }
         }
         return errors;

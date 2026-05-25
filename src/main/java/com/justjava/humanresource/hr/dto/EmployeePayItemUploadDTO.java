@@ -4,7 +4,6 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 
 @Getter
 @Setter
@@ -15,8 +14,5 @@ public class EmployeePayItemUploadDTO {
     private String employeeEmail;
     private String itemType;
     private String itemCode;
-    private String overridden;
     private BigDecimal overrideAmount;
-    private LocalDate effectiveFrom;
-    private LocalDate effectiveTo;
 }
