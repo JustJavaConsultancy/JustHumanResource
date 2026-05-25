@@ -95,7 +95,11 @@ public class LeaveWorkflowService {
 
     @Transactional(readOnly = true)
     public List<LeaveRequest> getMyLeaveRequests() {
-        return leaveRequestRepository.findByEmployeeIdOrderByCreatedAtDesc(getCurrentEmployee().getId());
+        Employee current = tryGetCurrentEmployee();
+        if (current == null) {
+            return List.of();
+        }
+        return leaveRequestRepository.findByEmployeeIdOrderByCreatedAtDesc(current.getId());
     }
 
     @Transactional(readOnly = true)
@@ -170,5 +174,17 @@ public class LeaveWorkflowService {
     private Employee getCurrentEmployee() {
         String email = (String) authenticationManager.get("email");
         return employeeService.getByEmail(email);
+    }
+
+    private Employee tryGetCurrentEmployee() {
+        try {
+            String email = (String) authenticationManager.get("email");
+            if (email == null || email.isBlank()) {
+                return null;
+            }
+            return employeeService.getByEmail(email);
+        } catch (Exception ex) {
+            return null;
+        }
     }
 }
