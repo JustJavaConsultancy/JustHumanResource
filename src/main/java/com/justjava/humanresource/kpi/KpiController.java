@@ -27,6 +27,15 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import com.justjava.humanresource.kpi.service.KpiCsvUploadResultDTO;
+import com.justjava.humanresource.kpi.service.KpiCsvUploadService;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.math.BigDecimal;
 import java.time.YearMonth;
@@ -56,6 +65,9 @@ public class KpiController {
 
     @Autowired
     private FlowableTaskService flowableTaskService;
+
+    @Autowired
+    private KpiCsvUploadService kpiCsvUploadService;
 
     @GetMapping("/kpi")
     public String attendancePage(Model model) {
@@ -733,4 +745,71 @@ public class KpiController {
 
         return "kpi/fragment/appraisal-fragment :: appraisal-content";
     }
+
+
+
+
+    @GetMapping("/kpi/measurements/csv-template")
+    public ResponseEntity<ByteArrayResource> downloadCsvTemplate() {
+
+        String csv = "employeeId,actualValue\n" +
+                "12,85.00\n" +
+                "14,92.50\n" +
+                "17,100.00\n";
+
+        byte[] bytes = csv.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"kpi-measurement-template.csv\"")
+                .contentType(MediaType.parseMediaType("text/csv"))
+                .contentLength(bytes.length)
+                .body(new ByteArrayResource(bytes));
+    }
+
+
+
+    @PostMapping("/kpi/measurements/csv-upload")
+    public String uploadKpiCsv(
+            @RequestParam("file")   MultipartFile file,
+            @RequestParam("kpiId")  Long          kpiId,
+            @RequestParam("period") String        periodStr,
+            Model model
+    ) {
+        try {
+            YearMonth period = YearMonth.parse(periodStr);
+
+            KpiCsvUploadResultDTO result =
+                    kpiCsvUploadService.uploadCsv(file, kpiId, period);
+
+            // Build a user-friendly flash message
+            if (result.isFullSuccess()) {
+                model.addAttribute("csvUploadMessage",
+                        "CSV upload successful! " + result.savedCount() + " measurement(s) saved.");
+                model.addAttribute("csvUploadSuccess", true);
+            } else {
+                model.addAttribute("csvUploadMessage",
+                        result.savedCount() + " of " + result.totalRows()
+                                + " rows saved. Errors: " + String.join("; ", result.rowErrors()));
+                model.addAttribute("csvUploadSuccess", result.savedCount() > 0);
+            }
+
+        } catch (Exception ex) {
+            model.addAttribute("csvUploadMessage",
+                    "Upload failed: " + ex.getMessage());
+            model.addAttribute("csvUploadSuccess", false);
+        }
+
+        // Reload the measurements table (same target as manual entry)
+        List<KpiMeasurementResponseDTO> measurements =
+                kpiMeasurementService.getAllEffectiveMeasurements(YearMonth.now().minusMonths(1));
+        model.addAttribute("measurements", measurements);
+
+        // Return the measurements table fragment so HTMX swaps only the table area.
+        // The banner attributes are available in the same fragment scope.
+        return "kpi/fragment/kpi-measurements-table";
+    }
+
+
+
 }
