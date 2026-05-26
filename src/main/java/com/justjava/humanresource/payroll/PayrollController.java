@@ -531,7 +531,32 @@ public class PayrollController {
         return "payroll/fragments/employee-payroll";
     }
 
+    @PostMapping("/setup/allowance/update")
+    public String updateAllowance(Allowance allowance, RedirectAttributes redirectAttributes) {
+        if (allowance.getAmount() == null)
+            allowance.setAmount(BigDecimal.ZERO);
+        payrollSetupService.updateAllowance(allowance);
+        redirectAttributes.addFlashAttribute("success", "Allowance updated successfully");
+        return "redirect:/payroll/items";
+    }
 
+    @PostMapping("/setup/deduction/update")
+    public String updateDeduction(Deduction deduction, RedirectAttributes redirectAttributes) {
+        if (deduction.getAmount() == null)
+            deduction.setAmount(BigDecimal.ZERO);
+        payrollSetupService.updateDeduction(deduction);
+        redirectAttributes.addFlashAttribute("success", "Deduction updated successfully");
+        return "redirect:/payroll/items";
+    }
+
+    @PostMapping("/setup/taxrelief/update")
+    public String updateTaxRelief(TaxRelief taxRelief, RedirectAttributes redirectAttributes) {
+        if (taxRelief.getAmount() == null)
+            taxRelief.setAmount(BigDecimal.ZERO);
+        payrollSetupService.updateTaxRelief(taxRelief);
+        redirectAttributes.addFlashAttribute("success", "Tax relief updated successfully");
+        return "redirect:/payroll/items";
+    }
 
 
 }

@@ -60,4 +60,15 @@ public interface PayGroupAllowanceRepository
             @Param("date") LocalDate date,
             @Param("status") RecordStatus status
     );
+
+    @Query("""
+    SELECT pga FROM PayGroupAllowance pga
+    WHERE pga.allowance.id = :allowanceId
+      AND pga.status = :status
+""")
+    List<PayGroupAllowance> findByAllowanceIdAndStatus(
+            @Param("allowanceId") Long allowanceId,
+            @Param("status") RecordStatus status
+    );
+
 }

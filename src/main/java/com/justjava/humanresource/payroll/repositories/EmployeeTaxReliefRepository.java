@@ -3,6 +3,7 @@ package com.justjava.humanresource.payroll.repositories;
 import com.justjava.humanresource.core.enums.RecordStatus;
 import com.justjava.humanresource.hr.entity.Employee;
 import com.justjava.humanresource.payroll.entity.EmployeeTaxRelief;
+import feign.Param;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -37,4 +38,15 @@ public interface EmployeeTaxReliefRepository
 
     Optional<EmployeeTaxRelief> findByEmployeeIdAndTaxReliefIdAndEffectiveFrom(
             Long employeeId, Long taxReliefId, LocalDate effectiveFrom);
+
+
+    @Query("""
+    SELECT etr FROM EmployeeTaxRelief etr
+    WHERE etr.taxRelief.id = :taxReliefId
+      AND etr.status = :status
+""")
+    List<EmployeeTaxRelief> findByTaxReliefIdAndStatus(
+            @Param("taxReliefId") Long taxReliefId,
+            @Param("status") RecordStatus status
+    );
 }
