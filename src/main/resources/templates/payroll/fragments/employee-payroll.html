@@ -423,13 +423,20 @@
             <span class="font-medium text-slate-900">Employee Payroll</span>
         </div>
 
-        <!-- Quick-access: Grouped Report (hidden when already on that page) -->
-        <a th:if="${!isRestrictedHr}" href="/payroll/grouped-report" class="grouped-report-shortcut" id="groupedReportLink">
-            <span class="grouped-report-label">View Grouped Report</span>
-            <span class="grouped-report-arrow">
-        <i class="bi bi-arrow-right"></i>
-      </span>
-        </a>
+        <!-- Quick-access links — stacked vertically -->
+        <div class="flex flex-col items-end gap-1">
+            <a th:if="${!isRestrictedHr}" href="/payroll/grouped-report" class="grouped-report-shortcut" id="groupedReportLink">
+                <span class="grouped-report-label">View Grouped Report</span>
+                <span class="grouped-report-arrow">
+            <i class="bi bi-arrow-right"></i>
+        </span>
+            </a>
+
+            <a href="/payroll/payitems-report" class="grouped-report-shortcut">
+                <span>View Pay Items Report</span>
+                <span class="grouped-report-arrow"><i class="bi bi-arrow-right"></i></span>
+            </a>
+        </div>
     </div>
 
     <style>
@@ -653,66 +660,85 @@
         </div>
 
 
-        <!-- Table -->
-        <div th:if="${previousPeriods != null and not #lists.isEmpty(previousPeriods)}"
-             class="past-period-card">
-            <!-- Past Payroll Header -->
-            <div style="padding: 1rem 1.5rem; background: #fafbfd; border-bottom: 1px solid #e6e9ef; display: flex; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
-                <span class="text-sm font-semibold text-slate-600">All Past Records</span>
+        <!-- Collapsible Past Payroll Accordion -->
+        <div th:if="${previousPeriods != null and not #lists.isEmpty(previousPeriods)}" class="past-period-card">
+
+            <!-- Accordion trigger row (always visible) -->
+            <div id="pastPayrollToggle"
+                 onclick="togglePastPayroll()"
+                 style="padding: 1rem 1.5rem; background: #fafbfd; display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; gap: 1rem;">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <div style="width: 34px; height: 34px; border-radius: 8px; background: #eff3fb; display: flex; align-items: center; justify-content: center;">
+                        <i class="bi bi-clock-history" style="color: #4b6fa8; font-size: 0.95rem;"></i>
+                    </div>
+                    <div>
+                        <div class="text-sm font-semibold text-slate-700">Past Payroll Records</div>
+                        <div class="text-xs text-slate-400"
+                             th:text="${#lists.size(previousPeriods)} + ' record' + (${#lists.size(previousPeriods)} != 1 ? 's' : '') + ' — click to expand'">records</div>
+                    </div>
+                </div>
+                <span id="pastPayrollExpandBtn"
+                      style="display: inline-flex; align-items: center; gap: 5px; padding: 5px 14px; border-radius: 6px; font-size: 0.78rem; font-weight: 600; color: #1d4ed8; background: #eff6ff; border: 1px solid #bfdbfe; white-space: nowrap;">
+                    <i class="bi bi-chevron-down" id="pastPayrollChevron" style="transition: transform 0.2s;"></i>
+                    View Records
+                </span>
             </div>
-            <div class="overflow-x-auto custom-scrollbar">
-                <table class="payroll-table">
-                    <thead>
-                    <tr>
-                        <th>Employee</th>
-                        <th>Pay Day</th>
-                        <th>Basic Salary</th>
-                        <th>Gross Pay</th>
-                        <th>Total Deductions</th>
-                        <th>Net Pay</th>
-                        <th>Bank</th>
-                        <th>Actions</th>
-                    </tr>
-                    </thead>
-                    <tbody id="pastPayrollBody">
-                    <tr th:each="paySlip : ${previousPeriods}">
-                        <td>
-                            <div class="flex items-center gap-3">
-                                <div class="emp-avatar"
-                                     th:text="${paySlip.employeeName != null and #strings.length(paySlip.employeeName) >= 2
-                              ? #strings.toUpperCase(#strings.substring(paySlip.employeeName, 0, 2))
-                              : 'NA'}">AA</div>
-                                <div>
-                                    <div th:text="${paySlip.employeeName}" class="font-semibold text-slate-800 text-sm">—</div>
-                                    <div th:text="'ID · ' + ${paySlip.employeeId}" class="text-xs text-slate-400">—</div>
+
+            <!-- Collapsible table (hidden by default) -->
+            <div id="pastPayrollContent" style="display: none;">
+                <div class="overflow-x-auto custom-scrollbar">
+                    <table class="payroll-table">
+                        <thead>
+                        <tr>
+                            <th>Employee</th>
+                            <th>Pay Day</th>
+                            <th>Basic Salary</th>
+                            <th>Gross Pay</th>
+                            <th>Total Deductions</th>
+                            <th>Net Pay</th>
+                            <th>Bank</th>
+                            <th>Actions</th>
+                        </tr>
+                        </thead>
+                        <tbody id="pastPayrollBody">
+                        <tr th:each="paySlip : ${previousPeriods}">
+                            <td>
+                                <div class="flex items-center gap-3">
+                                    <div class="emp-avatar"
+                                         th:text="${paySlip.employeeName != null and #strings.length(paySlip.employeeName) >= 2
+                                  ? #strings.toUpperCase(#strings.substring(paySlip.employeeName, 0, 2))
+                                  : 'NA'}">AA</div>
+                                    <div>
+                                        <div th:text="${paySlip.employeeName}" class="font-semibold text-slate-800 text-sm">—</div>
+                                        <div th:text="'ID · ' + ${paySlip.employeeId}" class="text-xs text-slate-400">—</div>
+                                    </div>
                                 </div>
-                            </div>
-                        </td>
-                        <td th:text="${paySlip.payDate}" class="mono">—</td>
-                        <td th:text="${paySlip.basicSalary}" class="mono amount-positive">—</td>
-                        <td th:text="${paySlip.grossPay}" class="mono amount-positive">—</td>
-                        <td th:text="${paySlip.totalDeductions}" class="mono amount-deduct">—</td>
-                        <td th:text="${paySlip.netPay}" class="mono amount-positive">—</td>
-                        <td>
-                            <!-- bankName + bankAccountNumber both live on PaySlipDTO -->
-                            <div th:text="${paySlip.bankName}" class="text-sm text-slate-700">—</div>
-                            <div th:text="${paySlip.bankAccountNumber}" class="text-xs text-slate-400 mono">—</div>
-                        </td>
-                        <td>
-                            <div style="display:flex;align-items:center;gap:4px;">
-                                <button class="payslip-icon-btn open-payslip-modal" title="View payslip"
-                                        th:attr="data-modal-id=${'psModal_slip_' + paySlip.id}">
-                                    <i class="bi bi-eye"></i>
-                                </button>
-                                <button class="payslip-icon-btn download-payslip-modal" title="Download payslip"
-                                        th:attr="data-modal-id=${'psModal_slip_' + paySlip.id}">
-                                    <i class="bi bi-download"></i>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                    </tbody>
-                </table>
+                            </td>
+                            <td th:text="${paySlip.payDate}" class="mono">—</td>
+                            <td th:text="${paySlip.basicSalary}" class="mono amount-positive">—</td>
+                            <td th:text="${paySlip.grossPay}" class="mono amount-positive">—</td>
+                            <td th:text="${paySlip.totalDeductions}" class="mono amount-deduct">—</td>
+                            <td th:text="${paySlip.netPay}" class="mono amount-positive">—</td>
+                            <td>
+                                <div th:text="${paySlip.bankName}" class="text-sm text-slate-700">—</div>
+                                <div th:text="${paySlip.bankAccountNumber}" class="text-xs text-slate-400 mono">—</div>
+                            </td>
+                            <td>
+                                <div style="display:flex;align-items:center;gap:4px;">
+                                    <button class="payslip-icon-btn open-payslip-modal" title="View payslip"
+                                            th:attr="data-modal-id=${'psModal_slip_' + paySlip.id}">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    <button class="payslip-icon-btn download-payslip-modal" title="Download payslip"
+                                            th:attr="data-modal-id=${'psModal_slip_' + paySlip.id}">
+                                        <i class="bi bi-download"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
@@ -1025,171 +1051,171 @@
         <div class="period-label" style="margin-top:2.5rem;">Payroll Report</div>
 
         <div class="current-period-card mb-8">
-        <div class="current-period-header">
-            <div>
-                <h2 class="text-slate-800 font-bold text-xl">Employee Grouped Report</h2>
-                <p class="text-slate-500 text-sm mt-1">Grouped summary of employee payroll by selected category</p>
+            <div class="current-period-header">
+                <div>
+                    <h2 class="text-slate-800 font-bold text-xl">Employee Grouped Report</h2>
+                    <p class="text-slate-500 text-sm mt-1">Grouped summary of employee payroll by selected category</p>
+                </div>
+                <!-- Group By selector -->
+                <form method="get" th:action="@{/payroll/grouped-report}" class="flex items-center gap-3">
+                    <span class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Group By:</span>
+                    <select name="groupBy" class="filter-select" onchange="this.form.submit()">
+                        <option value="GRADE"     th:selected="${groupBy == 'GRADE'}">Grade</option>
+                        <option value="PAYGROUP"  th:selected="${groupBy == 'PAYGROUP'}">Pay Group</option>
+                        <option value="COMPANY"   th:selected="${groupBy == 'COMPANY'}">Company</option>
+                    </select>
+                </form>
             </div>
-            <!-- Group By selector -->
-            <form method="get" th:action="@{/payroll/grouped-report}" class="flex items-center gap-3">
-                <span class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Group By:</span>
-                <select name="groupBy" class="filter-select" onchange="this.form.submit()">
-                    <option value="GRADE"     th:selected="${groupBy == 'GRADE'}">Grade</option>
-                    <option value="PAYGROUP"  th:selected="${groupBy == 'PAYGROUP'}">Pay Group</option>
-                    <option value="COMPANY"   th:selected="${groupBy == 'COMPANY'}">Company</option>
-                </select>
-            </form>
-        </div>
 
-        <!-- No report data -->
-        <div th:if="${report == null or #lists.isEmpty(report)}">
-            <div class="empty-state">
-                <i class="bi bi-bar-chart"></i>
-                <p>No report data available. Visit <a href="/payroll/grouped-report" class="text-blue-600 underline">the grouped report page</a> to load the grouped report.</p>
+            <!-- No report data -->
+            <div th:if="${report == null or #lists.isEmpty(report)}">
+                <div class="empty-state">
+                    <i class="bi bi-bar-chart"></i>
+                    <p>No report data available. Visit <a href="/payroll/grouped-report" class="text-blue-600 underline">the grouped report page</a> to load the grouped report.</p>
+                </div>
             </div>
-        </div>
 
-        <!-- Report groups -->
-        <div th:if="${report != null and not #lists.isEmpty(report)}">
+            <!-- Report groups -->
+            <div th:if="${report != null and not #lists.isEmpty(report)}">
 
-            <!-- ── GRAND TOTAL CARD ── -->
-            <div class="grand-total-card" id="grandTotalCard" th:if="${totals != null}">
-                <div class="grand-total-header">
-                    <div class="grand-total-left">
-                        <div class="grand-total-icon">
-                            <i class="bi bi-calculator-fill"></i>
+                <!-- ── GRAND TOTAL CARD ── -->
+                <div class="grand-total-card" id="grandTotalCard" th:if="${totals != null}">
+                    <div class="grand-total-header">
+                        <div class="grand-total-left">
+                            <div class="grand-total-icon">
+                                <i class="bi bi-calculator-fill"></i>
+                            </div>
+                            <div>
+                                <div class="grand-total-title">Grand Total</div>
+                                <div class="grand-total-sub" id="grandTotalSubtitle">
+                                    <span th:text="${totals.totalGroups}">0</span> Groups,
+                                    <span th:text="${totals.totalEmployees}">0</span> Employees combined
+                                </div>
+                            </div>
                         </div>
-                        <div>
-                            <div class="grand-total-title">Grand Total</div>
-                            <div class="grand-total-sub" id="grandTotalSubtitle">
-                                <span th:text="${totals.totalGroups}">0</span> Groups,
-                                <span th:text="${totals.totalEmployees}">0</span> Employees combined
+                        <div class="grand-total-stats">
+                            <div class="grand-stat-box gross">
+                                <div class="grand-stat-lbl">Total Gross</div>
+                                <div class="grand-stat-val" id="grandGross"
+                                     th:text="${'₦' + #numbers.formatDecimal(totals.totalGross, 1, 'COMMA', 2, 'POINT')}">₦0.00</div>
+                            </div>
+                            <div class="grand-stat-box deduct">
+                                <div class="grand-stat-lbl">Total Deductions</div>
+                                <div class="grand-stat-val" id="grandDeductions"
+                                     th:text="${'₦' + #numbers.formatDecimal(totals.totalDeductions, 1, 'COMMA', 2, 'POINT')}">₦0.00</div>
+                            </div>
+                            <div class="grand-stat-box net">
+                                <div class="grand-stat-lbl">Total Net Pay</div>
+                                <div class="grand-stat-val" id="grandNet"
+                                     th:text="${'₦' + #numbers.formatDecimal(totals.totalNet, 1, 'COMMA', 2, 'POINT')}">₦0.00</div>
+                            </div>
+                            <div class="grand-dl-actions">
+                                <button class="bulk-dl-btn csv" onclick="downloadGrandCSV()">
+                                    <i class="bi bi-filetype-csv"></i> Download All CSV
+                                </button>
+                                <button class="bulk-dl-btn pdf" onclick="downloadGrandPDF()">
+                                    <i class="bi bi-file-earmark-pdf"></i> Download All PDF
+                                </button>
                             </div>
                         </div>
                     </div>
-                    <div class="grand-total-stats">
-                        <div class="grand-stat-box gross">
-                            <div class="grand-stat-lbl">Total Gross</div>
-                            <div class="grand-stat-val" id="grandGross"
-                                 th:text="${'₦' + #numbers.formatDecimal(totals.totalGross, 1, 'COMMA', 2, 'POINT')}">₦0.00</div>
-                        </div>
-                        <div class="grand-stat-box deduct">
-                            <div class="grand-stat-lbl">Total Deductions</div>
-                            <div class="grand-stat-val" id="grandDeductions"
-                                 th:text="${'₦' + #numbers.formatDecimal(totals.totalDeductions, 1, 'COMMA', 2, 'POINT')}">₦0.00</div>
-                        </div>
-                        <div class="grand-stat-box net">
-                            <div class="grand-stat-lbl">Total Net Pay</div>
-                            <div class="grand-stat-val" id="grandNet"
-                                 th:text="${'₦' + #numbers.formatDecimal(totals.totalNet, 1, 'COMMA', 2, 'POINT')}">₦0.00</div>
-                        </div>
-                        <div class="grand-dl-actions">
-                            <button class="bulk-dl-btn csv" onclick="downloadGrandCSV()">
-                                <i class="bi bi-filetype-csv"></i> Download All CSV
-                            </button>
-                            <button class="bulk-dl-btn pdf" onclick="downloadGrandPDF()">
-                                <i class="bi bi-file-earmark-pdf"></i> Download All PDF
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div th:each="group : ${report}" class="group-report-card border-2 border-blue-500 rounded-lg mb-6 overflow-hidden"
-                 th:attr="data-group-name=${group.groupName}, data-group-by=${groupBy}">
-
-                <!-- Group header -->
-                <div class="flex items-center justify-between px-6 py-4 bg-slate-50 border-b border-slate-200">
-                    <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                            <i class="bi bi-people-fill text-blue-600 text-sm"></i>
-                        </div>
-                        <div>
-                            <div th:text="${group.groupName}" class="font-bold text-slate-800 text-sm">Group</div>
-                            <div th:text="${group.employeeCount + ' employee' + (group.employeeCount != 1 ? 's' : '')}"
-                                 class="text-xs text-slate-400">0 employees</div>
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-6 flex-wrap">
-                        <div class="header-stat">
-                            <div th:text="${'₦' + #numbers.formatDecimal(group.totalGross != null ? group.totalGross : 0, 1, 'COMMA', 2, 'POINT')}"
-                                 class="stat-val text-slate-800">₦0.00</div>
-                            <div class="stat-lbl">Total Gross</div>
-                        </div>
-                        <div class="header-stat">
-                            <div th:text="${'₦' + #numbers.formatDecimal(group.totalDeductions != null ? group.totalDeductions : 0, 1, 'COMMA', 2, 'POINT')}"
-                                 class="stat-val text-red-600">₦0.00</div>
-                            <div class="stat-lbl">Deductions</div>
-                        </div>
-                        <div class="header-stat">
-                            <div th:text="${'₦' + #numbers.formatDecimal(group.totalNet != null ? group.totalNet : 0, 1, 'COMMA', 2, 'POINT')}"
-                                 class="stat-val text-green-700">₦0.00</div>
-                            <div class="stat-lbl">Net Pay</div>
-                        </div>
-                        <div class="bulk-dl-actions">
-                            <button class="bulk-dl-btn csv group-csv-btn">
-                                <i class="bi bi-filetype-csv"></i> CSV
-                            </button>
-                            <button class="bulk-dl-btn pdf group-pdf-btn">
-                                <i class="bi bi-file-earmark-pdf"></i> PDF
-                            </button>
-                        </div>
-                    </div>
                 </div>
 
-                <!-- Employees in this group -->
-                <div class="overflow-x-auto custom-scrollbar">
-                    <table class="payroll-table">
-                        <thead>
-                        <tr>
-                            <th>Employee</th>
-                            <th>Gross Pay</th>
-                            <th>PAYE</th>
-                            <th>Pension</th>
-                            <th>Total Deductions</th>
-                            <th>Net Pay</th>
-                            <th>Bank</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr th:each="emp : ${group.employees}">
-                            <td>
-                                <div class="flex items-center gap-3">
-                                    <div class="emp-avatar"
-                                         th:with="fullName=${(emp.firstName != null ? emp.firstName : '') + ' ' + (emp.secondName != null ? emp.secondName : '')}"
-                                         th:text="${#strings.length(fullName) >= 2 ? #strings.toUpperCase(#strings.substring(fullName, 0, 2)) : 'NA'}">AA</div>
-                                    <div>
-                                        <div th:text="${(emp.firstName != null ? emp.firstName : '') + ' ' + (emp.secondName != null ? emp.secondName : '')}"
-                                             class="font-semibold text-slate-800 text-sm">—</div>
-                                        <div th:text="'ID · ' + ${emp.employeeId}" class="text-xs text-slate-400">—</div>
+                <div th:each="group : ${report}" class="group-report-card border-2 border-blue-500 rounded-lg mb-6 overflow-hidden"
+                     th:attr="data-group-name=${group.groupName}, data-group-by=${groupBy}">
+
+                    <!-- Group header -->
+                    <div class="flex items-center justify-between px-6 py-4 bg-slate-50 border-b border-slate-200">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                                <i class="bi bi-people-fill text-blue-600 text-sm"></i>
+                            </div>
+                            <div>
+                                <div th:text="${group.groupName}" class="font-bold text-slate-800 text-sm">Group</div>
+                                <div th:text="${group.employeeCount + ' employee' + (group.employeeCount != 1 ? 's' : '')}"
+                                     class="text-xs text-slate-400">0 employees</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-6 flex-wrap">
+                            <div class="header-stat">
+                                <div th:text="${'₦' + #numbers.formatDecimal(group.totalGross != null ? group.totalGross : 0, 1, 'COMMA', 2, 'POINT')}"
+                                     class="stat-val text-slate-800">₦0.00</div>
+                                <div class="stat-lbl">Total Gross</div>
+                            </div>
+                            <div class="header-stat">
+                                <div th:text="${'₦' + #numbers.formatDecimal(group.totalDeductions != null ? group.totalDeductions : 0, 1, 'COMMA', 2, 'POINT')}"
+                                     class="stat-val text-red-600">₦0.00</div>
+                                <div class="stat-lbl">Deductions</div>
+                            </div>
+                            <div class="header-stat">
+                                <div th:text="${'₦' + #numbers.formatDecimal(group.totalNet != null ? group.totalNet : 0, 1, 'COMMA', 2, 'POINT')}"
+                                     class="stat-val text-green-700">₦0.00</div>
+                                <div class="stat-lbl">Net Pay</div>
+                            </div>
+                            <div class="bulk-dl-actions">
+                                <button class="bulk-dl-btn csv group-csv-btn">
+                                    <i class="bi bi-filetype-csv"></i> CSV
+                                </button>
+                                <button class="bulk-dl-btn pdf group-pdf-btn">
+                                    <i class="bi bi-file-earmark-pdf"></i> PDF
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Employees in this group -->
+                    <div class="overflow-x-auto custom-scrollbar">
+                        <table class="payroll-table">
+                            <thead>
+                            <tr>
+                                <th>Employee</th>
+                                <th>Gross Pay</th>
+                                <th>PAYE</th>
+                                <th>Pension</th>
+                                <th>Total Deductions</th>
+                                <th>Net Pay</th>
+                                <th>Bank</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="emp : ${group.employees}">
+                                <td>
+                                    <div class="flex items-center gap-3">
+                                        <div class="emp-avatar"
+                                             th:with="fullName=${(emp.firstName != null ? emp.firstName : '') + ' ' + (emp.secondName != null ? emp.secondName : '')}"
+                                             th:text="${#strings.length(fullName) >= 2 ? #strings.toUpperCase(#strings.substring(fullName, 0, 2)) : 'NA'}">AA</div>
+                                        <div>
+                                            <div th:text="${(emp.firstName != null ? emp.firstName : '') + ' ' + (emp.secondName != null ? emp.secondName : '')}"
+                                                 class="font-semibold text-slate-800 text-sm">—</div>
+                                            <div th:text="'ID · ' + ${emp.employeeId}" class="text-xs text-slate-400">—</div>
+                                        </div>
                                     </div>
-                                </div>
-                            </td>
-                            <td th:text="${'₦' + #numbers.formatDecimal(emp.gross   != null ? emp.gross   : 0, 1, 'COMMA', 2, 'POINT')}"
-                                class="mono amount-positive">—</td>
-                            <td th:text="${'₦' + #numbers.formatDecimal(emp.paye    != null ? emp.paye    : 0, 1, 'COMMA', 2, 'POINT')}"
-                                class="mono amount-deduct">—</td>
-                            <td th:text="${'₦' + #numbers.formatDecimal(emp.pension != null ? emp.pension : 0, 1, 'COMMA', 2, 'POINT')}"
-                                class="mono amount-deduct">—</td>
-                            <td th:text="${'₦' + #numbers.formatDecimal(
+                                </td>
+                                <td th:text="${'₦' + #numbers.formatDecimal(emp.gross   != null ? emp.gross   : 0, 1, 'COMMA', 2, 'POINT')}"
+                                    class="mono amount-positive">—</td>
+                                <td th:text="${'₦' + #numbers.formatDecimal(emp.paye    != null ? emp.paye    : 0, 1, 'COMMA', 2, 'POINT')}"
+                                    class="mono amount-deduct">—</td>
+                                <td th:text="${'₦' + #numbers.formatDecimal(emp.pension != null ? emp.pension : 0, 1, 'COMMA', 2, 'POINT')}"
+                                    class="mono amount-deduct">—</td>
+                                <td th:text="${'₦' + #numbers.formatDecimal(
                     (emp.paye != null ? emp.paye : T(java.math.BigDecimal).ZERO).add(
                      emp.pension != null ? emp.pension : T(java.math.BigDecimal).ZERO),
                     1, 'COMMA', 2, 'POINT')}"
-                                class="mono amount-deduct">—</td>
-                            <td th:text="${'₦' + #numbers.formatDecimal(emp.net     != null ? emp.net     : 0, 1, 'COMMA', 2, 'POINT')}"
-                                class="mono amount-positive">—</td>
-                            <td>
-                                <div th:text="${emp.bankAccountNumber != null ? emp.bankAccountNumber : '—'}" class="mono text-sm text-slate-700">—</div>
-                                <div th:text="${emp.bankName != null ? emp.bankName : ''}" class="text-xs text-slate-400"></div>
-                            </td>
-                        </tr>
-                        </tbody>
-                    </table>
-                </div>
+                                    class="mono amount-deduct">—</td>
+                                <td th:text="${'₦' + #numbers.formatDecimal(emp.net     != null ? emp.net     : 0, 1, 'COMMA', 2, 'POINT')}"
+                                    class="mono amount-positive">—</td>
+                                <td>
+                                    <div th:text="${emp.bankAccountNumber != null ? emp.bankAccountNumber : '—'}" class="mono text-sm text-slate-700">—</div>
+                                    <div th:text="${emp.bankName != null ? emp.bankName : ''}" class="text-xs text-slate-400"></div>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
 
+                </div>
             </div>
         </div>
-    </div>
     </th:block>
     <!-- /grouped report -->
 
@@ -1790,7 +1816,19 @@
             if (card) downloadGroupPDF(pdfBtn, card);
           }
         });
-        function disableSubmitButton(form) {
+        function togglePastPayroll() {
+            const content  = document.getElementById('pastPayrollContent');
+            const chevron  = document.getElementById('pastPayrollChevron');
+            const btn      = document.getElementById('pastPayrollExpandBtn');
+            const isHidden = content.style.display === 'none';
+            content.style.display = isHidden ? '' : 'none';
+            chevron.style.transform = isHidden ? 'rotate(180deg)' : '';
+            btn.innerHTML = isHidden
+                ? '<i class="bi bi-chevron-up" id="pastPayrollChevron" style="transition:transform 0.2s;"></i> Hide Records'
+                : '<i class="bi bi-chevron-down" id="pastPayrollChevron" style="transition:transform 0.2s;"></i> View Records';
+        }
+
+                function disableSubmitButton(form) {
           const btn = form.querySelector('button[type="submit"]');
           if (btn) { btn.disabled = true; btn.classList.add('opacity-50', 'cursor-not-allowed'); btn.textContent = 'Submitting…'; }
           return true;
