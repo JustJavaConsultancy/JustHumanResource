@@ -14,11 +14,15 @@ import com.justjava.humanresource.payroll.service.PaySlipService;
 import com.justjava.humanresource.payroll.service.PayrollPeriodService;
 import com.justjava.humanresource.payroll.service.PayrollSetupService;
 import com.justjava.humanresource.payroll.dto.EmployeeGroupedReportDTO;
+import com.justjava.humanresource.payroll.dto.AllowanceGroupReportDTO;
+import com.justjava.humanresource.payroll.dto.AllowanceReportLineDTO;
 import com.justjava.humanresource.payroll.enums.EmployeeGroupBy;
 import com.justjava.humanresource.payroll.report.services.ReportingService;
 import com.justjava.humanresource.core.enums.PayrollRunStatus;
 import com.justjava.humanresource.payroll.dto.FutureEmployeeAllowanceDTO;
 import java.util.Comparator;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 
 import com.justjava.humanresource.workflow.dto.FlowableTaskDTO;
 import com.justjava.humanresource.workflow.service.FlowableTaskService;
@@ -529,6 +533,144 @@ public class PayrollController {
         model.addAttribute("title", "Payroll Management");
         model.addAttribute("subTitle", "Manage employee payroll, salary details, and payment history");
         return "payroll/fragments/employee-payroll";
+    }
+
+    @GetMapping("/payroll/payitems-report")
+    public String getPayItemsReport(
+            @RequestParam(defaultValue = "GRADE") String groupBy,
+            Model model) {
+
+        if (authenticationManager.isRestrictedHr()) {
+            return "redirect:/payroll/employee-payroll";
+        }
+
+        YearMonth currentMonth = YearMonth.now();
+
+        // ── 1. Build scoped employee ID set for jobHR (same pattern as grouped-report) ──
+        final Set<Long> scopedIds;
+        if (jobHrEmployeeAccessService.isJobHrScopedUser()) {
+            Long actorGradeId = jobHrEmployeeAccessService.getLoggedInJobGradeId();
+            scopedIds = employeeOnboardingService.getAllOnboardings().stream()
+                    .filter(e -> e.getJobStep() != null
+                            && e.getJobStep().getJobGrade() != null
+                            && Objects.equals(e.getJobStep().getJobGrade().getId(), actorGradeId))
+                    .map(Employee::getId)
+                    .collect(Collectors.toSet());
+        } else {
+            scopedIds = null;
+        }
+
+        // ── 2. Load all current-period payslips ──
+        List<PaySlipDTO> paySlips = paySlipService.getCurrentPeriodPaySlips(1L);
+
+        // ── 3. Filter to scoped employees if jobHR ──
+        if (scopedIds != null) {
+            paySlips = paySlips.stream()
+                    .filter(ps -> scopedIds.contains(ps.getEmployeeId()))
+                    .collect(Collectors.toList());
+        }
+
+        // ── 4. Build employeeId → Employee map for group-name resolution ──
+        Map<Long, Employee> employeeMap = employeeOnboardingService.getAllOnboardings().stream()
+                .collect(Collectors.toMap(Employee::getId, e -> e, (a, b) -> a));
+
+        // ── 5. Group payslips by chosen dimension ──
+        Map<String, List<PaySlipDTO>> grouped = new LinkedHashMap<>();
+        for (PaySlipDTO ps : paySlips) {
+            Employee emp = employeeMap.get(ps.getEmployeeId());
+            String key = resolvePayItemsGroupName(emp, groupBy);
+            grouped.computeIfAbsent(key, k -> new ArrayList<>()).add(ps);
+        }
+
+        // ── 6. Build report groups ──
+        List<AllowanceGroupReportDTO> payitemsReport = new ArrayList<>();
+
+        for (Map.Entry<String, List<PaySlipDTO>> entry : grouped.entrySet()) {
+            AllowanceGroupReportDTO group = new AllowanceGroupReportDTO();
+            group.setGroupName(entry.getKey());
+            group.setEmployeeCount((long) entry.getValue().size());
+
+            // Sum each allowance code across all employees in this group
+            Map<String, AllowanceReportLineDTO> codeMap = new LinkedHashMap<>();
+            for (PaySlipDTO slip : entry.getValue()) {
+                if (slip.getAllowances() == null) continue;
+                for (PaySlipLineDTO line : slip.getAllowances()) {
+                    // Skip residual adjustment — not displayed anywhere (mirrors employee-payroll.html)
+                    if ("RESIDUAL".equals(line.getCode()) || "Residual Adjustment".equals(line.getDescription())) continue;
+                    codeMap.compute(line.getCode(), (code, existing) -> {
+                        BigDecimal amt = line.getAmount() != null ? line.getAmount() : BigDecimal.ZERO;
+                        if (existing == null) {
+                            return new AllowanceReportLineDTO(
+                                    line.getCode(),
+                                    line.getDescription(),
+                                    amt,
+                                    line.isTaxable(),
+                                    !line.isOutOfPayroll()
+                            );
+                        }
+                        existing.setTotalAmount(existing.getTotalAmount().add(amt));
+                        return existing;
+                    });
+                }
+            }
+
+            List<AllowanceReportLineDTO> lines = new ArrayList<>(codeMap.values());
+            BigDecimal groupTotal = lines.stream()
+                    .map(AllowanceReportLineDTO::getTotalAmount)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            group.setAllowances(lines);
+            group.setGroupTotal(groupTotal);
+            payitemsReport.add(group);
+        }
+
+        // Sort groups alphabetically
+        payitemsReport.sort(Comparator.comparing(AllowanceGroupReportDTO::getGroupName));
+
+        // ── 7. Compute grand totals across all groups ──
+        Map<String, AllowanceReportLineDTO> grandCodeMap = new LinkedHashMap<>();
+        for (AllowanceGroupReportDTO group : payitemsReport) {
+            for (AllowanceReportLineDTO line : group.getAllowances()) {
+                grandCodeMap.compute(line.getCode(), (code, existing) -> {
+                    if (existing == null) {
+                        return new AllowanceReportLineDTO(
+                                line.getCode(), line.getDescription(),
+                                line.getTotalAmount(), line.isTaxable(), line.isPartOfGross()
+                        );
+                    }
+                    existing.setTotalAmount(existing.getTotalAmount().add(line.getTotalAmount()));
+                    return existing;
+                });
+            }
+        }
+
+        BigDecimal grandTotal = grandCodeMap.values().stream()
+                .map(AllowanceReportLineDTO::getTotalAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        model.addAttribute("payitemsReport",  payitemsReport);
+        model.addAttribute("grandAllowances", new ArrayList<>(grandCodeMap.values()));
+        model.addAttribute("grandTotal",      grandTotal);
+        model.addAttribute("totalGroups",     (long) payitemsReport.size());
+        model.addAttribute("totalEmployees",  payitemsReport.stream().mapToLong(AllowanceGroupReportDTO::getEmployeeCount).sum());
+        model.addAttribute("groupBy",         groupBy);
+        model.addAttribute("reportMonth",     currentMonth.toString());
+        model.addAttribute("title",           "Payroll Management");
+        model.addAttribute("subTitle",        "Manage employee payroll, salary details, and payment history");
+        return "payroll/fragments/payitems-report";
+    }
+
+    private String resolvePayItemsGroupName(Employee emp, String groupBy) {
+        if (emp == null) return "Unknown";
+        switch (groupBy.toUpperCase()) {
+            case "GRADE":
+                return (emp.getJobStep() != null && emp.getJobStep().getJobGrade() != null)
+                        ? emp.getJobStep().getJobGrade().getName() : "No Grade";
+            case "PAYGROUP":
+                return emp.getPayGroup() != null ? emp.getPayGroup().getName() : "No Pay Group";
+            default:
+                return "Unknown";
+        }
     }
 
     @PostMapping("/setup/allowance/update")
