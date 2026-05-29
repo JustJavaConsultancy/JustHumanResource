@@ -71,6 +71,10 @@ public class EmployeeOnboardingService {
         dto.setEmail(command.getEmail());
         dto.setPhoneNumber(command.getPhoneNumber());
 
+
+        dto.setTinNumber(command.getTinNumber());
+        dto.setRsaPin(command.getRsaPin());
+        dto.setPfa(command.getPfa());
         dto.setNinNumber(command.getNinNumber());
         dto.setBvnNumber(command.getBvnNumber());
         dto.setNextOfKinName(command.getNextOfKinName());
@@ -187,6 +191,9 @@ public class EmployeeOnboardingService {
         }
 
         // identity fields
+        if (dto.getTinNumber() != null) employee.setTinNumber(dto.getTinNumber());
+        if (dto.getRsaPin() != null) employee.setRsaPin(dto.getRsaPin());
+        if (dto.getPfa() != null) employee.setPfa(dto.getPfa());
         if (dto.getNinNumber() != null) employee.setNinNumber(dto.getNinNumber());
         if (dto.getBvnNumber() != null) employee.setBvnNumber(dto.getBvnNumber());
 

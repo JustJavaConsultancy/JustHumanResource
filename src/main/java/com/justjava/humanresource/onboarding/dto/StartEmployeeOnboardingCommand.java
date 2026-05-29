@@ -15,6 +15,9 @@ public class StartEmployeeOnboardingCommand {
     private Long payGroupId;
 
     // NEW
+    private String tinNumber;
+    private String rsaPin;
+    private String pfa;
     private String ninNumber;
     private String bvnNumber;
     private String nextOfKinName;

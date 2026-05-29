@@ -21,6 +21,9 @@ public class EmployeeDTO {
     private boolean kpiEnabled;
 
     // Identity
+    private String tinNumber;
+    private String rsaPin;
+    private String pfa;
     private String ninNumber;
     private String bvnNumber;
 

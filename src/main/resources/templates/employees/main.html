@@ -724,6 +724,9 @@
                         data-employment-status=${employee.employmentStatus},
                         data-nin-number=${employee.ninNumber},
                         data-bvn-number=${employee.bvnNumber},
+                        data-tin-number=${employee.tinNumber},
+                        data-rsa-pin=${employee.rsaPin},
+                        data-pfa=${employee.pfa},
                         data-nok-name=${employee.nextOfKinName},
                         data-nok-phone=${employee.nextOfKinPhoneNumber},
                         data-nok-email=${employee.nextOfKinEmail},
@@ -999,6 +1002,41 @@
                             <!-- TAB 2: Identity -->
                             <div id="add-tab-identity" class="tab-panel">
                                 <p class="form-section-title">Identity Numbers</p>
+                                <div class="grid grid-cols-2 gap-4 mb-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">TIN</label>
+                                        <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                                            <span class="material-icons-round text-sm">receipt_long</span>
+                                        </span>
+                                            <input type="text" name="tinNumber" class="form-input pl-10" placeholder="Up to 20 characters"
+                                                   maxlength="20">
+                                        </div>
+                                        <p class="text-xs text-gray-400 mt-1">Tax Identification Number</p>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">RSA PIN</label>
+                                        <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                                            <span class="material-icons-round text-sm">savings</span>
+                                        </span>
+                                            <input type="text" name="rsaPin" class="form-input pl-10" placeholder="Up to 20 characters"
+                                                   maxlength="20">
+                                        </div>
+                                        <p class="text-xs text-gray-400 mt-1">Retirement Savings Account PIN</p>
+                                    </div>
+                                </div>
+                                <div class="mb-4">
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">PFA</label>
+                                    <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                                            <span class="material-icons-round text-sm">account_balance</span>
+                                        </span>
+                                        <input type="text" name="pfa" class="form-input pl-10" placeholder="Up to 20 characters"
+                                               maxlength="20">
+                                    </div>
+                                    <p class="text-xs text-gray-400 mt-1">Pension Fund Administrator</p>
+                                </div>
                                 <div class="grid grid-cols-2 gap-4">
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">NIN Number</label>
@@ -1317,6 +1355,41 @@
                             <!-- TAB 2: Identity -->
                             <div id="edit-tab-identity" class="tab-panel">
                                 <p class="form-section-title">Identity Numbers</p>
+                                <div class="grid grid-cols-2 gap-4 mb-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">TIN</label>
+                                        <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                                            <span class="material-icons-round text-sm">receipt_long</span>
+                                        </span>
+                                            <input type="text" id="editTinNumber" name="tinNumber" class="form-input pl-10"
+                                                   placeholder="Up to 20 characters" maxlength="20">
+                                        </div>
+                                        <p class="text-xs text-gray-400 mt-1">Tax Identification Number</p>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">RSA PIN</label>
+                                        <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                                            <span class="material-icons-round text-sm">savings</span>
+                                        </span>
+                                            <input type="text" id="editRsaPin" name="rsaPin" class="form-input pl-10"
+                                                   placeholder="Up to 20 characters" maxlength="20">
+                                        </div>
+                                        <p class="text-xs text-gray-400 mt-1">Retirement Savings Account PIN</p>
+                                    </div>
+                                </div>
+                                <div class="mb-4">
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">PFA</label>
+                                    <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                                            <span class="material-icons-round text-sm">account_balance</span>
+                                        </span>
+                                        <input type="text" id="editPfa" name="pfa" class="form-input pl-10"
+                                               placeholder="PFA" maxlength="50">
+                                    </div>
+                                    <p class="text-xs text-gray-400 mt-1">Pension Fund Administrator</p>
+                                </div>
                                 <div class="grid grid-cols-2 gap-4">
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">NIN Number</label>
@@ -2260,6 +2333,9 @@
 
             document.getElementById('editNinNumber').value = row.dataset.ninNumber || '';
             document.getElementById('editBvnNumber').value = row.dataset.bvnNumber || '';
+            document.getElementById('editTinNumber').value = row.dataset.tinNumber || '';
+            document.getElementById('editRsaPin').value    = row.dataset.rsaPin    || '';
+            document.getElementById('editPfa').value       = row.dataset.pfa       || '';
 
             document.getElementById('editNextOfKinName').value        = row.dataset.nokName || '';
             document.getElementById('editNextOfKinPhoneNumber').value  = row.dataset.nokPhone || '';
@@ -2334,6 +2410,9 @@
                 payGroupId:           parseInt(document.getElementById('editPayGroupId').value, 10),
                 ninNumber:            document.getElementById('editNinNumber').value,
                 bvnNumber:            document.getElementById('editBvnNumber').value,
+                tinNumber:            document.getElementById('editTinNumber').value,
+                rsaPin:               document.getElementById('editRsaPin').value,
+                pfa:                  document.getElementById('editPfa').value,
                 nextOfKinName:        document.getElementById('editNextOfKinName').value,
                 nextOfKinPhoneNumber: document.getElementById('editNextOfKinPhoneNumber').value,
                 nextOfKinEmail:       document.getElementById('editNextOfKinEmail').value,
