@@ -26,7 +26,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -58,117 +57,209 @@ public class EmployeeUploadServiceImpl implements EmployeeUploadService {
 
         List<EmployeeUploadDTO> records = csvParserService.parse(file);
 
-        // ── PHASE 1: Validate — zero DB writes here ──────────────────────────
-        List<String> conflictingEmails = findAllConflicts(records);
-
-        if (!conflictingEmails.isEmpty()) {
-            // Build a detailed error message and throw — nothing has been saved yet,
-            // so the ID sequence is completely untouched.
-            String message = buildConflictErrorMessage(conflictingEmails);
-            throw new DuplicateEmailUploadException(message, conflictingEmails);
+        // Deduplicate by email within the CSV — last row for a given email wins.
+        // Rows with a blank/null email are silently dropped.
+        Map<String, EmployeeUploadDTO> deduped = new LinkedHashMap<>();
+        for (EmployeeUploadDTO dto : records) {
+            if (dto.getEmail() != null && !dto.getEmail().isBlank()) {
+                String normalizedEmail = dto.getEmail().toLowerCase().trim();
+                dto.setEmail(normalizedEmail);
+                deduped.put(normalizedEmail, dto);
+            }
         }
 
-        // ── PHASE 2: All rows are clean — persist them ────────────────────────
+        // Load defaults once — needed by both create and grade/step resolution paths.
         Department department = departmentRepository.findById(DEFAULT_DEPARTMENT_ID)
                 .orElseThrow(() -> new IllegalStateException("Department not found"));
-
         PayGroup payGroup = payGroupRepository.findById(1L)
                 .orElseThrow(() -> new IllegalStateException("PayGroup not found"));
 
         Map<String, JobGrade> gradeCache = new HashMap<>();
-        Map<String, JobStep> stepCache  = new HashMap<>();
-        List<Long> savedIds             = new ArrayList<>();
+        Map<String, JobStep> stepCache   = new HashMap<>();
 
-        for (EmployeeUploadDTO dto : records) {
+        List<Long> createdIds              = new ArrayList<>();
+        List<Long> updatedIdsNeedingRecalc = new ArrayList<>();
 
-            JobGrade jobGrade = gradeCache.computeIfAbsent(dto.getGrade(), gradeName ->
-                    jobGradeRepository.findByName(gradeName).orElseGet(() -> {
-                        JobGrade g = new JobGrade();
-                        g.setName(gradeName);
-                        g.setDepartment(department);
-                        return jobGradeRepository.save(g);
-                    }));
+        for (EmployeeUploadDTO dto : deduped.values()) {
 
-            String stepKey = dto.getGrade() + "|" + dto.getGross().toPlainString();
-            JobStep step = stepCache.computeIfAbsent(stepKey, k ->
-                    jobStepRepository.findByGrossSalaryAndJobGrade(
-                            dto.getGross().divide(BigDecimal.valueOf(12), 5, RoundingMode.HALF_UP), jobGrade
-                    ).orElseGet(() -> {
-                        JobStep s = new JobStep();
-                        s.setJobGrade(jobGrade);
-                        s.setGrossSalary(dto.getGross().divide(BigDecimal.valueOf(12), 5, RoundingMode.HALF_UP));
-                        s.setName("STEP-" + dto.getGross());
-                        return jobStepRepository.save(s);
-                    }));
+            // Resolve grade + step only when both columns are present with non-blank values.
+            boolean hasGradeAndGross = dto.hasColumn("grade") && dto.getGrade() != null
+                    && dto.hasColumn("gross") && dto.getGross() != null;
 
-            Long employeeId = applicationContext
-                    .getBean(EmployeeUploadServiceImpl.class)
-                    .saveSingleEmployee(dto, department, payGroup, step);
-            savedIds.add(employeeId);
-        }
-
-        // ── PHASE 3: Payroll recalculation after all employees are committed ──
-        for (Long employeeId : savedIds) {
-            try {
-                payrollChangeOrchestrator.recalculateForEmployee(employeeId, LocalDate.now());
-            } catch (Exception e) {
-                System.err.println("CSV upload: payroll recalculation failed for ID "
-                        + employeeId + " — " + e.getMessage());
+            JobStep resolvedStep = null;
+            if (hasGradeAndGross) {
+                resolvedStep = resolveStep(dto, department, gradeCache, stepCache);
             }
-        }
-    }
 
+            Optional<Employee> existingOpt = employeeRepository.findByEmail(dto.getEmail());
 
-    private List<String> findAllConflicts(List<EmployeeUploadDTO> records) {
+            if (existingOpt.isPresent()) {
+                // ── UPDATE path ───────────────────────────────────────────────
+                Long updatedId = applicationContext
+                        .getBean(EmployeeUploadServiceImpl.class)
+                        .updateSingleEmployee(existingOpt.get(), dto, resolvedStep);
 
-        List<String> conflicting = new ArrayList<>();
-
-        // A) Intra-CSV duplicates — case-sensitive exact match
-        Map<String, Long> frequencyInCsv = records.stream()
-                .map(EmployeeUploadDTO::getEmail)
-                .collect(Collectors.groupingBy(email -> email, Collectors.counting()));
-
-        frequencyInCsv.forEach((email, count) -> {
-            if (count > 1) conflicting.add(email + " (appears " + count + "x in the file)");
-        });
-
-        // B) Emails already in the database — case-sensitive
-        List<String> emailsInFile = records.stream()
-                .map(EmployeeUploadDTO::getEmail)
-                .distinct()
-                .collect(Collectors.toList());
-
-        for (String email : emailsInFile) {
-            if (employeeRepository.findByEmail(email).isPresent()) {
-                // Avoid listing it twice if it was already flagged as a CSV duplicate
-                String label = email + " (already exists in the system)";
-                boolean alreadyListed = conflicting.stream()
-                        .anyMatch(c -> c.startsWith(email + " (appears"));
-                if (alreadyListed) {
-                    // Replace the entry to include both reasons
-                    conflicting.replaceAll(c ->
-                            c.startsWith(email + " (appears")
-                                    ? email + " (duplicate in file AND already exists in the system)"
-                                    : c);
-                } else {
-                    conflicting.add(label);
+                if (hasGradeAndGross) {
+                    updatedIdsNeedingRecalc.add(updatedId);
                 }
+
+            } else {
+                // ── CREATE path ───────────────────────────────────────────────
+                // Skip silently if any required field for creation is absent.
+                if (!hasAllRequiredFieldsForCreate(dto)) {
+                    continue;
+                }
+                Long createdId = applicationContext
+                        .getBean(EmployeeUploadServiceImpl.class)
+                        .saveSingleEmployee(dto, department, payGroup, resolvedStep);
+                createdIds.add(createdId);
             }
         }
 
-        return conflicting;
+        // ── Payroll recalculation ─────────────────────────────────────────────
+        for (Long id : createdIds) {
+            try {
+                payrollChangeOrchestrator.recalculateForEmployee(id, LocalDate.now());
+            } catch (Exception e) {
+                System.err.println("CSV upload: payroll recalculation failed for new employee ID "
+                        + id + " — " + e.getMessage());
+            }
+        }
+        for (Long id : updatedIdsNeedingRecalc) {
+            try {
+                payrollChangeOrchestrator.recalculateForEmployee(id, LocalDate.now());
+            } catch (Exception e) {
+                System.err.println("CSV upload: payroll recalculation failed for updated employee ID "
+                        + id + " — " + e.getMessage());
+            }
+        }
     }
 
-    private String buildConflictErrorMessage(List<String> conflicts) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("Upload failed — the following ").append(conflicts.size())
-                .append(" email conflict(s) must be resolved before re-uploading:\n");
-        for (int i = 0; i < conflicts.size(); i++) {
-            sb.append("  ").append(i + 1).append(". ").append(conflicts.get(i)).append("\n");
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  UPDATE existing employee — only touches fields whose columns were present
+    //  in the CSV header and whose values are non-blank.
+    // ─────────────────────────────────────────────────────────────────────────
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public Long updateSingleEmployee(Employee employee, EmployeeUploadDTO dto, JobStep resolvedStep) {
+
+        if (dto.hasColumn("firstname") && dto.getFirstName() != null) {
+            employee.setFirstName(dto.getFirstName());
         }
-        sb.append("Please fix the CSV file and try again. No employees were saved.");
-        return sb.toString();
+        if (dto.hasColumn("secondname") && dto.getSecondName() != null) {
+            employee.setLastName(dto.getSecondName());
+        }
+        if (resolvedStep != null) {
+            employee.setJobStep(resolvedStep);
+        }
+        if (dto.hasColumn("tinnumber") && dto.getTinNumber() != null) {
+            employee.setTinNumber(dto.getTinNumber());
+        }
+        if (dto.hasColumn("rsapin") && dto.getRsaPin() != null) {
+            employee.setRsaPin(dto.getRsaPin());
+        }
+        if (dto.hasColumn("pfa") && dto.getPfa() != null) {
+            employee.setPfa(dto.getPfa());
+        }
+        if (dto.hasColumn("ninnumber") && dto.getNinNumber() != null) {
+            employee.setNinNumber(dto.getNinNumber());
+        }
+        if (dto.hasColumn("bvnnumber") && dto.getBvnNumber() != null) {
+            employee.setBvnNumber(dto.getBvnNumber());
+        }
+        if (dto.hasColumn("phonenumber") && dto.getPhoneNumber() != null) {
+            employee.setPhoneNumber(dto.getPhoneNumber());
+        }
+        if (dto.hasColumn("dateofhire") && dto.getDateOfHire() != null) {
+            try {
+                employee.setDateOfHire(LocalDate.parse(dto.getDateOfHire()));
+            } catch (Exception e) {
+                System.err.println("CSV upload: invalid dateOfHire '" + dto.getDateOfHire()
+                        + "' for " + dto.getEmail() + " — skipping field");
+            }
+        }
+        if (dto.hasColumn("nextofkinname") && dto.getNextOfKinName() != null) {
+            employee.setNextOfKinName(dto.getNextOfKinName());
+        }
+        if (dto.hasColumn("nextofkinphonenumber") && dto.getNextOfKinPhoneNumber() != null) {
+            employee.setNextOfKinPhoneNumber(dto.getNextOfKinPhoneNumber());
+        }
+        if (dto.hasColumn("nextofkinemail") && dto.getNextOfKinEmail() != null) {
+            employee.setNextOfKinEmail(dto.getNextOfKinEmail());
+        }
+        if (dto.hasColumn("nextofkinaddress") && dto.getNextOfKinAddress() != null) {
+            employee.setNextOfKinAddress(dto.getNextOfKinAddress());
+        }
+        if (dto.hasColumn("guarantorname") && dto.getGuarantorName() != null) {
+            employee.setGuarantorName(dto.getGuarantorName());
+        }
+        if (dto.hasColumn("guarantorphonenumber") && dto.getGuarantorPhoneNumber() != null) {
+            employee.setGuarantorPhoneNumber(dto.getGuarantorPhoneNumber());
+        }
+        if (dto.hasColumn("guarantoremail") && dto.getGuarantorEmail() != null) {
+            employee.setGuarantorEmail(dto.getGuarantorEmail());
+        }
+        if (dto.hasColumn("guarantoraddress") && dto.getGuarantorAddress() != null) {
+            employee.setGuarantorAddress(dto.getGuarantorAddress());
+        }
+        if (dto.hasColumn("guarantorninnumber") && dto.getGuarantorNinNumber() != null) {
+            employee.setGuarantorNinNumber(dto.getGuarantorNinNumber());
+        }
+        if (dto.hasColumn("dateofbirth") && dto.getDateOfBirth() != null) {
+            try {
+                employee.setDateOfBirth(LocalDate.parse(dto.getDateOfBirth()));
+            } catch (Exception e) {
+                System.err.println("CSV upload: invalid dateOfBirth '" + dto.getDateOfBirth()
+                        + "' for " + dto.getEmail() + " — skipping field");
+            }
+        }
+        if (dto.hasColumn("gender") && dto.getGender() != null) {
+            employee.setGender(dto.getGender());
+        }
+        if (dto.hasColumn("maritalstatus") && dto.getMaritalStatus() != null) {
+            employee.setMaritalStatus(dto.getMaritalStatus());
+        }
+        if (dto.hasColumn("residentialaddress") && dto.getResidentialAddress() != null) {
+            employee.setResidentialAddress(dto.getResidentialAddress());
+        }
+        if (dto.hasColumn("mission") && dto.getMission() != null) {
+            employee.setMission(dto.getMission());
+        }
+
+        employeeRepository.save(employee);
+
+        // Upsert bank detail when all three bank columns are present with non-blank values.
+        boolean allBankColumnsPresent = dto.hasColumn("accountname")
+                && dto.hasColumn("bankname")
+                && dto.hasColumn("accountnumber");
+        boolean allBankValuesPresent  = dto.getAccountName()   != null
+                && dto.getBankName()      != null
+                && dto.getAccountNumber() != null;
+
+        if (allBankColumnsPresent && allBankValuesPresent) {
+            // Deactivate existing active details, then insert a new primary record.
+            employeeBankDetailRepository.deactivateAllByEmployeeId(employee.getId());
+            EmployeeBankDetail bankDetail = EmployeeBankDetail.builder()
+                    .employee(employee)
+                    .accountName(dto.getAccountName())
+                    .bankName(dto.getBankName())
+                    .accountNumber(dto.getAccountNumber())
+                    .primaryAccount(true)
+                    .effectiveFrom(LocalDate.now())
+                    .status(RecordStatus.ACTIVE)
+                    .build();
+            employeeBankDetailRepository.save(bankDetail);
+        }
+
+        return employee.getId();
     }
+
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  CREATE new employee — unchanged from original except optional fields
+    //  from the DTO are now applied when present.
+    // ─────────────────────────────────────────────────────────────────────────
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public Long saveSingleEmployee(EmployeeUploadDTO dto, Department department,
@@ -185,6 +276,36 @@ public class EmployeeUploadServiceImpl implements EmployeeUploadService {
         employee.setJobStep(step);
         employee.setPayGroup(payGroup);
         employee.setEmail(dto.getEmail());
+
+        // Optional fields that may be present in the CSV
+        if (dto.getPhoneNumber()   != null) employee.setPhoneNumber(dto.getPhoneNumber());
+        if (dto.getTinNumber()     != null) employee.setTinNumber(dto.getTinNumber());
+        if (dto.getRsaPin()        != null) employee.setRsaPin(dto.getRsaPin());
+        if (dto.getPfa()           != null) employee.setPfa(dto.getPfa());
+        if (dto.getNinNumber()     != null) employee.setNinNumber(dto.getNinNumber());
+        if (dto.getBvnNumber()     != null) employee.setBvnNumber(dto.getBvnNumber());
+        if (dto.getGender()        != null) employee.setGender(dto.getGender());
+        if (dto.getMaritalStatus() != null) employee.setMaritalStatus(dto.getMaritalStatus());
+        if (dto.getResidentialAddress() != null) employee.setResidentialAddress(dto.getResidentialAddress());
+        if (dto.getMission()       != null) employee.setMission(dto.getMission());
+        if (dto.getNextOfKinName()        != null) employee.setNextOfKinName(dto.getNextOfKinName());
+        if (dto.getNextOfKinPhoneNumber() != null) employee.setNextOfKinPhoneNumber(dto.getNextOfKinPhoneNumber());
+        if (dto.getNextOfKinEmail()       != null) employee.setNextOfKinEmail(dto.getNextOfKinEmail());
+        if (dto.getNextOfKinAddress()     != null) employee.setNextOfKinAddress(dto.getNextOfKinAddress());
+        if (dto.getGuarantorName()        != null) employee.setGuarantorName(dto.getGuarantorName());
+        if (dto.getGuarantorPhoneNumber() != null) employee.setGuarantorPhoneNumber(dto.getGuarantorPhoneNumber());
+        if (dto.getGuarantorEmail()       != null) employee.setGuarantorEmail(dto.getGuarantorEmail());
+        if (dto.getGuarantorAddress()     != null) employee.setGuarantorAddress(dto.getGuarantorAddress());
+        if (dto.getGuarantorNinNumber()   != null) employee.setGuarantorNinNumber(dto.getGuarantorNinNumber());
+
+        if (dto.getDateOfHire() != null) {
+            try { employee.setDateOfHire(LocalDate.parse(dto.getDateOfHire())); }
+            catch (Exception e) { System.err.println("CSV upload: invalid dateOfHire '" + dto.getDateOfHire() + "' for " + dto.getEmail()); }
+        }
+        if (dto.getDateOfBirth() != null) {
+            try { employee.setDateOfBirth(LocalDate.parse(dto.getDateOfBirth())); }
+            catch (Exception e) { System.err.println("CSV upload: invalid dateOfBirth '" + dto.getDateOfBirth() + "' for " + dto.getEmail()); }
+        }
 
         employee = employeeRepository.save(employee);
 
@@ -239,6 +360,58 @@ public class EmployeeUploadServiceImpl implements EmployeeUploadService {
         return employee.getId();
     }
 
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  Helpers
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * All five fields must be non-null/non-blank for a new employee to be created.
+     * Missing any one causes the row to be silently skipped.
+     */
+    private boolean hasAllRequiredFieldsForCreate(EmployeeUploadDTO dto) {
+        return dto.getFirstName()  != null && !dto.getFirstName().isBlank()
+            && dto.getSecondName() != null && !dto.getSecondName().isBlank()
+            && dto.getEmail()      != null && !dto.getEmail().isBlank()
+            && dto.getGrade()      != null && !dto.getGrade().isBlank()
+            && dto.getGross()      != null;
+    }
+
+    /**
+     * Resolves (or creates) the {@link JobGrade} and {@link JobStep} for the given
+     * DTO, using shared caches to avoid redundant DB round-trips within one upload.
+     */
+    private JobStep resolveStep(EmployeeUploadDTO dto, Department department,
+                                Map<String, JobGrade> gradeCache,
+                                Map<String, JobStep>  stepCache) {
+
+        JobGrade jobGrade = gradeCache.computeIfAbsent(dto.getGrade(), gradeName ->
+                jobGradeRepository.findByName(gradeName).orElseGet(() -> {
+                    JobGrade g = new JobGrade();
+                    g.setName(gradeName);
+                    g.setDepartment(department);
+                    return jobGradeRepository.save(g);
+                }));
+
+        BigDecimal monthlySalary = dto.getGross().divide(BigDecimal.valueOf(12), 5, RoundingMode.HALF_UP);
+        String stepKey = dto.getGrade() + "|" + dto.getGross().toPlainString();
+
+        return stepCache.computeIfAbsent(stepKey, k ->
+                jobStepRepository.findByGrossSalaryAndJobGrade(monthlySalary, jobGrade)
+                        .orElseGet(() -> {
+                            JobStep s = new JobStep();
+                            s.setJobGrade(jobGrade);
+                            s.setGrossSalary(monthlySalary);
+                            s.setName("STEP-" + dto.getGross());
+                            return jobStepRepository.save(s);
+                        }));
+    }
+
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  Kept for backward compatibility — the controller's catch block imports
+    //  this exception. It is no longer thrown by the upsert flow.
+    // ─────────────────────────────────────────────────────────────────────────
 
     public static class DuplicateEmailUploadException extends RuntimeException {
 
