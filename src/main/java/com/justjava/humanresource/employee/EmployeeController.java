@@ -47,12 +47,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import com.justjava.humanresource.payroll.dto.FutureEmployeeAllowanceDTO;
 
-import java.util.Optional;
+import java.util.*;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 @Controller
@@ -577,4 +573,34 @@ public class EmployeeController {
         documentService.deleteDocument(docId);
         return ResponseEntity.ok().build();
     }
+
+
+    @PostMapping("/employees/check-emails")
+    @ResponseBody
+    public ResponseEntity<List<String>> checkEmails(@RequestBody List<String> emails) {
+        if (emails == null || emails.isEmpty()) {
+            return ResponseEntity.ok(Collections.emptyList());
+        }
+
+        List<String> normalised = emails.stream()
+                .filter(e -> e != null && !e.isBlank())
+                .map(e -> e.trim().toLowerCase(Locale.ROOT))
+                .distinct()
+                .collect(Collectors.toList());
+
+        // Use the existing employeeService.getByEmail(); treat not-found as absent.
+        List<String> existing = normalised.stream()
+                .filter(email -> {
+                    try {
+                        employeeService.getByEmail(email);
+                        return true;
+                    } catch (Exception ex) {
+                        return false;
+                    }
+                })
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(existing);
+    }
+
 }
