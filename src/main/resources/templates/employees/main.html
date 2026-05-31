@@ -584,8 +584,8 @@
                 <span class="material-icons-round text-green-600 dark:text-green-400">upload_file</span>
             </div>
             <div>
-                <p class="text-sm font-semibold text-gray-700 dark:text-gray-200">Bulk Upload Employees</p>
-                <p class="text-xs text-gray-500 dark:text-gray-400">CSV format: firstName, secondName, email, grade, GROSS, accountName, bankName, accountNumber</p>
+                <p class="text-sm font-semibold text-gray-700 dark:text-gray-200">Bulk Upload / Update Employees</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Header-driven CSV — column names must match field names (e.g. firstName, secondName, email, grade, gross …). New employees require all 5 core fields; existing emails are treated as edits.</p>
             </div>
         </div>
         <div class="flex items-center gap-3 md:ml-auto">
@@ -1942,7 +1942,7 @@
     <div id="csvPreviewModal" class="fixed inset-0 z-50 hidden modal-transition" onclick="if(event.target===this)closeModal('csvPreviewModal')">
         <div class="modal-backdrop fixed inset-0 bg-black bg-opacity-50"></div>
         <div class="fixed inset-0 flex items-center justify-center p-4">
-            <div class="modal-content bg-white dark:bg-gray-800 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl flex flex-col">
+            <div class="modal-content bg-white dark:bg-gray-800 rounded-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden shadow-2xl flex flex-col">
 
                 <!-- Header -->
                 <div class="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
@@ -1951,8 +1951,8 @@
                             <span class="material-icons-round text-green-600 dark:text-green-400">preview</span>
                         </div>
                         <div>
-                            <h3 class="text-lg font-bold text-gray-900 dark:text-white">Preview CSV Upload</h3>
-                            <p class="text-xs text-gray-500 dark:text-gray-400" id="csvPreviewCount">Review employees before uploading</p>
+                            <h3 class="text-lg font-bold text-gray-900 dark:text-white">Preview CSV Upload / Update</h3>
+                            <p class="text-xs text-gray-500 dark:text-gray-400" id="csvPreviewCount">Checking emails…</p>
                         </div>
                     </div>
                     <button onclick="closeModal('csvPreviewModal')" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
@@ -1965,32 +1965,22 @@
                     <!-- Validation summary banner -->
                     <div id="csvValidationBanner" class="hidden mb-4 p-3 rounded-xl border flex items-start gap-2 text-sm"></div>
 
-                    <!-- Server-side duplicate email conflict panel (shown after a 409 response) -->
-                    <div id="csvConflictPanel" class="hidden mb-4 rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/10 overflow-hidden">
-                        <div class="flex items-center gap-2 px-4 py-3 bg-red-100 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800">
-                            <span class="material-icons-round text-red-600 dark:text-red-400">block</span>
-                            <span class="font-semibold text-red-700 dark:text-red-400 text-sm">Upload blocked — email conflicts found</span>
+                    <!-- Create / Edit summary panel -->
+                    <div id="csvSummaryPanel" class="hidden mb-4 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/10 overflow-hidden">
+                        <div class="flex items-center gap-2 px-4 py-3 bg-blue-100 dark:bg-blue-900/20 border-b border-blue-200 dark:border-blue-800">
+                            <span class="material-icons-round text-blue-600 dark:text-blue-400">info</span>
+                            <span class="font-semibold text-blue-700 dark:text-blue-400 text-sm" id="csvSummaryTitle">Upload summary</span>
                         </div>
                         <div class="px-4 py-3">
-                            <p class="text-xs text-red-600 dark:text-red-400 mb-2">The following email addresses must be fixed in your CSV before you can upload. <strong>No employees were saved.</strong></p>
-                            <ul id="csvConflictList" class="space-y-1 text-xs text-red-700 dark:text-red-300 max-h-40 overflow-y-auto font-mono"></ul>
+                            <p class="text-xs text-blue-700 dark:text-blue-300" id="csvSummaryBody"></p>
                         </div>
                     </div>
 
                     <div class="overflow-x-auto">
                         <table class="w-full text-sm border-collapse">
                             <thead>
-                            <tr class="bg-gray-50 dark:bg-gray-700">
-                                <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-200 dark:border-gray-600">#</th>
-                                <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-200 dark:border-gray-600">First Name</th>
-                                <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-200 dark:border-gray-600">Last Name</th>
-                                <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-200 dark:border-gray-600">Email</th>
-                                <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-200 dark:border-gray-600">Grade</th>
-                                <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-200 dark:border-gray-600">Gross (Annual)</th>
-                                <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-200 dark:border-gray-600 bg-blue-50 dark:bg-blue-900/20">Account Name</th>
-                                <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-200 dark:border-gray-600 bg-blue-50 dark:bg-blue-900/20">Bank Name</th>
-                                <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-200 dark:border-gray-600 bg-blue-50 dark:bg-blue-900/20">Account No.</th>
-                                <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-200 dark:border-gray-600">Status</th>
+                            <tr id="csvPreviewTableHead" class="bg-gray-50 dark:bg-gray-700">
+                                <!-- Populated dynamically -->
                             </tr>
                             </thead>
                             <tbody id="csvPreviewTableBody" class="divide-y divide-gray-100 dark:divide-gray-700">
@@ -3058,8 +3048,31 @@
         });
         }
 
-        // ── CSV UPLOAD: parse locally → preview modal → confirm → POST ─────
+        // ── CSV UPLOAD: parse locally → check emails → preview modal → confirm → POST ─────
         let _csvFileForUpload = null;
+
+        // All valid DTO field names (normalised lowercase). Used to label columns nicely.
+        const CSV_FIELD_LABELS = {
+            firstname: 'First Name', secondname: 'Last Name', lastname: 'Last Name',
+            email: 'Email', grade: 'Grade', gross: 'Gross (Annual)',
+            accountname: 'Account Name', bankname: 'Bank Name', accountnumber: 'Account No.',
+            tinnumber: 'TIN', rsapin: 'RSA PIN', pfa: 'PFA',
+            ninnumber: 'NIN', bvnnumber: 'BVN', phonenumber: 'Phone',
+            dateofhire: 'Date of Hire', dateofbirth: 'Date of Birth',
+            gender: 'Gender', maritalstatus: 'Marital Status',
+            residentialaddress: 'Residential Address', mission: 'Mission',
+            nextofkinname: 'NOK Name', nextofkinphonenumber: 'NOK Phone',
+            nextofkinemail: 'NOK Email', nextofkinaddress: 'NOK Address',
+            guarantorname: 'Guarantor Name', guarantorphonenumber: 'Guarantor Phone',
+            guarantoremail: 'Guarantor Email', guarantoraddress: 'Guarantor Address',
+            guarantorninnumber: 'Guarantor NIN'
+        };
+
+        // Required for a CREATE row; EDIT rows bypass this check.
+        const CSV_REQUIRED_FOR_CREATE = new Set(['firstname', 'secondname', 'email', 'grade', 'gross']);
+
+        // Bank fields: if any is present, all three must be non-blank.
+        const CSV_BANK_FIELDS = new Set(['accountname', 'bankname', 'accountnumber']);
 
         function uploadCsv() {
             const file = document.getElementById('csvFileInput').files[0];
@@ -3068,16 +3081,11 @@
                 return;
             }
             _csvFileForUpload = file;
-
-            // Reset the conflict panel whenever a new file is chosen
-            document.getElementById('csvConflictPanel').classList.add('hidden');
             document.getElementById('csvValidationBanner').classList.add('hidden');
+            document.getElementById('csvSummaryPanel').classList.add('hidden');
 
             const reader = new FileReader();
-            reader.onload = function(e) {
-                const text = e.target.result;
-                parseCsvAndShowPreview(text);
-            };
+            reader.onload = function(e) { parseCsvAndShowPreview(e.target.result); };
             reader.readAsText(file);
         }
 
@@ -3088,94 +3096,206 @@
                 return;
             }
 
-            const dataLines = lines.slice(1); // skip header
-            const rows = [];
-            let hasErrors = false;
-
-            dataLines.forEach(function(line, idx) {
-                const parts = line.split(',').map(p => p.trim());
-                const firstName    = parts[0] || '';
-                const secondName   = parts[1] || '';
-                const email        = (parts[2] || '').toLowerCase();
-                const grade        = parts[3] || '';
-                const gross        = parts[4] || '';
-                const accountName  = parts[5] || '';
-                const bankName     = parts[6] || '';
-                const accountNumber = parts[7] || '';
-
-                const errors = [];
-                if (!firstName)  errors.push('Missing first name');
-                if (!secondName) errors.push('Missing last name');
-                if (!email || !email.includes('@')) errors.push('Invalid email');
-                if (!grade)      errors.push('Missing grade');
-                if (!gross || isNaN(Number(gross))) errors.push('Invalid gross');
-
-                // Bank details: if any bank field is set, all three must be valid
-                const anyBank = accountName || bankName || accountNumber;
-                if (anyBank) {
-                    if (!accountName) errors.push('Account name required');
-                    if (!bankName)    errors.push('Bank name required');
-                    if (!accountNumber || accountNumber.replace(/\D/g,'').length !== 10)
-                        errors.push('Account number must be 10 digits');
-                }
-
-                if (errors.length > 0) hasErrors = true;
-                rows.push({ idx: idx + 1, firstName, secondName, email, grade, gross, accountName, bankName, accountNumber, errors });
+            // ── 1. Parse header row ───────────────────────────────────────────
+            // Normalize: lowercase + strip whitespace; alias "lastname" → "secondname"
+            const rawHeaders = lines[0].split(',');
+            const normHeaders = rawHeaders.map(h => {
+                let n = h.trim().toLowerCase().replace(/\s+/g, '');
+                if (n === 'lastname') n = 'secondname';
+                return n;
             });
 
-            // Populate table
+            // ── 2. Parse data rows ────────────────────────────────────────────
+            const dataRows = lines.slice(1).map((line, idx) => {
+                const parts = line.split(',');
+                const cells = {};
+                normHeaders.forEach((col, i) => {
+                    cells[col] = (parts[i] || '').trim();
+                });
+                return { rowNum: idx + 1, cells };
+            });
+
+            // ── 3. Collect all emails for the server check ────────────────────
+            const emailColPresent = normHeaders.includes('email');
+            const allEmails = emailColPresent
+                ? dataRows.map(r => (r.cells['email'] || '').toLowerCase()).filter(Boolean)
+                : [];
+
+            // Show modal skeleton immediately, then populate after email check
+            openModal('csvPreviewModal');
+            document.getElementById('csvPreviewCount').textContent = 'Checking emails with server…';
+            document.getElementById('csvConfirmUploadBtn').disabled = true;
+            document.getElementById('csvConfirmUploadBtn').classList.add('opacity-50', 'cursor-not-allowed');
+            document.getElementById('csvPreviewTableHead').innerHTML = '';
+            document.getElementById('csvPreviewTableBody').innerHTML =
+                '<tr><td colspan="99" class="px-4 py-8 text-center text-gray-400 text-sm">' +
+                '<span class="material-icons-round animate-spin inline-block mr-2" style="font-size:18px;vertical-align:middle">autorenew</span>' +
+                'Checking existing employees…</td></tr>';
+
+            // ── 4. POST email list to server ──────────────────────────────────
+            fetch('/employees/check-emails', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(allEmails)
+            })
+            .then(r => r.ok ? r.json() : Promise.reject('Email check failed (' + r.status + ')'))
+            .then(existingEmails => {
+                const existingSet = new Set((existingEmails || []).map(e => e.toLowerCase()));
+                _buildCsvPreview(normHeaders, dataRows, existingSet);
+            })
+            .catch(err => {
+                // If the endpoint is unavailable, fall back: treat all as NEW (conservative)
+                console.warn('Email pre-check failed, treating all as NEW:', err);
+                _buildCsvPreview(normHeaders, dataRows, new Set());
+            });
+        }
+
+        function _buildCsvPreview(normHeaders, dataRows, existingEmailSet) {
+            // ── Build table header ────────────────────────────────────────────
+            const thead = document.getElementById('csvPreviewTableHead');
+            const thBase = 'px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-200 dark:border-gray-600';
+            const thBank = thBase + ' bg-blue-50 dark:bg-blue-900/20';
+
+            let headHtml = '<th class="' + thBase + '">#</th>';
+            normHeaders.forEach(col => {
+                const label = CSV_FIELD_LABELS[col] || col;
+                const isBank = CSV_BANK_FIELDS.has(col);
+                headHtml += '<th class="' + (isBank ? thBank : thBase) + '">' + esc(label) + '</th>';
+            });
+            headHtml += '<th class="' + thBase + '">Action</th><th class="' + thBase + '">Status</th>';
+            thead.innerHTML = headHtml;
+
+            // ── Validate & build rows ─────────────────────────────────────────
+            const rows = [];
+            let hasBlockingErrors = false;
+
+            dataRows.forEach(({ rowNum, cells }) => {
+                const emailRaw = (cells['email'] || '').toLowerCase();
+                const isEdit   = emailRaw && existingEmailSet.has(emailRaw);
+                const errors   = [];
+
+                if (isEdit) {
+                    // EDIT: only validate bank completeness if any bank field is non-empty
+                    const anyBank = CSV_BANK_FIELDS.values().next && // guard
+                        [...CSV_BANK_FIELDS].some(f => cells[f]);
+                    if (anyBank) {
+                        if (!cells['accountname']) errors.push('Account name required when providing bank details');
+                        if (!cells['bankname'])    errors.push('Bank name required when providing bank details');
+                        if (!cells['accountnumber'] || cells['accountnumber'].replace(/\D/g,'').length !== 10)
+                            errors.push('Account number must be exactly 10 digits');
+                    }
+                } else {
+                    // NEW: all required fields must be present
+                    CSV_REQUIRED_FOR_CREATE.forEach(req => {
+                        if (normHeaders.includes(req) && !cells[req]) {
+                            errors.push('Missing ' + (CSV_FIELD_LABELS[req] || req));
+                        } else if (!normHeaders.includes(req)) {
+                            errors.push('Column "' + req + '" missing from CSV header');
+                        }
+                    });
+                    if (cells['email'] && !cells['email'].includes('@')) {
+                        errors.push('Invalid email format');
+                    }
+                    if (cells['gross'] && isNaN(Number(cells['gross']))) {
+                        errors.push('Gross must be a number');
+                    }
+                    const anyBank = [...CSV_BANK_FIELDS].some(f => cells[f]);
+                    if (anyBank) {
+                        if (!cells['accountname']) errors.push('Account name required');
+                        if (!cells['bankname'])    errors.push('Bank name required');
+                        if (!cells['accountnumber'] || cells['accountnumber'].replace(/\D/g,'').length !== 10)
+                            errors.push('Account number must be 10 digits');
+                    }
+                }
+
+                if (errors.length) hasBlockingErrors = true;
+                rows.push({ rowNum, cells, isEdit, errors });
+            });
+
+            // ── Build table body ──────────────────────────────────────────────
             const tbody = document.getElementById('csvPreviewTableBody');
             tbody.innerHTML = '';
-            rows.forEach(function(row) {
-                const ok = row.errors.length === 0;
-                const bankProvided = row.accountName || row.bankName || row.accountNumber;
-
+            rows.forEach(({ rowNum, cells, isEdit, errors }) => {
+                const ok = errors.length === 0;
                 const tr = document.createElement('tr');
                 tr.className = ok
-                    ? 'hover:bg-gray-50 dark:hover:bg-gray-750'
+                    ? (isEdit ? 'bg-amber-50 dark:bg-amber-900/5 hover:bg-amber-50/80' : 'hover:bg-gray-50 dark:hover:bg-gray-750')
                     : 'bg-red-50 dark:bg-red-900/10';
 
-                tr.innerHTML =
-                    '<td class="px-3 py-2 text-gray-400 text-xs">' + row.idx + '</td>' +
-                    '<td class="px-3 py-2 font-medium text-gray-800 dark:text-gray-200">' + esc(row.firstName) + '</td>' +
-                    '<td class="px-3 py-2 text-gray-700 dark:text-gray-300">' + esc(row.secondName) + '</td>' +
-                    '<td class="px-3 py-2 text-gray-700 dark:text-gray-300 text-xs">' + esc(row.email) + '</td>' +
-                    '<td class="px-3 py-2"><span class="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-semibold">' + esc(row.grade) + '</span></td>' +
-                    '<td class="px-3 py-2 text-gray-700 dark:text-gray-300 font-mono text-xs">' + esc(row.gross) + '</td>' +
-                    '<td class="px-3 py-2 bg-blue-50/50 dark:bg-blue-900/10 text-gray-700 dark:text-gray-300 text-xs">' + (bankProvided ? esc(row.accountName) || '<span class="text-red-400">—</span>' : '<span class="text-gray-300">—</span>') + '</td>' +
-                    '<td class="px-3 py-2 bg-blue-50/50 dark:bg-blue-900/10 text-gray-700 dark:text-gray-300 text-xs">' + (bankProvided ? esc(row.bankName)    || '<span class="text-red-400">—</span>' : '<span class="text-gray-300">—</span>') + '</td>' +
-                    '<td class="px-3 py-2 bg-blue-50/50 dark:bg-blue-900/10 font-mono text-xs text-gray-700 dark:text-gray-300">' + (bankProvided ? esc(row.accountNumber) || '<span class="text-red-400">—</span>' : '<span class="text-gray-300">—</span>') + '</td>' +
-                    '<td class="px-3 py-2">' + (ok
-                        ? '<span class="flex items-center gap-1 text-green-600 text-xs font-medium"><span class="material-icons-round text-sm">check_circle</span>OK</span>'
-                        : '<span class="text-red-600 text-xs" title="' + esc(row.errors.join(', ')) + '"><span class="material-icons-round text-sm align-bottom">error</span> ' + esc(row.errors[0]) + (row.errors.length > 1 ? ' +' + (row.errors.length - 1) + ' more' : '') + '</span>'
-                    ) + '</td>';
+                let rowHtml = '<td class="px-3 py-2 text-gray-400 text-xs">' + rowNum + '</td>';
+                normHeaders.forEach(col => {
+                    const val = cells[col] || '';
+                    const isBank = CSV_BANK_FIELDS.has(col);
+                    const cellBase = 'px-3 py-2 text-xs text-gray-700 dark:text-gray-300';
+                    const cellClass = cellBase + (isBank ? ' bg-blue-50/50 dark:bg-blue-900/10' : '');
+                    let cellContent;
+                    if (col === 'email') {
+                        cellContent = '<span class="font-mono">' + esc(val) + '</span>';
+                    } else if (col === 'grade') {
+                        cellContent = val
+                            ? '<span class="px-2 py-0.5 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 rounded text-xs font-semibold">' + esc(val) + '</span>'
+                            : '<span class="text-gray-300">—</span>';
+                    } else if (col === 'gross') {
+                        cellContent = val ? '<span class="font-mono">' + esc(val) + '</span>' : '<span class="text-gray-300">—</span>';
+                    } else {
+                        cellContent = val ? esc(val) : '<span class="text-gray-300">—</span>';
+                    }
+                    rowHtml += '<td class="' + cellClass + '">' + cellContent + '</td>';
+                });
+
+                // Action badge
+                const actionBadge = isEdit
+                    ? '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"><span class="material-icons-round" style="font-size:12px">edit</span>EDIT</span>'
+                    : '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300"><span class="material-icons-round" style="font-size:12px">person_add</span>NEW</span>';
+                rowHtml += '<td class="px-3 py-2">' + actionBadge + '</td>';
+
+                // Status badge
+                const statusBadge = ok
+                    ? '<span class="flex items-center gap-1 text-green-600 dark:text-green-400 text-xs font-medium"><span class="material-icons-round text-sm">check_circle</span>OK</span>'
+                    : '<span class="text-red-600 dark:text-red-400 text-xs" title="' + esc(errors.join(', ')) + '"><span class="material-icons-round text-sm align-bottom">error</span> ' + esc(errors[0]) + (errors.length > 1 ? ' +' + (errors.length - 1) + ' more' : '') + '</span>';
+                rowHtml += '<td class="px-3 py-2">' + statusBadge + '</td>';
+
+                tr.innerHTML = rowHtml;
                 tbody.appendChild(tr);
             });
 
-            // Count badge
-            const withBank = rows.filter(r => r.accountName || r.bankName || r.accountNumber).length;
+            // ── Summary counts ────────────────────────────────────────────────
+            const newCount  = rows.filter(r => !r.isEdit).length;
+            const editCount = rows.filter(r =>  r.isEdit).length;
             document.getElementById('csvPreviewCount').textContent =
-                rows.length + ' employee' + (rows.length !== 1 ? 's' : '') +
-                ' found' + (withBank > 0 ? ' · ' + withBank + ' with bank details' : '');
+                rows.length + ' row' + (rows.length !== 1 ? 's' : '') +
+                ' · ' + newCount + ' new · ' + editCount + ' edit' + (editCount !== 1 ? 's' : '');
 
-            // Validation banner
+            // ── Summary info panel ────────────────────────────────────────────
+            const summaryPanel = document.getElementById('csvSummaryPanel');
+            const summaryTitle = document.getElementById('csvSummaryTitle');
+            const summaryBody  = document.getElementById('csvSummaryBody');
+            summaryPanel.classList.remove('hidden');
+            summaryTitle.textContent = 'Upload summary: ' + newCount + ' to create, ' + editCount + ' to update';
+            const parts = [];
+            if (newCount)  parts.push('<strong>' + newCount + ' new employee' + (newCount !== 1 ? 's' : '') + '</strong> will be created (all 5 required fields must be present).');
+            if (editCount) parts.push('<strong>' + editCount + ' existing employee' + (editCount !== 1 ? 's' : '') + '</strong> will be updated — only the columns present in this CSV will be touched.');
+            summaryBody.innerHTML = parts.join(' ');
+
+            // ── Validation banner + confirm button ────────────────────────────
             const banner = document.getElementById('csvValidationBanner');
-            if (hasErrors) {
+            const confirmBtn = document.getElementById('csvConfirmUploadBtn');
+            if (hasBlockingErrors) {
                 const errCount = rows.filter(r => r.errors.length > 0).length;
                 banner.className = 'mb-4 p-3 rounded-xl border flex items-start gap-2 text-sm bg-red-50 border-red-200 text-red-700 dark:bg-red-900/10 dark:border-red-800 dark:text-red-400';
-                banner.innerHTML = '<span class="material-icons-round text-base mt-0.5">warning</span><span><strong>' + errCount + ' row(s) have errors</strong> and will be skipped during upload. Fix the CSV and re-select to correct them.</span>';
+                banner.innerHTML = '<span class="material-icons-round text-base mt-0.5">warning</span>' +
+                    '<span><strong>' + errCount + ' row(s) have errors</strong> and cannot be processed. Fix the CSV and re-select the file.</span>';
                 banner.classList.remove('hidden');
-                document.getElementById('csvConfirmUploadBtn').disabled = true;
-                document.getElementById('csvConfirmUploadBtn').classList.add('opacity-50', 'cursor-not-allowed');
+                confirmBtn.disabled = true;
+                confirmBtn.classList.add('opacity-50', 'cursor-not-allowed');
             } else {
                 banner.className = 'mb-4 p-3 rounded-xl border flex items-start gap-2 text-sm bg-green-50 border-green-200 text-green-700 dark:bg-green-900/10 dark:border-green-800 dark:text-green-400';
-                banner.innerHTML = '<span class="material-icons-round text-base mt-0.5">check_circle</span><span>All rows look valid. Review below and click <strong>Confirm &amp; Upload</strong> to proceed.</span>';
+                banner.innerHTML = '<span class="material-icons-round text-base mt-0.5">check_circle</span>' +
+                    '<span>All rows look valid. Review below and click <strong>Confirm &amp; Upload</strong> to proceed.</span>';
                 banner.classList.remove('hidden');
-                document.getElementById('csvConfirmUploadBtn').disabled = false;
-                document.getElementById('csvConfirmUploadBtn').classList.remove('opacity-50', 'cursor-not-allowed');
+                confirmBtn.disabled = false;
+                confirmBtn.classList.remove('opacity-50', 'cursor-not-allowed');
             }
-
-            openModal('csvPreviewModal');
         }
 
         function esc(str) {
@@ -3194,38 +3314,17 @@
             btn.disabled = true;
             btn.innerHTML = '<span class="pi-spinner"></span> Uploading...';
 
-            // Hide any previous conflict panel
-            const conflictPanel = document.getElementById('csvConflictPanel');
-            conflictPanel.classList.add('hidden');
-
             const formData = new FormData();
             formData.append('file', _csvFileForUpload);
 
             fetch('/employees/upload-csv', { method: 'POST', body: formData })
                 .then(async r => {
-                    if (r.status === 409) {
-                        // Server found duplicate emails — show them all in the conflict panel
-                        const data = await r.json();
-                        const list = document.getElementById('csvConflictList');
-                        list.innerHTML = '';
-                        (data.conflictingEmails || []).forEach(function(entry) {
-                            const li = document.createElement('li');
-                            li.className = 'flex items-start gap-1.5';
-                            li.innerHTML = '<span class="material-icons-round text-xs mt-0.5 flex-shrink-0">close</span>' + esc(entry);
-                            list.appendChild(li);
-                        });
-                        conflictPanel.classList.remove('hidden');
-                        // Scroll up so user sees the panel
-                        conflictPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                        // Keep the modal open so user can read the errors
-                        return;
-                    }
                     const text = await r.text();
-                    if (!r.ok) throw new Error(text);
+                    if (!r.ok) throw new Error(text || 'Upload failed');
                     closeModal('csvPreviewModal');
                     document.getElementById('csvFileInput').value = '';
                     _csvFileForUpload = null;
-                    showPiToast('Employees uploaded successfully ✓', 'success');
+                    showPiToast('Upload complete ✓', 'success');
                     setTimeout(() => window.location.reload(), 1500);
                 })
                 .catch(err => showPiToast('Upload failed: ' + err.message, 'error'))
