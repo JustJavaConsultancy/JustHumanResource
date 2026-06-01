@@ -72,7 +72,7 @@
         <div class="flex items-center space-x-3">
             <span id="periodStatusIcon" class="material-icons-round text-red-600 dark:text-red-400">lock</span>
             <div>
-                <p class="font-medium text-gray-800 dark:text-gray-200">Payroll Period is CLOSED.</p>
+                <p class="font-medium text-gray-800 dark:text-gray-200">No active payroll period.</p>
                 <p class="text-sm text-gray-600 dark:text-gray-400">All payroll actions are disabled. Open the period to start processing.</p>
             </div>
         </div>
@@ -84,8 +84,13 @@
             <!-- Open lock icon to convey active period -->
             <span class="material-icons-round text-green-600 dark:text-green-400">lock_open</span>
             <div>
-                <p class="font-medium text-gray-800 dark:text-gray-200">Payroll Period is OPEN.</p>
-                <p class="text-sm text-gray-600 dark:text-gray-400">Payroll actions are enabled. There is a current open period</p>
+                <p class="font-medium text-gray-800 dark:text-gray-200"
+                   th:text="${'Payroll Period is ' + payrollStatus + '.'}">Payroll Period is OPEN.</p>
+                <p class="text-sm text-gray-600 dark:text-gray-400"
+                   th:if="${currentPayrollPeriod != null}"
+                   th:text="${#temporals.format(currentPayrollPeriod.periodStart, 'dd MMM yyyy') + ' - ' + #temporals.format(currentPayrollPeriod.periodEnd, 'dd MMM yyyy')}">
+                    Payroll actions are enabled. There is a current open period
+                </p>
             </div>
         </div>
     </div>

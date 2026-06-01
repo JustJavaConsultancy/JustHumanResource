@@ -721,6 +721,7 @@
                         data-job-grade-id=${employee.jobStep != null ? employee.jobStep.jobGrade.id : ''},
                         data-job-step-id=${employee.jobStep != null ? employee.jobStep.id : ''},
                         data-pay-group-id=${employee.payGroup != null ? employee.payGroup.id : ''},
+                        data-manager-id=${managerMap != null and managerMap.containsKey(employee.id) ? managerMap.get(employee.id) : ''},
                         data-employment-status=${employee.employmentStatus},
                         data-nin-number=${employee.ninNumber},
                         data-bvn-number=${employee.bvnNumber},
@@ -994,6 +995,17 @@
                                         <select name="payGroupId" id="addPayGroupId" class="form-input" required>
                                             <option value="">Select Pay Group</option>
                                             <option th:each="pg : ${payGroups}" th:value="${pg.id}" th:text="${pg.name}">Executive</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                            Line Manager
+                                        </label>
+                                        <select name="managerId" id="addManagerId" class="form-input">
+                                            <option value="">Select Line Manager</option>
+                                            <option th:each="mgr : ${employees}"
+                                                    th:value="${mgr.id}"
+                                                    th:text="${mgr.firstName + ' ' + mgr.lastName + ' (' + mgr.employeeNumber + ')'}">Manager</option>
                                         </select>
                                     </div>
                                 </div>
@@ -1347,6 +1359,17 @@
                                         <select id="editPayGroupId" name="payGroupId" class="form-input" required>
                                             <option value="">Select Pay Group</option>
                                             <option th:each="pg : ${payGroups}" th:value="${pg.id}" th:text="${pg.name}">Executive</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                            Line Manager
+                                        </label>
+                                        <select id="editManagerId" name="lineManagerId" class="form-input">
+                                            <option value="">Select Line Manager</option>
+                                            <option th:each="mgr : ${employees}"
+                                                    th:value="${mgr.id}"
+                                                    th:text="${mgr.firstName + ' ' + mgr.lastName + ' (' + mgr.employeeNumber + ')'}">Manager</option>
                                         </select>
                                     </div>
                                 </div>
@@ -2320,6 +2343,7 @@
             document.getElementById('editEmploymentStatus').value  = row.dataset.employmentStatus;
             document.getElementById('editDepartmentId').value      = row.dataset.departmentId || '';
             document.getElementById('editPayGroupId').value        = row.dataset.payGroupId || '';
+            document.getElementById('editManagerId').value         = row.dataset.managerId || '';
 
             document.getElementById('editNinNumber').value = row.dataset.ninNumber || '';
             document.getElementById('editBvnNumber').value = row.dataset.bvnNumber || '';
@@ -2398,6 +2422,9 @@
                 departmentId:         parseInt(document.getElementById('editDepartmentId').value, 10),
                 jobStepId:            parseInt(document.getElementById('editJobStepId').value, 10),
                 payGroupId:           parseInt(document.getElementById('editPayGroupId').value, 10),
+                lineManagerId:        document.getElementById('editManagerId').value
+                                       ? parseInt(document.getElementById('editManagerId').value, 10)
+                                       : null,
                 ninNumber:            document.getElementById('editNinNumber').value,
                 bvnNumber:            document.getElementById('editBvnNumber').value,
                 tinNumber:            document.getElementById('editTinNumber').value,

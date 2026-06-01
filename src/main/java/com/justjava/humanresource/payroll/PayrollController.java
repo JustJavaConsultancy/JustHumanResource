@@ -101,7 +101,9 @@ public class PayrollController {
                 .filter(Deduction::isStatutory)
                 .toList();
 
-        model.addAttribute("payrollStatus", payrollPeriodService.getPeriodStatusForDate(1L, LocalDate.now()));
+        PayrollPeriod currentPayrollPeriod = payrollPeriodService.getCurrentPeriod(1L);
+        model.addAttribute("currentPayrollPeriod", currentPayrollPeriod);
+        model.addAttribute("payrollStatus", currentPayrollPeriod != null ? currentPayrollPeriod.getStatus() : null);
         model.addAttribute("allowances", allowances.size());
         model.addAttribute("employees", employees.size());
         model.addAttribute("taxableAllowances", taxableAllowances.size());

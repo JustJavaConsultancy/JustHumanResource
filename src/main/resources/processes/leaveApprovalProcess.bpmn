@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:flowable="http://flowable.org/bpmn"
+             targetNamespace="http://flowable.org/processdef">
+
+  <process id="leaveApprovalProcess" name="Leave Approval Process" isExecutable="true">
+
+    <startEvent id="startEvent"/>
+
+    <serviceTask id="initializeApproval"
+                 name="Initialize Leave Approval"
+                 flowable:delegateExpression="${initializeLeaveApprovalDelegate}"/>
+
+    <userTask id="managerApprovalTask"
+              name="Leave Approval"
+              flowable:assignee="${currentApproverId}"/>
+
+    <exclusiveGateway id="decisionGateway" name="Approved?"/>
+
+    <serviceTask id="processApprovalDecision"
+                 name="Process Approval Decision"
+                 flowable:delegateExpression="${processLeaveApprovalDecisionDelegate}"/>
+
+    <exclusiveGateway id="moreApproversGateway" name="More Approvers?"/>
+
+    <serviceTask id="finalizeApproval"
+                 name="Finalize Approval"
+                 flowable:delegateExpression="${finalizeLeaveApprovalDelegate}"/>
+
+    <serviceTask id="finalizeRejection"
+                 name="Finalize Rejection"
+                 flowable:delegateExpression="${finalizeLeaveRejectionDelegate}"/>
+
+    <endEvent id="approvedEnd" name="Approved"/>
+    <endEvent id="rejectedEnd" name="Rejected"/>
+
+    <sequenceFlow id="flow1" sourceRef="startEvent" targetRef="initializeApproval"/>
+    <sequenceFlow id="flow2" sourceRef="initializeApproval" targetRef="managerApprovalTask"/>
+    <sequenceFlow id="flow3" sourceRef="managerApprovalTask" targetRef="decisionGateway"/>
+
+    <sequenceFlow id="flow4" sourceRef="decisionGateway" targetRef="processApprovalDecision">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${approvalDecision == 'APPROVE'}]]></conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="flow5" sourceRef="decisionGateway" targetRef="finalizeRejection">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${approvalDecision == 'REJECT'}]]></conditionExpression>
+    </sequenceFlow>
+
+    <sequenceFlow id="flow6" sourceRef="processApprovalDecision" targetRef="moreApproversGateway"/>
+    <sequenceFlow id="flow7" sourceRef="moreApproversGateway" targetRef="managerApprovalTask">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${hasMoreApprovers}]]></conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="flow8" sourceRef="moreApproversGateway" targetRef="finalizeApproval">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${!hasMoreApprovers}]]></conditionExpression>
+    </sequenceFlow>
+
+    <sequenceFlow id="flow9" sourceRef="finalizeApproval" targetRef="approvedEnd"/>
+    <sequenceFlow id="flow10" sourceRef="finalizeRejection" targetRef="rejectedEnd"/>
+
+  </process>
+
+</definitions>

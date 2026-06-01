@@ -62,9 +62,8 @@ public class ClosePeriodDelegate implements JavaDelegate {
                 "PayrollPeriod",
                 periodId,
                 "CLOSE",
-                approvedBy != null ? approvedBy : "SYSTEM",
-                "FINANCE",
                 "Period closed via approval workflow"
+                        + (approvedBy != null ? ". Approved by: " + approvedBy : "")
         );
 
         log.info("Payroll period {} successfully closed.", periodId);

@@ -35,6 +35,8 @@ import com.justjava.humanresource.payroll.service.PayrollRunService;
 import com.justjava.humanresource.payroll.service.PayrollSetupService;
 import com.justjava.humanresource.workflow.dto.FlowableTaskDTO;
 import com.justjava.humanresource.workflow.service.FlowableTaskService;
+import com.justjava.humanresource.orgStructure.enums.ReportingType;
+import com.justjava.humanresource.orgStructure.repositories.EmployeeReportingLineRepository;
 import org.flowable.engine.history.HistoricProcessInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
@@ -70,6 +72,7 @@ public class EmployeeController {
     @Autowired private EmployeePayItemUploadService employeePayItemUploadService;
     @Autowired private JobHrEmployeeAccessService jobHrEmployeeAccessService;
     @Autowired PaySlipService paySlipService;
+    @Autowired private EmployeeReportingLineRepository employeeReportingLineRepository;
 
     // ─────────────────────────────────────────────────────────────────────────
     //  EMPLOYEES PAGE
@@ -88,6 +91,15 @@ public class EmployeeController {
                 .toList();
         employees = jobHrEmployeeAccessService.filterEmployeesByScope(employees);
 
+        Map<Long, Long> primaryManagerMap = new LinkedHashMap<>();
+        for (Employee employee : employees) {
+            employeeReportingLineRepository.findEffectiveManager(
+                    employee.getId(),
+                    ReportingType.PRIMARY,
+                    LocalDate.now()
+            ).ifPresent(line -> primaryManagerMap.put(employee.getId(), line.getManager().getId()));
+        }
+
         employees.forEach(e ->
                 System.out.println("Employee: " + e.getFirstName() + " " + e.getEmploymentStatus()
                         + ", Department: " + e.getDepartment().getName()));
@@ -103,6 +115,7 @@ public class EmployeeController {
         model.addAttribute("jobGrades",   jobGrades);
         model.addAttribute("departments", departments);
         model.addAttribute("payGroups",   payGroups);
+        model.addAttribute("managerMap",  primaryManagerMap);
         model.addAttribute("title",       "Employee Management");
         model.addAttribute("subTitle",    "Manage employee records, payroll, and performance data");
         model.addAttribute("isRestrictedHr", authenticationManager.isRestrictedHr());
@@ -123,6 +136,9 @@ public class EmployeeController {
             @RequestParam(required = false) String bankName,
             @RequestParam(required = false) String accountNumber) {
         jobHrEmployeeAccessService.assertCanUseJobStep(command.getJobStepId());
+        if (command.getManagerId() != null) {
+            jobHrEmployeeAccessService.assertCanAccessEmployee(command.getManagerId());
+        }
 
         try {
             EmployeeOnboardingResponseDTO dto =
@@ -165,6 +181,9 @@ public class EmployeeController {
                                             @RequestBody EmployeeDTO incomingEmployee) {
         jobHrEmployeeAccessService.assertCanAccessEmployee(id);
         jobHrEmployeeAccessService.assertCanUseJobStep(incomingEmployee.getJobStepId());
+        if (incomingEmployee.getLineManagerId() != null) {
+            jobHrEmployeeAccessService.assertCanAccessEmployee(incomingEmployee.getLineManagerId());
+        }
         try {
             System.out.println("Received update for employee ID: " + id + " with data: " + incomingEmployee);
             employeeOnboardingService.updateEmployee(id, incomingEmployee);

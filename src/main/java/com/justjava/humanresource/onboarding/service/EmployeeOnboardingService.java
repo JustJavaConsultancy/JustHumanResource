@@ -17,6 +17,9 @@ import com.justjava.humanresource.onboarding.entity.EmployeeOnboarding;
 import com.justjava.humanresource.onboarding.enums.OnboardingStatus;
 import com.justjava.humanresource.onboarding.repositories.EmployeeOnboardingRepository;
 import com.justjava.humanresource.core.config.AuthenticationManager;
+import com.justjava.humanresource.orgStructure.enums.ReportingType;
+import com.justjava.humanresource.orgStructure.repositories.EmployeeReportingLineRepository;
+import com.justjava.humanresource.orgStructure.services.OrganogramService;
 
 
 import com.justjava.humanresource.payroll.service.PayrollChangeOrchestrator;
@@ -47,6 +50,8 @@ public class EmployeeOnboardingService {
     private final PayrollChangeOrchestrator payrollChangeOrchestrator;
     private final AuthenticationManager authenticationManager;
     private final JobHrEmployeeAccessService jobHrEmployeeAccessService;
+    private final OrganogramService organogramService;
+    private final EmployeeReportingLineRepository employeeReportingLineRepository;
 
     @Transactional
     public EmployeeOnboardingResponseDTO startOnboarding(
@@ -93,6 +98,18 @@ public class EmployeeOnboardingService {
         dto.setStatus(String.valueOf(RecordStatus.INACTIVE));
 
         Employee employee = employeeService.createEmployee(dto);
+
+        if (command.getManagerId() != null) {
+            if (command.getManagerId().equals(employee.getId())) {
+                throw new IllegalArgumentException("Employee cannot be their own line manager.");
+            }
+            organogramService.assignManager(
+                    employee.getId(),
+                    command.getManagerId(),
+                    ReportingType.PRIMARY,
+                    LocalDate.now()
+            );
+        }
 
         // 2️⃣ Create onboarding FIRST (without processInstanceId)
         EmployeeOnboarding onboarding = EmployeeOnboarding.builder()
@@ -222,6 +239,25 @@ public class EmployeeOnboardingService {
 
         if (hasBankData) {
             employeeService.updateBankDetails(id, dto);
+        }
+
+        if (dto.getLineManagerId() != null) {
+            if (dto.getLineManagerId().equals(employee.getId())) {
+                throw new IllegalArgumentException("Employee cannot be their own line manager.");
+            }
+            organogramService.assignManager(
+                    employee.getId(),
+                    dto.getLineManagerId(),
+                    ReportingType.PRIMARY,
+                    LocalDate.now()
+            );
+        } else {
+            employeeReportingLineRepository.findActiveLine(employee.getId(), ReportingType.PRIMARY)
+                    .ifPresent(line -> organogramService.removeManager(
+                            employee.getId(),
+                            ReportingType.PRIMARY,
+                            LocalDate.now()
+                    ));
         }
     }
 
