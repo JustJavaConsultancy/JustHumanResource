@@ -13,6 +13,7 @@ public class StartEmployeeOnboardingCommand {
     private Long departmentId;
     private Long jobStepId;
     private Long payGroupId;
+    private Long managerId;
 
     // NEW
     private String tinNumber;
