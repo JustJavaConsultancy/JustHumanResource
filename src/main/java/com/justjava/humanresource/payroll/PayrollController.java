@@ -365,10 +365,29 @@ public class PayrollController {
                 : null;
 
         // Fetch and sort previous payslips, excluding restricted employees
-        List<PaySlipDTO> previousPaySlips = paySlipService.getAllClosedPeriodPaySlips(1L).stream()
+        Map<String, List<PaySlipDTO>> previousPeriods = paySlipService.getAllClosedPeriodPaySlips(1L).stream()
                 .filter(ps -> visibleEmployeeIds == null || visibleEmployeeIds.contains(ps.getEmployeeId()))
-                .sorted((a, b) -> a.getEmployeeId().compareTo(b.getEmployeeId()))
-                .toList();
+                .sorted((a, b) -> {
+                    // Sort within each group by employee
+                    int cmp = b.getPayDate().compareTo(a.getPayDate()); // newest periods first
+                    return cmp != 0 ? cmp : a.getEmployeeId().compareTo(b.getEmployeeId());
+                })
+                .collect(Collectors.groupingBy(
+                        ps -> YearMonth.from(ps.getPayDate()).toString(), // key: "2025-01"
+                        LinkedHashMap::new,
+                        Collectors.toList()
+                ));
+
+// Sort so newest period comes first (LinkedHashMap preserves insertion order)
+        Map<String, List<PaySlipDTO>> sortedPreviousPeriods = previousPeriods.entrySet().stream()
+                .sorted(Map.Entry.<String, List<PaySlipDTO>>comparingByKey().reversed())
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        Map.Entry::getValue,
+                        (a, b) -> a,
+                        LinkedHashMap::new
+                ));
+
 
         // Auto-generate payslips for any POSTED run that doesn't have one yet
         for (PayrollRun run : payrollRuns) {
@@ -419,7 +438,7 @@ public class PayrollController {
 
         model.addAttribute("payrollRuns", payrollRuns);
         model.addAttribute("currentPaySlips", currentPaySlips);
-        model.addAttribute("previousPeriods", previousPaySlips);
+        model.addAttribute("previousPeriods", sortedPreviousPeriods);
         model.addAttribute("title", "Payroll Management");
         model.addAttribute("subTitle", "Manage employee payroll, salary details, and payment history");
 
@@ -534,9 +553,11 @@ public class PayrollController {
         model.addAttribute("report", report);
         model.addAttribute("totals", grandTotals);
         model.addAttribute("groupBy", groupBy);
-        model.addAttribute("title", "Payroll Management");
-        model.addAttribute("subTitle", "Manage employee payroll, salary details, and payment history");
-        return "payroll/fragments/employee-payroll";
+        model.addAttribute("isRestrictedHr", authenticationManager.isRestrictedHr());
+        model.addAttribute("isJobHr", jobHrEmployeeAccessService.isJobHrScopedUser());
+        model.addAttribute("title", "Grouped Payroll Report");
+        model.addAttribute("subTitle", "Grouped summary of employee payroll by selected category");
+        return "payroll/fragments/grouped-report";
     }
 
     @GetMapping("/payroll/payitems-report")
