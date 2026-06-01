@@ -97,6 +97,21 @@ public interface EmployeePositionHistoryRepository
     long countByCurrentTrue();
 
     /* ============================================================
+       📊 VARIANCE REPORT — position changes within a period
+       ============================================================ */
+
+    /**
+     * Returns all position history records for an employee whose
+     * {@code effectiveFrom} falls within [{@code start}, {@code end}].
+     * Used by the Payroll Variance Report to detect salary/promotion changes.
+     */
+    List<EmployeePositionHistory> findByEmployee_IdAndEffectiveFromBetween(
+            Long employeeId,
+            LocalDate start,
+            LocalDate end
+    );
+
+    /* ============================================================
        🛡️ DUPLICATE GUARD — finds any existing record for employee + date
           regardless of current flag, to prevent constraint violations
        ============================================================ */

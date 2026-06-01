@@ -830,6 +830,36 @@ AND pr.versionNumber = (
     );
 
     /* ============================================================
+       VARIANCE REPORT
+       ============================================================ */
+
+    /**
+     * Returns the highest-version POSTED run for a specific employee in a
+     * specific period. Used by the Payroll Variance Report to load the
+     * previous-period baseline for each employee.
+     */
+    @Query("""
+    SELECT pr FROM PayrollRun pr
+    WHERE pr.employee.id = :employeeId
+      AND pr.periodStart = :periodStart
+      AND pr.periodEnd   = :periodEnd
+      AND pr.status      = com.justjava.humanresource.core.enums.PayrollRunStatus.POSTED
+      AND pr.versionNumber = (
+          SELECT MAX(pr2.versionNumber)
+          FROM PayrollRun pr2
+          WHERE pr2.employee.id  = :employeeId
+            AND pr2.periodStart  = :periodStart
+            AND pr2.periodEnd    = :periodEnd
+            AND pr2.status       = com.justjava.humanresource.core.enums.PayrollRunStatus.POSTED
+      )
+    """)
+    Optional<PayrollRun> findLatestPostedRunForEmployeeAndPeriod(
+            @Param("employeeId")   Long      employeeId,
+            @Param("periodStart")  LocalDate periodStart,
+            @Param("periodEnd")    LocalDate periodEnd
+    );
+
+    /* ============================================================
        EMPLOYEE REPORT
        ============================================================ */
 

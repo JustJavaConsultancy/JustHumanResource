@@ -23,9 +23,11 @@ public class SalaryChangePayrollListener {
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onSalaryChanged(SalaryChangedEvent event) {
+        // Note: This listener is not currently used in the codebase.
+        // PayrollMessageDispatcher is triggered directly from PayrollChangeOrchestratorImpl.
         payrollMessageDispatcher.requestPayroll(
                 event.getEmployee().getId(),
-                LocalDate.now()
+                event.getLocalDate()
         );
     }
 }

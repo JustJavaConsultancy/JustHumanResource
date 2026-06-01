@@ -44,9 +44,17 @@ public class InitializePayrollDelegate implements JavaDelegate {
         }
 */
 
+        // retroEffectiveDate is optional — present only for retro-triggered runs
+        LocalDate retroEffectiveDate = null;
+        Object retroVar = execution.getVariable("retroEffectiveDate");
+        if (retroVar instanceof LocalDate) {
+            retroEffectiveDate = (LocalDate) retroVar;
+        }
+
         Long payrollRunId = payrollService.initializePayrollRun(
                 employeeId,
                 payrollDate,
+                retroEffectiveDate,
                 processInstanceId
         );
 

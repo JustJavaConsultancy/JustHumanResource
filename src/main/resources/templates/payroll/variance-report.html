@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Payroll Variance Report</title>
+  <style>
+    /* ── Avatar colour cycling ───────────────────────────────── */
+    .av-0 { background-color: #dbeafe; color: #1e40af; }
+    .av-1 { background-color: #e0e7ff; color: #3730a3; }
+    .av-2 { background-color: #dcfce7; color: #166534; }
+    .av-3 { background-color: #fef3c7; color: #92400e; }
+    .av-4 { background-color: #fce7f3; color: #9d174d; }
+
+    /* ── Stat card hover ─────────────────────────────────────── */
+    .stat-card { transition: transform 0.2s; }
+    .stat-card:hover { transform: scale(1.02); }
+
+    /* ── Table row hover ─────────────────────────────────────── */
+    .row-hover { transition: background 0.15s; }
+    .row-hover:hover { background-color: #f8fafc; }
+
+    /* ── Expandable breakdown row ────────────────────────────── */
+    .detail-row { display: none; }
+    .detail-row.open { display: table-row; }
+
+    /* ── Variance direction colours ──────────────────────────── */
+    .var-up   { color: #16a34a; }
+    .var-down { color: #dc2626; }
+    .var-zero { color: #9ca3af; }
+  </style>
+</head>
+<body>
+<main layout:fragment="content">
+
+  <!-- ═══════════════════════════════════════════════════════════
+       PAGE HEADER
+  ═══════════════════════════════════════════════════════════ -->
+  <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+    <div>
+      <!-- Breadcrumb -->
+      <nav class="flex items-center gap-2 text-xs font-semibold text-gray-400 mb-2 tracking-wider uppercase">
+        <a th:href="@{/reporting}" class="hover:text-primary transition-colors flex items-center gap-1">
+          <span class="material-icons-round">arrow_back</span>
+          Back to reports
+        </a>
+        <span class="mx-2">/</span>
+        <span class="font-medium text-slate-900 dark:text-white">Variance Report</span>
+      </nav>
+
+      <div class="flex items-center gap-3 flex-wrap mt-1">
+        <div class="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 px-3 py-1.5 rounded-full">
+          <span class="material-icons-round text-sm text-blue-700 dark:text-blue-400">calendar_month</span>
+          <span class="text-sm font-semibold text-gray-600 dark:text-gray-300"
+                th:text="${#temporals.format(periodStart, 'MMM d, yyyy')} + ' – ' + ${#temporals.format(periodEnd, 'MMM d, yyyy')}">
+            Jan 1, 2026 – Jan 31, 2026
+          </span>
+        </div>
+        <span class="text-xs text-gray-400 font-medium italic">
+          <span th:text="${totalEmployees} + ' employees analysed'">0 employees analysed</span>
+        </span>
+      </div>
+    </div>
+
+    <!-- Action buttons -->
+    <div class="flex items-center gap-3">
+      <button onclick="exportCsv()"
+              class="flex items-center gap-2 px-5 py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-semibold rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+        <span class="material-icons-round text-lg">table_view</span>
+        Export CSV
+      </button>
+      <button onclick="window.print()"
+              class="flex items-center gap-2 px-6 py-2.5 bg-blue-900 text-white font-bold rounded-xl shadow-lg hover:opacity-90 active:scale-95 transition-all">
+        <span class="material-icons-round text-lg">picture_as_pdf</span>
+        Download PDF
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       SUMMARY STAT CARDS
+  ═══════════════════════════════════════════════════════════ -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+
+    <!-- Employees Analysed -->
+    <div class="stat-card bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm flex flex-col justify-between">
+      <div class="flex justify-between items-start mb-4">
+        <div class="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
+          <span class="material-icons-round text-blue-700 dark:text-blue-400">group</span>
+        </div>
+        <span class="text-[10px] font-black bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded">
+          This period
+        </span>
+      </div>
+      <div>
+        <p class="text-gray-500 dark:text-gray-400 text-xs font-bold uppercase tracking-wider">Employees Analysed</p>
+        <h3 class="text-3xl font-extrabold text-blue-900 dark:text-white mt-1"
+            th:text="${totalEmployees}">0</h3>
+      </div>
+    </div>
+
+    <!-- Pay Increases -->
+    <div class="stat-card bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm flex flex-col justify-between">
+      <div class="flex justify-between items-start mb-4">
+        <div class="w-12 h-12 rounded-xl bg-green-50 dark:bg-green-900/20 flex items-center justify-center">
+          <span class="material-icons-round text-green-600 dark:text-green-400">trending_up</span>
+        </div>
+        <span class="text-[10px] font-black bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-2 py-1 rounded">
+          Higher pay
+        </span>
+      </div>
+      <div>
+        <p class="text-gray-500 dark:text-gray-400 text-xs font-bold uppercase tracking-wider">Pay Increases</p>
+        <h3 class="text-3xl font-extrabold text-green-700 dark:text-green-400 mt-1"
+            th:text="${totalIncreased}">0</h3>
+      </div>
+    </div>
+
+    <!-- Pay Decreases -->
+    <div class="stat-card bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm flex flex-col justify-between">
+      <div class="flex justify-between items-start mb-4">
+        <div class="w-12 h-12 rounded-xl bg-red-50 dark:bg-red-900/20 flex items-center justify-center">
+          <span class="material-icons-round text-red-600 dark:text-red-400">trending_down</span>
+        </div>
+        <span class="text-[10px] font-black bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 px-2 py-1 rounded">
+          Lower pay
+        </span>
+      </div>
+      <div>
+        <p class="text-gray-500 dark:text-gray-400 text-xs font-bold uppercase tracking-wider">Pay Decreases</p>
+        <h3 class="text-3xl font-extrabold text-red-600 dark:text-red-400 mt-1"
+            th:text="${totalDecreased}">0</h3>
+      </div>
+    </div>
+
+    <!-- Amendments -->
+    <div class="stat-card bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm flex flex-col justify-between">
+      <div class="flex justify-between items-start mb-4">
+        <div class="w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center">
+          <span class="material-icons-round text-amber-600 dark:text-amber-400">edit_note</span>
+        </div>
+        <span class="text-[10px] font-black bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-2 py-1 rounded">
+          This period
+        </span>
+      </div>
+      <div>
+        <p class="text-gray-500 dark:text-gray-400 text-xs font-bold uppercase tracking-wider">Amendments</p>
+        <h3 class="text-3xl font-extrabold text-amber-600 dark:text-amber-400 mt-1"
+            th:text="${amendmentCount}">0</h3>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       FILTER BAR
+  ═══════════════════════════════════════════════════════════ -->
+  <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-5 mb-6">
+    <div class="flex flex-wrap items-end gap-4">
+
+      <div class="flex flex-col gap-1">
+        <label class="text-[10px] font-bold uppercase tracking-wider text-gray-500">Period Start</label>
+        <input type="date" id="filterPeriodStart"
+               th:value="${#temporals.format(periodStart, 'yyyy-MM-dd')}"
+               class="border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100
+                      rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"/>
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label class="text-[10px] font-bold uppercase tracking-wider text-gray-500">Period End</label>
+        <input type="date" id="filterPeriodEnd"
+               th:value="${#temporals.format(periodEnd, 'yyyy-MM-dd')}"
+               class="border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100
+                      rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"/>
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label class="text-[10px] font-bold uppercase tracking-wider text-gray-500">Department ID</label>
+        <input type="number" id="filterDepartmentId" placeholder="All"
+               class="border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100
+                      rounded-lg px-3 py-2 text-sm w-28 focus:outline-none focus:ring-2 focus:ring-blue-500/20"/>
+      </div>
+
+      <button onclick="applyFilters()"
+              class="flex items-center gap-2 px-5 py-2.5 bg-blue-900 text-white font-bold rounded-xl
+                     hover:opacity-90 active:scale-95 transition-all text-sm">
+        <span class="material-icons-round text-base">filter_list</span>
+        Apply Filter
+      </button>
+
+      <div id="filterSpinner"
+           class="hidden flex items-center gap-2 text-xs font-semibold text-gray-400">
+        <span class="material-icons-round animate-spin text-base">autorenew</span>
+        Loading…
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       MAIN VARIANCE TABLE
+  ═══════════════════════════════════════════════════════════ -->
+  <div class="bg-white dark:bg-gray-800 rounded-3xl overflow-hidden shadow-sm border border-gray-100 dark:border-gray-700">
+
+    <!-- Table header bar -->
+    <div class="p-8 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+      <div>
+        <h2 class="text-lg font-bold text-blue-900 dark:text-white">Employee Payroll Variance</h2>
+        <p class="text-xs text-gray-400 mt-0.5">Current vs previous period — component-level breakdown available per row</p>
+      </div>
+      <div class="flex items-center gap-2 px-3 py-1 text-xs font-bold text-blue-700 dark:text-blue-300
+                  bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+        <span class="material-icons-round text-xs">compare_arrows</span>
+        Period-on-Period
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="overflow-x-auto">
+      <table class="w-full text-left" id="varianceTable">
+        <thead>
+        <tr class="bg-gray-50 dark:bg-gray-750">
+          <th class="px-8 py-5 text-[11px] font-bold text-gray-400 uppercase tracking-widest w-8"></th>
+          <th class="px-8 py-5 text-[11px] font-bold text-gray-400 uppercase tracking-widest">Employee</th>
+          <th class="px-8 py-5 text-[11px] font-bold text-gray-400 uppercase tracking-widest">Department</th>
+          <th class="px-8 py-5 text-[11px] font-bold text-gray-400 uppercase tracking-widest text-right">Prev Net</th>
+          <th class="px-8 py-5 text-[11px] font-bold text-gray-400 uppercase tracking-widest text-right">Curr Net</th>
+          <th class="px-8 py-5 text-[11px] font-bold text-gray-400 uppercase tracking-widest text-right">Variance</th>
+          <th class="px-8 py-5 text-[11px] font-bold text-gray-400 uppercase tracking-widest">Reasons</th>
+          <th class="px-8 py-5 text-[11px] font-bold text-gray-400 uppercase tracking-widest text-center">Type</th>
+        </tr>
+        </thead>
+
+        <tbody id="varianceTbody">
+
+        <!-- ── Empty state ── -->
+        <tr th:if="${varianceReport == null or #lists.isEmpty(varianceReport)}">
+          <td colspan="8" class="px-8 py-20 text-center">
+            <div class="flex flex-col items-center gap-3 text-gray-400">
+              <span class="material-icons-round text-5xl">compare_arrows</span>
+              <p class="text-sm font-medium">No payroll variance data found for this period.</p>
+              <p class="text-xs text-gray-400">Ensure payroll runs are posted for both the current and previous period.</p>
+            </div>
+          </td>
+        </tr>
+
+        <!-- ── Data rows ── -->
+        <th:block th:each="row, rStat : ${varianceReport}">
+
+          <!-- Main row -->
+          <tr class="row-hover border-t border-gray-50 dark:border-gray-700 dark:hover:bg-gray-750"
+              th:id="'row-' + ${rStat.index}">
+
+            <!-- Expand toggle -->
+            <td class="px-4 py-6">
+              <button th:onclick="'toggleDetail(' + ${rStat.index} + ')'"
+                      class="w-7 h-7 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center
+                             hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
+                      th:id="'btn-' + ${rStat.index}">
+                <span class="material-icons-round text-sm text-gray-500">expand_more</span>
+              </button>
+            </td>
+
+            <!-- Employee name + avatar -->
+            <td class="px-8 py-6">
+              <div class="flex items-center gap-3"
+                   th:with="safeName=${row.employeeName != null ? row.employeeName : '?'},
+                             spaceIdx=${#strings.contains(safeName,' ') ? safeName.lastIndexOf(' ') : -1}">
+                <div class="w-9 h-9 rounded-lg flex items-center justify-center font-bold text-xs flex-shrink-0"
+                     th:classappend="'av-' + ${rStat.index % 5}"
+                     th:text="${spaceIdx > 0}
+                               ? ${safeName.substring(0,1).toUpperCase() + safeName.substring(spaceIdx+1,spaceIdx+2).toUpperCase()}
+                               : ${safeName.substring(0,1).toUpperCase()}">AB</div>
+                <div>
+                  <p class="font-bold text-blue-900 dark:text-white text-sm"
+                     th:text="${row.employeeName}">John Doe</p>
+                  <p class="text-[11px] font-mono text-gray-400"
+                     th:text="${row.employeeNumber}">EMP-001</p>
+                </div>
+              </div>
+            </td>
+
+            <!-- Department -->
+            <td class="px-8 py-6 text-sm font-medium text-gray-600 dark:text-gray-300"
+                th:text="${row.department}">Finance</td>
+
+            <!-- Previous Net -->
+            <td class="px-8 py-6 text-right font-semibold text-gray-500 dark:text-gray-400 text-sm"
+                th:text="${row.newEmployee} ? '—'
+                         : ${#numbers.formatDecimal(row.previousNet, 1, 'COMMA', 2, 'POINT')}">
+              0.00
+            </td>
+
+            <!-- Current Net -->
+            <td class="px-8 py-6 text-right font-bold text-blue-900 dark:text-white text-sm"
+                th:text="${#numbers.formatDecimal(row.currentNet, 1, 'COMMA', 2, 'POINT')}">
+              0.00
+            </td>
+
+            <!-- Variance (colour-coded) -->
+            <td class="px-8 py-6 text-right text-sm font-extrabold">
+              <!-- Positive -->
+              <span th:if="${row.netVariance != null and row.netVariance.compareTo(T(java.math.BigDecimal).ZERO) > 0}"
+                    class="flex items-center justify-end gap-1 var-up">
+                <span class="material-icons-round text-base">trending_up</span>
+                +<span th:text="${#numbers.formatDecimal(row.netVariance, 1, 'COMMA', 2, 'POINT')}">0.00</span>
+              </span>
+              <!-- Negative -->
+              <span th:if="${row.netVariance != null and row.netVariance.compareTo(T(java.math.BigDecimal).ZERO) < 0}"
+                    class="flex items-center justify-end gap-1 var-down">
+                <span class="material-icons-round text-base">trending_down</span>
+                <span th:text="${#numbers.formatDecimal(row.netVariance, 1, 'COMMA', 2, 'POINT')}">0.00</span>
+              </span>
+              <!-- Zero / null -->
+              <span th:if="${row.netVariance == null or row.netVariance.compareTo(T(java.math.BigDecimal).ZERO) == 0}"
+                    class="var-zero flex items-center justify-end gap-1">
+                <span class="material-icons-round text-base">remove</span>
+                0.00
+              </span>
+            </td>
+
+            <!-- Reasons -->
+            <td class="px-8 py-6">
+              <div class="flex flex-wrap gap-1">
+                <span th:each="reason : ${row.reasons}"
+                      th:text="${reason}"
+                      class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black uppercase
+                             bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300">
+                </span>
+              </div>
+            </td>
+
+            <!-- Type badge -->
+            <td class="px-8 py-6 text-center">
+              <span th:if="${row.amendment}"
+                    class="px-3 py-1 rounded-full text-[10px] font-black uppercase
+                           bg-amber-100 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400">
+                AMENDMENT
+              </span>
+              <span th:if="${!row.amendment}"
+                    class="px-3 py-1 rounded-full text-[10px] font-black uppercase
+                           bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300">
+                STANDARD
+              </span>
+            </td>
+
+          </tr>
+
+          <!-- Expandable breakdown row -->
+          <tr class="detail-row bg-gray-50 dark:bg-gray-750 border-t border-dashed border-gray-200 dark:border-gray-600"
+              th:id="'detail-' + ${rStat.index}">
+            <td colspan="8" class="px-10 py-5">
+
+              <!-- Amendment reason banner -->
+              <div th:if="${row.amendmentReason != null}"
+                   class="flex items-center gap-2 mb-4 px-4 py-2 bg-amber-50 dark:bg-amber-900/20
+                          border border-amber-200 dark:border-amber-700 rounded-xl text-xs font-semibold text-amber-800 dark:text-amber-300">
+                <span class="material-icons-round text-base">info</span>
+                Amendment reason: <span th:text="${row.amendmentReason}" class="font-bold ml-1">—</span>
+              </div>
+
+              <!-- Component breakdown mini-table -->
+              <p class="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-3">Component Breakdown</p>
+              <div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-600">
+                <table class="w-full text-left text-xs">
+                  <thead>
+                  <tr class="bg-gray-100 dark:bg-gray-700">
+                    <th class="px-5 py-3 font-bold text-gray-500 uppercase tracking-wider">Code</th>
+                    <th class="px-5 py-3 font-bold text-gray-500 uppercase tracking-wider">Description</th>
+                    <th class="px-5 py-3 font-bold text-gray-500 uppercase tracking-wider">Type</th>
+                    <th class="px-5 py-3 font-bold text-gray-500 uppercase tracking-wider text-right">Previous</th>
+                    <th class="px-5 py-3 font-bold text-gray-500 uppercase tracking-wider text-right">Current</th>
+                    <th class="px-5 py-3 font-bold text-gray-500 uppercase tracking-wider text-right">Change</th>
+                    <th class="px-5 py-3 font-bold text-gray-500 uppercase tracking-wider text-center">Status</th>
+                  </tr>
+                  </thead>
+                  <tbody class="divide-y divide-gray-100 dark:divide-gray-600">
+                  <tr th:each="line : ${row.lineVariances}"
+                      class="dark:bg-gray-750">
+                    <td class="px-5 py-3 font-mono font-bold text-gray-700 dark:text-gray-300"
+                        th:text="${line.componentCode}">BASIC</td>
+                    <td class="px-5 py-3 text-gray-600 dark:text-gray-400"
+                        th:text="${line.description}">Basic Salary</td>
+                    <td class="px-5 py-3 text-gray-500 dark:text-gray-400"
+                        th:text="${line.componentType}">EARNING</td>
+                    <td class="px-5 py-3 text-right text-gray-500 dark:text-gray-400"
+                        th:text="${line.previousAmount != null}
+                                  ? ${#numbers.formatDecimal(line.previousAmount, 1, 'COMMA', 2, 'POINT')}
+                                  : '—'">—</td>
+                    <td class="px-5 py-3 text-right font-semibold text-gray-700 dark:text-gray-200"
+                        th:text="${line.currentAmount != null}
+                                  ? ${#numbers.formatDecimal(line.currentAmount, 1, 'COMMA', 2, 'POINT')}
+                                  : '—'">—</td>
+                    <!-- Change amount (coloured) -->
+                    <td class="px-5 py-3 text-right font-bold">
+                      <span th:if="${line.variance != null and line.variance.compareTo(T(java.math.BigDecimal).ZERO) > 0}"
+                            class="var-up"
+                            th:text="'+' + ${#numbers.formatDecimal(line.variance, 1, 'COMMA', 2, 'POINT')}">+0.00</span>
+                      <span th:if="${line.variance != null and line.variance.compareTo(T(java.math.BigDecimal).ZERO) < 0}"
+                            class="var-down"
+                            th:text="${#numbers.formatDecimal(line.variance, 1, 'COMMA', 2, 'POINT')}">-0.00</span>
+                      <span th:if="${line.variance == null or line.variance.compareTo(T(java.math.BigDecimal).ZERO) == 0}"
+                            class="var-zero">0.00</span>
+                    </td>
+                    <!-- Change type badge -->
+                    <td class="px-5 py-3 text-center">
+                      <span th:if="${line.changeType == 'ADDED'}"
+                            class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400">ADDED</span>
+                      <span th:if="${line.changeType == 'REMOVED'}"
+                            class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-400">REMOVED</span>
+                      <span th:if="${line.changeType == 'CHANGED'}"
+                            class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-amber-100 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400">CHANGED</span>
+                      <span th:if="${line.changeType == 'UNCHANGED'}"
+                            class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-gray-100 dark:bg-gray-700 text-gray-500">UNCHANGED</span>
+                    </td>
+                  </tr>
+                  <tr th:if="${row.lineVariances == null or #lists.isEmpty(row.lineVariances)}">
+                    <td colspan="7" class="px-5 py-4 text-center text-xs text-gray-400">No line items available.</td>
+                  </tr>
+                  </tbody>
+                </table>
+              </div>
+            </td>
+          </tr>
+
+        </th:block>
+
+        </tbody>
+
+        <!-- ── Totals footer ── -->
+        <tfoot th:if="${varianceReport != null and !#lists.isEmpty(varianceReport)}">
+        <tr class="bg-blue-900 text-white">
+          <td class="px-8 py-6" colspan="3">
+            <span class="text-sm font-bold tracking-widest uppercase">
+              Total — <span th:text="${totalEmployees} + ' employees'">0 employees</span>
+            </span>
+          </td>
+          <td class="px-8 py-6 text-right font-extrabold text-lg" colspan="1">
+            <!-- Previous net total -->
+          </td>
+          <td class="px-8 py-6 text-right font-extrabold text-lg" colspan="1">
+            <!-- Current net total is implied by variance -->
+          </td>
+          <td class="px-8 py-6 text-right font-extrabold text-lg text-blue-200" colspan="1"
+              th:with="isPos=${totalNetVariance != null and totalNetVariance.compareTo(T(java.math.BigDecimal).ZERO) >= 0}">
+            <span th:text="${isPos ? '+' : ''} + ${#numbers.formatDecimal(totalNetVariance, 1, 'COMMA', 2, 'POINT')}">0.00</span>
+          </td>
+          <td colspan="2" class="px-8 py-6"></td>
+        </tr>
+        </tfoot>
+
+      </table>
+    </div>
+
+    <!-- Table footer count -->
+    <div class="px-8 py-5 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
+      <p class="text-xs text-gray-400"
+         th:text="'Showing ' + ${totalEmployees} + ' employees'">Showing 0 employees</p>
+      <div class="flex gap-2">
+        <button class="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center opacity-50 cursor-not-allowed">
+          <span class="material-icons-round text-sm">chevron_left</span>
+        </button>
+        <button class="w-8 h-8 rounded-lg bg-blue-900 text-white flex items-center justify-center font-bold text-xs">1</button>
+        <button class="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center hover:bg-gray-200 transition-colors">
+          <span class="material-icons-round text-sm">chevron_right</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       INSIGHT CARDS
+  ═══════════════════════════════════════════════════════════ -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-10">
+
+    <!-- Net Variance Total -->
+    <div class="bg-gray-50 dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700">
+      <p class="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">Net Variance Total</p>
+      <div class="flex items-end gap-3">
+        <span class="text-3xl font-extrabold"
+              th:classappend="${totalNetVariance != null and totalNetVariance.compareTo(T(java.math.BigDecimal).ZERO) >= 0} ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400'"
+              th:text="${(totalNetVariance != null and totalNetVariance.compareTo(T(java.math.BigDecimal).ZERO) >= 0) ? '+' : ''} + ${#numbers.formatDecimal(totalNetVariance != null ? totalNetVariance : 0, 1, 'COMMA', 2, 'POINT')}">
+          0.00
+        </span>
+      </div>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+        Across <span th:text="${totalEmployees}">0</span> employees this period
+      </p>
+    </div>
+
+    <!-- Highest Single Variance -->
+    <div class="bg-gray-50 dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700">
+      <p class="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">Highest Variance</p>
+      <div th:if="${highestVariance != null}">
+        <p class="text-2xl font-extrabold text-blue-900 dark:text-white"
+           th:text="${#numbers.formatDecimal(highestVariance.netVariance.abs(), 1, 'COMMA', 2, 'POINT')}">0.00</p>
+        <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mt-2"
+           th:text="${highestVariance.employeeName}">—</p>
+      </div>
+      <div th:if="${highestVariance == null}">
+        <p class="text-2xl font-extrabold text-gray-400">—</p>
+        <p class="text-xs text-gray-400 mt-2">No variance recorded</p>
+      </div>
+    </div>
+
+    <!-- Distinct Change Reasons -->
+    <div class="bg-blue-900 rounded-2xl p-6 shadow-xl shadow-blue-900/10">
+      <p class="text-[10px] font-black uppercase tracking-widest text-blue-200 mb-2">Change Reasons Detected</p>
+      <div class="flex items-center gap-3 mt-2">
+        <span class="material-icons-round text-white text-3xl">category</span>
+        <span class="text-white font-extrabold text-3xl" th:text="${distinctReasonCount}">0</span>
+      </div>
+      <p class="text-blue-200 text-xs mt-3">
+        Distinct change reasons across
+        <span th:text="${totalEmployees}">0</span> employees
+      </p>
+    </div>
+
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       JAVASCRIPT
+  ═══════════════════════════════════════════════════════════ -->
+  <script th:inline="javascript">
+    /* ── Expand / collapse component breakdown ─────────────────────────── */
+    function toggleDetail(index) {
+      const detailRow = document.getElementById('detail-' + index);
+      const btn       = document.getElementById('btn-' + index);
+      const icon      = btn.querySelector('.material-icons-round');
+
+      if (detailRow.classList.contains('open')) {
+        detailRow.classList.remove('open');
+        icon.textContent = 'expand_more';
+      } else {
+        detailRow.classList.add('open');
+        icon.textContent = 'expand_less';
+      }
+    }
+
+    /* ── Apply filters — re-fetch via REST API and rebuild table ────────── */
+    async function applyFilters() {
+      const periodStart  = document.getElementById('filterPeriodStart').value;
+      const periodEnd    = document.getElementById('filterPeriodEnd').value;
+      const departmentId = document.getElementById('filterDepartmentId').value;
+      const spinner      = document.getElementById('filterSpinner');
+
+      if (!periodStart || !periodEnd) {
+        alert('Please select both Period Start and Period End.');
+        return;
+      }
+      if (periodEnd < periodStart) {
+        alert('Period End must not be before Period Start.');
+        return;
+      }
+
+      spinner.classList.remove('hidden');
+
+      try {
+        const params = new URLSearchParams({ companyId: 1, periodStart, periodEnd });
+        if (departmentId) params.append('departmentId', departmentId);
+
+        const res  = await fetch(`/api/payroll/reports/variance?${params}`);
+        if (!res.ok) throw new Error('Server returned ' + res.status);
+        const data = await res.json();
+
+        renderTable(data);
+        updateSummaryCards(data);
+      } catch (err) {
+        alert('Failed to load variance data: ' + err.message);
+      } finally {
+        spinner.classList.add('hidden');
+      }
+    }
+
+    /* ── Format a number with commas and 2 decimal places ──────────────── */
+    function fmt(value) {
+      if (value == null) return '—';
+      return Number(value).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    /* ── Build a variance cell (coloured + icon) ────────────────────────── */
+    function varianceCell(value) {
+      const v = Number(value) || 0;
+      if (v > 0) {
+        return `<span class="flex items-center justify-end gap-1 var-up">
+                  <span class="material-icons-round text-base">trending_up</span>+${fmt(v)}
+                </span>`;
+      }
+      if (v < 0) {
+        return `<span class="flex items-center justify-end gap-1 var-down">
+                  <span class="material-icons-round text-base">trending_down</span>${fmt(v)}
+                </span>`;
+      }
+      return `<span class="flex items-center justify-end gap-1 var-zero">
+                <span class="material-icons-round text-base">remove</span>0.00
+              </span>`;
+    }
+
+    /* ── Build change-type badge ─────────────────────────────────────────── */
+    function changeTypeBadge(ct) {
+      const map = {
+        ADDED:     'bg-green-100 text-green-700',
+        REMOVED:   'bg-red-100 text-red-700',
+        CHANGED:   'bg-amber-100 text-amber-700',
+        UNCHANGED: 'bg-gray-100 text-gray-500'
+      };
+      const cls = map[ct] || 'bg-gray-100 text-gray-500';
+      return `<span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${cls}">${ct}</span>`;
+    }
+
+    /* ── Render a full line-variance mini-table ─────────────────────────── */
+    function lineTable(lines) {
+      if (!lines || lines.length === 0) {
+        return '<p class="text-xs text-gray-400 px-2">No line items available.</p>';
+      }
+      const rows = lines.map(l => `
+        <tr class="dark:bg-gray-750">
+          <td class="px-5 py-3 font-mono font-bold text-gray-700">${l.componentCode || ''}</td>
+          <td class="px-5 py-3 text-gray-600">${l.description || ''}</td>
+          <td class="px-5 py-3 text-gray-500">${l.componentType || ''}</td>
+          <td class="px-5 py-3 text-right text-gray-500">${fmt(l.previousAmount)}</td>
+          <td class="px-5 py-3 text-right font-semibold text-gray-700">${fmt(l.currentAmount)}</td>
+          <td class="px-5 py-3 text-right font-bold">
+            ${(() => {
+              const v = Number(l.variance) || 0;
+              if (v > 0) return `<span class="var-up">+${fmt(v)}</span>`;
+              if (v < 0) return `<span class="var-down">${fmt(v)}</span>`;
+              return `<span class="var-zero">0.00</span>`;
+            })()}
+          </td>
+          <td class="px-5 py-3 text-center">${changeTypeBadge(l.changeType)}</td>
+        </tr>`).join('');
+
+      return `
+        <div class="overflow-x-auto rounded-xl border border-gray-200">
+          <table class="w-full text-left text-xs">
+            <thead>
+              <tr class="bg-gray-100">
+                <th class="px-5 py-3 font-bold text-gray-500 uppercase tracking-wider">Code</th>
+                <th class="px-5 py-3 font-bold text-gray-500 uppercase tracking-wider">Description</th>
+                <th class="px-5 py-3 font-bold text-gray-500 uppercase tracking-wider">Type</th>
+                <th class="px-5 py-3 font-bold text-gray-500 uppercase tracking-wider text-right">Previous</th>
+                <th class="px-5 py-3 font-bold text-gray-500 uppercase tracking-wider text-right">Current</th>
+                <th class="px-5 py-3 font-bold text-gray-500 uppercase tracking-wider text-right">Change</th>
+                <th class="px-5 py-3 font-bold text-gray-500 uppercase tracking-wider text-center">Status</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">${rows}</tbody>
+          </table>
+        </div>`;
+    }
+
+    /* ── Re-render the entire tbody from a JSON array ──────────────────── */
+    function renderTable(data) {
+      const tbody = document.getElementById('varianceTbody');
+      const avatarClasses = ['av-0','av-1','av-2','av-3','av-4'];
+
+      if (!data || data.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="8" class="px-8 py-20 text-center">
+              <div class="flex flex-col items-center gap-3 text-gray-400">
+                <span class="material-icons-round text-5xl">compare_arrows</span>
+                <p class="text-sm font-medium">No variance data found for the selected period.</p>
+              </div>
+            </td>
+          </tr>`;
+        return;
+      }
+
+      tbody.innerHTML = data.map((row, i) => {
+        const avClass = avatarClasses[i % 5];
+        const name    = row.employeeName || '?';
+        const parts   = name.split(' ');
+        const initials = parts.length > 1
+            ? parts[0][0].toUpperCase() + parts[parts.length - 1][0].toUpperCase()
+            : name[0].toUpperCase();
+
+        const reasonPills = (row.reasons || []).map(r =>
+            `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black uppercase
+                         bg-blue-50 text-blue-700">${r}</span>`
+        ).join(' ');
+
+        const typeBadge = row.amendment
+            ? `<span class="px-3 py-1 rounded-full text-[10px] font-black uppercase bg-amber-100 text-amber-700">AMENDMENT</span>`
+            : `<span class="px-3 py-1 rounded-full text-[10px] font-black uppercase bg-blue-50 text-blue-700">STANDARD</span>`;
+
+        const amendBanner = row.amendmentReason
+            ? `<div class="flex items-center gap-2 mb-4 px-4 py-2 bg-amber-50 border border-amber-200 rounded-xl
+                          text-xs font-semibold text-amber-800">
+                 <span class="material-icons-round text-base">info</span>
+                 Amendment reason: <span class="font-bold ml-1">${row.amendmentReason}</span>
+               </div>`
+            : '';
+
+        return `
+          <tr class="row-hover border-t border-gray-50" id="row-${i}">
+            <td class="px-4 py-6">
+              <button onclick="toggleDetail(${i})" id="btn-${i}"
+                      class="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center hover:bg-blue-50 transition-colors">
+                <span class="material-icons-round text-sm text-gray-500">expand_more</span>
+              </button>
+            </td>
+            <td class="px-8 py-6">
+              <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-lg flex items-center justify-center font-bold text-xs flex-shrink-0 ${avClass}">${initials}</div>
+                <div>
+                  <p class="font-bold text-blue-900 text-sm">${name}</p>
+                  <p class="text-[11px] font-mono text-gray-400">${row.employeeNumber || ''}</p>
+                </div>
+              </div>
+            </td>
+            <td class="px-8 py-6 text-sm font-medium text-gray-600">${row.department || ''}</td>
+            <td class="px-8 py-6 text-right font-semibold text-gray-500 text-sm">
+              ${row.newEmployee ? '—' : fmt(row.previousNet)}
+            </td>
+            <td class="px-8 py-6 text-right font-bold text-blue-900 text-sm">${fmt(row.currentNet)}</td>
+            <td class="px-8 py-6 text-right text-sm font-extrabold">${varianceCell(row.netVariance)}</td>
+            <td class="px-8 py-6"><div class="flex flex-wrap gap-1">${reasonPills}</div></td>
+            <td class="px-8 py-6 text-center">${typeBadge}</td>
+          </tr>
+          <tr class="detail-row bg-gray-50 border-t border-dashed border-gray-200" id="detail-${i}">
+            <td colspan="8" class="px-10 py-5">
+              ${amendBanner}
+              <p class="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-3">Component Breakdown</p>
+              ${lineTable(row.lineVariances)}
+            </td>
+          </tr>`;
+      }).join('');
+    }
+
+    /* ── Update summary stat cards after a filter re-fetch ─────────────── */
+    function updateSummaryCards(data) {
+      const total      = data.length;
+      const increased  = data.filter(r => (Number(r.netVariance) || 0) > 0).length;
+      const decreased  = data.filter(r => (Number(r.netVariance) || 0) < 0).length;
+      const amendments = data.filter(r => r.amendment).length;
+
+      // These IDs must match the text elements in the stat cards
+      safeSet('statTotal',      total);
+      safeSet('statIncreased',  increased);
+      safeSet('statDecreased',  decreased);
+      safeSet('statAmendments', amendments);
+    }
+
+    function safeSet(id, value) {
+      const el = document.getElementById(id);
+      if (el) el.textContent = value;
+    }
+
+    /* ── Export visible table rows to CSV ───────────────────────────────── */
+    function exportCsv() {
+      const rows = document.querySelectorAll('#varianceTbody tr:not(.detail-row)');
+      if (rows.length === 0) { alert('No data to export.'); return; }
+
+      const header = ['Employee','Employee Number','Department','Previous Net','Current Net','Net Variance','Reasons','Type'];
+      const lines  = [header.join(',')];
+
+      rows.forEach(tr => {
+        const cells = tr.querySelectorAll('td');
+        if (cells.length < 8) return;
+        const nameEl  = cells[1].querySelector('p');
+        const numEl   = cells[1].querySelectorAll('p')[1];
+        const deptEl  = cells[2];
+        const prevEl  = cells[3];
+        const currEl  = cells[4];
+        const varEl   = cells[5];
+        const rsnEl   = cells[6];
+        const typeEl  = cells[7];
+
+        const col = el => '"' + (el ? el.textContent.trim().replace(/"/g,'""') : '') + '"';
+        lines.push([col(nameEl), col(numEl), col(deptEl), col(prevEl), col(currEl),
+                    col(varEl), col(rsnEl), col(typeEl)].join(','));
+      });
+
+      const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href = url; a.download = 'payroll-variance-report.csv'; a.click();
+      URL.revokeObjectURL(url);
+    }
+  </script>
+
+</main>
+</body>
+</html>
