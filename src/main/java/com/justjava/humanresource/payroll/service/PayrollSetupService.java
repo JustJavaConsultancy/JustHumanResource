@@ -32,12 +32,14 @@ public interface PayrollSetupService {
      * ALLOWANCES
      * ========================= */
     Allowance createAllowance(Allowance allowance);
+    Allowance updateAllowance(Allowance allowance);
     List<Allowance> getActiveAllowances();
 
     /* =========================
      * DEDUCTIONS
      * ========================= */
     Deduction createDeduction(Deduction deduction);
+    Deduction updateDeduction(Deduction deduction);
     List<Deduction> getActiveDeductions();
 
     /* ============================================================
@@ -125,6 +127,7 @@ public interface PayrollSetupService {
      * TAX RELIEF
      * ========================= */
     TaxRelief createTaxRelief(TaxRelief relief);
+    TaxRelief updateTaxRelief(TaxRelief relief);
     List<TaxRelief> getActiveTaxReliefs();
 
 /* ============================================================

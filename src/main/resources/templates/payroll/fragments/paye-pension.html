@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout}">
+<head>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+        .period-label { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.03em; text-transform: uppercase; color: #4b5565; border-bottom: 1px solid #e2e4e8; padding-bottom: 0.5rem; margin-bottom: 1.25rem; }
+        .current-period-card { background: #ffffff; border: 1px solid #e6e9ef; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+        .current-period-header { background: #f5f7fb; padding: 1.5rem 2rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; border-bottom: 1px solid #e6e9ef; }
+        .filter-select { background: #ffffff; border: 1px solid #d6dce5; border-radius: 6px; padding: 0.45rem 2rem 0.45rem 0.85rem; font-size: 0.8125rem; color: #1f2a3e; cursor: pointer; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23758299' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; }
+        .payroll-table { width: 100%; border-collapse: collapse; }
+        .payroll-table thead tr { background: #f5f7fb; border-top: 1px solid #e6e9ef; border-bottom: 1px solid #e6e9ef; }
+        .payroll-table th { padding: 0.75rem 1.5rem; text-align: left; font-size: 0.68rem; font-weight: 600; letter-spacing: 0.03em; text-transform: uppercase; color: #5f6c80; white-space: nowrap; }
+        .payroll-table tbody tr { border-bottom: 1px solid #edeff2; transition: background 0.1s; }
+        .payroll-table tbody tr:hover { background: #f9fafc; }
+        .payroll-table td { padding: 1rem 1.5rem; font-size: 0.875rem; color: #1f2a3e; white-space: nowrap; }
+        .emp-avatar { width: 34px; height: 34px; border-radius: 50%; background: #d9dee8; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 600; color: #2e3a4f; flex-shrink: 0; }
+        .amount-deduct { color: #b64343; font-weight: 600; }
+        .amount-employer { color: #0284c7; font-weight: 600; }
+
+        .grand-total-card { background: linear-gradient(135deg, #0f2554 0%, #1e3a8a 60%, #1d4ed8 100%); border-radius: 12px; margin-bottom: 1.75rem; overflow: hidden; box-shadow: 0 4px 20px rgba(30,58,138,0.25), 0 1px 4px rgba(30,58,138,0.15); position: relative; }
+        .grand-total-header { padding: 1.5rem 2rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1.25rem; position: relative; z-index: 1; }
+        .grand-total-left { display: flex; align-items: center; gap: 14px; }
+        .grand-total-icon { width: 46px; height: 46px; border-radius: 10px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 1.25rem; color: #ffffff; flex-shrink: 0; }
+        .grand-total-title { font-size: 1.1rem; font-weight: 800; color: #ffffff; letter-spacing: -0.01em; }
+        .grand-total-sub { font-size: 0.75rem; color: rgba(255,255,255,0.6); margin-top: 2px; font-weight: 500; }
+        .grand-total-stats { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+        .grand-stat-box { background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 0.6rem 1.1rem; min-width: 130px; }
+        .grand-stat-lbl { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: rgba(255,255,255,0.55); margin-bottom: 3px; }
+        .grand-stat-val { font-size: 1.05rem; font-weight: 800; font-family: ui-monospace, 'Cascadia Code', Consolas, monospace; color: #ffffff; }
+
+        .bulk-dl-btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: background 0.15s; border: 1px solid transparent; white-space: nowrap; }
+        .bulk-dl-btn.csv { color: #166534; background: #dcfce7; border-color: #86efac; }
+        .bulk-dl-btn.pdf { color: #7c2d12; background: #fee2e2; border-color: #fca5a5; }
+        .grand-dl-actions .bulk-dl-btn.csv { background: rgba(220,252,231,0.15); border-color: rgba(134,239,172,0.4); color: #bbf7d0; }
+        .grand-dl-actions .bulk-dl-btn.pdf { background: rgba(254,226,226,0.15); border-color: rgba(252,165,165,0.4); color: #fecaca; }
+        .header-stat { background: #ffffff; border: 1px solid #dde1e7; border-radius: 6px; padding: 0.6rem 1.2rem; color: #1f2a3e; }
+        .header-stat .stat-val { font-size: 1.15rem; font-weight: 600; line-height: 1.2; }
+        .header-stat .stat-lbl { font-size: 0.7rem; color: #6b788b; font-weight: 500; text-transform: uppercase; }
+    </style>
+</head>
+<body>
+<main layout:fragment="content">
+
+    <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center gap-2 text-sm text-slate-500">
+            <a th:href="@{/payroll}" class="hover:text-primary transition-colors flex items-center gap-1">
+                <span class="material-icons-round">arrow_back</span>
+                Back to Dashboard
+            </a>
+            <span class="mx-2">/</span>
+            <span class="font-medium text-slate-900">PAYE & Pension Report</span>
+        </div>
+    </div>
+
+    <div class="period-label">Statutory Report</div>
+
+    <div class="current-period-card mb-8">
+        <div class="current-period-header">
+            <div>
+                <h2 class="text-slate-800 font-bold text-xl">PAYE & Pension Report</h2>
+                <p class="text-slate-500 text-sm mt-1">Grouped summary of tax and pension contributions</p>
+            </div>
+            <form method="get" th:action="@{/payroll/paye-pension-report}" class="flex items-center gap-3">
+                <span class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Group By:</span>
+                <select name="groupBy" class="filter-select" onchange="this.form.submit()">
+                    <option value="GRADE" th:selected="${groupBy == 'GRADE'}">Grade</option>
+                    <option value="PAYGROUP" th:selected="${groupBy == 'PAYGROUP'}">Pay Group</option>
+                </select>
+            </form>
+        </div>
+
+        <div th:if="${report == null or #lists.isEmpty(report)}" class="p-8 text-center text-slate-400">
+            <i class="bi bi-inbox text-4xl mb-3 block"></i>
+            <p>No statutory records found for the current period.</p>
+        </div>
+
+        <div th:if="${report != null and not #lists.isEmpty(report)}">
+
+            <div class="grand-total-card" id="grandTotalCard" th:if="${totals != null}">
+                <div class="grand-total-header">
+                    <div class="grand-total-left">
+                        <div class="grand-total-icon"><i class="bi bi-bank"></i></div>
+                        <div>
+                            <div class="grand-total-title">Grand Total</div>
+                            <div class="grand-total-sub">
+                                <span th:text="${totals.totalGroups}">0</span> Groups,
+                                <span th:text="${totals.totalEmployees}">0</span> Employees
+                            </div>
+                        </div>
+                    </div>
+                    <div class="grand-total-stats">
+                        <div class="grand-stat-box">
+                            <div class="grand-stat-lbl">Total PAYE TAX</div>
+                            <div class="grand-stat-val text-red-300" id="grandPaye"
+                                 th:text="${'₦' + #numbers.formatDecimal(totals.totalPaye, 1, 'COMMA', 2, 'POINT')}">₦0.00</div>
+                        </div>
+                        <div class="grand-stat-box">
+                            <div class="grand-stat-lbl">Total Employee Pension</div>
+                            <div class="grand-stat-val text-red-300" id="grandEmpPension"
+                                 th:text="${'₦' + #numbers.formatDecimal(totals.totalEmployeePension, 1, 'COMMA', 2, 'POINT')}">₦0.00</div>
+                        </div>
+                        <div class="grand-stat-box">
+                            <div class="grand-stat-lbl">Total Employer Pension</div>
+                            <div class="grand-stat-val text-blue-300" id="grandEmployerPension"
+                                 th:text="${'₦' + #numbers.formatDecimal(totals.totalEmployerPension, 1, 'COMMA', 2, 'POINT')}">₦0.00</div>
+                        </div>
+                        <div class="grand-dl-actions">
+                            <button class="bulk-dl-btn csv" onclick="downloadGrandCSV()">
+                                <i class="bi bi-filetype-csv"></i> Download All CSV
+                            </button>
+                            <button class="bulk-dl-btn pdf" onclick="downloadGrandPDF()">
+                                <i class="bi bi-file-earmark-pdf"></i> Download All PDF
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div th:each="group : ${report}" class="group-report-card border-2 border-slate-200 rounded-lg mb-6 overflow-hidden"
+                 th:attr="data-group-name=${group.groupName}, data-group-by=${groupBy}">
+
+                <div class="flex items-center justify-between px-6 py-4 bg-slate-50 border-b border-slate-200">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                            <i class="bi bi-folder-fill text-blue-600 text-sm"></i>
+                        </div>
+                        <div>
+                            <div th:text="${group.groupName}" class="font-bold text-slate-800 text-sm">Group</div>
+                            <div th:text="${group.employeeCount + ' employee' + (group.employeeCount != 1 ? 's' : '')}"
+                                 class="text-xs text-slate-400">0 employees</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4 flex-wrap">
+                        <div class="header-stat">
+                            <div th:text="${'₦' + #numbers.formatDecimal(group.totalPaye, 1, 'COMMA', 2, 'POINT')}"
+                                 class="stat-val text-red-600">₦0.00</div>
+                            <div class="stat-lbl">PAYE TAX</div>
+                        </div>
+                        <div class="header-stat">
+                            <div th:text="${'₦' + #numbers.formatDecimal(group.totalEmployeePension, 1, 'COMMA', 2, 'POINT')}"
+                                 class="stat-val text-red-600">₦0.00</div>
+                            <div class="stat-lbl">Employee Pension</div>
+                        </div>
+                        <div class="header-stat">
+                            <div th:text="${'₦' + #numbers.formatDecimal(group.totalEmployerPension, 1, 'COMMA', 2, 'POINT')}"
+                                 class="stat-val text-blue-600">₦0.00</div>
+                            <div class="stat-lbl">Employer Pension</div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button class="bulk-dl-btn csv group-csv-btn"><i class="bi bi-filetype-csv"></i> CSV</button>
+                            <button class="bulk-dl-btn pdf group-pdf-btn"><i class="bi bi-file-earmark-pdf"></i> PDF</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="payroll-table">
+                        <thead>
+                        <tr>
+                            <th>Employee</th>
+                            <th>PAYE Tax</th>
+                            <th>Employee Pension</th>
+                            <th>Employer Pension</th>
+                            <th>Tax Payer ID (TIN)</th>
+                            <th>RSA PIN</th>
+                            <th>Pension Admin (PFA)</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="emp : ${group.employees}">
+                            <td>
+                                <div class="flex items-center gap-3">
+                                    <div class="emp-avatar" th:text="${#strings.length(emp.employeeName) >= 2 ? #strings.toUpperCase(#strings.substring(emp.employeeName, 0, 2)) : 'NA'}">AA</div>
+                                    <div>
+                                        <div th:text="${emp.employeeName}" class="font-semibold text-slate-800 text-sm">—</div>
+                                        <div th:text="'ID · ' + ${emp.employeeId}" class="text-xs text-slate-400">—</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td th:text="${'₦' + #numbers.formatDecimal(emp.paye, 1, 'COMMA', 2, 'POINT')}" class="amount-deduct font-mono">—</td>
+                            <td th:text="${'₦' + #numbers.formatDecimal(emp.employeePension, 1, 'COMMA', 2, 'POINT')}" class="amount-deduct font-mono">—</td>
+                            <td th:text="${'₦' + #numbers.formatDecimal(emp.employerPension, 1, 'COMMA', 2, 'POINT')}" class="amount-employer font-mono">—</td>
+                            <td th:text="${emp.tinNumber}" class="font-mono text-slate-600">—</td>
+                            <td th:text="${emp.rsaPin}" class="font-mono text-slate-600">—</td>
+                            <td th:text="${emp.pfa}" class="text-slate-600">—</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* ─────────────────────────────────────────────────────────────
+           SHARED UTILITIES
+           ───────────────────────────────────────────────────────────── */
+        function cellText(row, idx) { return row.cells[idx]?.textContent.trim().replace(/\s+/g, ' ') || '—'; }
+        function stripCurrency(val) { return val.replace(/[₦,\s]/g, '').trim(); }
+        function triggerDownload(content, filename, type) {
+            const blob = new Blob([content], { type: type });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = filename; a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        /* ─────────────────────────────────────────────────────────────
+           GROUP — CSV
+           ───────────────────────────────────────────────────────────── */
+        function downloadGroupCSV(btn, card) {
+            const groupName = card.dataset.groupName;
+            const groupBy = card.dataset.groupBy;
+            let csv = 'Employee Name,Employee ID,PAYE Tax,Employee Pension,Employer Pension,Tax Payer ID (TIN),RSA PIN,Pension Admin (PFA)\n';
+            Array.from(card.querySelectorAll('table tbody tr')).forEach(r => {
+                const name = r.querySelector('.font-semibold')?.textContent.trim() || '—';
+                const empId = r.querySelector('.text-slate-400')?.textContent.replace('ID · ','').trim() || '—';
+                const paye = stripCurrency(cellText(r, 1));
+                const empPen = stripCurrency(cellText(r, 2));
+                const emplyrPen = stripCurrency(cellText(r, 3));
+                const tin = cellText(r, 4);
+                const rsa = cellText(r, 5);
+                const pfa = cellText(r, 6);
+                csv += `"${name}","${empId}",${paye},${empPen},${emplyrPen},"${tin}","${rsa}","${pfa}"\n`;
+            });
+            const date = new Date().toISOString().split('T')[0];
+            triggerDownload(csv, `paye-pension-${groupBy}-${groupName}-${date}.csv`, 'text/csv;charset=utf-8;');
+        }
+
+        /* ─────────────────────────────────────────────────────────────
+           GRAND TOTAL — CSV
+           ───────────────────────────────────────────────────────────── */
+        function downloadGrandCSV() {
+            const cards = document.querySelectorAll('.group-report-card');
+            const groupBy = cards[0]?.dataset.groupBy || 'Group';
+            let csv = 'Group,Employee Name,Employee ID,PAYE Tax,Employee Pension,Employer Pension,Tax Payer ID (TIN),RSA PIN,Pension Admin (PFA)\n';
+            cards.forEach(card => {
+                const groupName = card.dataset.groupName || '—';
+                Array.from(card.querySelectorAll('table tbody tr')).forEach(r => {
+                    const name = r.querySelector('.font-semibold')?.textContent.trim() || '—';
+                    const empId = r.querySelector('.text-slate-400')?.textContent.replace('ID · ','').trim() || '—';
+                    const paye = stripCurrency(cellText(r, 1));
+                    const empPen = stripCurrency(cellText(r, 2));
+                    const emplyrPen = stripCurrency(cellText(r, 3));
+                    const tin = cellText(r, 4);
+                    const rsa = cellText(r, 5);
+                    const pfa = cellText(r, 6);
+                    csv += `"${groupName}","${name}","${empId}",${paye},${empPen},${emplyrPen},"${tin}","${rsa}","${pfa}"\n`;
+                });
+            });
+            const date = new Date().toISOString().split('T')[0];
+            triggerDownload(csv, `paye-pension-grand-total-${groupBy.toLowerCase()}-${date}.csv`, 'text/csv;charset=utf-8;');
+        }
+
+        /* ─────────────────────────────────────────────────────────────
+           PDF RENDERING ENGINE
+           (chunked rows → render each chunk → merge via pdf-lib)
+           ───────────────────────────────────────────────────────────── */
+        const THEAD_HTML = `
+            <tr style="background:#f0f4ff;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;">
+                <th style="padding:0.5rem 0.75rem;text-align:left;font-size:0.62rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#1e3a8a;white-space:nowrap;">EMPLOYEE</th>
+                <th style="padding:0.5rem 0.75rem;text-align:left;font-size:0.62rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#1e3a8a;white-space:nowrap;">PAYE TAX</th>
+                <th style="padding:0.5rem 0.75rem;text-align:left;font-size:0.62rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#1e3a8a;white-space:nowrap;">EMPLOYEE PENSION</th>
+                <th style="padding:0.5rem 0.75rem;text-align:left;font-size:0.62rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#1e3a8a;white-space:nowrap;">EMPLOYER PENSION</th>
+                <th style="padding:0.5rem 0.75rem;text-align:left;font-size:0.62rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#1e3a8a;white-space:nowrap;">TIN</th>
+                <th style="padding:0.5rem 0.75rem;text-align:left;font-size:0.62rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#1e3a8a;white-space:nowrap;">RSA PIN</th>
+                <th style="padding:0.5rem 0.75rem;text-align:left;font-size:0.62rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#1e3a8a;white-space:nowrap;">PFA</th>
+            </tr>`;
+
+        const FOOTER_HTML = `<div style="margin-top:1.5rem;text-align:center;font-size:0.68rem;color:#cbd5e1;border-top:1px solid #f1f5f9;padding-top:0.75rem;">
+            This is a computer-generated statutory report. No signature required.
+        </div>`;
+
+        function buildHeaderHTML(title, date, count) {
+            return `<div style="border-bottom:2px solid #e2e8f0;padding-bottom:1rem;margin-bottom:1.25rem;">
+                <div style="font-size:1.3rem;font-weight:800;color:#1e3a8a;letter-spacing:-0.02em;">${title}</div>
+                <div style="font-size:0.75rem;color:#94a3b8;margin-top:3px;">Generated: ${date} &nbsp;·&nbsp; ${count} employee(s)</div>
+            </div>`;
+        }
+
+        function buildSummaryHTML(labels, values, colors) {
+            // labels: string[], values: string[], colors: 'red'|'blue'[]
+            const boxes = labels.map((lbl, i) => {
+                const isBlue = colors[i] === 'blue';
+                return `<div style="background:${isBlue ? '#eff6ff' : '#fef2f2'};border:1px solid ${isBlue ? '#bfdbfe' : '#fecaca'};padding:0.6rem 1rem;border-radius:6px;">
+                    <div style="font-size:0.62rem;font-weight:700;color:${isBlue ? '#3b82f6' : '#ef4444'};">${lbl}</div>
+                    <div style="font-weight:700;font-size:0.95rem;color:${isBlue ? '#0284c7' : '#b64343'}">${values[i]}</div>
+                </div>`;
+            }).join('');
+            return `<div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1.25rem;">${boxes}</div>`;
+        }
+
+        function renderBulkPDF(allRowEls, headerHTML, summaryHTML, filename, totalCount) {
+            const ROWS_PER_CHUNK = 35; // landscape A4, employee rows are taller than allowance rows
+            const chunks = [];
+            for (let i = 0; i < allRowEls.length; i += ROWS_PER_CHUNK) {
+                chunks.push(allRowEls.slice(i, i + ROWS_PER_CHUNK));
+            }
+            if (chunks.length === 0) chunks.push([]);
+
+            const totalPages = chunks.length;
+            const buffers = [];
+
+            function buildChunkHTML(chunkRows, pageNum) {
+                const rowsHTML = chunkRows.map(r => (r.outerHTML || r)).join('');
+                const pageNote = totalPages > 1
+                    ? `<div style="font-size:0.68rem;color:#94a3b8;text-align:right;margin-bottom:4px;">Page ${pageNum} of ${totalPages}</div>`
+                    : '';
+                const isFirstPage = pageNum === 1;
+                return `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#fff;padding:1.5rem;width:100%;box-sizing:border-box;">
+                    ${isFirstPage ? headerHTML : ''}
+                    ${isFirstPage ? summaryHTML : ''}
+                    ${pageNote}
+                    <table style="width:100%;border-collapse:collapse;font-size:0.78rem;">
+                        <thead>${THEAD_HTML}</thead>
+                        <tbody>${rowsHTML}</tbody>
+                    </table>
+                    ${FOOTER_HTML}
+                </div>`;
+            }
+
+            function renderAllChunks(index) {
+                if (index >= chunks.length) {
+                    mergeAndSave(buffers, filename);
+                    return;
+                }
+                const chunkHTML = buildChunkHTML(chunks[index], index + 1);
+                const container = document.createElement('div');
+                container.style.cssText = 'position:fixed;left:-9999px;top:0;width:1122px;background:#fff;';
+                container.innerHTML = chunkHTML;
+                document.body.appendChild(container);
+
+                html2pdf()
+                    .set({
+                        margin: [8, 8, 8, 8],
+                        filename: filename,
+                        image: { type: 'jpeg', quality: 0.95 },
+                        html2canvas: { scale: 1.5, useCORS: true, scrollX: 0, scrollY: 0, logging: false },
+                        jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+                    })
+                    .from(container.firstElementChild)
+                    .outputPdf('arraybuffer')
+                    .then(buf => {
+                        document.body.removeChild(container);
+                        buffers.push(buf);
+                        renderAllChunks(index + 1);
+                    })
+                    .catch(err => {
+                        document.body.removeChild(container);
+                        console.error('Chunk render error:', err);
+                        renderAllChunks(index + 1);
+                    });
+            }
+
+            async function mergeAndSave(bufs, fname) {
+                try {
+                    const mergedPdf = await PDFLib.PDFDocument.create();
+                    for (const buf of bufs) {
+                        const srcDoc = await PDFLib.PDFDocument.load(buf);
+                        const pages  = await mergedPdf.copyPages(srcDoc, srcDoc.getPageIndices());
+                        pages.forEach(p => mergedPdf.addPage(p));
+                    }
+                    const mergedBytes = await mergedPdf.save();
+                    const blob = new Blob([mergedBytes], { type: 'application/pdf' });
+                    const url  = URL.createObjectURL(blob);
+                    const a    = document.createElement('a');
+                    a.href = url; a.download = fname; a.click();
+                    URL.revokeObjectURL(url);
+                } catch (e) {
+                    console.error('PDF merge error:', e);
+                    alert('PDF generation failed. Please try downloading as CSV instead.');
+                }
+            }
+
+            renderAllChunks(0);
+        }
+
+        /* ─────────────────────────────────────────────────────────────
+           GROUP — PDF
+           ───────────────────────────────────────────────────────────── */
+        function downloadGroupPDF(btn, card) {
+            const groupName = card.dataset.groupName;
+            const groupBy   = card.dataset.groupBy;
+            const date      = new Date().toISOString().split('T')[0];
+
+            const stats = card.querySelectorAll('.header-stat .stat-val');
+            const totalPaye      = stats[0]?.textContent.trim() || '₦0.00';
+            const totalEmpPen    = stats[1]?.textContent.trim() || '₦0.00';
+            const totalEmplyrPen = stats[2]?.textContent.trim() || '₦0.00';
+
+            const rows = Array.from(card.querySelectorAll('table tbody tr'));
+
+            // Build row HTML strings for the engine
+            const rowHTMLs = rows.map((r, i) => {
+                const name   = r.querySelector('.font-semibold')?.textContent.trim() || '—';
+                const empId  = r.querySelector('.text-slate-400')?.textContent.replace('ID · ', '').trim() || '—';
+                const paye   = cellText(r, 1);
+                const empPen = cellText(r, 2);
+                const emplPen= cellText(r, 3);
+                const tin    = cellText(r, 4);
+                const rsa    = cellText(r, 5);
+                const pfa    = cellText(r, 6);
+                const bg     = i % 2 === 0 ? '#ffffff' : '#f8fafc';
+                return `<tr style="background:${bg};border-bottom:1px solid #e2e8f0;">
+                    <td style="padding:0.55rem 0.75rem;vertical-align:top;">${name}<br><span style="font-size:0.7rem;color:#94a3b8">ID: ${empId}</span></td>
+                    <td style="padding:0.55rem 0.75rem;color:#b64343;font-weight:600;">${paye}</td>
+                    <td style="padding:0.55rem 0.75rem;color:#b64343;font-weight:600;">${empPen}</td>
+                    <td style="padding:0.55rem 0.75rem;color:#0284c7;font-weight:600;">${emplPen}</td>
+                    <td style="padding:0.55rem 0.75rem;font-family:monospace;">${tin}</td>
+                    <td style="padding:0.55rem 0.75rem;font-family:monospace;">${rsa}</td>
+                    <td style="padding:0.55rem 0.75rem;">${pfa}</td>
+                </tr>`;
+            });
+
+            const headerHTML  = buildHeaderHTML(`PAYE & Pension: ${groupBy} — ${groupName}`, date, rows.length);
+            const summaryHTML = buildSummaryHTML(
+                ['TOTAL PAYE TAX', 'TOTAL EMPLOYEE PENSION', 'TOTAL EMPLOYER PENSION'],
+                [totalPaye, totalEmpPen, totalEmplyrPen],
+                ['red', 'red', 'blue']
+            );
+
+            renderBulkPDF(rowHTMLs, headerHTML, summaryHTML,
+                `paye-pension-${groupBy.toLowerCase()}-${groupName.replace(/\s+/g, '-')}-${date}.pdf`,
+                rows.length);
+        }
+
+        /* ─────────────────────────────────────────────────────────────
+           GRAND TOTAL — PDF  (all groups, chunked + merged)
+           ───────────────────────────────────────────────────────────── */
+        function downloadGrandPDF() {
+            const cards   = document.querySelectorAll('.group-report-card');
+            const groupBy = cards[0]?.dataset.groupBy || 'Group';
+            const date    = new Date().toISOString().split('T')[0];
+
+            const totalPaye      = document.getElementById('grandPaye')?.textContent.trim()           || '₦0.00';
+            const totalEmpPen    = document.getElementById('grandEmpPension')?.textContent.trim()     || '₦0.00';
+            const totalEmplyrPen = document.getElementById('grandEmployerPension')?.textContent.trim()|| '₦0.00';
+
+            const rowHTMLs = [];
+            let totalEmps  = 0;
+
+            cards.forEach(card => {
+                const groupName = card.dataset.groupName || '—';
+                const rows = Array.from(card.querySelectorAll('table tbody tr'));
+                totalEmps += rows.length;
+
+                // Group separator row
+                rowHTMLs.push(`<tr>
+                    <td colspan="7" style="background:#f0f4ff;font-weight:700;font-size:0.72rem;
+                                           color:#1e3a8a;letter-spacing:0.05em;text-transform:uppercase;
+                                           padding:6px 12px;">${groupBy}: ${groupName}</td>
+                </tr>`);
+
+                rows.forEach((r, i) => {
+                    const name   = r.querySelector('.font-semibold')?.textContent.trim() || '—';
+                    const empId  = r.querySelector('.text-slate-400')?.textContent.replace('ID · ', '').trim() || '—';
+                    const paye   = cellText(r, 1);
+                    const empPen = cellText(r, 2);
+                    const emplPen= cellText(r, 3);
+                    const tin    = cellText(r, 4);
+                    const rsa    = cellText(r, 5);
+                    const pfa    = cellText(r, 6);
+                    const bg     = i % 2 === 0 ? '#ffffff' : '#f8fafc';
+                    rowHTMLs.push(`<tr style="background:${bg};border-bottom:1px solid #e2e8f0;">
+                        <td style="padding:0.55rem 0.75rem;vertical-align:top;">${name}<br><span style="font-size:0.7rem;color:#94a3b8">ID: ${empId}</span></td>
+                        <td style="padding:0.55rem 0.75rem;color:#b64343;font-weight:600;">${paye}</td>
+                        <td style="padding:0.55rem 0.75rem;color:#b64343;font-weight:600;">${empPen}</td>
+                        <td style="padding:0.55rem 0.75rem;color:#0284c7;font-weight:600;">${emplPen}</td>
+                        <td style="padding:0.55rem 0.75rem;font-family:monospace;">${tin}</td>
+                        <td style="padding:0.55rem 0.75rem;font-family:monospace;">${rsa}</td>
+                        <td style="padding:0.55rem 0.75rem;">${pfa}</td>
+                    </tr>`);
+                });
+
+                // Spacer between groups
+                rowHTMLs.push(`<tr><td colspan="7" style="padding:4px;"></td></tr>`);
+            });
+
+            const headerHTML  = buildHeaderHTML(`PAYE & Pension Grand Total — ${groupBy}`, date, totalEmps);
+            const summaryHTML = buildSummaryHTML(
+                ['GRAND TOTAL PAYE TAX', 'GRAND TOTAL EMP. PENSION', 'GRAND TOTAL EMPLOYER PENSION'],
+                [totalPaye, totalEmpPen, totalEmplyrPen],
+                ['red', 'red', 'blue']
+            );
+
+            renderBulkPDF(rowHTMLs, headerHTML, summaryHTML,
+                `paye-pension-grand-total-${groupBy.toLowerCase()}-${date}.pdf`,
+                totalEmps);
+        }
+
+        /* ─────────────────────────────────────────────────────────────
+           WIRE UP GROUP BUTTONS via event delegation
+           ───────────────────────────────────────────────────────────── */
+        document.addEventListener('click', function(e) {
+            const csvBtn = e.target.closest('.group-csv-btn');
+            const pdfBtn = e.target.closest('.group-pdf-btn');
+            if (csvBtn) downloadGroupCSV(csvBtn, csvBtn.closest('.group-report-card'));
+            if (pdfBtn) downloadGroupPDF(pdfBtn, pdfBtn.closest('.group-report-card'));
+        });
+    </script>
+</main>
+</body>
+</html>

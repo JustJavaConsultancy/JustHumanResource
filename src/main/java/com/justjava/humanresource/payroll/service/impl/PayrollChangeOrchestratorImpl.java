@@ -6,6 +6,7 @@ import com.justjava.humanresource.hr.repository.EmployeeRepository;
 import com.justjava.humanresource.payroll.service.EmployeePositionHistoryService;
 import com.justjava.humanresource.payroll.service.PayrollChangeOrchestrator;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class PayrollChangeOrchestratorImpl implements PayrollChangeOrchestrator {
@@ -21,13 +23,12 @@ public class PayrollChangeOrchestratorImpl implements PayrollChangeOrchestrator 
     private final EmployeeRepository employeeRepository;
     private final EmployeePositionHistoryService positionHistoryService;
 
-    // ✅ No class-level @Transactional — each method controls its own boundary
 
     @Override
     @Transactional
     public void recalculateForEmployee(Long employeeId, LocalDate effectiveDate) {
         updateEmployeePositionHistory(employeeId, effectiveDate);
-        dispatcher.requestPayroll(employeeId, effectiveDate);
+        safeRequestPayroll(employeeId, effectiveDate);
     }
 
     @Override
@@ -60,7 +61,7 @@ public class PayrollChangeOrchestratorImpl implements PayrollChangeOrchestrator 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void processSingleEmployee(Long employeeId, LocalDate effectiveDate) {
         updateEmployeePositionHistory(employeeId, effectiveDate);
-        dispatcher.requestPayroll(employeeId, effectiveDate);
+        safeRequestPayroll(employeeId, effectiveDate);
     }
 
     @Override
@@ -74,5 +75,18 @@ public class PayrollChangeOrchestratorImpl implements PayrollChangeOrchestrator 
                 employee.getPayGroup().getId(),
                 effectiveDate
         );
+    }
+
+
+    private void safeRequestPayroll(Long employeeId, LocalDate effectiveDate) {
+        try {
+            dispatcher.requestPayroll(employeeId, effectiveDate);
+        } catch (IllegalStateException ex) {
+            log.warn(
+                    "Payroll signal skipped for employee {} on {} — process not in waiting state. " +
+                            "This is expected during bulk uploads. Cause: {}",
+                    employeeId, effectiveDate, ex.getMessage()
+            );
+        }
     }
 }

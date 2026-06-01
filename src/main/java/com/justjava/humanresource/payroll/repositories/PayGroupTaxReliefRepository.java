@@ -2,6 +2,7 @@ package com.justjava.humanresource.payroll.repositories;
 
 import com.justjava.humanresource.core.enums.RecordStatus;
 import com.justjava.humanresource.payroll.entity.PayGroupTaxRelief;
+import feign.Param;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -55,5 +56,16 @@ public interface PayGroupTaxReliefRepository
             Long payGroupId,
             LocalDate date,
             RecordStatus status
+    );
+
+
+    @Query("""
+    SELECT p FROM PayGroupTaxRelief p
+    WHERE p.taxRelief.id = :taxReliefId
+      AND p.status = :status
+""")
+    List<PayGroupTaxRelief> findByTaxReliefIdAndStatus(
+            @Param("taxReliefId") Long taxReliefId,
+            @Param("status") RecordStatus status
     );
 }

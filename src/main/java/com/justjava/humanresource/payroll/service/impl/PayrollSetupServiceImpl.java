@@ -183,6 +183,46 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
     }
 
     @Override
+    @Transactional
+    public Allowance updateAllowance(Allowance updated) {
+        Allowance existing = allowanceRepository.findById(updated.getId())
+                .orElseThrow(() -> new EntityNotFoundException("Allowance not found: " + updated.getId()));
+        existing.setCode(updated.getCode());
+        existing.setName(updated.getName());
+        existing.setAmount(updated.getAmount());
+        existing.setCalculationType(updated.getCalculationType());
+        existing.setPercentageRate(updated.getPercentageRate());
+        existing.setFormulaExpression(updated.getFormulaExpression());
+        existing.setProratable(updated.isProratable());
+        existing.setTaxable(updated.isTaxable());
+        existing.setPensionable(updated.isPensionable());
+        existing.setPartOfGross(updated.isPartOfGross());
+        existing.setOutOfPayroll(updated.isOutOfPayroll());
+        existing.setStatus(updated.getStatus());
+        allowanceRepository.save(existing);
+
+        if (payrollPeriodService.isPayrollDateInOpenPeriod(1L, LocalDate.now())) {
+            payGroupAllowanceRepository
+                    .findByAllowanceIdAndStatus(updated.getId(), RecordStatus.ACTIVE)
+                    .stream()
+                    .map(pga -> pga.getPayGroup().getId())
+                    .distinct()
+                    .forEach(pgId -> payrollChangeOrchestrator.recalculateForPayGroup(pgId, LocalDate.now()));
+
+            employeeAllowanceRepository
+                    .findByAllowanceIdAndStatus(updated.getId(), RecordStatus.ACTIVE)
+                    .stream()
+                    .map(ea -> ea.getEmployee().getId())
+                    .distinct()
+                    .forEach(empId -> payrollChangeOrchestrator.recalculateForEmployee(empId, LocalDate.now()));
+        }
+
+        return existing;
+    }
+
+
+
+    @Override
     public List<Allowance> getActiveAllowances() {
         return allowanceRepository.findByStatus(RecordStatus.ACTIVE, Sort.by(Sort.Direction.ASC, "id"));
     }
@@ -201,6 +241,42 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
         deduction.setStatus(RecordStatus.ACTIVE);
         return deductionRepository.save(deduction);
     }
+
+    @Override
+    @Transactional
+    public Deduction updateDeduction(Deduction updated) {
+        Deduction existing = deductionRepository.findById(updated.getId())
+                .orElseThrow(() -> new EntityNotFoundException("Deduction not found: " + updated.getId()));
+        existing.setCode(updated.getCode());
+        existing.setName(updated.getName());
+        existing.setAmount(updated.getAmount());
+        existing.setCalculationType(updated.getCalculationType());
+        existing.setPercentageRate(updated.getPercentageRate());
+        existing.setFormulaExpression(updated.getFormulaExpression());
+        existing.setProratable(updated.isProratable());
+        existing.setStatutory(updated.isStatutory());
+        existing.setStatus(updated.getStatus());
+        deductionRepository.save(existing);
+
+        if (payrollPeriodService.isPayrollDateInOpenPeriod(1L, LocalDate.now())) {
+            payGroupDeductionRepository
+                    .findByDeductionIdAndStatus(updated.getId(), RecordStatus.ACTIVE)
+                    .stream()
+                    .map(pgd -> pgd.getPayGroup().getId())
+                    .distinct()
+                    .forEach(pgId -> payrollChangeOrchestrator.recalculateForPayGroup(pgId, LocalDate.now()));
+
+            employeeDeductionRepository
+                    .findByDeductionIdAndStatus(updated.getId(), RecordStatus.ACTIVE)
+                    .stream()
+                    .map(ed -> ed.getEmployee().getId())
+                    .distinct()
+                    .forEach(empId -> payrollChangeOrchestrator.recalculateForEmployee(empId, LocalDate.now()));
+        }
+
+        return existing;
+    }
+
 
     @Override
     public List<Deduction> getActiveDeductions() {
@@ -601,6 +677,40 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
         relief.setActive(true);
         return taxReliefRepository.save(relief);
     }
+
+    @Override
+    @Transactional
+    public TaxRelief updateTaxRelief(TaxRelief updated) {
+        TaxRelief existing = taxReliefRepository.findById(updated.getId())
+                .orElseThrow(() -> new EntityNotFoundException("TaxRelief not found: " + updated.getId()));
+        existing.setCode(updated.getCode());
+        existing.setName(updated.getName());
+        existing.setAmount(updated.getAmount());
+        existing.setCalculationType(updated.getCalculationType());
+        existing.setPercentageRate(updated.getPercentageRate());
+        existing.setFormulaExpression(updated.getFormulaExpression());
+        existing.setMaximumAmount(updated.getMaximumAmount());
+        taxReliefRepository.save(existing);
+
+        if (payrollPeriodService.isPayrollDateInOpenPeriod(1L, LocalDate.now())) {
+            payGroupTaxReliefRepository
+                    .findByTaxReliefIdAndStatus(updated.getId(), RecordStatus.ACTIVE)
+                    .stream()
+                    .map(pgtr -> pgtr.getPayGroup().getId())
+                    .distinct()
+                    .forEach(pgId -> payrollChangeOrchestrator.recalculateForPayGroup(pgId, LocalDate.now()));
+
+            employeeTaxReliefRepository
+                    .findByTaxReliefIdAndStatus(updated.getId(), RecordStatus.ACTIVE)
+                    .stream()
+                    .map(EmployeeTaxRelief::getEmployeeId)
+                    .distinct()
+                    .forEach(empId -> payrollChangeOrchestrator.recalculateForEmployee(empId, LocalDate.now()));
+        }
+
+        return existing;
+    }
+
     @Override
     public List<TaxRelief> getActiveTaxReliefs() {
         return taxReliefRepository.findByActiveTrue(Sort.by(Sort.Direction.ASC, "id"));

@@ -57,6 +57,15 @@ public class Employee extends BaseEntity {
     private PayGroup payGroup;
 
     // --- Personal Information  ---
+    @Column(nullable = true, length = 20)
+    private String tinNumber;
+
+    @Column(nullable = true, length = 20)
+    private String rsaPin;
+
+    @Column(nullable = true)
+    private String pfa;
+
     @Column(nullable = true, length = 11)
     private String ninNumber;
 

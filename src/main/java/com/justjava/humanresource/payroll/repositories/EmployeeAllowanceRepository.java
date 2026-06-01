@@ -80,4 +80,15 @@ public interface EmployeeAllowanceRepository
             Long companyId,
             LocalDate today
     );
+
+
+    @Query("""
+    SELECT ea FROM EmployeeAllowance ea
+    WHERE ea.allowance.id = :allowanceId
+      AND ea.status = :status
+""")
+    List<EmployeeAllowance> findByAllowanceIdAndStatus(
+            @Param("allowanceId") Long allowanceId,
+            @Param("status") RecordStatus status
+    );
 }

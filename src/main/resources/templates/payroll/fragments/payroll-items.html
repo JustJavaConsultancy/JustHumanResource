@@ -748,7 +748,7 @@
                         <span class="material-icons-round">close</span>
                     </button>
                 </div>
-                <form th:action="@{/setup/taxrelief}" method="post" id="editTaxReliefForm" class="space-y-4" onsubmit="disableSubmitButton(this)">
+                <form th:action="@{/setup/taxrelief/update}" method="post" id="editTaxReliefForm" class="space-y-4" onsubmit="disableSubmitButton(this)">
                     <input type="hidden" name="id" id="editTaxReliefId" value="" />
                     <div>
                         <label class="block text-sm font-medium mb-2">Code *</label>
@@ -878,27 +878,42 @@
             }
         }
 
-        function editAllowance(id) {
-            const allowance = allowances.find(a => a.id === id);
-            if (!allowance) return;
-            document.getElementById('editAllowanceId').value = allowance.id;
-            document.getElementById('editAllowanceCode').value = allowance.code;
-            document.getElementById('editAllowanceName').value = allowance.name;
-            document.getElementById('editAllowanceAmount').value = allowance.amount;
-            document.getElementById('editAllowanceCalcType').value = allowance.calculationType || 'FIXED_AMOUNT';
-            document.getElementById('editAllowancePercentage').value = allowance.percentageRate || '';
-            document.getElementById('editAllowanceFormula').value = allowance.formulaExpression || '';
-            document.getElementById('editAllowanceProratable').checked = allowance.proratable || false;
-            document.getElementById('editAllowanceTaxable').checked = allowance.taxable || false;
-            document.getElementById('editAllowancePensionable').checked = !allowance.pensionable;
-            document.getElementById('editAllowancePartOfGrossCheck').checked = !allowance.partOfGross;
-            document.getElementById('editAllowancePartOfGrossHidden').value = allowance.partOfGross ? 'true' : 'false';
-            document.getElementById('editAllowanceOutOfPayroll').checked = allowance.outOfPayroll || false;
-            document.getElementById('editAllowanceStatus').value = allowance.status || 'ACTIVE';
-            const select = document.getElementById('editAllowanceCalcType');
-            toggleCalculationFields(select, 'editAllowance');
-            openModal('editAllowanceModal');
-        }
+function editAllowance(id) {
+    const allowance = allowances.find(a => a.id === id);
+    if (!allowance) return;
+    document.getElementById('editAllowanceId').value = allowance.id;
+    document.getElementById('editAllowanceCode').value = allowance.code;
+    document.getElementById('editAllowanceName').value = allowance.name;
+    document.getElementById('editAllowanceAmount').value = allowance.amount;
+    document.getElementById('editAllowanceCalcType').value = allowance.calculationType || 'FIXED_AMOUNT';
+    document.getElementById('editAllowancePercentage').value = allowance.percentageRate || '';
+    document.getElementById('editAllowanceFormula').value = allowance.formulaExpression || '';
+    document.getElementById('editAllowanceStatus').value = allowance.status || 'ACTIVE';
+
+    // proratable
+    document.getElementById('editAllowanceProratable').checked = allowance.proratable || false;
+
+    // taxable
+    document.getElementById('editAllowanceTaxable').checked = allowance.taxable || false;
+
+    // outOfPayroll
+    document.getElementById('editAllowanceOutOfPayroll').checked = allowance.outOfPayroll || false;
+    document.getElementById('editAllowanceOutOfPayrollHidden').value = allowance.outOfPayroll ? 'true' : 'false';
+
+    // Non-Pensionable: checkbox is inverted (checked = non-pensionable = pensionable is false)
+    const nonPensionable = !allowance.pensionable;
+    document.getElementById('editAllowancePensionable').checked = nonPensionable;
+    document.getElementById('editAllowancePensionableHidden').value = allowance.pensionable ? 'true' : 'false';
+
+    // Exclude from Gross: checkbox is inverted (checked = excluded = partOfGross is false)
+    const excludeFromGross = !allowance.partOfGross;
+    document.getElementById('editAllowancePartOfGrossCheck').checked = excludeFromGross;
+    document.getElementById('editAllowancePartOfGrossHidden').value = allowance.partOfGross ? 'true' : 'false';
+
+    const select = document.getElementById('editAllowanceCalcType');
+    toggleCalculationFields(select, 'editAllowance');
+    openModal('editAllowanceModal');
+}
 
         function editDeduction(id) {
             const deduction = deductions.find(d => d.id === id);

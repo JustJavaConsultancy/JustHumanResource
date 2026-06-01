@@ -42,4 +42,15 @@ public interface EmployeeDeductionRepository
             @Param("date") LocalDate date,
             @Param("status") RecordStatus status
     );
+
+
+    @Query("""
+    SELECT ed FROM EmployeeDeduction ed
+    WHERE ed.deduction.id = :deductionId
+      AND ed.status = :status
+""")
+    List<EmployeeDeduction> findByDeductionIdAndStatus(
+            @Param("deductionId") Long deductionId,
+            @Param("status") RecordStatus status
+    );
 }

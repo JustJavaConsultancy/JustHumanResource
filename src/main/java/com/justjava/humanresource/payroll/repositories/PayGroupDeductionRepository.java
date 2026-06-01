@@ -59,4 +59,15 @@ public interface PayGroupDeductionRepository
             @Param("date") LocalDate date,
             @Param("status") RecordStatus status
     );
+
+
+    @Query("""
+    SELECT pgd FROM PayGroupDeduction pgd
+    WHERE pgd.deduction.id = :deductionId
+      AND pgd.status = :status
+""")
+    List<PayGroupDeduction> findByDeductionIdAndStatus(
+            @Param("deductionId") Long deductionId,
+            @Param("status") RecordStatus status
+    );
 }
