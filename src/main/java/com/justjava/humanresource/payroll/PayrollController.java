@@ -102,7 +102,8 @@ public class PayrollController {
                 .filter(Deduction::isStatutory)
                 .toList();
 
-        model.addAttribute("payrollStatus", payrollPeriodService.getPeriodStatusForDate(1L, LocalDate.now()));
+        PayrollPeriod currentPeriod = payrollPeriodService.getCurrentPeriod(1L);
+        model.addAttribute("payrollStatus", currentPeriod != null ? currentPeriod.getStatus() : null);
         model.addAttribute("allowances", allowances.size());
         model.addAttribute("employees", employees.size());
         model.addAttribute("taxableAllowances", taxableAllowances.size());
@@ -531,7 +532,6 @@ public class PayrollController {
             periodEnd = fallback.atEndOfMonth();
         }
         YearMonth currentMonth = YearMonth.from(periodEnd);
-        List<PaySlipDTO> currentPeriodPaySlips = paySlipService.getCurrentPeriodPaySlips(1L);
 
         // Build scoped employee ID set for jobHR
         final Set<Long> scopedIds;
