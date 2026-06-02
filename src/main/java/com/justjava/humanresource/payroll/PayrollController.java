@@ -727,6 +727,8 @@ public class PayrollController {
         return "payroll/fragments/grouped-report";
     }
 
+
+
     @GetMapping("/payroll/payitems-report")
     public String getPayItemsReport(
             @RequestParam(defaultValue = "GRADE") String groupBy,
@@ -738,7 +740,7 @@ public class PayrollController {
 
         YearMonth currentMonth = YearMonth.now();
 
-        // ── 1. Build scoped employee ID set for jobHR (same pattern as grouped-report) ──
+        // ── 1. Scope filter (jobHR) ───────────────────────────────────
         final Set<Long> scopedIds;
         if (jobHrEmployeeAccessService.isJobHrScopedUser()) {
             Long actorGradeId = jobHrEmployeeAccessService.getLoggedInJobGradeId();
@@ -752,21 +754,17 @@ public class PayrollController {
             scopedIds = null;
         }
 
-        // ── 2. Load all current-period payslips ──
-        List<PaySlipDTO> paySlips = paySlipService.getCurrentPeriodPaySlips(1L);
+        Map<Long, Employee> employeeMap = employeeOnboardingService.getAllOnboardings().stream()
+                .collect(Collectors.toMap(Employee::getId, e -> e, (a, b) -> a));
 
-        // ── 3. Filter to scoped employees if jobHR ──
+        // ── 2. CURRENT PERIOD ─────────────────────────────────────────
+        List<PaySlipDTO> paySlips = paySlipService.getCurrentPeriodPaySlips(1L);
         if (scopedIds != null) {
             paySlips = paySlips.stream()
                     .filter(ps -> scopedIds.contains(ps.getEmployeeId()))
                     .collect(Collectors.toList());
         }
 
-        // ── 4. Build employeeId → Employee map for group-name resolution ──
-        Map<Long, Employee> employeeMap = employeeOnboardingService.getAllOnboardings().stream()
-                .collect(Collectors.toMap(Employee::getId, e -> e, (a, b) -> a));
-
-        // ── 5. Group payslips by chosen dimension ──
         Map<String, List<PaySlipDTO>> grouped = new LinkedHashMap<>();
         for (PaySlipDTO ps : paySlips) {
             Employee emp = employeeMap.get(ps.getEmployeeId());
@@ -774,31 +772,21 @@ public class PayrollController {
             grouped.computeIfAbsent(key, k -> new ArrayList<>()).add(ps);
         }
 
-        // ── 6. Build report groups ──
         List<AllowanceGroupReportDTO> payitemsReport = new ArrayList<>();
-
         for (Map.Entry<String, List<PaySlipDTO>> entry : grouped.entrySet()) {
             AllowanceGroupReportDTO group = new AllowanceGroupReportDTO();
             group.setGroupName(entry.getKey());
             group.setEmployeeCount((long) entry.getValue().size());
 
-            // Sum each allowance code across all employees in this group
             Map<String, AllowanceReportLineDTO> codeMap = new LinkedHashMap<>();
             for (PaySlipDTO slip : entry.getValue()) {
                 if (slip.getAllowances() == null) continue;
                 for (PaySlipLineDTO line : slip.getAllowances()) {
-                    // Skip residual adjustment — not displayed anywhere (mirrors employee-payroll.html)
                     if ("RESIDUAL".equals(line.getCode()) || "Residual Adjustment".equals(line.getDescription())) continue;
                     codeMap.compute(line.getCode(), (code, existing) -> {
                         BigDecimal amt = line.getAmount() != null ? line.getAmount() : BigDecimal.ZERO;
                         if (existing == null) {
-                            return new AllowanceReportLineDTO(
-                                    line.getCode(),
-                                    line.getDescription(),
-                                    amt,
-                                    line.isTaxable(),
-                                    !line.isOutOfPayroll()
-                            );
+                            return new AllowanceReportLineDTO(line.getCode(), line.getDescription(), amt, line.isTaxable(), !line.isOutOfPayroll());
                         }
                         existing.setTotalAmount(existing.getTotalAmount().add(amt));
                         return existing;
@@ -807,48 +795,138 @@ public class PayrollController {
             }
 
             List<AllowanceReportLineDTO> lines = new ArrayList<>(codeMap.values());
-            BigDecimal groupTotal = lines.stream()
-                    .map(AllowanceReportLineDTO::getTotalAmount)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-
+            BigDecimal groupTotal = lines.stream().map(AllowanceReportLineDTO::getTotalAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
             group.setAllowances(lines);
             group.setGroupTotal(groupTotal);
             payitemsReport.add(group);
         }
-
-        // Sort groups alphabetically
         payitemsReport.sort(Comparator.comparing(AllowanceGroupReportDTO::getGroupName));
 
-        // ── 7. Compute grand totals across all groups ──
         Map<String, AllowanceReportLineDTO> grandCodeMap = new LinkedHashMap<>();
         for (AllowanceGroupReportDTO group : payitemsReport) {
             for (AllowanceReportLineDTO line : group.getAllowances()) {
                 grandCodeMap.compute(line.getCode(), (code, existing) -> {
-                    if (existing == null) {
-                        return new AllowanceReportLineDTO(
-                                line.getCode(), line.getDescription(),
-                                line.getTotalAmount(), line.isTaxable(), line.isPartOfGross()
-                        );
-                    }
+                    if (existing == null) return new AllowanceReportLineDTO(line.getCode(), line.getDescription(), line.getTotalAmount(), line.isTaxable(), line.isPartOfGross());
                     existing.setTotalAmount(existing.getTotalAmount().add(line.getTotalAmount()));
                     return existing;
                 });
             }
         }
+        BigDecimal grandTotal = grandCodeMap.values().stream().map(AllowanceReportLineDTO::getTotalAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        BigDecimal grandTotal = grandCodeMap.values().stream()
-                .map(AllowanceReportLineDTO::getTotalAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        // ── 3. PAST PERIODS ───────────────────────────────────────────
+        // Deduplicate: best payslip per (employeeId, yearMonth)
+        List<PaySlipDTO> closedPaySlips = paySlipService.getAllClosedPeriodPaySlips(1L).stream()
+                .filter(ps -> scopedIds == null || scopedIds.contains(ps.getEmployeeId()))
+                .collect(Collectors.collectingAndThen(
+                        Collectors.toList(),
+                        list -> {
+                            Map<String, PaySlipDTO> best = new LinkedHashMap<>();
+                            for (PaySlipDTO ps : list) {
+                                String key = ps.getEmployeeId() + "_" + YearMonth.from(ps.getPayDate());
+                                PaySlipDTO existing = best.get(key);
+                                boolean hasLines = ps.getAllowances() != null && !ps.getAllowances().isEmpty();
+                                boolean existingHasLines = existing != null && existing.getAllowances() != null && !existing.getAllowances().isEmpty();
+                                if (existing == null || (hasLines && !existingHasLines)) {
+                                    best.put(key, ps);
+                                }
+                            }
+                            return new ArrayList<>(best.values());
+                        }
+                ));
 
-        model.addAttribute("payitemsReport",  payitemsReport);
-        model.addAttribute("grandAllowances", new ArrayList<>(grandCodeMap.values()));
-        model.addAttribute("grandTotal",      grandTotal);
-        model.addAttribute("totalGroups",     (long) payitemsReport.size());
-        model.addAttribute("totalEmployees",  payitemsReport.stream().mapToLong(AllowanceGroupReportDTO::getEmployeeCount).sum());
-        model.addAttribute("groupBy",         groupBy);
-        model.addAttribute("reportMonth",     currentMonth.toString());
-        model.addAttribute("title",           "Payroll Management");
-        model.addAttribute("subTitle",        "Manage employee payroll, salary details, and payment history");
+        // Group by yearMonth, newest first
+        Map<String, List<PaySlipDTO>> byPeriod = closedPaySlips.stream()
+                .collect(Collectors.groupingBy(
+                        ps -> YearMonth.from(ps.getPayDate()).toString(),
+                        LinkedHashMap::new,
+                        Collectors.toList()
+                ));
+
+        // Build past AllowanceGroupReportDTO per period
+        Map<String, List<AllowanceGroupReportDTO>> pastPayitemsReports = byPeriod.entrySet().stream()
+                .sorted(Map.Entry.<String, List<PaySlipDTO>>comparingByKey().reversed())
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        periodEntry -> {
+                            Map<String, List<PaySlipDTO>> periodGrouped = new LinkedHashMap<>();
+                            for (PaySlipDTO ps : periodEntry.getValue()) {
+                                Employee emp = employeeMap.get(ps.getEmployeeId());
+                                String key = resolvePayItemsGroupName(emp, groupBy);
+                                periodGrouped.computeIfAbsent(key, k -> new ArrayList<>()).add(ps);
+                            }
+
+                            List<AllowanceGroupReportDTO> periodReport = new ArrayList<>();
+                            for (Map.Entry<String, List<PaySlipDTO>> g : periodGrouped.entrySet()) {
+                                AllowanceGroupReportDTO dto = new AllowanceGroupReportDTO();
+                                dto.setGroupName(g.getKey());
+                                dto.setEmployeeCount((long) g.getValue().size());
+
+                                Map<String, AllowanceReportLineDTO> cm = new LinkedHashMap<>();
+                                for (PaySlipDTO slip : g.getValue()) {
+                                    if (slip.getAllowances() == null) continue;
+                                    for (PaySlipLineDTO line : slip.getAllowances()) {
+                                        if ("RESIDUAL".equals(line.getCode()) || "Residual Adjustment".equals(line.getDescription())) continue;
+                                        cm.compute(line.getCode(), (code, existing) -> {
+                                            BigDecimal amt = line.getAmount() != null ? line.getAmount() : BigDecimal.ZERO;
+                                            if (existing == null) return new AllowanceReportLineDTO(line.getCode(), line.getDescription(), amt, line.isTaxable(), !line.isOutOfPayroll());
+                                            existing.setTotalAmount(existing.getTotalAmount().add(amt));
+                                            return existing;
+                                        });
+                                    }
+                                }
+
+                                List<AllowanceReportLineDTO> dtoLines = new ArrayList<>(cm.values());
+                                BigDecimal dtoTotal = dtoLines.stream().map(AllowanceReportLineDTO::getTotalAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
+                                dto.setAllowances(dtoLines);
+                                dto.setGroupTotal(dtoTotal);
+                                periodReport.add(dto);
+                            }
+                            periodReport.sort(Comparator.comparing(AllowanceGroupReportDTO::getGroupName));
+                            return periodReport;
+                        },
+                        (a, b) -> a,
+                        LinkedHashMap::new
+                ));
+
+        // Pre-compute per-period totals (grand allowances chips + counts) for Thymeleaf
+        Map<String, Map<String, Object>> pastPayitemsPeriodTotals = new LinkedHashMap<>();
+        for (Map.Entry<String, List<AllowanceGroupReportDTO>> entry : pastPayitemsReports.entrySet()) {
+            List<AllowanceGroupReportDTO> groups = entry.getValue();
+
+            long periodEmployees = groups.stream().mapToLong(AllowanceGroupReportDTO::getEmployeeCount).sum();
+
+            // Aggregate grand allowance chips for this period
+            Map<String, AllowanceReportLineDTO> periodGrandMap = new LinkedHashMap<>();
+            for (AllowanceGroupReportDTO grp : groups) {
+                for (AllowanceReportLineDTO line : grp.getAllowances()) {
+                    periodGrandMap.compute(line.getCode(), (code, existing) -> {
+                        if (existing == null) return new AllowanceReportLineDTO(line.getCode(), line.getDescription(), line.getTotalAmount(), line.isTaxable(), line.isPartOfGross());
+                        existing.setTotalAmount(existing.getTotalAmount().add(line.getTotalAmount()));
+                        return existing;
+                    });
+                }
+            }
+
+            Map<String, Object> periodTotals = new LinkedHashMap<>();
+            periodTotals.put("totalGroups",     (long) groups.size());
+            periodTotals.put("totalEmployees",  periodEmployees);
+            periodTotals.put("grandAllowances", new ArrayList<>(periodGrandMap.values()));
+            pastPayitemsPeriodTotals.put(entry.getKey(), periodTotals);
+        }
+
+        // ── 4. Model attributes ───────────────────────────────────────
+        model.addAttribute("payitemsReport",          payitemsReport);
+        model.addAttribute("grandAllowances",         new ArrayList<>(grandCodeMap.values()));
+        model.addAttribute("grandTotal",              grandTotal);
+        model.addAttribute("totalGroups",             (long) payitemsReport.size());
+        model.addAttribute("totalEmployees",          payitemsReport.stream().mapToLong(AllowanceGroupReportDTO::getEmployeeCount).sum());
+        model.addAttribute("groupBy",                 groupBy);
+        model.addAttribute("reportMonth",             currentMonth.toString());
+        model.addAttribute("pastPayitemsReports",     pastPayitemsReports);
+        model.addAttribute("pastPayitemsPeriodTotals",pastPayitemsPeriodTotals);
+        model.addAttribute("title",                   "Payroll Management");
+        model.addAttribute("subTitle",                "Manage employee payroll, salary details, and payment history");
         return "payroll/fragments/payitems-report";
     }
 
@@ -893,6 +971,8 @@ public class PayrollController {
     }
 
 
+
+
     @GetMapping("/payroll/paye-pension-report")
     public String getPayePensionReport(@RequestParam(defaultValue = "GRADE") String groupBy, Model model) {
         if (authenticationManager.isRestrictedHr()) {
@@ -901,6 +981,7 @@ public class PayrollController {
 
         YearMonth currentMonth = YearMonth.now();
 
+        // ── Scope filter (Job-HR) ──────────────────────────────────────
         final Set<Long> scopedIds;
         if (jobHrEmployeeAccessService.isJobHrScopedUser()) {
             Long actorGradeId = jobHrEmployeeAccessService.getLoggedInJobGradeId();
@@ -914,9 +995,11 @@ public class PayrollController {
             scopedIds = null;
         }
 
-        List<PaySlipDTO> paySlips = paySlipService.getCurrentPeriodPaySlips(1L);
         Map<Long, Employee> employeeMap = employeeOnboardingService.getAllOnboardings().stream()
                 .collect(Collectors.toMap(Employee::getId, e -> e, (a, b) -> a));
+
+        // ── CURRENT PERIOD ─────────────────────────────────────────────
+        List<PaySlipDTO> paySlips = paySlipService.getCurrentPeriodPaySlips(1L);
 
         Map<String, PayePensionGroupDTO> groupedData = new LinkedHashMap<>();
         BigDecimal grandPaye = BigDecimal.ZERO;
@@ -936,11 +1019,9 @@ public class PayrollController {
                     .employees(new ArrayList<>())
                     .build());
 
-            // 1. Initialize variables
             BigDecimal paye = BigDecimal.ZERO;
             BigDecimal empPension = ps.getPensionAmount() != null ? ps.getPensionAmount() : BigDecimal.ZERO;
 
-            // 2. Scan lines for both PAYE and Pension fallbacks
             if (ps.getDeductions() != null) {
                 for (PaySlipLineDTO deduction : ps.getDeductions()) {
                     String code = deduction.getCode() != null ? deduction.getCode().trim() : "";
@@ -950,8 +1031,6 @@ public class PayrollController {
                     if ("PAYE".equalsIgnoreCase(code)) {
                         paye = paye.add(amount);
                     }
-
-                    // If summary pension field is empty, extract it dynamically from the line breakdown
                     if (empPension.compareTo(BigDecimal.ZERO) == 0) {
                         if ("PENSION".equalsIgnoreCase(code) || desc.contains("pension")) {
                             empPension = empPension.add(amount);
@@ -960,7 +1039,6 @@ public class PayrollController {
                 }
             }
 
-            // 3. Compute statutory Employer Pension (standard 10% vs 8% ratio breakdown)
             BigDecimal employerPension = empPension.multiply(new BigDecimal("1.25")).setScale(2, RoundingMode.HALF_UP);
 
             PayePensionLineDTO line = PayePensionLineDTO.builder()
@@ -997,11 +1075,146 @@ public class PayrollController {
                 "totalEmployerPension", grandEmployerPension
         );
 
-        model.addAttribute("report", reportList);
-        model.addAttribute("totals", totals);
-        model.addAttribute("groupBy", groupBy);
-        model.addAttribute("reportMonth", currentMonth.toString());
-        model.addAttribute("title", "PAYE & Pension Report");
+        // ── PAST PERIODS ───────────────────────────────────────────────
+        // Deduplicate closed payslips: one best entry per (employeeId, yearMonth)
+        List<PaySlipDTO> closedPaySlips = paySlipService.getAllClosedPeriodPaySlips(1L).stream()
+                .filter(ps -> scopedIds == null || scopedIds.contains(ps.getEmployeeId()))
+                .collect(Collectors.collectingAndThen(
+                        Collectors.toList(),
+                        list -> {
+                            Map<String, PaySlipDTO> best = new LinkedHashMap<>();
+                            for (PaySlipDTO ps : list) {
+                                String key = ps.getEmployeeId() + "_" + YearMonth.from(ps.getPayDate());
+                                PaySlipDTO existing = best.get(key);
+                                boolean hasLines = ps.getDeductions() != null && !ps.getDeductions().isEmpty();
+                                boolean existingHasLines = existing != null && existing.getDeductions() != null && !existing.getDeductions().isEmpty();
+                                if (existing == null || (hasLines && !existingHasLines)) {
+                                    best.put(key, ps);
+                                }
+                            }
+                            return new ArrayList<>(best.values());
+                        }
+                ));
+
+        // Group by YearMonth, newest first
+        Map<String, List<PaySlipDTO>> byPeriod = closedPaySlips.stream()
+                .collect(Collectors.groupingBy(
+                        ps -> YearMonth.from(ps.getPayDate()).toString(),
+                        LinkedHashMap::new,
+                        Collectors.toList()
+                ));
+
+        // Build past PAYE/Pension groups per period
+        Map<String, List<PayePensionGroupDTO>> pastPayePensionReports = byPeriod.entrySet().stream()
+                .sorted(Map.Entry.<String, List<PaySlipDTO>>comparingByKey().reversed())
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        periodEntry -> {
+                            Map<String, List<PaySlipDTO>> grouped = new LinkedHashMap<>();
+                            for (PaySlipDTO ps : periodEntry.getValue()) {
+                                Employee emp = employeeMap.get(ps.getEmployeeId());
+                                String key = resolvePayItemsGroupName(emp, groupBy);
+                                grouped.computeIfAbsent(key, k -> new ArrayList<>()).add(ps);
+                            }
+                            return grouped.entrySet().stream()
+                                    .map(g -> {
+                                        PayePensionGroupDTO dto = PayePensionGroupDTO.builder()
+                                                .groupName(g.getKey())
+                                                .employees(new ArrayList<>())
+                                                .build();
+                                        BigDecimal grpPaye = BigDecimal.ZERO;
+                                        BigDecimal grpEmpPen = BigDecimal.ZERO;
+                                        BigDecimal grpEmplyrPen = BigDecimal.ZERO;
+
+                                        for (PaySlipDTO ps : g.getValue()) {
+                                            Employee emp = employeeMap.get(ps.getEmployeeId());
+                                            if (emp == null) continue;
+
+                                            BigDecimal linePaye = BigDecimal.ZERO;
+                                            BigDecimal lineEmpPen = ps.getPensionAmount() != null ? ps.getPensionAmount() : BigDecimal.ZERO;
+
+                                            if (ps.getDeductions() != null) {
+                                                for (PaySlipLineDTO d : ps.getDeductions()) {
+                                                    String dCode = d.getCode() != null ? d.getCode().trim() : "";
+                                                    String dDesc = d.getDescription() != null ? d.getDescription().toLowerCase() : "";
+                                                    BigDecimal dAmt = d.getAmount() != null ? d.getAmount() : BigDecimal.ZERO;
+                                                    if ("PAYE".equalsIgnoreCase(dCode) || dDesc.contains("paye") || dDesc.contains("pay as you earn")) {
+                                                        linePaye = linePaye.add(dAmt);
+                                                    }
+                                                    if (lineEmpPen.compareTo(BigDecimal.ZERO) == 0) {
+                                                        if ("PENSION".equalsIgnoreCase(dCode) || "PENSION_EMP".equalsIgnoreCase(dCode) || dDesc.contains("pension")) {
+                                                            lineEmpPen = lineEmpPen.add(dAmt);
+                                                        }
+                                                    }
+                                                }
+                                            }
+
+                                            BigDecimal lineEmplyrPen = lineEmpPen.multiply(new BigDecimal("1.25")).setScale(2, RoundingMode.HALF_UP);
+
+                                            PayePensionLineDTO pastLine = PayePensionLineDTO.builder()
+                                                    .employeeName(ps.getEmployeeName())
+                                                    .employeeId(ps.getEmployeeId())
+                                                    .paye(linePaye)
+                                                    .employeePension(lineEmpPen)
+                                                    .employerPension(lineEmplyrPen)
+                                                    .tinNumber(emp.getTinNumber() != null ? emp.getTinNumber() : "—")
+                                                    .rsaPin(emp.getRsaPin() != null ? emp.getRsaPin() : "—")
+                                                    .pfa(emp.getPfa() != null ? emp.getPfa() : "—")
+                                                    .build();
+
+                                            dto.getEmployees().add(pastLine);
+                                            grpPaye = grpPaye.add(linePaye);
+                                            grpEmpPen = grpEmpPen.add(lineEmpPen);
+                                            grpEmplyrPen = grpEmplyrPen.add(lineEmplyrPen);
+                                        }
+
+                                        dto.setEmployeeCount(dto.getEmployees().size());
+                                        dto.setTotalPaye(grpPaye);
+                                        dto.setTotalEmployeePension(grpEmpPen);
+                                        dto.setTotalEmployerPension(grpEmplyrPen);
+                                        return dto;
+                                    })
+                                    .filter(g -> !g.getEmployees().isEmpty())
+                                    .sorted(Comparator.comparing(PayePensionGroupDTO::getGroupName))
+                                    .collect(Collectors.toList());
+                        },
+                        (a, b) -> a,
+                        LinkedHashMap::new
+                ));
+
+        // Pre-compute per-period totals for Thymeleaf
+        Map<String, Map<String, Object>> pastPayePeriodTotals = new LinkedHashMap<>();
+        for (Map.Entry<String, List<PayePensionGroupDTO>> entry : pastPayePensionReports.entrySet()) {
+            List<PayePensionGroupDTO> groups = entry.getValue();
+            BigDecimal periodPaye = groups.stream()
+                    .map(g -> g.getTotalPaye() != null ? g.getTotalPaye() : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            BigDecimal periodEmpPen = groups.stream()
+                    .map(g -> g.getTotalEmployeePension() != null ? g.getTotalEmployeePension() : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            BigDecimal periodEmplyrPen = groups.stream()
+                    .map(g -> g.getTotalEmployerPension() != null ? g.getTotalEmployerPension() : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            long periodEmployees = groups.stream()
+                    .mapToLong(g -> g.getEmployeeCount())
+                    .sum();
+            pastPayePeriodTotals.put(entry.getKey(), Map.of(
+                    "totalGroups",          (long) groups.size(),
+                    "totalEmployees",       periodEmployees,
+                    "totalPaye",            periodPaye,
+                    "totalEmployeePension", periodEmpPen,
+                    "totalEmployerPension", periodEmplyrPen
+            ));
+        }
+
+        // ── Model attributes ───────────────────────────────────────────
+        model.addAttribute("report",                  reportList);
+        model.addAttribute("totals",                  totals);
+        model.addAttribute("groupBy",                 groupBy);
+        model.addAttribute("reportMonth",             currentMonth.toString());
+        model.addAttribute("pastPayePensionReports",  pastPayePensionReports);
+        model.addAttribute("pastPayePeriodTotals",    pastPayePeriodTotals);
+        model.addAttribute("title",    "PAYE & Pension Report");
         model.addAttribute("subTitle", "Statutory deductions and pension scheme reporting");
 
         return "payroll/fragments/paye-pension";

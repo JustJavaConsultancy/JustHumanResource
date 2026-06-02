@@ -196,6 +196,171 @@
         </div>
     </div>
 
+    <!-- ================================================================
+         PAST PAYE & PENSION REPORTS  (pastPayePensionReports: Map<String, List<PayePensionGroupDTO>>)
+         ================================================================ -->
+    <div th:if="${pastPayePensionReports != null and not #maps.isEmpty(pastPayePensionReports)}"
+         style="margin-top: 2.5rem;">
+
+        <div class="period-label">Past PAYE &amp; Pension Reports</div>
+
+        <div th:each="periodEntry : ${pastPayePensionReports}" style="margin-bottom: 0.875rem;">
+
+            <!-- Period accordion header -->
+            <div th:id="'pastPayeToggle_' + ${periodEntry.key}"
+                 th:attr="data-period-key=${periodEntry.key}"
+                 style="padding:1rem 1.5rem;background:#fafbfd;border:1px solid #e6e9ef;border-radius:8px;
+                        display:flex;align-items:center;justify-content:space-between;cursor:pointer;
+                        user-select:none;gap:1rem;">
+                <div style="display:flex;align-items:center;gap:0.75rem;">
+                    <div style="width:34px;height:34px;border-radius:8px;background:#eff3fb;
+                                display:flex;align-items:center;justify-content:center;">
+                        <i class="bi bi-calendar-month" style="color:#4b6fa8;font-size:0.95rem;"></i>
+                    </div>
+                    <div>
+                        <div class="text-sm font-semibold text-slate-700 past-paye-period-label"
+                             th:attr="data-period-key=${periodEntry.key}"
+                             th:text="${periodEntry.key}">Period</div>
+                        <div class="text-xs text-slate-400"
+                             th:text="${#lists.size(periodEntry.value)} + ' group' + (${#lists.size(periodEntry.value)} != 1 ? 's' : '')">groups</div>
+                    </div>
+                </div>
+                <span style="display:inline-flex;align-items:center;gap:5px;padding:5px 14px;border-radius:6px;
+                             font-size:0.78rem;font-weight:600;color:#1d4ed8;background:#eff6ff;
+                             border:1px solid #bfdbfe;white-space:nowrap;">
+                    <i th:id="'pastPayeChevron_' + ${periodEntry.key}" class="bi bi-chevron-down"
+                       style="transition:transform 0.2s;"></i>
+                    View
+                </span>
+            </div>
+
+            <!-- Collapsible content (hidden by default) -->
+            <div th:id="'pastPayeContent_' + ${periodEntry.key}" style="display:none;margin-top:0.5rem;">
+
+                <!-- Per-period Grand Total Card -->
+                <div class="grand-total-card"
+                     th:attr="data-period-key=${periodEntry.key}"
+                     style="margin-bottom:1.25rem;">
+                    <div class="grand-total-header">
+                        <div class="grand-total-left">
+                            <div class="grand-total-icon"><i class="bi bi-bank"></i></div>
+                            <div>
+                                <div class="grand-total-title">Grand Total</div>
+                                <div class="grand-total-sub">
+                                    <span th:text="${pastPayePeriodTotals[periodEntry.key]['totalGroups']}">0</span> Groups,
+                                    <span th:text="${pastPayePeriodTotals[periodEntry.key]['totalEmployees']}">0</span> Employees
+                                </div>
+                            </div>
+                        </div>
+                        <div class="grand-total-stats">
+                            <div class="grand-stat-box">
+                                <div class="grand-stat-lbl">Total PAYE TAX</div>
+                                <div class="grand-stat-val text-red-300 past-grand-paye"
+                                     th:text="${'₦' + #numbers.formatDecimal(pastPayePeriodTotals[periodEntry.key]['totalPaye'], 1, 'COMMA', 2, 'POINT')}">₦0.00</div>
+                            </div>
+                            <div class="grand-stat-box">
+                                <div class="grand-stat-lbl">Total Employee Pension</div>
+                                <div class="grand-stat-val text-red-300 past-grand-emp-pension"
+                                     th:text="${'₦' + #numbers.formatDecimal(pastPayePeriodTotals[periodEntry.key]['totalEmployeePension'], 1, 'COMMA', 2, 'POINT')}">₦0.00</div>
+                            </div>
+                            <div class="grand-stat-box">
+                                <div class="grand-stat-lbl">Total Employer Pension</div>
+                                <div class="grand-stat-val text-blue-300 past-grand-employer-pension"
+                                     th:text="${'₦' + #numbers.formatDecimal(pastPayePeriodTotals[periodEntry.key]['totalEmployerPension'], 1, 'COMMA', 2, 'POINT')}">₦0.00</div>
+                            </div>
+                            <div class="grand-dl-actions">
+                                <button class="bulk-dl-btn csv past-paye-grand-csv-btn"
+                                        th:attr="data-period-key=${periodEntry.key}">
+                                    <i class="bi bi-filetype-csv"></i> Download All CSV
+                                </button>
+                                <button class="bulk-dl-btn pdf past-paye-grand-pdf-btn"
+                                        th:attr="data-period-key=${periodEntry.key}">
+                                    <i class="bi bi-file-earmark-pdf"></i> Download All PDF
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div><!-- /per-period grand total -->
+
+                <!-- Individual group cards -->
+                <div th:each="group : ${periodEntry.value}"
+                     class="past-paye-group-card border border-slate-200 rounded-lg mb-4 overflow-hidden"
+                     th:attr="data-group-name=${group.groupName}, data-group-by=${groupBy}, data-period-key=${periodEntry.key}">
+
+                    <div class="flex items-center justify-between px-6 py-4 bg-slate-50 border-b border-slate-200">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                                <i class="bi bi-people-fill text-blue-600 text-sm"></i>
+                            </div>
+                            <div>
+                                <div th:text="${group.groupName}" class="font-bold text-slate-800 text-sm">Group</div>
+                                <div th:text="${group.employeeCount + ' employee' + (group.employeeCount != 1 ? 's' : '')}"
+                                     class="text-xs text-slate-400">0 employees</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-4 flex-wrap">
+                            <div class="header-stat">
+                                <div th:text="${'₦' + #numbers.formatDecimal(group.totalPaye, 1, 'COMMA', 2, 'POINT')}"
+                                     class="stat-val text-red-600">₦0.00</div>
+                                <div class="stat-lbl">PAYE TAX</div>
+                            </div>
+                            <div class="header-stat">
+                                <div th:text="${'₦' + #numbers.formatDecimal(group.totalEmployeePension, 1, 'COMMA', 2, 'POINT')}"
+                                     class="stat-val text-red-600">₦0.00</div>
+                                <div class="stat-lbl">Employee Pension</div>
+                            </div>
+                            <div class="header-stat">
+                                <div th:text="${'₦' + #numbers.formatDecimal(group.totalEmployerPension, 1, 'COMMA', 2, 'POINT')}"
+                                     class="stat-val text-blue-600">₦0.00</div>
+                                <div class="stat-lbl">Employer Pension</div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button class="bulk-dl-btn csv past-paye-group-csv-btn"><i class="bi bi-filetype-csv"></i> CSV</button>
+                                <button class="bulk-dl-btn pdf past-paye-group-pdf-btn"><i class="bi bi-file-earmark-pdf"></i> PDF</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="payroll-table">
+                            <thead>
+                            <tr>
+                                <th>Employee</th>
+                                <th>PAYE Tax</th>
+                                <th>Employee Pension</th>
+                                <th>Employer Pension</th>
+                                <th>Tax Payer ID (TIN)</th>
+                                <th>RSA PIN</th>
+                                <th>Pension Admin (PFA)</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="emp : ${group.employees}">
+                                <td>
+                                    <div class="flex items-center gap-3">
+                                        <div class="emp-avatar" th:text="${#strings.length(emp.employeeName) >= 2 ? #strings.toUpperCase(#strings.substring(emp.employeeName, 0, 2)) : 'NA'}">AA</div>
+                                        <div>
+                                            <div th:text="${emp.employeeName}" class="font-semibold text-slate-800 text-sm">—</div>
+                                            <div th:text="'ID · ' + ${emp.employeeId}" class="text-xs text-slate-400">—</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td th:text="${'₦' + #numbers.formatDecimal(emp.paye, 1, 'COMMA', 2, 'POINT')}" class="amount-deduct font-mono">—</td>
+                                <td th:text="${'₦' + #numbers.formatDecimal(emp.employeePension, 1, 'COMMA', 2, 'POINT')}" class="amount-deduct font-mono">—</td>
+                                <td th:text="${'₦' + #numbers.formatDecimal(emp.employerPension, 1, 'COMMA', 2, 'POINT')}" class="amount-employer font-mono">—</td>
+                                <td th:text="${emp.tinNumber}" class="font-mono text-slate-600">—</td>
+                                <td th:text="${emp.rsaPin}" class="font-mono text-slate-600">—</td>
+                                <td th:text="${emp.pfa}" class="text-slate-600">—</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div><!-- /group card -->
+            </div><!-- /collapsible content -->
+        </div><!-- /period entry -->
+    </div><!-- /past paye-pension reports -->
+
     <script>
         /* ─────────────────────────────────────────────────────────────
            SHARED UTILITIES
@@ -501,6 +666,222 @@
             const pdfBtn = e.target.closest('.group-pdf-btn');
             if (csvBtn) downloadGroupCSV(csvBtn, csvBtn.closest('.group-report-card'));
             if (pdfBtn) downloadGroupPDF(pdfBtn, pdfBtn.closest('.group-report-card'));
+        });
+
+        /* ─────────────────────────────────────────────────────────────
+           PAST RECORDS — ACCORDION TOGGLE
+           ───────────────────────────────────────────────────────────── */
+        function togglePastPaye(periodKey) {
+            const content = document.getElementById('pastPayeContent_' + periodKey);
+            const chevron = document.getElementById('pastPayeChevron_' + periodKey);
+            if (!content) return;
+            const isHidden = content.style.display === 'none' || content.style.display === '';
+            content.style.display = isHidden ? 'block' : 'none';
+            if (chevron) chevron.style.transform = isHidden ? 'rotate(180deg)' : '';
+        }
+        document.querySelectorAll('[id^="pastPayeToggle_"]').forEach(function(el) {
+            el.addEventListener('click', function() {
+                togglePastPaye(this.getAttribute('data-period-key'));
+            });
+        });
+
+        /* ─────────────────────────────────────────────────────────────
+           FORMAT PERIOD LABELS: "2026-05" → "May 2026"
+           ───────────────────────────────────────────────────────────── */
+        function formatPeriodKey(key) {
+            const months = ['January','February','March','April','May','June',
+                            'July','August','September','October','November','December'];
+            const parts = key.split('-');
+            if (parts.length === 2) {
+                const month = parseInt(parts[1], 10);
+                if (month >= 1 && month <= 12) return months[month - 1] + ' ' + parts[0];
+            }
+            return key;
+        }
+        (function formatPastPeriodLabels() {
+            document.querySelectorAll('.past-paye-period-label').forEach(function(el) {
+                const key = el.getAttribute('data-period-key') || el.textContent.trim();
+                el.textContent = formatPeriodKey(key);
+            });
+        })();
+
+        /* ─────────────────────────────────────────────────────────────
+           PAST GROUP — CSV
+           ───────────────────────────────────────────────────────────── */
+        function downloadPastPayeGroupCSV(btn, card) {
+            const groupName  = card.dataset.groupName || 'Group';
+            const groupBy    = card.dataset.groupBy   || 'Group';
+            const periodKey  = card.dataset.periodKey || '';
+            const periodLabel = formatPeriodKey(periodKey);
+            let csv = 'Period,Employee Name,Employee ID,PAYE Tax,Employee Pension,Employer Pension,Tax Payer ID (TIN),RSA PIN,Pension Admin (PFA)\n';
+            Array.from(card.querySelectorAll('table tbody tr')).forEach(r => {
+                const name      = r.querySelector('.font-semibold')?.textContent.trim() || '—';
+                const empId     = r.querySelector('.text-slate-400')?.textContent.replace('ID · ','').trim() || '—';
+                const paye      = stripCurrency(cellText(r, 1));
+                const empPen    = stripCurrency(cellText(r, 2));
+                const emplyrPen = stripCurrency(cellText(r, 3));
+                const tin       = cellText(r, 4);
+                const rsa       = cellText(r, 5);
+                const pfa       = cellText(r, 6);
+                csv += `"${periodLabel}","${name}","${empId}",${paye},${empPen},${emplyrPen},"${tin}","${rsa}","${pfa}"\n`;
+            });
+            const safePeriod = periodKey.replace(/[^a-z0-9]/gi, '-');
+            const safeGroup  = groupName.replace(/[^a-z0-9]/gi, '_');
+            triggerDownload(csv, `paye-pension-${safePeriod}-${groupBy}-${safeGroup}.csv`, 'text/csv;charset=utf-8;');
+        }
+
+        /* ─────────────────────────────────────────────────────────────
+           PAST GROUP — PDF
+           ───────────────────────────────────────────────────────────── */
+        function downloadPastPayeGroupPDF(btn, card) {
+            const groupName   = card.dataset.groupName || 'Group';
+            const groupBy     = card.dataset.groupBy   || 'Group';
+            const periodKey   = card.dataset.periodKey || '';
+            const periodLabel = formatPeriodKey(periodKey);
+            const date        = new Date().toISOString().split('T')[0];
+            const safePeriod  = periodKey.replace(/[^a-z0-9]/gi, '-');
+            const safeGroup   = groupName.replace(/[^a-z0-9]/gi, '_');
+
+            const stats      = card.querySelectorAll('.header-stat .stat-val');
+            const totalPaye  = stats[0]?.textContent.trim() || '₦0.00';
+            const totalEmpP  = stats[1]?.textContent.trim() || '₦0.00';
+            const totalEmplP = stats[2]?.textContent.trim() || '₦0.00';
+            const rows       = Array.from(card.querySelectorAll('table tbody tr'));
+
+            const rowHTMLs = rows.map((r, i) => {
+                const name   = r.querySelector('.font-semibold')?.textContent.trim() || '—';
+                const empId  = r.querySelector('.text-slate-400')?.textContent.replace('ID · ','').trim() || '—';
+                const paye   = cellText(r, 1), empPen = cellText(r, 2);
+                const emplPen= cellText(r, 3), tin = cellText(r, 4);
+                const rsa    = cellText(r, 5), pfa = cellText(r, 6);
+                const bg     = i % 2 === 0 ? '#ffffff' : '#f8fafc';
+                return `<tr style="background:${bg};border-bottom:1px solid #e2e8f0;">
+                    <td style="padding:0.55rem 0.75rem;vertical-align:top;">${name}<br><span style="font-size:0.7rem;color:#94a3b8">ID: ${empId}</span></td>
+                    <td style="padding:0.55rem 0.75rem;color:#b64343;font-weight:600;">${paye}</td>
+                    <td style="padding:0.55rem 0.75rem;color:#b64343;font-weight:600;">${empPen}</td>
+                    <td style="padding:0.55rem 0.75rem;color:#0284c7;font-weight:600;">${emplPen}</td>
+                    <td style="padding:0.55rem 0.75rem;font-family:monospace;">${tin}</td>
+                    <td style="padding:0.55rem 0.75rem;font-family:monospace;">${rsa}</td>
+                    <td style="padding:0.55rem 0.75rem;">${pfa}</td>
+                </tr>`;
+            });
+
+            const headerHTML  = buildHeaderHTML(`PAYE & Pension — ${periodLabel} — ${groupBy}: ${groupName}`, date, rows.length);
+            const summaryHTML = buildSummaryHTML(
+                ['TOTAL PAYE TAX', 'TOTAL EMPLOYEE PENSION', 'TOTAL EMPLOYER PENSION'],
+                [totalPaye, totalEmpP, totalEmplP],
+                ['red', 'red', 'blue']
+            );
+            renderBulkPDF(rowHTMLs, headerHTML, summaryHTML,
+                `paye-pension-${safePeriod}-${groupBy.toLowerCase()}-${safeGroup}.pdf`,
+                rows.length);
+        }
+
+        /* ─────────────────────────────────────────────────────────────
+           PAST GRAND TOTAL — CSV (all groups for a period)
+           ───────────────────────────────────────────────────────────── */
+        function downloadPastPayeGrandCSV(periodKey) {
+            const cards       = document.querySelectorAll(`.past-paye-group-card[data-period-key="${periodKey}"]`);
+            const groupBy     = cards[0]?.dataset.groupBy || 'Group';
+            const periodLabel = formatPeriodKey(periodKey);
+            let csv = 'Period,Group,Employee Name,Employee ID,PAYE Tax,Employee Pension,Employer Pension,Tax Payer ID (TIN),RSA PIN,Pension Admin (PFA)\n';
+            cards.forEach(card => {
+                const groupName = card.dataset.groupName || '—';
+                Array.from(card.querySelectorAll('table tbody tr')).forEach(r => {
+                    const name      = r.querySelector('.font-semibold')?.textContent.trim() || '—';
+                    const empId     = r.querySelector('.text-slate-400')?.textContent.replace('ID · ','').trim() || '—';
+                    const paye      = stripCurrency(cellText(r, 1));
+                    const empPen    = stripCurrency(cellText(r, 2));
+                    const emplyrPen = stripCurrency(cellText(r, 3));
+                    const tin       = cellText(r, 4);
+                    const rsa       = cellText(r, 5);
+                    const pfa       = cellText(r, 6);
+                    csv += `"${periodLabel}","${groupName}","${name}","${empId}",${paye},${empPen},${emplyrPen},"${tin}","${rsa}","${pfa}"\n`;
+                });
+            });
+            const safePeriod = periodKey.replace(/[^a-z0-9]/gi, '-');
+            triggerDownload(csv, `paye-pension-grand-total-${safePeriod}-${groupBy.toLowerCase()}.csv`, 'text/csv;charset=utf-8;');
+        }
+
+        /* ─────────────────────────────────────────────────────────────
+           PAST GRAND TOTAL — PDF (all groups for a period, chunked + merged)
+           ───────────────────────────────────────────────────────────── */
+        function downloadPastPayeGrandPDF(periodKey) {
+            const cards       = document.querySelectorAll(`.past-paye-group-card[data-period-key="${periodKey}"]`);
+            const groupBy     = cards[0]?.dataset.groupBy || 'Group';
+            const periodLabel = formatPeriodKey(periodKey);
+            const safePeriod  = periodKey.replace(/[^a-z0-9]/gi, '-');
+            const date        = new Date().toISOString().split('T')[0];
+
+            const grandCard      = document.querySelector(`.grand-total-card[data-period-key="${periodKey}"]`);
+            const totalPaye      = grandCard?.querySelector('.past-grand-paye')?.textContent.trim()            || '—';
+            const totalEmpPen    = grandCard?.querySelector('.past-grand-emp-pension')?.textContent.trim()     || '—';
+            const totalEmplyrPen = grandCard?.querySelector('.past-grand-employer-pension')?.textContent.trim()|| '—';
+
+            const rowHTMLs = [];
+            let totalEmps  = 0;
+
+            cards.forEach(card => {
+                const groupName = card.dataset.groupName || '—';
+                const rows = Array.from(card.querySelectorAll('table tbody tr'));
+                totalEmps += rows.length;
+
+                rowHTMLs.push(`<tr>
+                    <td colspan="7" style="background:#f0f4ff;font-weight:700;font-size:0.72rem;
+                                           color:#1e3a8a;letter-spacing:0.05em;text-transform:uppercase;
+                                           padding:6px 12px;">${groupBy}: ${groupName}</td>
+                </tr>`);
+
+                rows.forEach((r, i) => {
+                    const name   = r.querySelector('.font-semibold')?.textContent.trim() || '—';
+                    const empId  = r.querySelector('.text-slate-400')?.textContent.replace('ID · ','').trim() || '—';
+                    const paye   = cellText(r, 1), empPen = cellText(r, 2);
+                    const emplPen= cellText(r, 3), tin = cellText(r, 4);
+                    const rsa    = cellText(r, 5), pfa = cellText(r, 6);
+                    const bg     = i % 2 === 0 ? '#ffffff' : '#f8fafc';
+                    rowHTMLs.push(`<tr style="background:${bg};border-bottom:1px solid #e2e8f0;">
+                        <td style="padding:0.55rem 0.75rem;vertical-align:top;">${name}<br><span style="font-size:0.7rem;color:#94a3b8">ID: ${empId}</span></td>
+                        <td style="padding:0.55rem 0.75rem;color:#b64343;font-weight:600;">${paye}</td>
+                        <td style="padding:0.55rem 0.75rem;color:#b64343;font-weight:600;">${empPen}</td>
+                        <td style="padding:0.55rem 0.75rem;color:#0284c7;font-weight:600;">${emplPen}</td>
+                        <td style="padding:0.55rem 0.75rem;font-family:monospace;">${tin}</td>
+                        <td style="padding:0.55rem 0.75rem;font-family:monospace;">${rsa}</td>
+                        <td style="padding:0.55rem 0.75rem;">${pfa}</td>
+                    </tr>`);
+                });
+
+                rowHTMLs.push(`<tr><td colspan="7" style="padding:4px;"></td></tr>`);
+            });
+
+            const headerHTML  = buildHeaderHTML(`PAYE & Pension Grand Total — ${periodLabel} — ${groupBy}`, date, totalEmps);
+            const summaryHTML = buildSummaryHTML(
+                ['GRAND TOTAL PAYE TAX', 'GRAND TOTAL EMP. PENSION', 'GRAND TOTAL EMPLOYER PENSION'],
+                [totalPaye, totalEmpPen, totalEmplyrPen],
+                ['red', 'red', 'blue']
+            );
+            renderBulkPDF(rowHTMLs, headerHTML, summaryHTML,
+                `paye-pension-grand-total-${safePeriod}-${groupBy.toLowerCase()}.pdf`,
+                totalEmps);
+        }
+
+        /* ─────────────────────────────────────────────────────────────
+           WIRE UP PAST BUTTONS via event delegation
+           ───────────────────────────────────────────────────────────── */
+        document.addEventListener('click', function(e) {
+            const pastCsvBtn      = e.target.closest('.past-paye-group-csv-btn');
+            const pastPdfBtn      = e.target.closest('.past-paye-group-pdf-btn');
+            const pastGrandCsvBtn = e.target.closest('.past-paye-grand-csv-btn');
+            const pastGrandPdfBtn = e.target.closest('.past-paye-grand-pdf-btn');
+            if (pastCsvBtn) {
+                const card = pastCsvBtn.closest('.past-paye-group-card');
+                if (card) downloadPastPayeGroupCSV(pastCsvBtn, card);
+            }
+            if (pastPdfBtn) {
+                const card = pastPdfBtn.closest('.past-paye-group-card');
+                if (card) downloadPastPayeGroupPDF(pastPdfBtn, card);
+            }
+            if (pastGrandCsvBtn) downloadPastPayeGrandCSV(pastGrandCsvBtn.dataset.periodKey);
+            if (pastGrandPdfBtn) downloadPastPayeGrandPDF(pastGrandPdfBtn.dataset.periodKey);
         });
     </script>
 </main>
