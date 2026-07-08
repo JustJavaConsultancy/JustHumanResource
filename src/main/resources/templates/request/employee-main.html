@@ -31,11 +31,16 @@
         .request-primary-btn { display:inline-flex; align-items:center; gap:8px; border-radius:10px; background:#2563eb; color:#fff; padding:10px 16px; font-size:14px; font-weight:700; transition:background-color .15s ease, transform .15s ease; }
         .request-primary-btn:hover { background:#1d4ed8; transform:translateY(-1px); }
         .request-secondary-btn { display:inline-flex; align-items:center; gap:8px; border:1px solid var(--request-border); border-radius:10px; padding:10px 16px; font-size:14px; font-weight:700; background:var(--request-surface); }
+        .request-danger-btn { display:inline-flex; align-items:center; gap:8px; border:1px solid #fecaca; border-radius:10px; padding:10px 16px; color:#b91c1c; font-size:14px; font-weight:700; background:#fff; }
+        .request-success-btn { display:inline-flex; align-items:center; gap:8px; border-radius:10px; background:#16a34a; color:white; padding:10px 16px; font-size:14px; font-weight:700; }
+        .request-warning-btn { display:inline-flex; align-items:center; gap:8px; border-radius:10px; background:#d97706; color:white; padding:10px 16px; font-size:14px; font-weight:700; }
         .request-modal-panel { max-width:1040px; border:1px solid var(--request-border); background:var(--request-surface); border-radius:16px; box-shadow:0 24px 80px -28px rgba(15,23,42,.7); overflow:hidden; }
         .request-modal-head,.request-modal-foot { position:sticky; z-index:1; background:var(--request-surface); border-color:var(--request-border); }
         .request-type-panel { border:1px solid var(--request-border); background:var(--request-soft); border-radius:14px; padding:18px; }
         .request-line-row { border:1px solid var(--request-border); background:var(--request-surface); border-radius:12px; padding:12px; }
         .request-empty { padding:28px; text-align:center; color:var(--request-muted); }
+        .request-toast { display:flex; align-items:flex-start; gap:10px; border-radius:10px; padding:12px 14px; font-size:13px; font-weight:600; box-shadow:0 12px 28px -12px rgba(15,23,42,.5); max-width:340px; animation:request-toast-in .15s ease-out; }
+        @keyframes request-toast-in { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
     </style>
 </head>
 <body>
@@ -261,6 +266,49 @@
         </div>
     </div>
 
+    <div id="toastContainer" class="fixed bottom-4 right-4 z-[80] flex flex-col gap-2"></div>
+
+    <div id="confirmModal" class="fixed inset-0 z-[70] hidden">
+        <div class="absolute inset-0 bg-black/50"></div>
+        <div class="absolute inset-0 flex items-center justify-center p-4">
+            <div class="request-modal-panel w-full max-w-sm">
+                <div class="request-modal-head flex items-center justify-between border-b px-5 py-4">
+                    <h3 id="confirmModalTitle" class="text-base font-bold">Confirm</h3>
+                </div>
+                <div class="p-5 text-sm">
+                    <p id="confirmModalMessage" class="text-gray-600 dark:text-gray-300"></p>
+                </div>
+                <div class="request-modal-foot flex justify-end gap-2 border-t px-5 py-4">
+                    <button type="button" id="confirmModalCancel" class="request-secondary-btn">Cancel</button>
+                    <button type="button" id="confirmModalConfirm" class="request-danger-btn">Confirm</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="approvalModal" class="fixed inset-0 z-[70] hidden">
+        <div class="absolute inset-0 bg-black/50" onclick="closeApprovalModal()"></div>
+        <div class="absolute inset-0 flex items-center justify-center p-4">
+            <div class="request-modal-panel w-full max-w-md">
+                <div class="request-modal-head flex items-center justify-between border-b px-5 py-4">
+                    <h3 id="approvalModalTitle" class="text-base font-bold">Approve Request</h3>
+                    <button type="button" onclick="closeApprovalModal()" class="text-gray-500 hover:text-gray-700"><span class="material-icons-round">close</span></button>
+                </div>
+                <div class="space-y-3 p-5">
+                    <label class="block text-sm font-medium">
+                        <span id="approvalModalLabel">Comment (optional)</span>
+                        <textarea id="approvalModalComment" rows="4" class="request-control mt-1" placeholder="Add a comment"></textarea>
+                    </label>
+                    <p id="approvalModalError" class="hidden text-sm font-medium text-red-600"></p>
+                </div>
+                <div class="request-modal-foot flex justify-end gap-2 border-t px-5 py-4">
+                    <button type="button" onclick="closeApprovalModal()" class="request-secondary-btn">Cancel</button>
+                    <button type="button" id="approvalModalSubmit" onclick="submitApprovalModal()" class="request-primary-btn">Confirm</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         const api = '/api/requests';
         const pageBase = '/employee/requests';
@@ -275,7 +323,89 @@
 
         function openRequestModal() { document.getElementById('requestModal').classList.remove('hidden'); }
         function closeRequestModal() { document.getElementById('requestModal').classList.add('hidden'); }
-        function showError(message) { alert(message || 'Request failed'); }
+
+        function showToast(message, type = 'error') {
+            const container = document.getElementById('toastContainer');
+            const styles = {
+                error: 'bg-red-600 text-white',
+                success: 'bg-green-600 text-white',
+                info: 'bg-gray-800 text-white'
+            };
+            const toast = document.createElement('div');
+            toast.className = `request-toast ${styles[type] || styles.info}`;
+            toast.innerHTML = `<span class="material-icons-round text-base">${type === 'success' ? 'check_circle' : type === 'error' ? 'error' : 'info'}</span><span>${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 4500);
+        }
+        function showError(message) { showToast(message || 'Request failed'); }
+
+        function showConfirmModal({ title = 'Confirm', message = '', confirmLabel = 'Confirm', danger = true } = {}) {
+            return new Promise(resolve => {
+                const modal = document.getElementById('confirmModal');
+                const confirmBtn = document.getElementById('confirmModalConfirm');
+                const cancelBtn = document.getElementById('confirmModalCancel');
+                document.getElementById('confirmModalTitle').textContent = title;
+                document.getElementById('confirmModalMessage').textContent = message;
+                confirmBtn.textContent = confirmLabel;
+                confirmBtn.className = danger ? 'request-danger-btn' : 'request-primary-btn';
+                modal.classList.remove('hidden');
+
+                function cleanup(result) {
+                    modal.classList.add('hidden');
+                    confirmBtn.removeEventListener('click', onConfirm);
+                    cancelBtn.removeEventListener('click', onCancel);
+                    resolve(result);
+                }
+                function onConfirm() { cleanup(true); }
+                function onCancel() { cleanup(false); }
+                confirmBtn.addEventListener('click', onConfirm);
+                cancelBtn.addEventListener('click', onCancel);
+            });
+        }
+
+        let approvalModalState = null;
+        function openApprovalModal(taskId, action) {
+            approvalModalState = { taskId, action };
+            const titles = { approve: 'Approve Request', reject: 'Reject Request', return: 'Return Request' };
+            const labels = { approve: 'Comment (optional)', reject: 'Comment (required)', return: 'Comment (required)' };
+            const buttonClasses = { approve: 'request-success-btn', reject: 'request-danger-btn', return: 'request-warning-btn' };
+            document.getElementById('approvalModalTitle').textContent = titles[action] || 'Confirm';
+            document.getElementById('approvalModalLabel').textContent = labels[action] || 'Comment';
+            document.getElementById('approvalModalComment').value = '';
+            document.getElementById('approvalModalError').classList.add('hidden');
+            const submitBtn = document.getElementById('approvalModalSubmit');
+            submitBtn.className = buttonClasses[action] || 'request-primary-btn';
+            submitBtn.textContent = (titles[action] || 'Confirm').split(' ')[0];
+            document.getElementById('approvalModal').classList.remove('hidden');
+            document.getElementById('approvalModalComment').focus();
+        }
+
+        function closeApprovalModal() {
+            document.getElementById('approvalModal').classList.add('hidden');
+            approvalModalState = null;
+        }
+
+        async function submitApprovalModal() {
+            if (!approvalModalState) return;
+            const { taskId, action } = approvalModalState;
+            const comment = document.getElementById('approvalModalComment').value.trim();
+            const errorEl = document.getElementById('approvalModalError');
+            if (action !== 'approve' && !comment) {
+                errorEl.textContent = 'A comment is required.';
+                errorEl.classList.remove('hidden');
+                return;
+            }
+            try {
+                await json(`${api}/approvals/${action}`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({taskId, comment})});
+                closeApprovalModal();
+                showToast(`Request ${action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : 'returned'}.`, 'success');
+                await loadData();
+            } catch (e) {
+                errorEl.textContent = e.message;
+                errorEl.classList.remove('hidden');
+            }
+        }
+
         function fmtType(type) { return (type || '').replaceAll('_', ' '); }
         function badge(status) {
             const color = status === 'APPROVED' ? 'request-badge-success' :
@@ -407,9 +537,9 @@
                     <td class="px-4 py-3">${t.taskName || t.taskDefinitionKey || ''}</td>
                     <td class="px-4 py-3">${(t.createdTime || '').replace('T', ' ')}</td>
                     <td class="px-4 py-3">
-                        <button onclick="approval('${t.taskId}','approve')" class="rounded bg-green-600 px-3 py-1 text-xs text-white">Approve</button>
-                        <button onclick="approval('${t.taskId}','reject')" class="rounded bg-red-600 px-3 py-1 text-xs text-white">Reject</button>
-                        <button onclick="approval('${t.taskId}','return')" class="rounded bg-orange-600 px-3 py-1 text-xs text-white">Return</button>
+                        <button onclick="openApprovalModal('${t.taskId}','approve')" class="rounded bg-green-600 px-3 py-1 text-xs text-white">Approve</button>
+                        <button onclick="openApprovalModal('${t.taskId}','reject')" class="rounded bg-red-600 px-3 py-1 text-xs text-white">Reject</button>
+                        <button onclick="openApprovalModal('${t.taskId}','return')" class="rounded bg-orange-600 px-3 py-1 text-xs text-white">Return</button>
                     </td>
                 </tr>`;
             }).join('') : '<tr><td colspan="4"><div class="request-empty"><span class="material-icons-round mb-2 block text-3xl">task_alt</span>No pending approval tasks.</div></td></tr>';
@@ -594,15 +724,6 @@
                 };
             }
             return data;
-        }
-
-        async function approval(taskId, action) {
-            const comment = prompt(action === 'approve' ? 'Optional comment:' : 'Comment is required:') || '';
-            if (action !== 'approve' && !comment.trim()) return showError('A comment is required.');
-            try {
-                await json(`${api}/approvals/${action}`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({taskId, comment})});
-                await loadData();
-            } catch (e) { showError(e.message); }
         }
 
         async function uploadInitialAttachment(requestId) {
