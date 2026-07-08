@@ -42,6 +42,32 @@
     <section class="dashboard-card overflow-hidden">
         <div class="flex items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-gray-700">
             <div class="flex items-center gap-2">
+                <span class="material-icons-round text-primary-600 dark:text-primary-400">fact_check</span>
+                <h4 class="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Pending Approvals</h4>
+            </div>
+            <button type="button" onclick="loadPendingApprovals()"
+                    class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">
+                Refresh
+            </button>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full min-w-[680px] text-sm">
+                <thead class="table-header">
+                <tr>
+                    <th class="px-4 py-3 text-left">Request</th>
+                    <th class="px-4 py-3 text-left">Task</th>
+                    <th class="px-4 py-3 text-left">Created</th>
+                    <th class="px-4 py-3 text-left">Action</th>
+                </tr>
+                </thead>
+                <tbody id="pendingApprovalRows" class="divide-y divide-gray-200 dark:divide-gray-700"></tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="dashboard-card overflow-hidden">
+        <div class="flex items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-gray-700">
+            <div class="flex items-center gap-2">
                 <span class="material-icons-round text-primary-600 dark:text-primary-400">history</span>
                 <h4 class="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Leave Requests</h4>
             </div>
@@ -125,9 +151,39 @@
         </div>
     </div>
 
+    <div id="approvalCommentModal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black/50" onclick="closeApprovalCommentModal()"></div>
+        <div class="absolute inset-0 flex items-center justify-center p-4">
+            <div class="w-full max-w-md rounded-xl border border-gray-200 bg-white shadow-xl dark:border-gray-700 dark:bg-gray-800">
+                <div class="flex items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-gray-700">
+                    <h3 id="approvalCommentTitle" class="text-lg font-bold text-gray-900 dark:text-white">Approve Request</h3>
+                    <button type="button" onclick="closeApprovalCommentModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                        <span class="material-icons-round">close</span>
+                    </button>
+                </div>
+                <form id="approvalCommentForm" class="space-y-4 p-5">
+                    <label class="block text-sm font-medium">
+                        <span id="approvalCommentLabel">Comment (optional)</span>
+                        <textarea id="approvalCommentText" rows="3" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-700"></textarea>
+                    </label>
+                    <div class="flex justify-end gap-2 pt-2">
+                        <button type="button" onclick="closeApprovalCommentModal()" class="rounded-lg border border-gray-300 px-4 py-2 dark:border-gray-600">Cancel</button>
+                        <button id="approvalCommentSubmitBtn" type="submit" class="rounded-lg bg-primary-600 px-4 py-2 text-white hover:bg-primary-700">Confirm</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <script>
         function openLeaveModal() { document.getElementById('leaveModal').classList.remove('hidden'); }
         function closeLeaveModal() { document.getElementById('leaveModal').classList.add('hidden'); }
+
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, ch => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[ch]));
+        }
 
         function badge(status) {
             const value = (status || '').toUpperCase();
@@ -188,6 +244,102 @@
             }
         }
 
+        async function loadPendingApprovals() {
+            const body = document.getElementById('pendingApprovalRows');
+            body.innerHTML = '<tr><td colspan="4" class="px-4 py-4 text-gray-500">Loading...</td></tr>';
+            try {
+                const data = await fetchJson('/leave/approvals/tasks');
+                if (!data.length) {
+                    body.innerHTML = '<tr><td colspan="4" class="px-4 py-4 text-gray-500">No pending approval tasks.</td></tr>';
+                    return;
+                }
+                body.innerHTML = data.map(t => {
+                    const leaveRequestId = (t.variables && t.variables.leaveRequestId) ? t.variables.leaveRequestId : '-';
+                    const created = t.createdTime ? String(t.createdTime).replace('T', ' ') : '';
+                    return `
+                        <tr class="table-row">
+                            <td class="px-4 py-3">Leave #${escapeHtml(leaveRequestId)}</td>
+                            <td class="px-4 py-3">${escapeHtml(t.taskName || t.taskDefinitionKey || '')}</td>
+                            <td class="px-4 py-3">${escapeHtml(created)}</td>
+                            <td class="px-4 py-3">
+                                <div class="flex gap-2">
+                                    <button onclick="approveLeaveTask('${t.taskId}')" class="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700">Approve</button>
+                                    <button onclick="rejectLeaveTask('${t.taskId}')" class="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700">Reject</button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            } catch (e) {
+                body.innerHTML = '<tr><td colspan="4" class="px-4 py-4 text-red-600">' + escapeHtml(e.message) + '</td></tr>';
+            }
+        }
+
+        let pendingApprovalTaskId = null;
+let pendingApprovalUrl = null;
+
+function openApprovalCommentModal(url, taskId, isReject) {
+    pendingApprovalUrl = url;
+    pendingApprovalTaskId = taskId;
+    document.getElementById('approvalCommentTitle').textContent = isReject ? 'Reject Request' : 'Approve Request';
+    document.getElementById('approvalCommentLabel').textContent = isReject ? 'Comment (required)' : 'Comment (optional)';
+    document.getElementById('approvalCommentText').value = '';
+    document.getElementById('approvalCommentSubmitBtn').className = isReject
+        ? 'rounded-lg bg-red-600 px-4 py-2 text-white hover:bg-red-700'
+        : 'rounded-lg bg-primary-600 px-4 py-2 text-white hover:bg-primary-700';
+    document.getElementById('approvalCommentSubmitBtn').textContent = isReject ? 'Reject' : 'Approve';
+    document.getElementById('approvalCommentModal').classList.remove('hidden');
+}
+
+function closeApprovalCommentModal() {
+    document.getElementById('approvalCommentModal').classList.add('hidden');
+    pendingApprovalUrl = null;
+    pendingApprovalTaskId = null;
+}
+
+// approve/reject endpoints return an empty 200 body, so we deliberately
+// do NOT call fetchJson()/response.json() here - parsing an empty body
+// as JSON throws and would show a false error even on success.
+async function postApprovalAction(url, taskId, comment) {
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({taskId, comment})
+    });
+    if (!response.ok) {
+        throw new Error(await response.text());
+    }
+}
+
+function approveLeaveTask(taskId) {
+    openApprovalCommentModal('/leave/approvals/approve', taskId, false);
+}
+
+function rejectLeaveTask(taskId) {
+    openApprovalCommentModal('/leave/approvals/reject', taskId, true);
+}
+
+document.getElementById('approvalCommentForm').addEventListener('submit', async event => {
+    event.preventDefault();
+    const comment = document.getElementById('approvalCommentText').value.trim();
+    const isReject = pendingApprovalUrl && pendingApprovalUrl.endsWith('/reject');
+    if (isReject && !comment) {
+        alert('A comment is required to reject a request.');
+        return;
+    }
+    const button = document.getElementById('approvalCommentSubmitBtn');
+    button.disabled = true;
+    try {
+        await postApprovalAction(pendingApprovalUrl, pendingApprovalTaskId, comment);
+        closeApprovalCommentModal();
+        await Promise.all([loadPendingApprovals(), loadLeaveRequests()]);
+    } catch (e) {
+        alert(e.message);
+    } finally {
+        button.disabled = false;
+    }
+});
+
         document.getElementById('leaveForm').addEventListener('submit', async event => {
             event.preventDefault();
             const button = document.getElementById('submitLeaveBtn');
@@ -218,7 +370,7 @@
         });
 
         document.addEventListener('DOMContentLoaded', async () => {
-            await Promise.all([loadStandIns(), loadLeaveRequests()]);
+            await Promise.all([loadStandIns(), loadLeaveRequests(), loadPendingApprovals()]);
         });
     </script>
 </main>
