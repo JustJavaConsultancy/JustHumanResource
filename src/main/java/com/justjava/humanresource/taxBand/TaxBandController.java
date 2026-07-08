@@ -6,6 +6,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import com.justjava.humanresource.payroll.statutory.service.TaxBandUploadService;
+import com.justjava.humanresource.payroll.statutory.service.impl.TaxBandUploadServiceImpl.TaxBandUploadValidationException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.multipart.MultipartFile;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -17,6 +25,9 @@ import java.util.Map;
 public class TaxBandController {
     @Autowired
     private PayrollSetupService payrollSetupService;
+
+    @Autowired
+    private TaxBandUploadService taxBandUploadService;
 
     @GetMapping("/tax-band")
     public String taxBand(Model model) {
@@ -90,5 +101,28 @@ public class TaxBandController {
                                                          @RequestBody PayeTaxBand band) {
         payrollSetupService.updateTax(id, band);
         return "redirect:/tax-band";
+    }
+
+
+    @PostMapping("/tax-band/upload-csv")
+    @ResponseBody
+    public ResponseEntity<?> uploadTaxBandCsv(@RequestParam("file") MultipartFile file) {
+        try {
+            TaxBandUploadService.UploadSummary summary = taxBandUploadService.uploadTaxBands(file);
+            Map<String, Object> body = new LinkedHashMap<>();
+            body.put("message", "Tax bands uploaded successfully");
+            body.put("totalRows", summary.totalRows());
+            body.put("successRows", summary.successRows());
+            body.put("regimeCode", summary.regimeCode());
+            return ResponseEntity.ok(body);
+        } catch (TaxBandUploadValidationException ex) {
+            Map<String, Object> body = new LinkedHashMap<>();
+            body.put("error", "TAX_BAND_UPLOAD_VALIDATION_FAILED");
+            body.put("message", "Upload blocked due to validation errors");
+            body.put("totalRows", ex.getTotalRows());
+            body.put("invalidRowCount", ex.getRowErrors().size());
+            body.put("rowErrors", ex.getRowErrors());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+        }
     }
 }
