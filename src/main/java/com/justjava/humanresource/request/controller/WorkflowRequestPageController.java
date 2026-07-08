@@ -20,4 +20,11 @@ public class WorkflowRequestPageController {
         model.addAttribute("subTitle", "Review request details, approvals, comments, and attachments");
         return "request/detail";
     }
+
+    @GetMapping("/requests/userGuide")
+    public String userGuide(Model model) {
+        model.addAttribute("title", "Request Workflow User Guide");
+        model.addAttribute("subTitle", "How to create, submit, approve, and track organizational requests");
+        return "request/userGuide";
+    }
 }

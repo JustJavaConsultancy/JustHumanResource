@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+    <meta charset="UTF-8">
+    <title>Request Workflow User Guide</title>
+    <style>
+        .guide-card { border: 1px solid #e5e7eb; border-radius: 8px; background: #fff; }
+        .dark .guide-card { border-color: #374151; background: #1f2937; }
+        .guide-link { display: flex; align-items: center; gap: .5rem; border-radius: 8px; padding: .65rem .8rem; font-size: .875rem; }
+        .guide-link:hover { background: #f3f4f6; }
+        .dark .guide-link:hover { background: #374151; }
+        .guide-step { display: inline-flex; align-items: center; justify-content: center; width: 1.75rem; height: 1.75rem; border-radius: 999px; background: #2563eb; color: white; font-weight: 700; font-size: .8rem; flex: none; }
+        .guide-pill { display: inline-flex; align-items: center; border-radius: 999px; padding: .2rem .55rem; font-size: .72rem; font-weight: 700; }
+        .pill-blue { background: #dbeafe; color: #1e40af; }
+        .pill-green { background: #dcfce7; color: #166534; }
+        .pill-yellow { background: #fef3c7; color: #92400e; }
+        .pill-red { background: #fee2e2; color: #991b1b; }
+        .pill-gray { background: #f3f4f6; color: #374151; }
+        .guide-code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; background: #f3f4f6; border-radius: 6px; padding: .1rem .4rem; font-size: .78rem; }
+        .dark .guide-code { background: #374151; }
+        .guide-table th { text-align: left; font-weight: 700; color: #4b5563; }
+        .dark .guide-table th { color: #d1d5db; }
+        .guide-table th, .guide-table td { border-bottom: 1px solid #e5e7eb; padding: .75rem; vertical-align: top; }
+        .dark .guide-table th, .dark .guide-table td { border-color: #374151; }
+        html { scroll-behavior: smooth; }
+    </style>
+</head>
+<body>
+<main layout:fragment="content" class="space-y-6">
+    <section class="rounded-lg bg-primary-800 px-6 py-7 text-white">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+                <p class="text-sm font-semibold uppercase tracking-wide text-blue-100">User Guide</p>
+                <h1 class="mt-2 text-2xl font-bold tracking-tight md:text-3xl">Request Workflow</h1>
+                <p class="mt-2 max-w-3xl text-sm text-blue-100 md:text-base">
+                    Use this guide to create, submit, approve, return, reject, track, and close organizational requests.
+                    The module supports staff requisitions, file requests, asset requests, and general requests.
+                </p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <a href="/requests" class="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-primary-700 hover:bg-blue-50">Open Requests</a>
+                <a href="#quick-start" class="rounded-lg border border-blue-300 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">Quick Start</a>
+            </div>
+        </div>
+    </section>
+
+    <div class="grid grid-cols-1 gap-6 xl:grid-cols-12">
+        <aside class="xl:col-span-3">
+            <div class="guide-card sticky top-24 p-4">
+                <h2 class="mb-3 text-sm font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">Navigate Guide</h2>
+                <nav class="space-y-1">
+                    <a class="guide-link" href="#overview"><span class="material-icons-round text-sm">dashboard</span> Overview</a>
+                    <a class="guide-link" href="#roles"><span class="material-icons-round text-sm">groups</span> Roles</a>
+                    <a class="guide-link" href="#quick-start"><span class="material-icons-round text-sm">rocket_launch</span> Quick Start</a>
+                    <a class="guide-link" href="#request-types"><span class="material-icons-round text-sm">category</span> Request Types</a>
+                    <a class="guide-link" href="#create"><span class="material-icons-round text-sm">add_circle</span> Create Request</a>
+                    <a class="guide-link" href="#details"><span class="material-icons-round text-sm">article</span> Request Detail</a>
+                    <a class="guide-link" href="#approval"><span class="material-icons-round text-sm">task_alt</span> Approval Flow</a>
+                    <a class="guide-link" href="#files-items"><span class="material-icons-round text-sm">attach_file</span> Files & Items</a>
+                    <a class="guide-link" href="#statuses"><span class="material-icons-round text-sm">flag</span> Statuses</a>
+                    <a class="guide-link" href="#troubleshooting"><span class="material-icons-round text-sm">help</span> Troubleshooting</a>
+                </nav>
+            </div>
+        </aside>
+
+        <div class="space-y-6 xl:col-span-9">
+            <section id="overview" class="guide-card p-5">
+                <h2 class="text-xl font-bold">1. What The Request Workflow Does</h2>
+                <p class="mt-3 text-sm leading-6 text-gray-600 dark:text-gray-300">
+                    The Request Workflow is the application area for managing organization-wide requests. A requester creates a draft,
+                    submits it for approval, and tracks its status. Approvers receive tasks, make decisions, and leave comments.
+                    HR/admin users can see wider request activity and close approved requests when the work is complete.
+                </p>
+                <div class="mt-4 grid grid-cols-1 gap-3 md:grid-cols-4">
+                    <div class="rounded-lg bg-gray-50 p-4 dark:bg-gray-800">
+                        <p class="font-semibold">Create</p>
+                        <p class="mt-1 text-sm text-gray-500">Capture request details and draft them.</p>
+                    </div>
+                    <div class="rounded-lg bg-gray-50 p-4 dark:bg-gray-800">
+                        <p class="font-semibold">Submit</p>
+                        <p class="mt-1 text-sm text-gray-500">Send the request into approval workflow.</p>
+                    </div>
+                    <div class="rounded-lg bg-gray-50 p-4 dark:bg-gray-800">
+                        <p class="font-semibold">Approve</p>
+                        <p class="mt-1 text-sm text-gray-500">Approvers approve, reject, or return requests.</p>
+                    </div>
+                    <div class="rounded-lg bg-gray-50 p-4 dark:bg-gray-800">
+                        <p class="font-semibold">Track</p>
+                        <p class="mt-1 text-sm text-gray-500">Review status, timeline, comments, files, and items.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="roles" class="guide-card p-5">
+                <h2 class="text-xl font-bold">2. Who Uses The Workflow</h2>
+                <div class="mt-4 overflow-x-auto">
+                    <table class="guide-table w-full text-sm">
+                        <thead>
+                        <tr>
+                            <th>Role</th>
+                            <th>What They Can Do</th>
+                            <th>Typical Screen</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr>
+                            <td class="font-semibold">Employee</td>
+                            <td>Create requests, save drafts, submit owned requests, track owned requests, add comments, and upload permitted attachments.</td>
+                            <td><span class="guide-code">/requests</span></td>
+                        </tr>
+                        <tr>
+                            <td class="font-semibold">Approver</td>
+                            <td>View assigned approval tasks and approve, reject, or return requests with comments.</td>
+                            <td>Pending My Approval section</td>
+                        </tr>
+                        <tr>
+                            <td class="font-semibold">HR/Admin</td>
+                            <td>View all requests, add internal comments, and close approved requests.</td>
+                            <td><span class="guide-code">/requests</span> and request detail pages</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p class="mt-3 text-sm text-gray-500">
+                    Note: every user who creates a request must have an employee profile linked to their login email.
+                </p>
+            </section>
+
+            <section id="quick-start" class="guide-card p-5">
+                <h2 class="text-xl font-bold">3. Quick Start</h2>
+                <div class="mt-4 space-y-4">
+                    <div class="flex gap-3">
+                        <span class="guide-step">1</span>
+                        <div>
+                            <p class="font-semibold">Open Requests</p>
+                            <p class="text-sm text-gray-600 dark:text-gray-300">Use the sidebar menu and click <strong>Requests</strong>, or open <span class="guide-code">/requests</span>.</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-3">
+                        <span class="guide-step">2</span>
+                        <div>
+                            <p class="font-semibold">Create a draft</p>
+                            <p class="text-sm text-gray-600 dark:text-gray-300">Click <strong>New Request</strong>, choose a request type, fill the required fields, and click <strong>Create Draft</strong>.</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-3">
+                        <span class="guide-step">3</span>
+                        <div>
+                            <p class="font-semibold">Review and submit</p>
+                            <p class="text-sm text-gray-600 dark:text-gray-300">The draft opens on its detail page. Check the details, attachments, and items, then click <strong>Submit</strong>.</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-3">
+                        <span class="guide-step">4</span>
+                        <div>
+                            <p class="font-semibold">Track progress</p>
+                            <p class="text-sm text-gray-600 dark:text-gray-300">Use status badges, the approval timeline, comments, and activity log to follow the request.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="request-types" class="guide-card p-5">
+                <h2 class="text-xl font-bold">4. Request Types</h2>
+                <div class="mt-4 overflow-x-auto">
+                    <table class="guide-table w-full text-sm">
+                        <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Use It For</th>
+                            <th>Key Fields</th>
+                            <th>Special Rule</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr>
+                            <td><span class="guide-pill pill-blue">Staff Requisition</span></td>
+                            <td>Request new or replacement headcount.</td>
+                            <td>Job title, department ID, positions, employment type, target start date, budget, reason for hire.</td>
+                            <td>Requires staff requisition details before it can be created.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="guide-pill pill-green">File Request</span></td>
+                            <td>Request access to, approval for, or processing of files/documents.</td>
+                            <td>File category, confidentiality level, requested access type, purpose, retention flag.</td>
+                            <td>Configured to require at least one attachment before submission.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="guide-pill pill-yellow">Asset Request</span></td>
+                            <td>Request equipment, software, tools, supplies, or other assets.</td>
+                            <td>Cost center, required date, business justification, item rows.</td>
+                            <td>Requires at least one item.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="guide-pill pill-gray">General Request</span></td>
+                            <td>Capture requests that do not fit another category.</td>
+                            <td>Title, description, priority.</td>
+                            <td>Minimal required fields.</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="create" class="guide-card p-5">
+                <h2 class="text-xl font-bold">5. Create And Submit A Request</h2>
+                <div class="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+                    <div class="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+                        <h3 class="font-semibold">Create Draft</h3>
+                        <ol class="mt-3 list-decimal space-y-2 pl-5 text-sm text-gray-600 dark:text-gray-300">
+                            <li>Open <strong>Requests</strong>.</li>
+                            <li>Click <strong>New Request</strong>.</li>
+                            <li>Select the request type.</li>
+                            <li>Enter the common fields: title, description, and priority.</li>
+                            <li>Complete the type-specific fields that appear.</li>
+                            <li>Click <strong>Create Draft</strong>.</li>
+                        </ol>
+                    </div>
+                    <div class="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+                        <h3 class="font-semibold">Submit For Approval</h3>
+                        <ol class="mt-3 list-decimal space-y-2 pl-5 text-sm text-gray-600 dark:text-gray-300">
+                            <li>Open the request detail page.</li>
+                            <li>Review the summary and type details.</li>
+                            <li>Add required attachments or items if needed.</li>
+                            <li>Click <strong>Submit</strong>.</li>
+                            <li>The request moves to <strong>In Approval</strong> when an approval route is found.</li>
+                        </ol>
+                    </div>
+                </div>
+                <div class="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-100">
+                    If the system says no approval route is configured, the requester may not have a reporting line configured.
+                </div>
+            </section>
+
+            <section id="details" class="guide-card p-5">
+                <h2 class="text-xl font-bold">6. Understand The Request Detail Page</h2>
+                <div class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div>
+                        <h3 class="font-semibold">Main Sections</h3>
+                        <ul class="mt-2 list-disc space-y-2 pl-5 text-sm text-gray-600 dark:text-gray-300">
+                            <li><strong>Summary:</strong> title, type, requester, department, and submission date.</li>
+                            <li><strong>Type Details:</strong> request-type-specific data.</li>
+                            <li><strong>Items:</strong> asset or purchase-style item rows.</li>
+                            <li><strong>Attachments:</strong> files uploaded to support the request.</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h3 class="font-semibold">Tracking Sections</h3>
+                        <ul class="mt-2 list-disc space-y-2 pl-5 text-sm text-gray-600 dark:text-gray-300">
+                            <li><strong>Approval Timeline:</strong> each approver level and decision.</li>
+                            <li><strong>Comments:</strong> requester, approver, and HR/admin notes.</li>
+                            <li><strong>Activity:</strong> creation, submission, approval, rejection, return, attachment, cancellation, and closure events.</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <section id="approval" class="guide-card p-5">
+                <h2 class="text-xl font-bold">7. Approval Flow</h2>
+                <p class="mt-3 text-sm leading-6 text-gray-600 dark:text-gray-300">
+                    Submitted requests use the configured Flowable workflow process. The current implementation resolves approvers using the requester's line-manager approval route.
+                    Approvers see their tasks in the <strong>Pending My Approval</strong> section.
+                </p>
+                <div class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+                    <div class="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+                        <span class="guide-pill pill-green">Approve</span>
+                        <p class="mt-3 text-sm text-gray-600 dark:text-gray-300">Moves the request to the next approver. If there are no more approvers, the request becomes approved.</p>
+                    </div>
+                    <div class="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+                        <span class="guide-pill pill-red">Reject</span>
+                        <p class="mt-3 text-sm text-gray-600 dark:text-gray-300">Stops the workflow and marks the request as rejected. A rejection comment is required.</p>
+                    </div>
+                    <div class="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+                        <span class="guide-pill pill-yellow">Return</span>
+                        <p class="mt-3 text-sm text-gray-600 dark:text-gray-300">Returns the request for correction. The requester can edit supporting information and resubmit.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="files-items" class="guide-card p-5">
+                <h2 class="text-xl font-bold">8. Files And Items</h2>
+                <div class="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+                    <div class="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+                        <h3 class="font-semibold">Attachments</h3>
+                        <ul class="mt-2 list-disc space-y-2 pl-5 text-sm text-gray-600 dark:text-gray-300">
+                            <li>Files can be uploaded from the request detail page when the request is still editable.</li>
+                            <li>File requests require at least one attachment before submission.</li>
+                            <li>Supported file types include PDF, PNG, JPEG, text, Word, and Excel formats.</li>
+                            <li>The current file size limit is 20 MB.</li>
+                        </ul>
+                    </div>
+                    <div class="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+                        <h3 class="font-semibold">Items</h3>
+                        <ul class="mt-2 list-disc space-y-2 pl-5 text-sm text-gray-600 dark:text-gray-300">
+                            <li>Asset requests require at least one item row.</li>
+                            <li>Use item rows for quantity, unit of measure, unit cost, currency, category, and vendor.</li>
+                            <li>The system calculates estimated total cost from unit cost and quantity.</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <section id="statuses" class="guide-card p-5">
+                <h2 class="text-xl font-bold">9. Status Guide</h2>
+                <div class="mt-4 overflow-x-auto">
+                    <table class="guide-table w-full text-sm">
+                        <thead>
+                        <tr>
+                            <th>Status</th>
+                            <th>Meaning</th>
+                            <th>What To Do Next</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr>
+                            <td><span class="guide-pill pill-gray">Draft</span></td>
+                            <td>The request has been created but not submitted.</td>
+                            <td>Review details, add files/items if needed, then submit.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="guide-pill pill-yellow">Submitted</span></td>
+                            <td>The request has been submitted and is preparing for workflow handling.</td>
+                            <td>Wait for approval processing.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="guide-pill pill-yellow">In Approval</span></td>
+                            <td>The request is assigned to one or more approvers.</td>
+                            <td>Approver should approve, reject, or return.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="guide-pill pill-yellow">Returned For Correction</span></td>
+                            <td>An approver returned the request for updates.</td>
+                            <td>Requester should review comments, correct details, and resubmit.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="guide-pill pill-green">Approved</span></td>
+                            <td>All required approval steps are complete.</td>
+                            <td>HR/admin may close the request when fulfilled.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="guide-pill pill-red">Rejected</span></td>
+                            <td>The request was rejected and the workflow ended.</td>
+                            <td>Review comments before creating a new request if needed.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="guide-pill pill-gray">Cancelled</span></td>
+                            <td>The requester cancelled the request before completion.</td>
+                            <td>No further action.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="guide-pill pill-gray">Closed</span></td>
+                            <td>An approved request has been completed and closed.</td>
+                            <td>No further action.</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="troubleshooting" class="guide-card p-5">
+                <h2 class="text-xl font-bold">10. Troubleshooting</h2>
+                <div class="mt-4 space-y-4">
+                    <div class="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+                        <h3 class="font-semibold">I cannot create a request</h3>
+                        <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">Confirm your login email is linked to an employee record. The system uses your employee record to identify request ownership.</p>
+                    </div>
+                    <div class="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+                        <h3 class="font-semibold">Submission says no approval route is configured</h3>
+                        <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">Ask HR/admin to check your primary reporting line. Requests currently depend on the line-manager approval route.</p>
+                    </div>
+                    <div class="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+                        <h3 class="font-semibold">My file request will not submit</h3>
+                        <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">File requests require at least one attachment before submission. Upload a supported file from the detail page, then submit again.</p>
+                    </div>
+                    <div class="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+                        <h3 class="font-semibold">My asset request will not submit</h3>
+                        <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">Asset requests require at least one item row. Add an item with a valid name and quantity.</p>
+                    </div>
+                    <div class="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+                        <h3 class="font-semibold">I cannot remove an attachment</h3>
+                        <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">Attachments can only be removed by the requester while the request is in draft or returned-for-correction state.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="guide-card p-5">
+                <h2 class="text-xl font-bold">11. Recommended Working Habits</h2>
+                <ul class="mt-3 list-disc space-y-2 pl-5 text-sm text-gray-600 dark:text-gray-300">
+                    <li>Use clear request titles so approvers can understand the request from the list page.</li>
+                    <li>Attach supporting documents before submitting file-sensitive or approval-sensitive requests.</li>
+                    <li>Use comments to explain corrections, decisions, and follow-up notes.</li>
+                    <li>Check the approval timeline before asking for status updates.</li>
+                    <li>HR/admin users should close approved requests after fulfillment to keep open lists clean.</li>
+                </ul>
+            </section>
+        </div>
+    </div>
+</main>
+</body>
+</html>
