@@ -2,10 +2,10 @@
 <html lang="en"
       xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
-      layout:decorate="~{layout}">
+      layout:decorate="~{layouts/employeeLayout}">
 <head>
     <meta charset="UTF-8">
-    <title>Requests</title>
+    <title>My Requests</title>
     <style>
         .request-page { --request-border:#e5e7eb; --request-muted:#64748b; --request-surface:#ffffff; --request-soft:#f8fafc; }
         .dark .request-page { --request-border:#374151; --request-muted:#9ca3af; --request-surface:#1f2937; --request-soft:#111827; }
@@ -46,8 +46,8 @@
                 <span class="material-icons-round">assignment</span>
             </span>
             <div>
-                <h1 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">Requests</h1>
-                <p class="mt-1 max-w-2xl text-sm text-gray-600 dark:text-gray-300">Create, submit, approve, and track organizational requests from one workflow desk.</p>
+                <h1 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">My Requests</h1>
+                <p class="mt-1 max-w-2xl text-sm text-gray-600 dark:text-gray-300">Create, submit, approve, and track your organizational requests from one workflow desk.</p>
             </div>
         </div>
         <div class="flex flex-wrap gap-2">
@@ -55,7 +55,7 @@
                 <span class="material-icons-round text-base">add</span>
                 New Request
             </button>
-            <a href="/requests/userGuide" class="request-secondary-btn">
+            <a href="/employee/requests/userGuide" class="request-secondary-btn">
                 <span class="material-icons-round text-base">help</span>
                 User Guide
             </a>
@@ -106,7 +106,7 @@
             </select>
         </div>
         <div class="overflow-x-auto">
-            <table class="w-full min-w-[820px] text-sm">
+            <table class="w-full min-w-[760px] text-sm">
                 <thead class="request-table-head">
                 <tr>
                     <th class="px-4 py-3 text-left">Number</th>
@@ -128,7 +128,7 @@
             <button type="button" onclick="loadData()" class="request-secondary-btn px-3 py-1.5 text-xs"><span class="material-icons-round text-sm">refresh</span>Refresh</button>
         </div>
         <div class="overflow-x-auto">
-            <table class="w-full min-w-[680px] text-sm">
+            <table class="w-full min-w-[620px] text-sm">
                 <thead class="request-table-head">
                 <tr>
                     <th class="px-4 py-3 text-left">Request</th>
@@ -158,10 +158,10 @@
                 <form id="requestForm" class="max-h-[78vh] space-y-5 overflow-y-auto p-6">
                     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <label class="text-sm font-medium">Type
-                            <select id="requestType" class="request-control mt-1" required></select>
+                            <select id="requestType" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-900" required></select>
                         </label>
                         <label class="text-sm font-medium">Priority
-                            <select id="priority" class="request-control mt-1">
+                            <select id="priority" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-900">
                                 <option>NORMAL</option>
                                 <option>LOW</option>
                                 <option>HIGH</option>
@@ -170,10 +170,10 @@
                         </label>
                     </div>
                     <label class="block text-sm font-medium">Title
-                        <input id="title" class="request-control mt-1" required maxlength="200">
+                        <input id="title" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-900" required maxlength="200">
                     </label>
                     <label class="block text-sm font-medium">Description
-                        <textarea id="description" rows="3" class="request-control mt-1"></textarea>
+                        <textarea id="description" rows="3" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-900"></textarea>
                     </label>
 
                     <div id="staffFields" class="request-type-panel hidden space-y-4">
@@ -254,7 +254,7 @@
 
                     <div class="request-modal-foot bottom-0 flex justify-end gap-2 border-t pt-4">
                         <button type="button" onclick="closeRequestModal()" class="rounded-lg border border-gray-300 px-4 py-2 dark:border-gray-600">Cancel</button>
-                        <button id="saveDraftBtn" type="submit" class="request-primary-btn">Create Draft</button>
+                        <button type="submit" class="request-primary-btn">Create Draft</button>
                     </div>
                 </form>
             </div>
@@ -263,6 +263,7 @@
 
     <script>
         const api = '/api/requests';
+        const pageBase = '/employee/requests';
         let requests = [];
         let tasks = [];
         let types = [];
@@ -274,7 +275,6 @@
 
         function openRequestModal() { document.getElementById('requestModal').classList.remove('hidden'); }
         function closeRequestModal() { document.getElementById('requestModal').classList.add('hidden'); }
-
         function showError(message) { alert(message || 'Request failed'); }
         function fmtType(type) { return (type || '').replaceAll('_', ' '); }
         function badge(status) {
@@ -315,9 +315,7 @@
                 renderRequests();
                 renderTasks();
                 renderStats();
-            } catch (e) {
-                showError(e.message);
-            }
+            } catch (e) { showError(e.message); }
         }
 
         function renderTypeOptions() {
@@ -360,6 +358,12 @@
             populateFileSelect('fileAccessType', 'Select access type', fileOptions.requestedAccessTypes || []);
         }
 
+        function populateFileSelect(id, placeholder, options) {
+            document.getElementById(id).innerHTML = `<option value="">${placeholder}</option>` + options
+                .map(option => `<option value="${option.value}">${option.label}</option>`)
+                .join('');
+        }
+
         function renderExpenseOptions() {
             populateEnumSelect('expensePaymentMethod', 'Select payment method', expenseOptions.paymentMethods || []);
             document.querySelectorAll('[data-expense="expenseCategory"]').forEach(select => populateExpenseCategorySelect(select));
@@ -373,12 +377,6 @@
             select.value = current;
         }
 
-        function populateFileSelect(id, placeholder, options) {
-            document.getElementById(id).innerHTML = `<option value="">${placeholder}</option>` + options
-                .map(option => `<option value="${option.value}">${option.label}</option>`)
-                .join('');
-        }
-
         function renderRequests() {
             const type = document.getElementById('typeFilter').value;
             const status = document.getElementById('statusFilter').value;
@@ -390,24 +388,22 @@
                 (!priority || r.priority === priority) &&
                 (!search || (r.requestNumber || '').toLowerCase().includes(search) || (r.title || '').toLowerCase().includes(search))
             );
-            const body = document.getElementById('requestRows');
-            body.innerHTML = filtered.length ? filtered.map(r => `
+            document.getElementById('requestRows').innerHTML = filtered.length ? filtered.map(r => `
                 <tr class="request-row">
                     <td class="px-4 py-3">${r.requestNumber || ''}</td>
                     <td class="px-4 py-3">${r.title || ''}</td>
                     <td class="px-4 py-3">${fmtType(r.requestType)}</td>
                     <td class="px-4 py-3">${r.priority || ''}</td>
                     <td class="px-4 py-3">${badge(r.status)}</td>
-                    <td class="px-4 py-3"><a class="text-primary-600 hover:underline" href="/requests/${r.id}">Open</a></td>
+                    <td class="px-4 py-3"><a class="text-primary-600 hover:underline" href="${pageBase}/${r.id}">Open</a></td>
                 </tr>`).join('') : '<tr><td colspan="6"><div class="request-empty"><span class="material-icons-round mb-2 block text-3xl">inbox</span>No requests found.</div></td></tr>';
         }
 
         function renderTasks() {
-            const body = document.getElementById('taskRows');
-            body.innerHTML = tasks.length ? tasks.map(t => {
+            document.getElementById('taskRows').innerHTML = tasks.length ? tasks.map(t => {
                 const requestId = t.variables && t.variables.workflowRequestId ? t.variables.workflowRequestId : '';
                 return `<tr class="request-row">
-                    <td class="px-4 py-3">${requestId ? `<a class="text-primary-600 hover:underline" href="/requests/${requestId}">Request #${requestId}</a>` : '-'}</td>
+                    <td class="px-4 py-3">${requestId ? `<a class="text-primary-600 hover:underline" href="${pageBase}/${requestId}">Request #${requestId}</a>` : '-'}</td>
                     <td class="px-4 py-3">${t.taskName || t.taskDefinitionKey || ''}</td>
                     <td class="px-4 py-3">${(t.createdTime || '').replace('T', ' ')}</td>
                     <td class="px-4 py-3">
@@ -528,6 +524,11 @@
             document.getElementById('expenseTotal').textContent = total.toFixed(2);
         }
 
+        function optionalNumber(id) {
+            const value = document.getElementById(id).value;
+            return value === '' ? null : Number(value);
+        }
+
         function payload() {
             const requestType = document.getElementById('requestType').value;
             const data = {
@@ -595,11 +596,6 @@
             return data;
         }
 
-        function optionalNumber(id) {
-            const value = document.getElementById(id).value;
-            return value === '' ? null : Number(value);
-        }
-
         async function approval(taskId, action) {
             const comment = prompt(action === 'approve' ? 'Optional comment:' : 'Comment is required:') || '';
             if (action !== 'approve' && !comment.trim()) return showError('A comment is required.');
@@ -636,7 +632,7 @@
                 document.getElementById('expenseRows').innerHTML = '';
                 updateExpenseTotal();
                 await loadData();
-                location.href = `/requests/${created.id}`;
+                location.href = `${pageBase}/${created.id}`;
             } catch (e) { showError(e.message); }
         });
         document.addEventListener('DOMContentLoaded', loadData);

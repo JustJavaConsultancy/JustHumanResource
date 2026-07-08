@@ -9,6 +9,9 @@ import java.math.BigDecimal;
 @Getter @Setter @Entity @Table(name="workflow_request_items")
 public class WorkflowRequestItem extends BaseEntity {
     @Column(nullable=false) private Long workflowRequestId;
+    private String externalSourceSystem;
+    private String externalAssetId;
+    private String externalAssetCode;
     @Column(nullable=false, length=200) private String itemName;
     @Column(length=1000) private String description;
     private String category;

@@ -56,6 +56,8 @@ import java.util.stream.Collectors;
 @Controller
 public class EmployeeController {
 
+    private static final Long DEFAULT_COMPANY_ID = 1L;
+
     @Autowired AuthenticationManager authenticationManager;
     @Autowired private SetupService setupService;
     @Autowired private EmployeeOnboardingService employeeOnboardingService;
@@ -73,6 +75,7 @@ public class EmployeeController {
     @Autowired private JobHrEmployeeAccessService jobHrEmployeeAccessService;
     @Autowired PaySlipService paySlipService;
     @Autowired private EmployeeReportingLineRepository employeeReportingLineRepository;
+    @Autowired private EmployeeCreationGateService employeeCreationGateService;
 
     // ─────────────────────────────────────────────────────────────────────────
     //  EMPLOYEES PAGE
@@ -119,6 +122,12 @@ public class EmployeeController {
         model.addAttribute("title",       "Employee Management");
         model.addAttribute("subTitle",    "Manage employee records, payroll, and performance data");
         model.addAttribute("isRestrictedHr", authenticationManager.isRestrictedHr());
+        boolean employeeCreationAllowed = employeeCreationGateService.canCreateEmployees(DEFAULT_COMPANY_ID);
+        model.addAttribute("employeeCreationAllowed", employeeCreationAllowed);
+        model.addAttribute(
+                "employeeCreationBlockedReason",
+                employeeCreationAllowed ? null : employeeCreationGateService.getBlockedReason(DEFAULT_COMPANY_ID)
+        );
         return "employees/main";
     }
 
@@ -135,12 +144,13 @@ public class EmployeeController {
             @RequestParam(required = false) String accountName,
             @RequestParam(required = false) String bankName,
             @RequestParam(required = false) String accountNumber) {
-        jobHrEmployeeAccessService.assertCanUseJobStep(command.getJobStepId());
-        if (command.getManagerId() != null) {
-            jobHrEmployeeAccessService.assertCanAccessEmployee(command.getManagerId());
-        }
-
         try {
+            employeeCreationGateService.assertCanCreateEmployees(DEFAULT_COMPANY_ID);
+            jobHrEmployeeAccessService.assertCanUseJobStep(command.getJobStepId());
+            if (command.getManagerId() != null) {
+                jobHrEmployeeAccessService.assertCanAccessEmployee(command.getManagerId());
+            }
+
             EmployeeOnboardingResponseDTO dto =
                     employeeOnboardingService.startOnboarding(command, initiatedBy);
 
@@ -166,6 +176,11 @@ public class EmployeeController {
             // can show the error inline without losing the form data.
             Map<String, Object> body = new LinkedHashMap<>();
             body.put("error",   "DUPLICATE_EMAIL");
+            body.put("message", ex.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+        } catch (EmployeeCreationBlockedException ex) {
+            Map<String, Object> body = new LinkedHashMap<>();
+            body.put("error", "PAYROLL_PERIOD_NOT_OPEN");
             body.put("message", ex.getMessage());
             return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
         }
@@ -292,6 +307,7 @@ public class EmployeeController {
     @ResponseBody
     public ResponseEntity<?> uploadCsv(@RequestParam("file") MultipartFile file) {
         try {
+            employeeCreationGateService.assertCanCreateEmployees(DEFAULT_COMPANY_ID);
             employeeUploadService.uploadEmployees(file);
             return ResponseEntity.ok("Employees uploaded successfully");
 
@@ -302,6 +318,11 @@ public class EmployeeController {
             body.put("error",            "DUPLICATE_EMAIL");
             body.put("message",          ex.getMessage());
             body.put("conflictingEmails", ex.getConflictingEmails());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+        } catch (EmployeeCreationBlockedException ex) {
+            Map<String, Object> body = new LinkedHashMap<>();
+            body.put("error", "PAYROLL_PERIOD_NOT_OPEN");
+            body.put("message", ex.getMessage());
             return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
         }
     }

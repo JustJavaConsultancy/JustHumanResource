@@ -3,6 +3,7 @@ package com.justjava.humanresource.onboarding.service;
 import com.justjava.humanresource.core.enums.EmploymentStatus;
 import com.justjava.humanresource.core.enums.RecordStatus;
 import com.justjava.humanresource.core.exception.ResourceNotFoundException;
+import com.justjava.humanresource.employee.EmployeeCreationGateService;
 import com.justjava.humanresource.hr.dto.EmployeeDTO;
 import com.justjava.humanresource.hr.dto.EmployeeOnboardingResponseDTO;
 import com.justjava.humanresource.hr.entity.*;
@@ -52,12 +53,15 @@ public class EmployeeOnboardingService {
     private final JobHrEmployeeAccessService jobHrEmployeeAccessService;
     private final OrganogramService organogramService;
     private final EmployeeReportingLineRepository employeeReportingLineRepository;
+    private final EmployeeCreationGateService employeeCreationGateService;
 
     @Transactional
     public EmployeeOnboardingResponseDTO startOnboarding(
             StartEmployeeOnboardingCommand command,
             String initiatedBy
     ) {
+        employeeCreationGateService.assertCanCreateEmployees(1L);
+
         if (command.getEmail() != null) {
             command.setEmail(command.getEmail().toLowerCase());
             employeeRepository.findByEmail(command.getEmail()).ifPresent(existing -> {
