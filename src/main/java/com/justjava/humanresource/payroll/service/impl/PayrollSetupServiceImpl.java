@@ -105,6 +105,15 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
     }
 
     @Override
+    @Transactional
+    public void deletePayeTaxBand(Long id) {
+        if (!payeTaxBandRepository.existsById(id)) {
+            throw new EntityNotFoundException("PayeTaxBand not found");
+        }
+        payeTaxBandRepository.deleteById(id);
+    }
+
+    @Override
     public List<PayeTaxBand> getActivePayeBands(LocalDate date) {
         return payeTaxBandRepository.findByEffectiveFromLessThanEqualAndEffectiveToIsNullAndStatusOrderByLowerBoundAsc(
                 date, RecordStatus.ACTIVE

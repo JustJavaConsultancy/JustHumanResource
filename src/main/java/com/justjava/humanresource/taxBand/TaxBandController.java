@@ -98,9 +98,19 @@ public class TaxBandController {
     }
     @PutMapping("/update/tax-band/{id}")
     public String updatePayeTaxBand(@PathVariable Long id,
-                                                         @RequestBody PayeTaxBand band) {
+                                    @RequestBody PayeTaxBand band) {
         payrollSetupService.updateTax(id, band);
         return "redirect:/tax-band";
+    }
+
+    @DeleteMapping("/delete/tax-band/{id}")
+    @ResponseBody
+    public ResponseEntity<?> deletePayeTaxBand(@PathVariable Long id) {
+        payrollSetupService.deletePayeTaxBand(id);
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("message", "Tax band deleted successfully");
+        body.put("id", id);
+        return ResponseEntity.ok(body);
     }
 
 

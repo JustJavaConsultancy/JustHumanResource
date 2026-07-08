@@ -89,30 +89,19 @@ public class TaxBandUploadServiceImpl implements TaxBandUploadService {
             }
         }
 
-        // ---- 4. Unique constraint check against existing DB rows (lowerBound + effectiveFrom) ----
-        if (errors.isEmpty()) {
-            List<BigDecimal> lowerBounds = rows.stream()
-                    .map(TaxBandUploadRowDTO::getLowerBound)
-                    .filter(Objects::nonNull)
-                    .toList();
-
-            List<PayeTaxBand> conflicts =
-                    payeTaxBandRepository.findByEffectiveFromAndLowerBoundIn(effectiveFrom, lowerBounds);
-
-            if (!conflicts.isEmpty()) {
-                for (PayeTaxBand conflict : conflicts) {
-                    errors.add(new RowError(0,
-                            "A tax band with lower bound " + conflict.getLowerBound()
-                                    + " and effective date " + effectiveFrom + " already exists"));
-                }
-            }
-        }
+        // ---- 4. (Removed) Previously checked for conflicts against existing DB rows.
+        // No longer needed: every successful upload now wipes and replaces all
+        // existing tax bands, so there is nothing left to conflict with.
 
         if (!errors.isEmpty()) {
             throw new TaxBandUploadValidationException(rows.size(), errors);
         }
 
-        // ---- 5. Save (all-or-nothing) ----
+        // ---- 5. Full replace: wipe every existing tax band, then insert the new set ----
+        // (Only reached once validation above has fully passed, so a bad CSV
+        // never deletes existing data — this whole method runs in one transaction.)
+        payeTaxBandRepository.deleteAllInBatch();
+
         List<String> generatedRegimeCodes = new ArrayList<>();
 
         for (TaxBandUploadRowDTO row : rows) {
