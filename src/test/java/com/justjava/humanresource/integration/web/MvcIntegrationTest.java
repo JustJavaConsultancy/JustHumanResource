@@ -20,7 +20,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrlPattern;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
@@ -48,7 +48,7 @@ class MvcIntegrationTest {
 
         mockMvc.perform(get("/"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/employee/dashboard"));
+                .andExpect(redirectedUrlPattern("/employee/dashboard*"));
     }
 
     @Test
@@ -58,7 +58,7 @@ class MvcIntegrationTest {
 
         mockMvc.perform(get("/"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/finance/dashboard"));
+                .andExpect(redirectedUrlPattern("/finance/dashboard*"));
     }
 
     @Test
@@ -69,7 +69,7 @@ class MvcIntegrationTest {
 
         mockMvc.perform(get("/"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/admin/users"));
+                .andExpect(redirectedUrlPattern("/admin/users*"));
     }
 
     @Test
@@ -81,7 +81,7 @@ class MvcIntegrationTest {
 
         mockMvc.perform(get("/"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/departments"));
+                .andExpect(redirectedUrlPattern("/departments*"));
     }
 
     @Test

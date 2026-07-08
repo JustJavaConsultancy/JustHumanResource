@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+    <meta charset="UTF-8">
+    <title>Request Detail</title>
+</head>
+<body>
+<main layout:fragment="content" class="space-y-6">
+    <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div>
+            <a href="/requests" class="text-sm text-primary-600 hover:underline">Back to Requests</a>
+            <h1 id="requestTitle" class="mt-2 text-2xl font-semibold text-gray-900 dark:text-gray-100">Request</h1>
+            <p id="requestMeta" class="text-sm text-gray-500 dark:text-gray-400"></p>
+        </div>
+        <div id="primaryActions" class="flex flex-wrap gap-2"></div>
+    </div>
+
+    <section class="grid grid-cols-1 gap-6 xl:grid-cols-3">
+        <div class="space-y-6 xl:col-span-2">
+            <div class="rounded-lg border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
+                <h2 class="text-base font-semibold">Summary</h2>
+                <div id="summary" class="mt-4 space-y-3 text-sm"></div>
+            </div>
+
+            <div class="rounded-lg border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
+                <h2 class="text-base font-semibold">Type Details</h2>
+                <div id="typeDetails" class="mt-4 text-sm"></div>
+            </div>
+
+            <div class="rounded-lg border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-base font-semibold">Items</h2>
+                </div>
+                <div id="items" class="mt-4 overflow-x-auto"></div>
+            </div>
+
+            <div class="rounded-lg border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-base font-semibold">Attachments</h2>
+                </div>
+                <form id="attachmentForm" class="mt-4 flex flex-col gap-3 md:flex-row md:items-center">
+                    <input id="attachmentFile" type="file" class="text-sm">
+                    <select id="attachmentType" class="rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-900">
+                        <option>SUPPORTING_DOCUMENT</option>
+                        <option>QUOTE</option>
+                        <option>APPROVAL_DOCUMENT</option>
+                        <option>POLICY_DOCUMENT</option>
+                        <option>IDENTIFICATION</option>
+                        <option>OTHER</option>
+                    </select>
+                    <button class="rounded-lg bg-primary-600 px-4 py-2 text-sm text-white">Upload</button>
+                </form>
+                <div id="attachments" class="mt-4 text-sm"></div>
+            </div>
+        </div>
+
+        <aside class="space-y-6">
+            <div class="rounded-lg border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
+                <h2 class="text-base font-semibold">Approval Timeline</h2>
+                <ol id="approvalSteps" class="mt-4 space-y-3 text-sm"></ol>
+            </div>
+
+            <div class="rounded-lg border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
+                <h2 class="text-base font-semibold">Comments</h2>
+                <form id="commentForm" class="mt-4 space-y-3">
+                    <textarea id="commentText" rows="3" placeholder="Add a comment" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-900"></textarea>
+                    <label class="inline-flex items-center gap-2 text-sm"><input id="internalComment" type="checkbox"> Internal only</label>
+                    <button class="block rounded-lg bg-primary-600 px-4 py-2 text-sm text-white">Add Comment</button>
+                </form>
+                <ul id="comments" class="mt-4 space-y-3 text-sm"></ul>
+            </div>
+
+            <div class="rounded-lg border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
+                <h2 class="text-base font-semibold">Activity</h2>
+                <ul id="activity" class="mt-4 space-y-3 text-sm"></ul>
+            </div>
+        </aside>
+    </section>
+
+    <script>
+        const api = '/api/requests';
+        const requestId = Number(location.pathname.split('/').pop());
+        let detail = null;
+        let context = null;
+        let tasks = [];
+
+        function text(value) { return value == null || value === '' ? '-' : value; }
+        function fmt(value) { return (value || '').replaceAll('_', ' '); }
+        function isOwner() { return detail && context && detail.request.requesterEmployeeId === context.employeeId; }
+        function canEditAttachments() { return isOwner() && ['DRAFT','SUBMITTED','RETURNED_FOR_CORRECTION'].includes(detail.request.status); }
+        function canRemoveAttachments() { return isOwner() && ['DRAFT','RETURNED_FOR_CORRECTION'].includes(detail.request.status); }
+
+        async function json(url, options) {
+            const response = await fetch(url, options);
+            if (!response.ok) throw new Error(await response.text());
+            const contentType = response.headers.get('content-type') || '';
+            return contentType.includes('application/json') ? response.json() : null;
+        }
+
+        async function load() {
+            try {
+                [detail, context, tasks] = await Promise.all([
+                    json(`${api}/${requestId}`),
+                    json(`${api}/context`),
+                    json(`${api}/approvals/tasks`)
+                ]);
+                render();
+            } catch (e) {
+                document.querySelector('main').innerHTML = `<div class="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">${e.message}</div>`;
+            }
+        }
+
+        function render() {
+            const r = detail.request;
+            document.getElementById('requestTitle').textContent = `${r.requestNumber}: ${r.title}`;
+            document.getElementById('requestMeta').textContent = `${fmt(r.requestType)} | ${r.priority} | ${fmt(r.status)}`;
+            document.getElementById('summary').innerHTML = `
+                <p><b>Description:</b> ${text(r.description)}</p>
+                <p><b>Requester employee ID:</b> ${r.requesterEmployeeId}</p>
+                <p><b>Department ID:</b> ${text(r.departmentId)}</p>
+                <p><b>Submitted:</b> ${text(r.submittedAt)}</p>`;
+            renderTypeDetails();
+            renderItems();
+            renderAttachments();
+            renderApprovals();
+            renderComments();
+            renderActivity();
+            renderActions();
+            document.getElementById('attachmentForm').classList.toggle('hidden', !canEditAttachments());
+            document.getElementById('internalComment').closest('label').classList.toggle('hidden', !context.hrAdmin);
+        }
+
+        function renderTypeDetails() {
+            const d = detail.typeDetails;
+            if (!d) {
+                document.getElementById('typeDetails').innerHTML = '<p class="text-gray-500">No additional details.</p>';
+                return;
+            }
+            document.getElementById('typeDetails').innerHTML = Object.entries(d)
+                .filter(([key]) => !['id','createdAt','updatedAt','version','workflowRequestId'].includes(key))
+                .map(([key, value]) => `<p><b>${fmt(key)}:</b> ${text(value)}</p>`)
+                .join('');
+        }
+
+        function renderItems() {
+            const rows = detail.items || [];
+            document.getElementById('items').innerHTML = rows.length ? `
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-50 dark:bg-gray-700"><tr><th class="px-3 py-2 text-left">Item</th><th class="px-3 py-2 text-left">Qty</th><th class="px-3 py-2 text-left">Unit Cost</th><th class="px-3 py-2 text-left">Total</th></tr></thead>
+                    <tbody>${rows.map(x => `<tr><td class="px-3 py-2">${x.itemName}</td><td class="px-3 py-2">${x.quantity} ${text(x.unitOfMeasure)}</td><td class="px-3 py-2">${text(x.estimatedUnitCost)} ${text(x.currency)}</td><td class="px-3 py-2">${text(x.estimatedTotalCost)} ${text(x.currency)}</td></tr>`).join('')}</tbody>
+                </table>` : '<p class="text-gray-500">No items.</p>';
+        }
+
+        function renderAttachments() {
+            const rows = detail.attachments || [];
+            document.getElementById('attachments').innerHTML = rows.length ? rows.map(a => `
+                <div class="flex items-center justify-between border-b border-gray-100 py-2 dark:border-gray-700">
+                    <a class="text-primary-600 hover:underline" href="${api}/${requestId}/attachments/${a.id}">${a.originalFilename}</a>
+                    ${canRemoveAttachments() ? `<button onclick="removeAttachment(${a.id})" class="rounded border border-red-300 px-2 py-1 text-xs text-red-600">Remove</button>` : ''}
+                </div>`).join('') : '<p class="text-gray-500">No attachments.</p>';
+        }
+
+        function renderApprovals() {
+            const rows = detail.approvalSteps || [];
+            document.getElementById('approvalSteps').innerHTML = rows.length ? rows.map(s => `
+                <li class="rounded border border-gray-200 p-3 dark:border-gray-700">
+                    <p><b>Level ${s.sequenceNo}</b> - ${fmt(s.decision)}</p>
+                    <p>Approver employee ID: ${s.approverEmployeeId}</p>
+                    <p>${text(s.comments)}</p>
+                </li>`).join('') : '<li class="text-gray-500">Not submitted.</li>';
+        }
+
+        function renderComments() {
+            const rows = detail.comments || [];
+            document.getElementById('comments').innerHTML = rows.length ? rows.map(c => `<li class="rounded border border-gray-200 p-3 dark:border-gray-700">${c.comment}</li>`).join('') : '<li class="text-gray-500">No comments.</li>';
+        }
+
+        function renderActivity() {
+            const rows = detail.activities || [];
+            document.getElementById('activity').innerHTML = rows.length ? rows.map(a => `<li><b>${fmt(a.activityType)}</b><br>${text(a.description)}</li>`).join('') : '<li class="text-gray-500">No activity.</li>';
+        }
+
+        function renderActions() {
+            const r = detail.request;
+            const task = tasks.find(t => t.variables && Number(t.variables.workflowRequestId) === requestId);
+            const actions = [];
+            if (isOwner() && ['DRAFT','RETURNED_FOR_CORRECTION'].includes(r.status)) actions.push(`<button onclick="submitRequest()" class="rounded-lg bg-primary-600 px-4 py-2 text-sm text-white">Submit</button>`);
+            if (isOwner() && !['APPROVED','REJECTED','CANCELLED','CLOSED'].includes(r.status)) actions.push(`<button onclick="cancelRequest()" class="rounded-lg border border-red-300 px-4 py-2 text-sm text-red-600">Cancel</button>`);
+            if (context.hrAdmin && r.status === 'APPROVED') actions.push(`<button onclick="closeRequest()" class="rounded-lg border border-gray-300 px-4 py-2 text-sm">Close</button>`);
+            if (task) {
+                actions.push(`<button onclick="approval('${task.taskId}','approve')" class="rounded-lg bg-green-600 px-4 py-2 text-sm text-white">Approve</button>`);
+                actions.push(`<button onclick="approval('${task.taskId}','reject')" class="rounded-lg bg-red-600 px-4 py-2 text-sm text-white">Reject</button>`);
+                actions.push(`<button onclick="approval('${task.taskId}','return')" class="rounded-lg bg-orange-600 px-4 py-2 text-sm text-white">Return</button>`);
+            }
+            document.getElementById('primaryActions').innerHTML = actions.join('');
+        }
+
+        async function submitRequest() { await mutate(`${api}/${requestId}/submit`, 'POST'); }
+        async function cancelRequest() { if (confirm('Cancel this request?')) await mutate(`${api}/${requestId}/cancel`, 'POST'); }
+        async function closeRequest() { if (confirm('Close this request?')) await mutate(`${api}/${requestId}/close`, 'POST'); }
+        async function mutate(url, method) {
+            try { await json(url, {method}); await load(); } catch (e) { alert(e.message); }
+        }
+
+        async function approval(taskId, action) {
+            const comment = prompt(action === 'approve' ? 'Optional comment:' : 'Comment is required:') || '';
+            if (action !== 'approve' && !comment.trim()) return alert('A comment is required.');
+            try {
+                await json(`${api}/approvals/${action}`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({taskId, comment})});
+                await load();
+            } catch (e) { alert(e.message); }
+        }
+
+        async function removeAttachment(id) {
+            if (!confirm('Remove this attachment?')) return;
+            try {
+                const response = await fetch(`${api}/${requestId}/attachments/${id}`, {method:'DELETE'});
+                if (!response.ok) throw new Error(await response.text());
+                await load();
+            } catch (e) { alert(e.message); }
+        }
+
+        document.getElementById('attachmentForm').addEventListener('submit', async event => {
+            event.preventDefault();
+            const file = document.getElementById('attachmentFile').files[0];
+            if (!file) return alert('Choose a file to upload.');
+            const form = new FormData();
+            form.append('file', file);
+            form.append('attachmentType', document.getElementById('attachmentType').value);
+            try {
+                const response = await fetch(`${api}/${requestId}/attachments`, {method:'POST', body: form});
+                if (!response.ok) throw new Error(await response.text());
+                event.target.reset();
+                await load();
+            } catch (e) { alert(e.message); }
+        });
+
+        document.getElementById('commentForm').addEventListener('submit', async event => {
+            event.preventDefault();
+            try {
+                await json(`${api}/${requestId}/comments`, {
+                    method:'POST',
+                    headers:{'Content-Type':'application/json'},
+                    body: JSON.stringify({comment: document.getElementById('commentText').value, internalOnly: document.getElementById('internalComment').checked})
+                });
+                event.target.reset();
+                await load();
+            } catch (e) { alert(e.message); }
+        });
+
+        document.addEventListener('DOMContentLoaded', load);
+    </script>
+</main>
+</body>
+</html>

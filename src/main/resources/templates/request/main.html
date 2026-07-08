@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+    <meta charset="UTF-8">
+    <title>Requests</title>
+</head>
+<body>
+<main layout:fragment="content" class="space-y-6">
+    <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div>
+            <h1 class="text-2xl font-semibold text-gray-900 dark:text-gray-100">Requests</h1>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Create, submit, and approve organizational requests.</p>
+        </div>
+        <button type="button" onclick="openRequestModal()"
+                class="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
+            <span class="material-icons-round text-base">add</span>
+            New Request
+        </button>
+    </div>
+
+    <section class="grid grid-cols-1 gap-4 md:grid-cols-4">
+        <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+            <p class="text-xs text-gray-500">Open</p>
+            <p id="openCount" class="mt-2 text-2xl font-semibold">0</p>
+        </div>
+        <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+            <p class="text-xs text-gray-500">Pending My Approval</p>
+            <p id="approvalCount" class="mt-2 text-2xl font-semibold">0</p>
+        </div>
+        <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+            <p class="text-xs text-gray-500">Approved</p>
+            <p id="approvedCount" class="mt-2 text-2xl font-semibold">0</p>
+        </div>
+        <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+            <p class="text-xs text-gray-500">Returned or Rejected</p>
+            <p id="exceptionCount" class="mt-2 text-2xl font-semibold">0</p>
+        </div>
+    </section>
+
+    <section class="rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+        <div class="grid grid-cols-1 gap-3 border-b border-gray-200 p-4 dark:border-gray-700 md:grid-cols-4">
+            <select id="typeFilter" class="rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-900">
+                <option value="">All types</option>
+            </select>
+            <select id="statusFilter" class="rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-900">
+                <option value="">All statuses</option>
+                <option>DRAFT</option>
+                <option>IN_APPROVAL</option>
+                <option>RETURNED_FOR_CORRECTION</option>
+                <option>APPROVED</option>
+                <option>REJECTED</option>
+                <option>CANCELLED</option>
+                <option>CLOSED</option>
+            </select>
+            <select id="priorityFilter" class="rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-900">
+                <option value="">All priorities</option>
+                <option>LOW</option>
+                <option>NORMAL</option>
+                <option>HIGH</option>
+                <option>URGENT</option>
+            </select>
+            <input id="requestSearch" placeholder="Search number or title"
+                   class="rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-900">
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="bg-gray-50 dark:bg-gray-700">
+                <tr>
+                    <th class="px-4 py-3 text-left">Number</th>
+                    <th class="px-4 py-3 text-left">Title</th>
+                    <th class="px-4 py-3 text-left">Type</th>
+                    <th class="px-4 py-3 text-left">Priority</th>
+                    <th class="px-4 py-3 text-left">Status</th>
+                    <th class="px-4 py-3 text-left">Action</th>
+                </tr>
+                </thead>
+                <tbody id="requestRows" class="divide-y divide-gray-200 dark:divide-gray-700"></tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+        <div class="flex items-center justify-between border-b border-gray-200 p-4 dark:border-gray-700">
+            <h2 class="text-base font-semibold">Pending My Approval</h2>
+            <button type="button" onclick="loadData()" class="rounded-md border border-gray-300 px-3 py-1.5 text-xs dark:border-gray-600">Refresh</button>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="bg-gray-50 dark:bg-gray-700">
+                <tr>
+                    <th class="px-4 py-3 text-left">Request</th>
+                    <th class="px-4 py-3 text-left">Task</th>
+                    <th class="px-4 py-3 text-left">Created</th>
+                    <th class="px-4 py-3 text-left">Action</th>
+                </tr>
+                </thead>
+                <tbody id="taskRows" class="divide-y divide-gray-200 dark:divide-gray-700"></tbody>
+            </table>
+        </div>
+    </section>
+
+    <div id="requestModal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black/50" onclick="closeRequestModal()"></div>
+        <div class="absolute inset-0 overflow-y-auto p-4">
+            <div class="mx-auto my-8 max-w-4xl rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+                <div class="flex items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-gray-700">
+                    <h3 class="text-lg font-semibold">New Request</h3>
+                    <button type="button" onclick="closeRequestModal()" class="text-gray-500 hover:text-gray-700">
+                        <span class="material-icons-round">close</span>
+                    </button>
+                </div>
+                <form id="requestForm" class="space-y-5 p-5">
+                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <label class="text-sm font-medium">Type
+                            <select id="requestType" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-900" required></select>
+                        </label>
+                        <label class="text-sm font-medium">Priority
+                            <select id="priority" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-900">
+                                <option>NORMAL</option>
+                                <option>LOW</option>
+                                <option>HIGH</option>
+                                <option>URGENT</option>
+                            </select>
+                        </label>
+                    </div>
+                    <label class="block text-sm font-medium">Title
+                        <input id="title" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-900" required maxlength="200">
+                    </label>
+                    <label class="block text-sm font-medium">Description
+                        <textarea id="description" rows="3" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-900"></textarea>
+                    </label>
+
+                    <div id="staffFields" class="hidden space-y-4 rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+                        <h4 class="font-semibold">Staff Requisition Details</h4>
+                        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <input id="staffJobTitle" placeholder="Job title" class="rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-900">
+                            <input id="staffDepartmentId" type="number" placeholder="Department ID" class="rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-900">
+                            <input id="staffJobGradeId" type="number" placeholder="Job grade ID (optional)" class="rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-900">
+                            <input id="staffPositions" type="number" min="1" placeholder="Number of positions" class="rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-900">
+                            <input id="staffEmploymentType" placeholder="Employment type" class="rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-900">
+                            <input id="staffStartDate" type="date" class="rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-900">
+                            <input id="staffMonthlyCost" type="number" min="0" step="0.01" placeholder="Estimated monthly cost" class="rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-900">
+                            <input id="staffReplacementId" type="number" placeholder="Replacement employee ID (optional)" class="rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-900">
+                        </div>
+                        <label class="inline-flex items-center gap-2 text-sm"><input id="staffBudgeted" type="checkbox"> Budgeted</label>
+                        <textarea id="staffReason" rows="3" placeholder="Reason for hire" class="w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-900"></textarea>
+                    </div>
+
+                    <div id="fileFields" class="hidden space-y-4 rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+                        <h4 class="font-semibold">File Request Details</h4>
+                        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <input id="fileCategory" placeholder="File category" class="rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-900">
+                            <input id="fileConfidentiality" placeholder="Confidentiality level" class="rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-900">
+                            <input id="fileAccessType" placeholder="Requested access type" class="rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-900">
+                            <label class="inline-flex items-center gap-2 text-sm"><input id="fileRetention" type="checkbox"> Retention required</label>
+                        </div>
+                        <textarea id="filePurpose" rows="3" placeholder="Purpose" class="w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-900"></textarea>
+                        <input id="initialAttachment" type="file" class="block w-full text-sm">
+                    </div>
+
+                    <div id="assetFields" class="hidden space-y-4 rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+                        <h4 class="font-semibold">Asset Request Details</h4>
+                        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <input id="assetCostCenter" placeholder="Cost center" class="rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-900">
+                            <input id="assetRequiredDate" type="date" class="rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-900">
+                        </div>
+                        <textarea id="assetJustification" rows="3" placeholder="Business justification" class="w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-900"></textarea>
+                        <div class="flex items-center justify-between">
+                            <h5 class="font-medium">Items</h5>
+                            <button type="button" onclick="addItemRow()" class="rounded-md border border-gray-300 px-3 py-1.5 text-xs dark:border-gray-600">Add Item</button>
+                        </div>
+                        <div id="itemRows" class="space-y-3"></div>
+                    </div>
+
+                    <div class="flex justify-end gap-2">
+                        <button type="button" onclick="closeRequestModal()" class="rounded-lg border border-gray-300 px-4 py-2 dark:border-gray-600">Cancel</button>
+                        <button id="saveDraftBtn" type="submit" class="rounded-lg bg-primary-600 px-4 py-2 text-white hover:bg-primary-700">Create Draft</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const api = '/api/requests';
+        let requests = [];
+        let tasks = [];
+        let types = [];
+
+        function openRequestModal() { document.getElementById('requestModal').classList.remove('hidden'); }
+        function closeRequestModal() { document.getElementById('requestModal').classList.add('hidden'); }
+
+        function showError(message) { alert(message || 'Request failed'); }
+        function fmtType(type) { return (type || '').replaceAll('_', ' '); }
+        function badge(status) {
+            const color = status === 'APPROVED' ? 'bg-green-100 text-green-700' :
+                status === 'REJECTED' || status === 'CANCELLED' ? 'bg-red-100 text-red-700' :
+                    status === 'RETURNED_FOR_CORRECTION' ? 'bg-orange-100 text-orange-700' :
+                        status === 'IN_APPROVAL' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700';
+            return `<span class="rounded px-2 py-1 text-xs ${color}">${status || ''}</span>`;
+        }
+
+        async function json(url, options) {
+            const response = await fetch(url, options);
+            if (!response.ok) throw new Error(await response.text());
+            const contentType = response.headers.get('content-type') || '';
+            return contentType.includes('application/json') ? response.json() : null;
+        }
+
+        async function loadData() {
+            try {
+                [requests, tasks, types] = await Promise.all([
+                    json(api + '/visible'),
+                    json(api + '/approvals/tasks'),
+                    json(api + '/types')
+                ]);
+                renderTypeOptions();
+                renderRequests();
+                renderTasks();
+                renderStats();
+            } catch (e) {
+                showError(e.message);
+            }
+        }
+
+        function renderTypeOptions() {
+            const options = types.map(t => `<option value="${t.code}">${t.name}</option>`).join('');
+            document.getElementById('requestType').innerHTML = options;
+            document.getElementById('typeFilter').innerHTML = '<option value="">All types</option>' + options;
+            updateTypeFields();
+        }
+
+        function renderRequests() {
+            const type = document.getElementById('typeFilter').value;
+            const status = document.getElementById('statusFilter').value;
+            const priority = document.getElementById('priorityFilter').value;
+            const search = document.getElementById('requestSearch').value.toLowerCase();
+            const filtered = requests.filter(r =>
+                (!type || r.requestType === type) &&
+                (!status || r.status === status) &&
+                (!priority || r.priority === priority) &&
+                (!search || (r.requestNumber || '').toLowerCase().includes(search) || (r.title || '').toLowerCase().includes(search))
+            );
+            const body = document.getElementById('requestRows');
+            body.innerHTML = filtered.length ? filtered.map(r => `
+                <tr>
+                    <td class="px-4 py-3">${r.requestNumber || ''}</td>
+                    <td class="px-4 py-3">${r.title || ''}</td>
+                    <td class="px-4 py-3">${fmtType(r.requestType)}</td>
+                    <td class="px-4 py-3">${r.priority || ''}</td>
+                    <td class="px-4 py-3">${badge(r.status)}</td>
+                    <td class="px-4 py-3"><a class="text-primary-600 hover:underline" href="/requests/${r.id}">Open</a></td>
+                </tr>`).join('') : '<tr><td colspan="6" class="px-4 py-4 text-gray-500">No requests found.</td></tr>';
+        }
+
+        function renderTasks() {
+            const body = document.getElementById('taskRows');
+            body.innerHTML = tasks.length ? tasks.map(t => {
+                const requestId = t.variables && t.variables.workflowRequestId ? t.variables.workflowRequestId : '';
+                return `<tr>
+                    <td class="px-4 py-3">${requestId ? `<a class="text-primary-600 hover:underline" href="/requests/${requestId}">Request #${requestId}</a>` : '-'}</td>
+                    <td class="px-4 py-3">${t.taskName || t.taskDefinitionKey || ''}</td>
+                    <td class="px-4 py-3">${(t.createdTime || '').replace('T', ' ')}</td>
+                    <td class="px-4 py-3">
+                        <button onclick="approval('${t.taskId}','approve')" class="rounded bg-green-600 px-3 py-1 text-xs text-white">Approve</button>
+                        <button onclick="approval('${t.taskId}','reject')" class="rounded bg-red-600 px-3 py-1 text-xs text-white">Reject</button>
+                        <button onclick="approval('${t.taskId}','return')" class="rounded bg-orange-600 px-3 py-1 text-xs text-white">Return</button>
+                    </td>
+                </tr>`;
+            }).join('') : '<tr><td colspan="4" class="px-4 py-4 text-gray-500">No pending approval tasks.</td></tr>';
+        }
+
+        function renderStats() {
+            document.getElementById('openCount').textContent = requests.filter(r => ['DRAFT','SUBMITTED','IN_APPROVAL','RETURNED_FOR_CORRECTION'].includes(r.status)).length;
+            document.getElementById('approvalCount').textContent = tasks.length;
+            document.getElementById('approvedCount').textContent = requests.filter(r => r.status === 'APPROVED').length;
+            document.getElementById('exceptionCount').textContent = requests.filter(r => ['RETURNED_FOR_CORRECTION','REJECTED'].includes(r.status)).length;
+        }
+
+        function updateTypeFields() {
+            const value = document.getElementById('requestType').value;
+            ['staffFields','fileFields','assetFields'].forEach(id => document.getElementById(id).classList.add('hidden'));
+            if (value === 'STAFF_REQUISITION') document.getElementById('staffFields').classList.remove('hidden');
+            if (value === 'FILE_REQUEST') document.getElementById('fileFields').classList.remove('hidden');
+            if (value === 'ASSET_REQUEST') {
+                document.getElementById('assetFields').classList.remove('hidden');
+                if (!document.getElementById('itemRows').children.length) addItemRow();
+            }
+        }
+
+        function addItemRow() {
+            const row = document.createElement('div');
+            row.className = 'grid grid-cols-1 gap-2 rounded-lg border border-gray-200 p-3 dark:border-gray-700 md:grid-cols-4';
+            row.innerHTML = `
+                <input data-item="itemName" placeholder="Item name" class="rounded border border-gray-300 px-2 py-2 dark:border-gray-600 dark:bg-gray-900">
+                <input data-item="quantity" type="number" min="0.0001" step="0.0001" placeholder="Quantity" class="rounded border border-gray-300 px-2 py-2 dark:border-gray-600 dark:bg-gray-900">
+                <input data-item="unitOfMeasure" placeholder="Unit" class="rounded border border-gray-300 px-2 py-2 dark:border-gray-600 dark:bg-gray-900">
+                <input data-item="estimatedUnitCost" type="number" min="0" step="0.01" placeholder="Unit cost" class="rounded border border-gray-300 px-2 py-2 dark:border-gray-600 dark:bg-gray-900">
+                <input data-item="currency" maxlength="3" placeholder="Currency" class="rounded border border-gray-300 px-2 py-2 dark:border-gray-600 dark:bg-gray-900">
+                <input data-item="category" placeholder="Category" class="rounded border border-gray-300 px-2 py-2 dark:border-gray-600 dark:bg-gray-900">
+                <input data-item="vendorName" placeholder="Vendor" class="rounded border border-gray-300 px-2 py-2 dark:border-gray-600 dark:bg-gray-900">
+                <button type="button" onclick="this.closest('div').remove()" class="rounded border border-gray-300 px-2 py-2 text-sm dark:border-gray-600">Remove</button>`;
+            document.getElementById('itemRows').appendChild(row);
+        }
+
+        function payload() {
+            const requestType = document.getElementById('requestType').value;
+            const data = {
+                requestType,
+                title: document.getElementById('title').value,
+                description: document.getElementById('description').value,
+                priority: document.getElementById('priority').value
+            };
+            if (requestType === 'STAFF_REQUISITION') {
+                data.staffRequisition = {
+                    jobTitle: document.getElementById('staffJobTitle').value,
+                    departmentId: Number(document.getElementById('staffDepartmentId').value),
+                    jobGradeId: optionalNumber('staffJobGradeId'),
+                    numberOfPositions: Number(document.getElementById('staffPositions').value),
+                    employmentType: document.getElementById('staffEmploymentType').value,
+                    targetStartDate: document.getElementById('staffStartDate').value || null,
+                    budgeted: document.getElementById('staffBudgeted').checked,
+                    estimatedMonthlyCost: optionalNumber('staffMonthlyCost'),
+                    reasonForHire: document.getElementById('staffReason').value,
+                    replacementEmployeeId: optionalNumber('staffReplacementId')
+                };
+                data.departmentId = data.staffRequisition.departmentId;
+            }
+            if (requestType === 'FILE_REQUEST') {
+                data.fileRequest = {
+                    fileCategory: document.getElementById('fileCategory').value,
+                    confidentialityLevel: document.getElementById('fileConfidentiality').value,
+                    requestedAccessType: document.getElementById('fileAccessType').value,
+                    retentionRequired: document.getElementById('fileRetention').checked,
+                    purpose: document.getElementById('filePurpose').value
+                };
+            }
+            if (requestType === 'ASSET_REQUEST') {
+                data.assetRequest = {
+                    costCenter: document.getElementById('assetCostCenter').value,
+                    requiredDate: document.getElementById('assetRequiredDate').value,
+                    businessJustification: document.getElementById('assetJustification').value
+                };
+                data.items = [...document.querySelectorAll('#itemRows > div')].map(row => {
+                    const entry = {};
+                    row.querySelectorAll('[data-item]').forEach(input => entry[input.dataset.item] = input.value);
+                    entry.quantity = Number(entry.quantity);
+                    if (entry.estimatedUnitCost) entry.estimatedUnitCost = Number(entry.estimatedUnitCost);
+                    return entry;
+                });
+            }
+            return data;
+        }
+
+        function optionalNumber(id) {
+            const value = document.getElementById(id).value;
+            return value === '' ? null : Number(value);
+        }
+
+        async function approval(taskId, action) {
+            const comment = prompt(action === 'approve' ? 'Optional comment:' : 'Comment is required:') || '';
+            if (action !== 'approve' && !comment.trim()) return showError('A comment is required.');
+            try {
+                await json(`${api}/approvals/${action}`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({taskId, comment})});
+                await loadData();
+            } catch (e) { showError(e.message); }
+        }
+
+        async function uploadInitialAttachment(requestId) {
+            const file = document.getElementById('initialAttachment').files[0];
+            if (!file) return;
+            const form = new FormData();
+            form.append('file', file);
+            form.append('attachmentType', 'SUPPORTING_DOCUMENT');
+            await fetch(`${api}/${requestId}/attachments`, {method:'POST', body: form}).then(async r => {
+                if (!r.ok) throw new Error(await r.text());
+            });
+        }
+
+        document.getElementById('requestType').addEventListener('change', updateTypeFields);
+        ['typeFilter','statusFilter','priorityFilter','requestSearch'].forEach(id => document.getElementById(id).addEventListener('input', renderRequests));
+        document.getElementById('requestForm').addEventListener('submit', async event => {
+            event.preventDefault();
+            try {
+                const created = await json(api, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload())});
+                await uploadInitialAttachment(created.id);
+                closeRequestModal();
+                event.target.reset();
+                document.getElementById('itemRows').innerHTML = '';
+                await loadData();
+                location.href = `/requests/${created.id}`;
+            } catch (e) { showError(e.message); }
+        });
+        document.addEventListener('DOMContentLoaded', loadData);
+    </script>
+</main>
+</body>
+</html>

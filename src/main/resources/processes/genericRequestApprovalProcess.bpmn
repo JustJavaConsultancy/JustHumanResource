@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:flowable="http://flowable.org/bpmn" targetNamespace="http://justjava.com/request">
+ <process id="genericRequestApprovalProcess" name="Generic Request Approval" isExecutable="true">
+  <startEvent id="start"/><serviceTask id="initialize" name="Initialize Approval" flowable:delegateExpression="${initializeRequestApprovalDelegate}"/><userTask id="approvalTask" name="Request Approval" flowable:assignee="${currentApproverId}"/><serviceTask id="recordDecision" name="Record Decision" flowable:delegateExpression="${processRequestApprovalDecisionDelegate}"/><exclusiveGateway id="decision"/>
+  <exclusiveGateway id="more"/><serviceTask id="approved" name="Finalize Approval" flowable:delegateExpression="${finalizeRequestApprovalDelegate}"/><serviceTask id="rejected" name="Finalize Rejection" flowable:delegateExpression="${finalizeRequestRejectionDelegate}"/><serviceTask id="returned" name="Return for Correction" flowable:delegateExpression="${returnRequestForCorrectionDelegate}"/><endEvent id="approvedEnd"/><endEvent id="rejectedEnd"/><endEvent id="returnedEnd"/>
+  <sequenceFlow id="f1" sourceRef="start" targetRef="initialize"/><sequenceFlow id="f2" sourceRef="initialize" targetRef="approvalTask"/><sequenceFlow id="f3" sourceRef="approvalTask" targetRef="recordDecision"/><sequenceFlow id="f4" sourceRef="recordDecision" targetRef="decision"/>
+  <sequenceFlow id="f5" sourceRef="decision" targetRef="rejected"><conditionExpression xsi:type="tFormalExpression"><![CDATA[${approvalDecision == 'REJECT'}]]></conditionExpression></sequenceFlow>
+  <sequenceFlow id="f6" sourceRef="decision" targetRef="returned"><conditionExpression xsi:type="tFormalExpression"><![CDATA[${approvalDecision == 'RETURN'}]]></conditionExpression></sequenceFlow>
+  <sequenceFlow id="f7" sourceRef="decision" targetRef="more"><conditionExpression xsi:type="tFormalExpression"><![CDATA[${approvalDecision == 'APPROVE'}]]></conditionExpression></sequenceFlow>
+  <sequenceFlow id="f8" sourceRef="more" targetRef="approvalTask"><conditionExpression xsi:type="tFormalExpression"><![CDATA[${hasMoreApprovers}]]></conditionExpression></sequenceFlow><sequenceFlow id="f9" sourceRef="more" targetRef="approved"><conditionExpression xsi:type="tFormalExpression"><![CDATA[${!hasMoreApprovers}]]></conditionExpression></sequenceFlow>
+  <sequenceFlow id="f10" sourceRef="approved" targetRef="approvedEnd"/><sequenceFlow id="f11" sourceRef="rejected" targetRef="rejectedEnd"/><sequenceFlow id="f12" sourceRef="returned" targetRef="returnedEnd"/>
+ </process>
+</definitions>
