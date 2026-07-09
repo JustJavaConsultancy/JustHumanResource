@@ -11,15 +11,9 @@
 <body>
 <main layout:fragment="content" class="space-y-6">
 
-    <div class="flex items-center justify-between">
-        <div>
-            <h1 class="text-2xl font-semibold text-gray-900 dark:text-gray-100">Leave Management</h1>
-            <p class="text-sm text-gray-500 dark:text-gray-400">Submit leave requests and process sequential line-manager approvals.</p>
-        </div>
-        <button onclick="openModal('addLeaveModal')"
-                class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
-            New Leave Request
-        </button>
+    <div>
+        <h1 class="text-2xl font-semibold text-gray-900 dark:text-gray-100">Leave Management</h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Submit leave requests and process sequential line-manager approvals.</p>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -61,7 +55,6 @@
                         <th class="text-left px-4 py-3">Request</th>
                         <th class="text-left px-4 py-3">Task</th>
                         <th class="text-left px-4 py-3">Created</th>
-                        <th class="text-left px-4 py-3">Action</th>
                     </tr>
                     </thead>
                     <tbody id="pendingApprovalsBody" class="divide-y divide-gray-200 dark:divide-gray-700"></tbody>
@@ -70,66 +63,7 @@
         </section>
     </div>
 
-    <div id="addLeaveModal" class="fixed inset-0 z-50 hidden">
-        <div class="absolute inset-0 bg-black/50" onclick="closeModal('addLeaveModal')"></div>
-        <div class="absolute inset-0 p-4 flex items-center justify-center">
-            <div class="w-full max-w-2xl bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-                <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-                    <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Submit Leave Request</h3>
-                    <button onclick="closeModal('addLeaveModal')" class="text-gray-500 hover:text-gray-700">✕</button>
-                </div>
-                <form id="leaveRequestForm" class="p-5 space-y-4">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Leave Type</label>
-                            <select id="leaveType" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2" required>
-                                <option value="ANNUAL">Annual</option>
-                                <option value="SICK">Sick</option>
-                                <option value="MATERNITY">Maternity</option>
-                                <option value="UNPAID">Unpaid</option>
-                                <option value="EMERGENCY">Emergency</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Stand-In Colleague</label>
-                            <select id="leaveStandInEmployeeId" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2" required>
-                                <option value="">Select colleague...</option>
-                                <option th:each="emp : ${employees}"
-                                        th:value="${emp.id}"
-                                        th:text="${emp.firstName + ' ' + emp.lastName + ' (' + emp.employeeNumber + ')'}">Employee</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Start Date</label>
-                            <input id="leaveStartDate" type="date" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2" required>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">End Date</label>
-                            <input id="leaveEndDate" type="date" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2" required>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Reason</label>
-                        <textarea id="leaveReason" rows="4" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2"></textarea>
-                    </div>
-
-                    <div class="flex justify-end gap-2 pt-2">
-                        <button type="button" onclick="closeModal('addLeaveModal')" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg">Cancel</button>
-                        <button id="submitLeaveBtn" type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Submit</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
     <script th:inline="javascript">
-        function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
-        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
-
         function statusBadge(status) {
             const s = (status || '').toUpperCase();
             if (s === 'APPROVED') return '<span class="px-2 py-1 rounded text-xs bg-green-100 text-green-700">APPROVED</span>';
@@ -176,11 +110,11 @@
 
         async function loadPendingApprovals() {
             const body = document.getElementById('pendingApprovalsBody');
-            body.innerHTML = '<tr><td colspan="4" class="px-4 py-4 text-sm text-gray-500">Loading...</td></tr>';
+            body.innerHTML = '<tr><td colspan="3" class="px-4 py-4 text-sm text-gray-500">Loading...</td></tr>';
             try {
                 const data = await fetchJsonSafe('/leave/approvals/tasks');
                 if (!data.length) {
-                    body.innerHTML = '<tr><td colspan="4" class="px-4 py-4 text-sm text-gray-500">No pending approval tasks.</td></tr>';
+                    body.innerHTML = '<tr><td colspan="3" class="px-4 py-4 text-sm text-gray-500">No pending approval tasks.</td></tr>';
                     return;
                 }
                 body.innerHTML = data.map(t => {
@@ -190,86 +124,13 @@
                             <td class="px-4 py-3">Leave #${leaveRequestId}</td>
                             <td class="px-4 py-3">${t.taskName || t.taskDefinitionKey || ''}</td>
                             <td class="px-4 py-3">${(t.createdTime || '').replace('T', ' ')}</td>
-                            <td class="px-4 py-3">
-                                <div class="flex gap-2">
-                                    <button onclick="approveLeaveTask('${t.taskId}')" class="px-3 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700">Approve</button>
-                                    <button onclick="rejectLeaveTask('${t.taskId}')" class="px-3 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700">Reject</button>
-                                </div>
-                            </td>
                         </tr>
                     `;
                 }).join('');
             } catch (e) {
-                body.innerHTML = '<tr><td colspan="4" class="px-4 py-4 text-sm text-red-600">' + e.message + '</td></tr>';
+                body.innerHTML = '<tr><td colspan="3" class="px-4 py-4 text-sm text-red-600">' + e.message + '</td></tr>';
             }
         }
-
-        async function postApproval(url, taskId) {
-            const comment = window.prompt('Optional comment:') || '';
-            const res = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ taskId, comment })
-            });
-            if (!res.ok) {
-                const text = await res.text();
-                throw new Error(text || 'Approval action failed');
-            }
-        }
-
-        async function approveLeaveTask(taskId) {
-            try {
-                await postApproval('/leave/approvals/approve', taskId);
-                await loadPendingApprovals();
-                await loadMyLeaveRequests();
-            } catch (e) {
-                alert(e.message);
-            }
-        }
-
-        async function rejectLeaveTask(taskId) {
-            try {
-                await postApproval('/leave/approvals/reject', taskId);
-                await loadPendingApprovals();
-                await loadMyLeaveRequests();
-            } catch (e) {
-                alert(e.message);
-            }
-        }
-
-        document.getElementById('leaveRequestForm')?.addEventListener('submit', async function (e) {
-            e.preventDefault();
-            const submitBtn = document.getElementById('submitLeaveBtn');
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Submitting...';
-            const payload = {
-                leaveType: document.getElementById('leaveType').value,
-                startDate: document.getElementById('leaveStartDate').value,
-                endDate: document.getElementById('leaveEndDate').value,
-                reason: document.getElementById('leaveReason').value,
-                standInEmployeeId: parseInt(document.getElementById('leaveStandInEmployeeId').value, 10)
-            };
-            try {
-                const res = await fetch('/leave/requests', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                if (!res.ok) {
-                    const text = await res.text();
-                    throw new Error(text || 'Leave request submission failed');
-                }
-                closeModal('addLeaveModal');
-                this.reset();
-                await loadMyLeaveRequests();
-                await loadPendingApprovals();
-            } catch (e) {
-                alert(e.message);
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Submit';
-            }
-        });
 
         document.addEventListener('DOMContentLoaded', async function () {
             await loadMyLeaveRequests();
