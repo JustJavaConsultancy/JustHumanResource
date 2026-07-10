@@ -31,8 +31,6 @@
         .request-primary-btn { display:inline-flex; align-items:center; gap:8px; border-radius:10px; background:#2563eb; color:#fff; padding:10px 16px; font-size:14px; font-weight:700; transition:background-color .15s ease, transform .15s ease; }
         .request-primary-btn:hover { background:#1d4ed8; transform:translateY(-1px); }
         .request-secondary-btn { display:inline-flex; align-items:center; gap:8px; border:1px solid var(--request-border); border-radius:10px; padding:10px 16px; font-size:14px; font-weight:700; background:var(--request-surface); }
-        .request-modal-panel { max-width:1040px; border:1px solid var(--request-border); background:var(--request-surface); border-radius:16px; box-shadow:0 24px 80px -28px rgba(15,23,42,.7); overflow:hidden; }
-        .request-modal-head,.request-modal-foot { position:sticky; z-index:1; background:var(--request-surface); border-color:var(--request-border); }
         .request-type-panel { border:1px solid var(--request-border); background:var(--request-soft); border-radius:14px; padding:18px; }
         .request-line-row { border:1px solid var(--request-border); background:var(--request-surface); border-radius:12px; padding:12px; }
         .request-empty { padding:28px; text-align:center; color:var(--request-muted); }
@@ -51,10 +49,6 @@
             </div>
         </div>
         <div class="flex flex-wrap gap-2">
-            <button type="button" onclick="openRequestModal()" class="request-primary-btn">
-                <span class="material-icons-round text-base">add</span>
-                New Request
-            </button>
             <a href="/requests/userGuide" class="request-secondary-btn">
                 <span class="material-icons-round text-base">help</span>
                 User Guide
@@ -120,26 +114,6 @@
 
     <section class="request-card overflow-hidden">
         <div class="flex items-center justify-between border-b border-gray-200 p-4 dark:border-gray-700">
-            <h2 class="text-base font-semibold">Pending My Approval</h2>
-            <button type="button" onclick="loadData()" class="request-secondary-btn px-3 py-1.5 text-xs"><span class="material-icons-round text-sm">refresh</span>Refresh</button>
-        </div>
-        <div class="overflow-x-auto">
-            <table class="w-full min-w-[680px] text-sm">
-                <thead class="request-table-head">
-                <tr>
-                    <th class="px-4 py-3 text-left">Request</th>
-                    <th class="px-4 py-3 text-left">Task</th>
-                    <th class="px-4 py-3 text-left">Created</th>
-                    <th class="px-4 py-3 text-left">Action</th>
-                </tr>
-                </thead>
-                <tbody id="taskRows" class="divide-y divide-gray-200 dark:divide-gray-700"></tbody>
-            </table>
-        </div>
-    </section>
-
-    <section class="request-card overflow-hidden">
-        <div class="flex items-center justify-between border-b border-gray-200 p-4 dark:border-gray-700">
             <h2 class="text-base font-semibold">Approval Paths</h2>
             <button type="button" onclick="loadData()" class="request-secondary-btn px-3 py-1.5 text-xs"><span class="material-icons-round text-sm">refresh</span>Refresh</button>
         </div>
@@ -173,140 +147,12 @@
         </div>
     </section>
 
-    <div id="requestModal" class="fixed inset-0 z-50 hidden">
-        <div class="absolute inset-0 bg-black/50" onclick="closeRequestModal()"></div>
-        <div class="absolute inset-0 overflow-y-auto p-4">
-            <div class="request-modal-panel mx-auto my-8">
-                <div class="request-modal-head top-0 flex items-center justify-between border-b px-6 py-4">
-                    <div>
-                        <h3 class="text-lg font-bold">New Request</h3>
-                        <p class="text-sm text-gray-500">Create a draft, attach documents where required, then submit for approval.</p>
-                    </div>
-                    <button type="button" onclick="closeRequestModal()" class="text-gray-500 hover:text-gray-700">
-                        <span class="material-icons-round">close</span>
-                    </button>
-                </div>
-                <form id="requestForm" class="max-h-[78vh] space-y-5 overflow-y-auto p-6">
-                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                        <label class="text-sm font-medium">Type
-                            <select id="requestType" class="request-control mt-1" required></select>
-                        </label>
-                        <label class="text-sm font-medium">Priority
-                            <select id="priority" class="request-control mt-1">
-                                <option>NORMAL</option>
-                                <option>LOW</option>
-                                <option>HIGH</option>
-                                <option>URGENT</option>
-                            </select>
-                        </label>
-                    </div>
-                    <label class="block text-sm font-medium">Title
-                        <input id="title" class="request-control mt-1" required maxlength="200">
-                    </label>
-                    <label class="block text-sm font-medium">Description
-                        <textarea id="description" rows="3" class="request-control mt-1"></textarea>
-                    </label>
-
-                    <div id="staffFields" class="request-type-panel hidden space-y-4">
-                        <h4 class="flex items-center gap-2 font-semibold"><span class="material-icons-round text-primary-600">groups</span>Staff Requisition Details</h4>
-                        <div class="space-y-3">
-                            <p class="text-sm font-medium text-gray-600 dark:text-gray-300">Role Details</p>
-                            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                                <label class="text-sm font-medium">Job Title<input id="staffJobTitle" required class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-900"></label>
-                                <label class="text-sm font-medium">Department<select id="staffDepartmentId" required class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-900"></select></label>
-                                <label class="text-sm font-medium">Job Grade<select id="staffJobGradeId" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-900"></select></label>
-                                <label class="text-sm font-medium">Employment Type<select id="staffEmploymentType" required class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-900"></select></label>
-                                <label class="text-sm font-medium">Number Of Positions<input id="staffPositions" type="number" min="1" required class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-900"></label>
-                                <label class="text-sm font-medium">Requisition Reason<select id="staffRequisitionReason" required onchange="toggleReplacementEmployee()" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-900"></select></label>
-                            </div>
-                        </div>
-                        <div id="staffReplacementGroup" class="hidden">
-                            <label class="text-sm font-medium">Replacement Employee<select id="staffReplacementId" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-900"></select></label>
-                        </div>
-                        <div class="space-y-3">
-                            <p class="text-sm font-medium text-gray-600 dark:text-gray-300">Timing & Budget</p>
-                            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                                <label class="text-sm font-medium">Target Start Date<input id="staffStartDate" type="date" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-900"></label>
-                                <label class="text-sm font-medium">Estimated Monthly Cost<input id="staffMonthlyCost" type="number" min="0" step="0.01" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-900"></label>
-                            </div>
-                            <label class="inline-flex items-center gap-2 text-sm"><input id="staffBudgeted" type="checkbox"> Budgeted</label>
-                        </div>
-                        <label class="block text-sm font-medium">Reason For Hire<textarea id="staffReason" rows="3" required class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-900"></textarea></label>
-                    </div>
-
-                    <div id="fileFields" class="request-type-panel hidden space-y-4">
-                        <h4 class="flex items-center gap-2 font-semibold"><span class="material-icons-round text-primary-600">folder_open</span>File Request Details</h4>
-                        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                            <select id="fileCategory" required class="rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-900"></select>
-                            <select id="fileConfidentiality" required class="rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-900"></select>
-                            <select id="fileAccessType" required class="rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-900"></select>
-                            <label class="inline-flex items-center gap-2 text-sm"><input id="fileRetention" type="checkbox"> Retention required</label>
-                        </div>
-                        <textarea id="filePurpose" rows="3" placeholder="Purpose" class="w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-900"></textarea>
-                        <input id="initialAttachment" type="file" class="block w-full text-sm">
-                    </div>
-
-                    <div id="assetFields" class="request-type-panel hidden space-y-4">
-                        <h4 class="flex items-center gap-2 font-semibold"><span class="material-icons-round text-primary-600">devices</span>Asset Request Details</h4>
-                        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                            <input id="assetRequiredDate" type="date" class="rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-900">
-                        </div>
-                        <textarea id="assetJustification" rows="3" placeholder="Business justification" class="w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-900"></textarea>
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <h5 class="font-medium">Assets</h5>
-                                <p id="assetCatalogStatus" class="mt-1 text-xs text-gray-500">Asset names are loaded from Fixed Asset Management.</p>
-                            </div>
-                            <button type="button" onclick="addItemRow()" class="rounded-md border border-gray-300 px-3 py-1.5 text-xs dark:border-gray-600">Add Asset</button>
-                        </div>
-                        <div id="itemRows" class="space-y-3"></div>
-                    </div>
-
-                    <div id="expenseFields" class="request-type-panel hidden space-y-4">
-                        <h4 class="flex items-center gap-2 font-semibold"><span class="material-icons-round text-primary-600">receipt_long</span>Expense Reimbursement Details</h4>
-                        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                            <label class="text-sm font-medium">Expense Start Date<input id="expenseStartDate" type="date" required class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-900"></label>
-                            <label class="text-sm font-medium">Expense End Date<input id="expenseEndDate" type="date" required class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-900"></label>
-                            <label class="text-sm font-medium">Payment Method<select id="expensePaymentMethod" required class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-900"></select></label>
-                            <label class="text-sm font-medium">Currency<input id="expenseCurrency" maxlength="3" value="NGN" required class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 uppercase dark:border-gray-600 dark:bg-gray-900"></label>
-                        </div>
-                        <label class="block text-sm font-medium">Business Purpose<textarea id="expensePurpose" rows="3" required class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-900"></textarea></label>
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <h5 class="font-medium">Expense Lines</h5>
-                                <p class="mt-1 text-xs text-gray-500">Add each receipt or expense being claimed.</p>
-                            </div>
-                            <button type="button" onclick="addExpenseRow()" class="rounded-md border border-gray-300 px-3 py-1.5 text-xs dark:border-gray-600">Add Expense</button>
-                        </div>
-                        <div id="expenseRows" class="space-y-3"></div>
-                        <p class="text-right text-sm font-semibold">Total Claim: <span id="expenseTotal">0.00</span></p>
-                        <input id="expenseAttachment" type="file" class="block w-full text-sm">
-                    </div>
-
-                    <div class="request-modal-foot bottom-0 flex justify-end gap-2 border-t pt-4">
-                        <button type="button" onclick="closeRequestModal()" class="rounded-lg border border-gray-300 px-4 py-2 dark:border-gray-600">Cancel</button>
-                        <button id="saveDraftBtn" type="submit" class="request-primary-btn">Create Draft</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
     <script>
         const api = '/api/requests';
         let requests = [];
-        let tasks = [];
         let types = [];
         let approvalPaths = [];
         let approverOptions = [];
-        let staffOptions = {};
-        let fileOptions = {};
-        let expenseOptions = {};
-        let assetCatalog = [];
-        let assetCatalogLoaded = false;
-
-        function openRequestModal() { document.getElementById('requestModal').classList.remove('hidden'); }
-        function closeRequestModal() { document.getElementById('requestModal').classList.add('hidden'); }
 
         function showError(message) { alert(message || 'Request failed'); }
         function fmtType(type) { return (type || '').replaceAll('_', ' '); }
@@ -329,33 +175,21 @@
 
         async function loadData() {
             try {
-                [requests, tasks, types, approvalPaths, approverOptions, staffOptions, fileOptions, expenseOptions] = await Promise.all([
+                [requests, types, approvalPaths, approverOptions] = await Promise.all([
                     json(api + '/visible'),
-                    json(api + '/approvals/tasks'),
                     json(api + '/types'),
                     json('/api/approval-paths'),
-                    json('/api/approval-paths/approvers'),
-                    json(api + '/staff-requisition-options'),
-                    json(api + '/file-options'),
-                    json(api + '/expense-reimbursement-options')
+                    json('/api/approval-paths/approvers')
                 ]);
                 requests = requests || [];
-                tasks = tasks || [];
                 types = types || [];
                 approvalPaths = approvalPaths || [];
                 approverOptions = approverOptions || [];
-                staffOptions = staffOptions || {};
-                fileOptions = fileOptions || {};
-                expenseOptions = expenseOptions || {};
                 renderTypeOptions();
-                renderStaffOptions();
-                renderFileOptions();
-                renderExpenseOptions();
                 renderApprovalPathRows();
                 renderRequestTypeRoutes();
                 if (!document.querySelectorAll('[data-approval-step]').length) resetApprovalPathForm();
                 renderRequests();
-                renderTasks();
                 renderStats();
             } catch (e) {
                 showError(e.message);
@@ -364,9 +198,7 @@
 
         function renderTypeOptions() {
             const options = types.map(t => `<option value="${t.code}">${t.name}</option>`).join('');
-            document.getElementById('requestType').innerHTML = options;
             document.getElementById('typeFilter').innerHTML = '<option value="">All types</option>' + options;
-            updateTypeFields();
         }
 
         function renderApprovalPathRows() {
@@ -486,58 +318,6 @@
             } catch (e) { showError(e.message); }
         });
 
-        function renderStaffOptions() {
-            populateLookupSelect('staffDepartmentId', 'Select department', staffOptions.departments || []);
-            populateLookupSelect('staffJobGradeId', 'Select job grade', staffOptions.jobGrades || [], true);
-            populateLookupSelect('staffReplacementId', 'Select replacement employee', staffOptions.employees || [], true);
-            populateEnumSelect('staffEmploymentType', 'Select employment type', staffOptions.employmentTypes || []);
-            populateEnumSelect('staffRequisitionReason', 'Select requisition reason', staffOptions.requisitionReasons || []);
-            toggleReplacementEmployee();
-        }
-
-        function populateLookupSelect(id, placeholder, options, optional = false) {
-            document.getElementById(id).innerHTML = `<option value="">${placeholder}${optional ? ' (optional)' : ''}</option>` + options
-                .map(option => `<option value="${option.value}">${option.label}</option>`)
-                .join('');
-        }
-
-        function populateEnumSelect(id, placeholder, options) {
-            document.getElementById(id).innerHTML = `<option value="">${placeholder}</option>` + options
-                .map(option => `<option value="${option.value}">${option.label}</option>`)
-                .join('');
-        }
-
-        function toggleReplacementEmployee() {
-            const replacement = document.getElementById('staffRequisitionReason').value === 'REPLACEMENT';
-            document.getElementById('staffReplacementGroup').classList.toggle('hidden', !replacement);
-            document.getElementById('staffReplacementId').required = replacement;
-        }
-
-        function renderFileOptions() {
-            populateFileSelect('fileCategory', 'Select file category', fileOptions.fileCategories || []);
-            populateFileSelect('fileConfidentiality', 'Select confidentiality level', fileOptions.confidentialityLevels || []);
-            populateFileSelect('fileAccessType', 'Select access type', fileOptions.requestedAccessTypes || []);
-        }
-
-        function renderExpenseOptions() {
-            populateEnumSelect('expensePaymentMethod', 'Select payment method', expenseOptions.paymentMethods || []);
-            document.querySelectorAll('[data-expense="expenseCategory"]').forEach(select => populateExpenseCategorySelect(select));
-        }
-
-        function populateExpenseCategorySelect(select) {
-            const current = select.value;
-            select.innerHTML = '<option value="">Select category</option>' + (expenseOptions.expenseCategories || [])
-                .map(option => `<option value="${option.value}">${option.label}</option>`)
-                .join('');
-            select.value = current;
-        }
-
-        function populateFileSelect(id, placeholder, options) {
-            document.getElementById(id).innerHTML = `<option value="">${placeholder}</option>` + options
-                .map(option => `<option value="${option.value}">${option.label}</option>`)
-                .join('');
-        }
-
         function renderRequests() {
             const type = document.getElementById('typeFilter').value;
             const status = document.getElementById('statusFilter').value;
@@ -561,238 +341,13 @@
                 </tr>`).join('') : '<tr><td colspan="6"><div class="request-empty"><span class="material-icons-round mb-2 block text-3xl">inbox</span>No requests found.</div></td></tr>';
         }
 
-        function renderTasks() {
-            const body = document.getElementById('taskRows');
-            body.innerHTML = tasks.length ? tasks.map(t => {
-                const requestId = t.variables && t.variables.workflowRequestId ? t.variables.workflowRequestId : '';
-                return `<tr class="request-row">
-                    <td class="px-4 py-3">${requestId ? `<a class="text-primary-600 hover:underline" href="/requests/${requestId}">Request #${requestId}</a>` : '-'}</td>
-                    <td class="px-4 py-3">${t.taskName || t.taskDefinitionKey || ''}</td>
-                    <td class="px-4 py-3">${(t.createdTime || '').replace('T', ' ')}</td>
-                    <td class="px-4 py-3">
-                        <button onclick="approval('${t.taskId}','approve')" class="rounded bg-green-600 px-3 py-1 text-xs text-white">Approve</button>
-                        <button onclick="approval('${t.taskId}','reject')" class="rounded bg-red-600 px-3 py-1 text-xs text-white">Reject</button>
-                        <button onclick="approval('${t.taskId}','return')" class="rounded bg-orange-600 px-3 py-1 text-xs text-white">Return</button>
-                    </td>
-                </tr>`;
-            }).join('') : '<tr><td colspan="4"><div class="request-empty"><span class="material-icons-round mb-2 block text-3xl">task_alt</span>No pending approval tasks.</div></td></tr>';
-        }
-
         function renderStats() {
             document.getElementById('openCount').textContent = requests.filter(r => ['DRAFT','SUBMITTED','IN_APPROVAL','RETURNED_FOR_CORRECTION'].includes(r.status)).length;
             document.getElementById('approvedCount').textContent = requests.filter(r => r.status === 'APPROVED').length;
             document.getElementById('exceptionCount').textContent = requests.filter(r => ['RETURNED_FOR_CORRECTION','REJECTED'].includes(r.status)).length;
         }
 
-        function updateTypeFields() {
-            const value = document.getElementById('requestType').value;
-            ['staffFields','fileFields','assetFields','expenseFields'].forEach(id => document.getElementById(id).classList.add('hidden'));
-            ['staffFields','fileFields','assetFields','expenseFields'].forEach(id => setSectionEnabled(id, false));
-            if (value === 'STAFF_REQUISITION') {
-                document.getElementById('staffFields').classList.remove('hidden');
-                setSectionEnabled('staffFields', true);
-            }
-            if (value === 'FILE_REQUEST') {
-                document.getElementById('fileFields').classList.remove('hidden');
-                setSectionEnabled('fileFields', true);
-            }
-            if (value === 'ASSET_REQUEST') {
-                document.getElementById('assetFields').classList.remove('hidden');
-                setSectionEnabled('assetFields', true);
-                loadAssetCatalog();
-                if (!document.getElementById('itemRows').children.length) addItemRow();
-            }
-            if (value === 'EXPENSE_REIMBURSEMENT') {
-                document.getElementById('expenseFields').classList.remove('hidden');
-                setSectionEnabled('expenseFields', true);
-                if (!document.getElementById('expenseRows').children.length) addExpenseRow();
-            }
-        }
-
-        function setSectionEnabled(id, enabled) {
-            document.querySelectorAll(`#${id} input, #${id} select, #${id} textarea, #${id} button`).forEach(element => {
-                element.disabled = !enabled;
-            });
-        }
-
-        async function loadAssetCatalog() {
-            if (assetCatalogLoaded) return;
-            const status = document.getElementById('assetCatalogStatus');
-            status.textContent = 'Loading assets from Fixed Asset Management...';
-            try {
-                assetCatalog = await json(api + '/assets/catalog') || [];
-                assetCatalogLoaded = true;
-                status.textContent = assetCatalog.length ? 'Select an asset from Fixed Asset Management.' : 'No requestable assets were returned by Fixed Asset Management.';
-                document.querySelectorAll('[data-item="famAssetId"]').forEach(select => populateAssetSelect(select));
-            } catch (e) {
-                status.textContent = 'Asset list could not be loaded from Fixed Asset Management. Please try again later.';
-                showError(e.message);
-            }
-        }
-
-        function populateAssetSelect(select) {
-            const current = select.value;
-            select.innerHTML = '<option value="">Select asset</option>' + assetCatalog.map(asset => {
-                const code = asset.assetCode ? ` - ${asset.assetCode}` : '';
-                const qty = asset.availableQuantity != null ? ` (${asset.availableQuantity} available)` : '';
-                return `<option value="${asset.assetId}">${asset.assetName}${code}${qty}</option>`;
-            }).join('');
-            select.value = current;
-            applySelectedAssetLimit(select);
-        }
-
-        function applySelectedAssetLimit(select) {
-            const row = select.closest('div');
-            const quantity = row.querySelector('[data-item="quantity"]');
-            const asset = assetCatalog.find(a => a.assetId === select.value);
-            if (asset && asset.availableQuantity != null) {
-                quantity.max = asset.availableQuantity;
-                quantity.placeholder = `Quantity, max ${asset.availableQuantity}`;
-            } else {
-                quantity.removeAttribute('max');
-                quantity.placeholder = 'Quantity';
-            }
-        }
-
-        function addItemRow() {
-            const row = document.createElement('div');
-            row.className = 'request-line-row grid grid-cols-1 gap-2 md:grid-cols-[1fr_160px_auto]';
-            row.innerHTML = `
-                <select data-item="famAssetId" required onchange="applySelectedAssetLimit(this)" class="rounded border border-gray-300 px-2 py-2 dark:border-gray-600 dark:bg-gray-900"></select>
-                <input data-item="quantity" type="number" min="1" step="1" placeholder="Quantity" required class="rounded border border-gray-300 px-2 py-2 dark:border-gray-600 dark:bg-gray-900">
-                <button type="button" onclick="this.closest('div').remove()" class="rounded border border-gray-300 px-2 py-2 text-sm dark:border-gray-600">Remove</button>`;
-            document.getElementById('itemRows').appendChild(row);
-            populateAssetSelect(row.querySelector('[data-item="famAssetId"]'));
-        }
-
-        function addExpenseRow() {
-            const row = document.createElement('div');
-            row.className = 'request-line-row grid grid-cols-1 gap-2 md:grid-cols-[150px_1fr_130px_auto]';
-            row.innerHTML = `
-                <input data-expense="expenseDate" type="date" required class="rounded border border-gray-300 px-2 py-2 dark:border-gray-600 dark:bg-gray-900">
-                <select data-expense="expenseCategory" required class="rounded border border-gray-300 px-2 py-2 dark:border-gray-600 dark:bg-gray-900"></select>
-                <input data-expense="amount" type="number" min="0.01" step="0.01" placeholder="Amount" required oninput="updateExpenseTotal()" class="rounded border border-gray-300 px-2 py-2 dark:border-gray-600 dark:bg-gray-900">
-                <button type="button" onclick="this.closest('div').remove(); updateExpenseTotal();" class="rounded border border-gray-300 px-2 py-2 text-sm dark:border-gray-600">Remove</button>
-                <input data-expense="description" placeholder="Description" required class="rounded border border-gray-300 px-2 py-2 dark:border-gray-600 dark:bg-gray-900 md:col-span-2">
-                <input data-expense="vendorName" placeholder="Vendor" class="rounded border border-gray-300 px-2 py-2 dark:border-gray-600 dark:bg-gray-900">
-                <input data-expense="remarks" placeholder="Remarks" class="rounded border border-gray-300 px-2 py-2 dark:border-gray-600 dark:bg-gray-900">`;
-            document.getElementById('expenseRows').appendChild(row);
-            populateExpenseCategorySelect(row.querySelector('[data-expense="expenseCategory"]'));
-        }
-
-        function updateExpenseTotal() {
-            const total = [...document.querySelectorAll('[data-expense="amount"]')]
-                .reduce((sum, input) => sum + (Number(input.value) || 0), 0);
-            document.getElementById('expenseTotal').textContent = total.toFixed(2);
-        }
-
-        function optionalNumber(id) {
-            const value = document.getElementById(id).value;
-            return value === '' ? null : Number(value);
-        }
-
-        function payload() {
-            const requestType = document.getElementById('requestType').value;
-            const data = {
-                requestType,
-                title: document.getElementById('title').value,
-                description: document.getElementById('description').value,
-                priority: document.getElementById('priority').value
-            };
-            if (requestType === 'STAFF_REQUISITION') {
-                data.staffRequisition = {
-                    jobTitle: document.getElementById('staffJobTitle').value,
-                    departmentId: Number(document.getElementById('staffDepartmentId').value),
-                    jobGradeId: optionalNumber('staffJobGradeId'),
-                    numberOfPositions: Number(document.getElementById('staffPositions').value),
-                    employmentType: document.getElementById('staffEmploymentType').value,
-                    requisitionReason: document.getElementById('staffRequisitionReason').value,
-                    targetStartDate: document.getElementById('staffStartDate').value || null,
-                    budgeted: document.getElementById('staffBudgeted').checked,
-                    estimatedMonthlyCost: optionalNumber('staffMonthlyCost'),
-                    reasonForHire: document.getElementById('staffReason').value,
-                    replacementEmployeeId: optionalNumber('staffReplacementId')
-                };
-                data.departmentId = data.staffRequisition.departmentId;
-            }
-            if (requestType === 'FILE_REQUEST') {
-                data.fileRequest = {
-                    fileCategory: document.getElementById('fileCategory').value,
-                    confidentialityLevel: document.getElementById('fileConfidentiality').value,
-                    requestedAccessType: document.getElementById('fileAccessType').value,
-                    retentionRequired: document.getElementById('fileRetention').checked,
-                    purpose: document.getElementById('filePurpose').value
-                };
-            }
-            if (requestType === 'ASSET_REQUEST') {
-                data.assetRequest = {
-                    requiredDate: document.getElementById('assetRequiredDate').value,
-                    businessJustification: document.getElementById('assetJustification').value
-                };
-                data.items = [...document.querySelectorAll('#itemRows > div')].map(row => ({
-                    famAssetId: row.querySelector('[data-item="famAssetId"]').value,
-                    quantity: Number(row.querySelector('[data-item="quantity"]').value)
-                }));
-            }
-            if (requestType === 'EXPENSE_REIMBURSEMENT') {
-                data.expenseReimbursement = {
-                    expenseStartDate: document.getElementById('expenseStartDate').value,
-                    expenseEndDate: document.getElementById('expenseEndDate').value,
-                    businessPurpose: document.getElementById('expensePurpose').value,
-                    paymentMethod: document.getElementById('expensePaymentMethod').value,
-                    currency: document.getElementById('expenseCurrency').value,
-                    expenseItems: [...document.querySelectorAll('#expenseRows > div')].map(row => ({
-                        expenseDate: row.querySelector('[data-expense="expenseDate"]').value,
-                        expenseCategory: row.querySelector('[data-expense="expenseCategory"]').value,
-                        description: row.querySelector('[data-expense="description"]').value,
-                        vendorName: row.querySelector('[data-expense="vendorName"]').value,
-                        amount: Number(row.querySelector('[data-expense="amount"]').value),
-                        remarks: row.querySelector('[data-expense="remarks"]').value
-                    }))
-                };
-            }
-            return data;
-        }
-
-        async function approval(taskId, action) {
-            const comment = prompt(action === 'approve' ? 'Optional comment:' : 'Comment is required:') || '';
-            if (action !== 'approve' && !comment.trim()) return showError('A comment is required.');
-            try {
-                await json(`${api}/approvals/${action}`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({taskId, comment})});
-                await loadData();
-            } catch (e) { showError(e.message); }
-        }
-
-        async function uploadInitialAttachment(requestId) {
-            const requestType = document.getElementById('requestType').value;
-            const input = requestType === 'EXPENSE_REIMBURSEMENT' ? document.getElementById('expenseAttachment') : document.getElementById('initialAttachment');
-            const file = input.files[0];
-            if (!file) return;
-            const form = new FormData();
-            form.append('file', file);
-            form.append('attachmentType', requestType === 'EXPENSE_REIMBURSEMENT' ? 'RECEIPT' : 'SUPPORTING_DOCUMENT');
-            await fetch(`${api}/${requestId}/attachments`, {method:'POST', body: form}).then(async r => {
-                if (!r.ok) throw new Error(await r.text());
-            });
-        }
-
-        document.getElementById('requestType').addEventListener('change', updateTypeFields);
-        document.getElementById('staffRequisitionReason').addEventListener('change', toggleReplacementEmployee);
         ['typeFilter','statusFilter','priorityFilter','requestSearch'].forEach(id => document.getElementById(id).addEventListener('input', renderRequests));
-        document.getElementById('requestForm').addEventListener('submit', async event => {
-            event.preventDefault();
-            try {
-                const created = await json(api, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload())});
-                await uploadInitialAttachment(created.id);
-                closeRequestModal();
-                event.target.reset();
-                document.getElementById('itemRows').innerHTML = '';
-                document.getElementById('expenseRows').innerHTML = '';
-                updateExpenseTotal();
-                await loadData();
-                location.href = `/requests/${created.id}`;
-            } catch (e) { showError(e.message); }
-        });
         document.addEventListener('DOMContentLoaded', loadData);
     </script>
 </main>
