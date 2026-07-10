@@ -1,6 +1,7 @@
 package com.justjava.humanresource.approval.service.impl;
 
 import com.justjava.humanresource.approval.enums.ApprovalModuleType;
+import com.justjava.humanresource.approval.enums.ApprovalRouteType;
 import com.justjava.humanresource.approval.model.ApprovalContext;
 import com.justjava.humanresource.approval.model.ApproverRef;
 import com.justjava.humanresource.approval.service.ApprovalRouteResolver;
@@ -23,8 +24,14 @@ public class LineManagerApprovalRouteResolver implements ApprovalRouteResolver {
 
     @Override
     public boolean supports(ApprovalContext context) {
-        return context.getModuleType() == ApprovalModuleType.LEAVE
-                || context.getModuleType() == ApprovalModuleType.REQUEST;
+        if (context.getModuleType() == ApprovalModuleType.LEAVE) {
+            return true;
+        }
+        ApprovalRouteType routeType = context.getRouteType() == null
+                ? ApprovalRouteType.LINE_MANAGER
+                : context.getRouteType();
+        return context.getModuleType() == ApprovalModuleType.REQUEST
+                && routeType == ApprovalRouteType.LINE_MANAGER;
     }
 
     @Override
