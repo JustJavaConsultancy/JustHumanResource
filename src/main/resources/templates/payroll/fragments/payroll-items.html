@@ -39,6 +39,18 @@
         .form-input { border: 1px solid #e2e8f0; border-radius: 0.5rem; padding: 0.75rem; width: 100%; transition: border-color 0.2s; }
         .form-input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
         .modal-backdrop { background-color: rgba(0, 0, 0, 0.5); backdrop-filter: blur(4px); }
+        .modal-transition { transition: opacity 0.2s ease-in-out; }
+        .modal-content { transform: scale(0.95); transition: transform 0.2s ease-in-out; }
+        .modal.show .modal-content { transform: scale(1); }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .pi-spinner {
+            width: 14px; height: 14px;
+            border: 2px solid rgba(255,255,255,.35);
+            border-top-color: white; border-radius: 50%;
+            animation: spin .5s linear infinite;
+            display: inline-block;
+        }
+        @keyframes piToastIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
         .sidebar-container { position: fixed; top: 0; left: 0; height: 100vh; width: 16rem; z-index: 40; overflow-y: auto; }
         .main-content { margin-left: 16rem; width: calc(100% - 16rem); min-height: 100vh; }
         @media (max-width: 1023px) {
@@ -90,6 +102,35 @@
         var taxReliefs = /*[[${taxReliefs}]]*/ [];
         /*]]>*/
     </script>
+
+    <!-- Pay Item CSV Upload Section -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 mb-6 flex flex-col md:flex-row md:items-center gap-4">
+        <div class="flex items-center gap-3">
+            <div class="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                <span class="material-icons-round text-blue-600 dark:text-blue-400">playlist_add</span>
+            </div>
+            <div>
+                <p class="text-sm font-semibold text-gray-700 dark:text-gray-200">Bulk Upload Employee Pay Items</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">CSV: employeeId, itemType, itemCode, overrideAmount</p>
+            </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-3 md:ml-auto">
+            <a href="#" onclick="downloadPayItemCsvTemplate(); return false;"
+               class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-300 text-xs font-semibold hover:bg-blue-50 dark:hover:bg-blue-900/20">
+                <span class="material-icons-round text-sm">download</span>
+                Download Template
+            </a>
+            <input type="file" id="payItemCsvFileInput" accept=".csv"
+                   class="text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0
+                      file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700
+                      hover:file:bg-blue-100 cursor-pointer" />
+            <button type="button" onclick="uploadPayItemsCsv()" id="payItemCsvUploadBtn"
+                    class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">
+                <span class="material-icons-round text-sm">cloud_upload</span>
+                Upload Pay Items
+            </button>
+        </div>
+    </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <!-- Allowances Section (takes 1/3 width on large screens) -->
@@ -794,6 +835,72 @@
         </div>
     </div>
 
+    <!-- ========== PAY ITEM CSV PREVIEW MODAL ========== -->
+    <div id="payItemCsvPreviewModal" class="fixed inset-0 z-50 hidden modal-transition" onclick="if(event.target===this)closeModal('payItemCsvPreviewModal')">
+        <div class="modal-backdrop fixed inset-0 bg-black bg-opacity-50"></div>
+        <div class="fixed inset-0 flex items-center justify-center p-4">
+            <div class="modal-content bg-white dark:bg-gray-800 rounded-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden shadow-2xl flex flex-col">
+                <div class="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                            <span class="material-icons-round text-blue-600 dark:text-blue-400">fact_check</span>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-bold text-gray-900 dark:text-white">Preview Pay Item Upload</h3>
+                            <p class="text-xs text-gray-500 dark:text-gray-400" id="payItemCsvPreviewCount">Review pay items before uploading</p>
+                        </div>
+                    </div>
+                    <button onclick="closeModal('payItemCsvPreviewModal')" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                        <span class="material-icons-round text-2xl">close</span>
+                    </button>
+                </div>
+
+                <div class="flex-1 overflow-auto p-5">
+                    <div id="payItemCsvValidationBanner" class="hidden mb-4 p-3 rounded-xl border flex items-start gap-2 text-sm"></div>
+
+                    <div id="payItemCsvConflictPanel" class="hidden mb-4 rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/10 overflow-hidden">
+                        <div class="flex items-center gap-2 px-4 py-3 bg-red-100 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800">
+                            <span class="material-icons-round text-red-600 dark:text-red-400">block</span>
+                            <span class="font-semibold text-red-700 dark:text-red-400 text-sm">Upload blocked - validation errors found</span>
+                        </div>
+                        <div class="px-4 py-3">
+                            <p class="text-xs text-red-600 dark:text-red-400 mb-2">Fix all rows below and re-upload. No pay items were saved.</p>
+                            <ul id="payItemCsvConflictList" class="space-y-1 text-xs text-red-700 dark:text-red-300 max-h-44 overflow-y-auto font-mono"></ul>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm border-collapse">
+                            <thead>
+                            <tr class="bg-gray-50 dark:bg-gray-700">
+                                <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-200 dark:border-gray-600">#</th>
+                                <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-200 dark:border-gray-600">Employee ID</th>
+                                <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-200 dark:border-gray-600">Item Type</th>
+                                <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-200 dark:border-gray-600">Item Code</th>
+                                <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-200 dark:border-gray-600">Override Amount</th>
+                                <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-200 dark:border-gray-600">Status</th>
+                            </tr>
+                            </thead>
+                            <tbody id="payItemCsvPreviewTableBody" class="divide-y divide-gray-100 dark:divide-gray-700"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between p-5 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
+                    <button onclick="closeModal('payItemCsvPreviewModal')"
+                            class="px-5 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm">
+                        Cancel
+                    </button>
+                    <button id="payItemCsvConfirmUploadBtn" onclick="confirmPayItemCsvUpload()"
+                            class="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm">
+                        <span class="material-icons-round text-sm">cloud_upload</span>
+                        Confirm &amp; Upload
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal JavaScript functions (updated to control amount field visibility) -->
     <script>
         function openModal(modalId) {
@@ -960,6 +1067,208 @@ function editAllowance(id) {
 
         function toggleTaxReliefStatus(id) {
             alert('Toggle tax relief status for ID: ' + id);
+        }
+
+        /* ── HTML ESCAPE ─────────────────────────────────────────────────── */
+        function piEscHtml(s) {
+            if (!s) return '';
+            return String(s).replace(/[&<>'"]/g, c =>
+                ({ '&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;' }[c]));
+        }
+
+        function esc(str) {
+            if (!str) return '';
+            return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        /* ── TOAST NOTIFICATION ──────────────────────────────────────────── */
+        function showPiToast(msg, type) {
+            const existing = document.getElementById('pi-toast');
+            if (existing) existing.remove();
+
+            const toast = document.createElement('div');
+            toast.id = 'pi-toast';
+            const bg = type === 'success' ? '#16a34a' : '#dc2626';
+            const icon = type === 'success' ? 'check_circle' : 'error';
+            toast.style.cssText = `
+                position:fixed; bottom:24px; right:24px; z-index:9999;
+                background:${bg}; color:white;
+                padding:12px 18px; border-radius:10px;
+                font-size:0.82rem; font-weight:600;
+                display:flex; align-items:center; gap:8px;
+                box-shadow:0 8px 24px rgba(0,0,0,.2);
+                animation:piToastIn .25s ease;
+                max-width:320px;
+            `;
+            toast.innerHTML = `
+                <span class="material-icons-round" style="font-size:18px">${icon}</span>
+                <span>${piEscHtml(msg)}</span>`;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3200);
+        }
+
+        // -- PAY ITEM CSV UPLOAD: parse preview -> confirm -> POST --
+        let _payItemCsvFileForUpload = null;
+
+        function downloadPayItemCsvTemplate() {
+            const template =
+    'employeeId,itemType,itemCode,overrideAmount\n' +
+    '12,ALLOWANCE,ALL-HOUSING,50000\n' +
+    '12,DEDUCTION,DED-PENSION,15000\n' +
+    '14,TAX_RELIEF,TR-CRA,10000\n';
+            const blob = new Blob([template], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'employee-pay-items-template.csv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function uploadPayItemsCsv() {
+            const file = document.getElementById('payItemCsvFileInput').files[0];
+            if (!file) {
+                showPiToast('Please select a CSV file first', 'error');
+                return;
+            }
+            _payItemCsvFileForUpload = file;
+            document.getElementById('payItemCsvConflictPanel').classList.add('hidden');
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                parsePayItemCsvAndShowPreview(e.target.result);
+            };
+            reader.readAsText(file);
+        }
+
+        function parsePayItemCsvAndShowPreview(csvText) {
+            const lines = csvText.split(/\r?\n/).filter(l => l.trim() !== '');
+            if (lines.length < 2) {
+                showPiToast('CSV file appears empty or has no data rows', 'error');
+                return;
+            }
+
+            const dataLines = lines.slice(1);
+            const rows = [];
+            let hasErrors = false;
+            const seen = new Set();
+            const validTypes = ['ALLOWANCE', 'DEDUCTION', 'TAX_RELIEF'];
+
+            dataLines.forEach(function(line, idx) {
+const parts = line.split(',').map(p => p.trim());
+const employeeId = parts[0] || '';
+const itemType = (parts[1] || '').toUpperCase();
+const itemCode = (parts[2] || '').toUpperCase();
+const overrideAmount = parts[3] || '';
+
+const errors = [];
+if (!employeeId || isNaN(Number(employeeId)) || Number(employeeId) <= 0) errors.push('employeeId must be a valid positive number');
+if (!validTypes.includes(itemType)) errors.push('itemType must be ALLOWANCE, DEDUCTION, or TAX_RELIEF');
+if (!itemCode) errors.push('itemCode is required');
+if (!overrideAmount || isNaN(Number(overrideAmount)) || Number(overrideAmount) < 0) {
+    errors.push('overrideAmount must be provided and >= 0');
+}
+const uniqueKey = employeeId + '|' + itemType + '|' + itemCode;
+if (seen.has(uniqueKey)) errors.push('Duplicate row in file');
+seen.add(uniqueKey);
+
+if (errors.length > 0) hasErrors = true;
+rows.push({ idx: idx + 1, employeeId, itemType, itemCode, overrideAmount, errors });
+            });
+
+            const tbody = document.getElementById('payItemCsvPreviewTableBody');
+            tbody.innerHTML = '';
+            rows.forEach(function(row) {
+                const ok = row.errors.length === 0;
+                const tr = document.createElement('tr');
+                tr.className = ok ? 'hover:bg-gray-50 dark:hover:bg-gray-750' : 'bg-red-50 dark:bg-red-900/10';
+  tr.innerHTML =
+    '<td class="px-3 py-2 text-gray-400 text-xs">' + row.idx + '</td>' +
+    '<td class="px-3 py-2 text-xs font-mono text-gray-700 dark:text-gray-300">' + esc(row.employeeId) + '</td>' +
+    '<td class="px-3 py-2 text-xs font-semibold text-gray-700 dark:text-gray-300">' + esc(row.itemType) + '</td>' +
+    '<td class="px-3 py-2 text-xs text-gray-700 dark:text-gray-300">' + esc(row.itemCode) + '</td>' +
+    '<td class="px-3 py-2 text-xs font-mono text-gray-700 dark:text-gray-300">' + esc(row.overrideAmount) + '</td>' +
+                    '<td class="px-3 py-2">' + (ok
+                        ? '<span class="flex items-center gap-1 text-green-600 text-xs font-medium"><span class="material-icons-round text-sm">check_circle</span>OK</span>'
+                        : '<span class="text-red-600 text-xs" title="' + esc(row.errors.join(', ')) + '"><span class="material-icons-round text-sm align-bottom">error</span> ' + esc(row.errors[0]) + (row.errors.length > 1 ? ' +' + (row.errors.length - 1) + ' more' : '') + '</span>'
+                    ) + '</td>';
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('payItemCsvPreviewCount').textContent =
+                rows.length + ' row' + (rows.length !== 1 ? 's' : '') + ' found';
+
+            const banner = document.getElementById('payItemCsvValidationBanner');
+            const confirmBtn = document.getElementById('payItemCsvConfirmUploadBtn');
+            if (hasErrors) {
+                const errCount = rows.filter(r => r.errors.length > 0).length;
+                banner.className = 'mb-4 p-3 rounded-xl border flex items-start gap-2 text-sm bg-red-50 border-red-200 text-red-700 dark:bg-red-900/10 dark:border-red-800 dark:text-red-400';
+                banner.innerHTML = '<span class="material-icons-round text-base mt-0.5">warning</span><span><strong>' + errCount + ' row(s) have errors</strong>. Fix the CSV and re-select to continue.</span>';
+                banner.classList.remove('hidden');
+                confirmBtn.disabled = true;
+                confirmBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            } else {
+                banner.className = 'mb-4 p-3 rounded-xl border flex items-start gap-2 text-sm bg-green-50 border-green-200 text-green-700 dark:bg-green-900/10 dark:border-green-800 dark:text-green-400';
+                banner.innerHTML = '<span class="material-icons-round text-base mt-0.5">check_circle</span><span>All rows look valid. Click <strong>Confirm &amp; Upload</strong> to proceed.</span>';
+                banner.classList.remove('hidden');
+                confirmBtn.disabled = false;
+                confirmBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+
+            openModal('payItemCsvPreviewModal');
+        }
+
+        function confirmPayItemCsvUpload() {
+            if (!_payItemCsvFileForUpload) {
+                showPiToast('No file selected', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('payItemCsvConfirmUploadBtn');
+            const originalHTML = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="pi-spinner"></span> Uploading...';
+
+            const conflictPanel = document.getElementById('payItemCsvConflictPanel');
+            conflictPanel.classList.add('hidden');
+
+            const formData = new FormData();
+            formData.append('file', _payItemCsvFileForUpload);
+
+            fetch('/employees/pay-items/upload-csv', { method: 'POST', body: formData })
+                .then(async r => {
+                    if (r.status === 409) {
+                        const data = await r.json();
+                        const list = document.getElementById('payItemCsvConflictList');
+                        list.innerHTML = '';
+                        (data.rowErrors || []).forEach(function(err) {
+                            const li = document.createElement('li');
+                            li.className = 'flex items-start gap-1.5';
+                            li.innerHTML = '<span class="material-icons-round text-xs mt-0.5 flex-shrink-0">close</span>Row ' +
+                                esc(err.rowNumber) + ': ' + esc(err.message) +
+                                ' [employeeId=' + esc(err.employeeId) +
+                                ', type=' + esc(err.itemType) + ', code=' + esc(err.itemCode) + ']';
+                            list.appendChild(li);
+                        });
+                        conflictPanel.classList.remove('hidden');
+                        conflictPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        return;
+                    }
+                    const data = await r.json();
+                    if (!r.ok) throw new Error(data.message || 'Upload failed');
+                    closeModal('payItemCsvPreviewModal');
+                    document.getElementById('payItemCsvFileInput').value = '';
+                    _payItemCsvFileForUpload = null;
+                    showPiToast('Pay items uploaded successfully (' + (data.successRows || 0) + ' rows)', 'success');
+                    setTimeout(() => window.location.reload(), 1200);
+                })
+                .catch(err => showPiToast('Upload failed: ' + err.message, 'error'))
+                .finally(() => {
+                    btn.disabled = false;
+                    btn.innerHTML = originalHTML;
+                });
         }
     </script>
 </main>
