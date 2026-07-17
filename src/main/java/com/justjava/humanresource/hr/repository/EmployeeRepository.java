@@ -102,4 +102,16 @@ public interface EmployeeRepository extends JpaRepository<Employee,Long> {
     // Filtered variant — excludes employees marked as restricted
     @Query("SELECT e FROM Employee e WHERE e.restrictedVisibility = false")
     List<Employee> findAllVisible();
+
+
+    @Query("""
+    SELECT DISTINCT e FROM Employee e
+    LEFT JOIN FETCH e.jobStep js
+    LEFT JOIN FETCH js.jobGrade
+    LEFT JOIN FETCH e.payGroup
+    WHERE e.department.id = :departmentId
+      AND e.restrictedVisibility = false
+    ORDER BY e.lastName, e.firstName
+""")
+    List<Employee> findByDepartmentIdForStructure(@Param("departmentId") Long departmentId);
 }
