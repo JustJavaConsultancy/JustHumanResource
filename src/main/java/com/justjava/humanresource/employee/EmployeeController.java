@@ -154,7 +154,6 @@ public class EmployeeController {
             EmployeeOnboardingResponseDTO dto =
                     employeeOnboardingService.startOnboarding(command, initiatedBy);
 
-            employeeService.changeEmploymentStatus(dto.getEmployeeId(), EmploymentStatus.ACTIVE, LocalDate.now());
 
             boolean hasBankData = accountName != null && !accountName.isBlank()
                     && bankName != null && !bankName.isBlank()
@@ -305,10 +304,17 @@ public class EmployeeController {
 
     @PostMapping("/employees/upload-csv")
     @ResponseBody
-    public ResponseEntity<?> uploadCsv(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<?> uploadCsv(@RequestParam("file") MultipartFile file,
+                                       @RequestParam(value = "groups", required = false) List<String> groups) {
         try {
             employeeCreationGateService.assertCanCreateEmployees(DEFAULT_COMPANY_ID);
-            employeeUploadService.uploadEmployees(file);
+            if (groups == null || groups.isEmpty()) {
+                Map<String, Object> body = new LinkedHashMap<>();
+                body.put("error", "GROUPS_REQUIRED");
+                body.put("message", "Please select at least one group before uploading.");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+            }
+            employeeUploadService.uploadEmployees(file, groups);
             return ResponseEntity.ok("Employees uploaded successfully");
 
         } catch (DuplicateEmailUploadException ex) {

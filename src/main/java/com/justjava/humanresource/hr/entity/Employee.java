@@ -9,6 +9,7 @@ import org.springframework.data.annotation.CreatedDate;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Getter
@@ -105,6 +106,12 @@ public class Employee extends BaseEntity {
 
     @Builder.Default
     private boolean restrictedVisibility = false;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "employee_groups", joinColumns = @JoinColumn(name = "employee_id"))
+    @Column(name = "group_name")
+    @Builder.Default
+    private List<String> groups = new ArrayList<>();
 
     // ---------- Emergency contact ----------
     @OneToOne(mappedBy = "employee", cascade = CascadeType.ALL, orphanRemoval = true)

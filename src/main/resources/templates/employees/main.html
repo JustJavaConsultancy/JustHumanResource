@@ -725,7 +725,8 @@
                         data-account-name=${employee.bankDetails != null and !#lists.isEmpty(employee.bankDetails) ? employee.bankDetails[0].accountName : ''},
                         data-bank-name=${employee.bankDetails != null and !#lists.isEmpty(employee.bankDetails) ? employee.bankDetails[0].bankName : ''},
                         data-account-number=${employee.bankDetails != null and !#lists.isEmpty(employee.bankDetails) ? employee.bankDetails[0].accountNumber : ''},
-                        data-restricted-visibility=${employee.restrictedVisibility}
+                        data-restricted-visibility=${employee.restrictedVisibility},
+                        data-groups=${employee.groups != null ? #strings.listJoin(employee.groups, ',') : ''}
                     "
                     th:onclick="'viewEmployee(' + ${employee.id} + ')'">
 
@@ -997,6 +998,25 @@
                                                     th:value="${mgr.id}"
                                                     th:text="${mgr.firstName + ' ' + mgr.lastName + ' (' + mgr.employeeNumber + ')'}">Manager</option>
                                         </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                            Group(s) <span class="text-red-500">*</span>
+                                        </label>
+                                        <div class="grid grid-cols-2 gap-2">
+                                            <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                                                <input type="checkbox" name="groups" value="employees" checked> Employees
+                                            </label>
+                                            <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                                                <input type="checkbox" name="groups" value="departmentHead"> Department Head
+                                            </label>
+                                            <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                                                <input type="checkbox" name="groups" value="assetManager"> Asset Manager
+                                            </label>
+                                            <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                                                <input type="checkbox" name="groups" value="auditor"> Auditor
+                                            </label>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1363,6 +1383,25 @@
                                                     th:value="${mgr.id}"
                                                     th:text="${mgr.firstName + ' ' + mgr.lastName + ' (' + mgr.employeeNumber + ')'}">Manager</option>
                                         </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                            Group(s) <span class="text-red-500">*</span>
+                                        </label>
+                                        <div class="grid grid-cols-2 gap-2">
+                                            <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                                                <input type="checkbox" name="groups" value="employees"> Employees
+                                            </label>
+                                            <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                                                <input type="checkbox" name="groups" value="departmentHead"> Department Head
+                                            </label>
+                                            <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                                                <input type="checkbox" name="groups" value="assetManager"> Asset Manager
+                                            </label>
+                                            <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                                                <input type="checkbox" name="groups" value="auditor"> Auditor
+                                            </label>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1954,6 +1993,26 @@
 
                 <!-- Body -->
                 <div class="flex-1 overflow-auto p-5">
+                    <div class="mb-4 p-3 rounded-xl border border-gray-200 dark:border-gray-700">
+                        <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Group(s) for newly created employees <span class="text-red-500">*</span>
+                        </p>
+                        <div class="grid grid-cols-2 gap-2">
+                            <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                                <input type="checkbox" name="csvGroups" value="employees" checked> Employees
+                            </label>
+                            <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                                <input type="checkbox" name="csvGroups" value="departmentHead"> Department Head
+                            </label>
+                            <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                                <input type="checkbox" name="csvGroups" value="assetManager"> Asset Manager
+                            </label>
+                            <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                                <input type="checkbox" name="csvGroups" value="auditor"> Auditor
+                            </label>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-1">Applies only to new employees created by this upload — rows that update existing employees are unaffected.</p>
+                    </div>
                     <!-- Validation summary banner -->
                     <div id="csvValidationBanner" class="hidden mb-4 p-3 rounded-xl border flex items-start gap-2 text-sm"></div>
 
@@ -2032,6 +2091,11 @@
         function validateAddBankDetails(form) {
             if (!employeeCreationAllowed) {
                 showPiToast(employeeCreationBlockedReason || 'Employee creation is currently disabled.', 'error');
+                return false;
+            }
+
+            if (form.querySelectorAll('input[name="groups"]:checked').length === 0) {
+                showPiToast('Please select at least one group', 'error');
                 return false;
             }
 
@@ -2306,6 +2370,11 @@
                 document.getElementById('editJobStepId').value = row.dataset.jobStepId || '';
             }, 50);
 
+            const currentGroups = (row.dataset.groups || '').split(',').filter(Boolean);
+            document.querySelectorAll('#editEmployeeForm input[name="groups"]').forEach(cb => {
+                cb.checked = currentGroups.includes(cb.value);
+            });
+
             openModal('editEmployeeModal');
         };
 
@@ -2345,6 +2414,14 @@
                     return;
                 }
             }
+            const selectedEditGroups = Array.from(
+                document.querySelectorAll('#editEmployeeForm input[name="groups"]:checked')
+            ).map(cb => cb.value);
+            if (selectedEditGroups.length === 0) {
+                showPiToast('Please select at least one group', 'error');
+                submitBtn.disabled = false; submitBtn.classList.remove('opacity-50','cursor-not-allowed'); submitBtn.innerHTML = '<span class="material-icons-round text-sm">save</span><span>Update Employee</span>';
+                return;
+            }
             // ────────────────────────────────────────────────────────────────
             const payload = {
                 firstName:            document.getElementById('editFirstName').value,
@@ -2372,6 +2449,7 @@
                 guarantorEmail:       document.getElementById('editGuarantorEmail').value,
                 guarantorAddress:     document.getElementById('editGuarantorAddress').value,
                 guarantorNinNumber:   document.getElementById('editGuarantorNinNumber').value,
+                groups:               selectedEditGroups,
                 accountName:          editAccountName   || null,
                 bankName:             editBankName      || null,
                 accountNumber:        editAccountNumber || null
@@ -3252,6 +3330,15 @@
                 return;
             }
 
+            const selectedGroups = Array.from(
+                document.querySelectorAll('input[name="csvGroups"]:checked')
+            ).map(cb => cb.value);
+
+            if (selectedGroups.length === 0) {
+                showPiToast('Please select at least one group for new employees', 'error');
+                return;
+            }
+
             const btn = document.getElementById('csvConfirmUploadBtn');
             const originalHTML = btn.innerHTML;
             btn.disabled = true;
@@ -3259,6 +3346,7 @@
 
             const formData = new FormData();
             formData.append('file', _csvFileForUpload);
+            selectedGroups.forEach(g => formData.append('groups', g));
 
             fetch('/employees/upload-csv', { method: 'POST', body: formData })
                 .then(async r => {

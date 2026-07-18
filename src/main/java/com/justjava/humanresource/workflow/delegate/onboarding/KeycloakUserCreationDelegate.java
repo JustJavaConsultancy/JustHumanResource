@@ -94,13 +94,19 @@ public class KeycloakUserCreationDelegate implements JavaDelegate {
                     employee.getLastName(),
                     attributes
             );
-            keycloakAdminService.sendPasswordResetEmail("humanResources",keycloakUserId);
+
             System.out.println(" The Created User keycloakUserId===="+keycloakUserId);
-            // =====================================================
-            // 6️⃣ Persist Keycloak ID Back To Employee
-            // =====================================================
+
+            @SuppressWarnings("unchecked")
+            List<String> groups = (List<String>) execution.getVariable("groups");
+            Assert.notEmpty(groups, "groups process variable is required — at least one group must be selected");
+            for (String groupName : groups) {
+                keycloakAdminService.addUserToGroup("mobile-auth-realm", keycloakUserId, groupName);
+            }
+
 
             employee.setKeycloakUserId(keycloakUserId);
+            employee.setGroups(groups);
             employeeService.save(employee);
 
             // =====================================================
@@ -112,6 +118,15 @@ public class KeycloakUserCreationDelegate implements JavaDelegate {
 
             log.info("Successfully provisioned Keycloak user for employeeId={}, keycloakUserId={}",
                     employeeId, keycloakUserId);
+
+
+            try {
+                keycloakAdminService.sendPasswordResetEmail("humanResources", keycloakUserId);
+            } catch (Exception emailEx) {
+                log.error("Password reset email failed for employeeId={}, keycloakUserId={} — " +
+                                "user is fully provisioned; email must be resent manually",
+                        employeeId, keycloakUserId, emailEx);
+            }
 
         } catch (Exception ex) {
             log.error("Keycloak provisioning failed for employeeId={}", employeeId, ex);

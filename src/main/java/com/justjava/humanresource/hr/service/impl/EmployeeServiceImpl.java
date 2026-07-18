@@ -24,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -48,6 +49,12 @@ public class EmployeeServiceImpl implements EmployeeService {
     @Override
     public Employee createEmployee(EmployeeDTO dto) {
         Employee employee = employeeMapper.toEntity(dto);
+
+
+        if (dto.getGroups() != null && !dto.getGroups().isEmpty()) {
+            employee.setGroups(new ArrayList<>(dto.getGroups()));
+        }
+
         if (hasEmergencyContactData(dto)) {
             EmergencyContact contact = EmergencyContact.builder()
                     .contactName(dto.getEmergencyContactName())

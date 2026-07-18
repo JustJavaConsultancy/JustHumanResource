@@ -55,8 +55,12 @@ public class EmployeeUploadServiceImpl implements EmployeeUploadService {
 
 
     @Override
-    public void uploadEmployees(MultipartFile file) {
+    public void uploadEmployees(MultipartFile file, List<String> groups) {
         employeeCreationGateService.assertCanCreateEmployees(1L);
+
+        if (groups == null || groups.isEmpty()) {
+            throw new IllegalArgumentException("At least one group must be selected before uploading employees.");
+        }
 
         List<EmployeeUploadDTO> records = csvParserService.parse(file);
 
@@ -114,7 +118,7 @@ public class EmployeeUploadServiceImpl implements EmployeeUploadService {
                 }
                 Long createdId = applicationContext
                         .getBean(EmployeeUploadServiceImpl.class)
-                        .saveSingleEmployee(dto, department, payGroup, resolvedStep);
+                        .saveSingleEmployee(dto, department, payGroup, resolvedStep, groups);
                 createdIds.add(createdId);
             }
         }
@@ -266,7 +270,7 @@ public class EmployeeUploadServiceImpl implements EmployeeUploadService {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public Long saveSingleEmployee(EmployeeUploadDTO dto, Department department,
-                                   PayGroup payGroup, JobStep step) {
+                                   PayGroup payGroup, JobStep step, List<String> groups) {
         if (dto.getEmail() != null) dto.setEmail(dto.getEmail().toLowerCase());
 
         Employee employee = new Employee();
@@ -323,6 +327,11 @@ public class EmployeeUploadServiceImpl implements EmployeeUploadService {
                 Map.of("employeeId", List.of(String.valueOf(employee.getId())))
         );
         employee.setKeycloakUserId(keycloakId);
+        employee.setGroups(groups);
+
+        for (String groupName : groups) {
+            keycloakAdminService.addUserToGroup(realmName, keycloakId, groupName);
+        }
 
         try {
             employeeService.changeEmploymentStatus(employee.getId(), EmploymentStatus.ACTIVE, LocalDate.now());
@@ -374,10 +383,10 @@ public class EmployeeUploadServiceImpl implements EmployeeUploadService {
      */
     private boolean hasAllRequiredFieldsForCreate(EmployeeUploadDTO dto) {
         return dto.getFirstName()  != null && !dto.getFirstName().isBlank()
-            && dto.getSecondName() != null && !dto.getSecondName().isBlank()
-            && dto.getEmail()      != null && !dto.getEmail().isBlank()
-            && dto.getGrade()      != null && !dto.getGrade().isBlank()
-            && dto.getGross()      != null;
+                && dto.getSecondName() != null && !dto.getSecondName().isBlank()
+                && dto.getEmail()      != null && !dto.getEmail().isBlank()
+                && dto.getGrade()      != null && !dto.getGrade().isBlank()
+                && dto.getGross()      != null;
     }
 
     /**

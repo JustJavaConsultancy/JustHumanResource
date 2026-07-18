@@ -2,6 +2,8 @@ package com.justjava.humanresource.onboarding.dto;
 
 import lombok.Data;
 
+import java.util.List;
+
 @Data
 public class StartEmployeeOnboardingCommand {
 
@@ -30,5 +32,6 @@ public class StartEmployeeOnboardingCommand {
     private String guarantorEmail;
     private String guarantorAddress;
     private String guarantorNinNumber;
-}
 
+    private List<String> groups;
+}

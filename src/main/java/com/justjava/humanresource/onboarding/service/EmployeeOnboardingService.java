@@ -21,6 +21,8 @@ import com.justjava.humanresource.core.config.AuthenticationManager;
 import com.justjava.humanresource.orgStructure.enums.ReportingType;
 import com.justjava.humanresource.orgStructure.repositories.EmployeeReportingLineRepository;
 import com.justjava.humanresource.orgStructure.services.OrganogramService;
+import com.justjava.humanresource.aau.keycloak.KeycloakAdminService;
+import org.springframework.beans.factory.annotation.Value;
 
 
 import com.justjava.humanresource.payroll.service.PayrollChangeOrchestrator;
@@ -32,6 +34,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -54,6 +57,10 @@ public class EmployeeOnboardingService {
     private final OrganogramService organogramService;
     private final EmployeeReportingLineRepository employeeReportingLineRepository;
     private final EmployeeCreationGateService employeeCreationGateService;
+    private final KeycloakAdminService keycloakAdminService;
+
+    @Value("${keycloak.realm}")
+    private String realmName;
 
     @Transactional
     public EmployeeOnboardingResponseDTO startOnboarding(
@@ -61,6 +68,10 @@ public class EmployeeOnboardingService {
             String initiatedBy
     ) {
         employeeCreationGateService.assertCanCreateEmployees(1L);
+
+        if (command.getGroups() == null || command.getGroups().isEmpty()) {
+            throw new IllegalArgumentException("At least one group must be selected for the employee.");
+        }
 
         if (command.getEmail() != null) {
             command.setEmail(command.getEmail().toLowerCase());
@@ -95,6 +106,7 @@ public class EmployeeOnboardingService {
         dto.setGuarantorEmail(command.getGuarantorEmail());
         dto.setGuarantorAddress(command.getGuarantorAddress());
         dto.setGuarantorNinNumber(command.getGuarantorNinNumber());
+        dto.setGroups(command.getGroups());
 
         dto.setEmploymentStatus(String.valueOf(EmploymentStatus.ONBOARDING));
         dto.setJobStepId(command.getJobStepId());
@@ -133,6 +145,7 @@ public class EmployeeOnboardingService {
         variables.put("initiator",        initiatedBy);
         variables.put("onboardingId",     onboarding.getId());
         variables.put("approvalRequired", false);
+        variables.put("groups",           command.getGroups());
 
         ProcessInstance processInstance =
                 runtimeService.startProcessInstanceByKey("onboardingProcess", variables);
@@ -140,6 +153,9 @@ public class EmployeeOnboardingService {
         // 4️⃣ Update onboarding with processInstanceId
         onboarding.setProcessInstanceId(processInstance.getProcessInstanceId());
         EmployeeOnboarding saved = onboardingRepository.save(onboarding);
+
+        // 5️⃣ the async Keycloak-provisioning delegate and overwrite its write.
+        employeeService.changeEmploymentStatus(employee.getId(), EmploymentStatus.ACTIVE, LocalDate.now());
 
         return EmployeeOnboardingResponseDTO.builder()
                 .id(saved.getId())
@@ -231,7 +247,31 @@ public class EmployeeOnboardingService {
         if (dto.getGuarantorAddress()     != null) employee.setGuarantorAddress(dto.getGuarantorAddress());
         if (dto.getGuarantorNinNumber()   != null) employee.setGuarantorNinNumber(dto.getGuarantorNinNumber());
 
+        if (dto.getGroups() != null) {
+            List<String> currentGroups = employee.getGroups() != null ? employee.getGroups() : List.of();
+            List<String> desiredGroups = dto.getGroups();
+
+            List<String> toAdd = desiredGroups.stream()
+                    .filter(g -> !currentGroups.contains(g))
+                    .toList();
+            List<String> toRemove = currentGroups.stream()
+                    .filter(g -> !desiredGroups.contains(g))
+                    .toList();
+
+            if (employee.getKeycloakUserId() != null) {
+                for (String groupName : toAdd) {
+                    keycloakAdminService.addUserToGroup(realmName, employee.getKeycloakUserId(), groupName);
+                }
+                for (String groupName : toRemove) {
+                    keycloakAdminService.removeUserFromGroup(realmName, employee.getKeycloakUserId(), groupName);
+                }
+            }
+
+            employee.setGroups(new ArrayList<>(desiredGroups));
+        }
+
         employeeRepository.save(employee);
+
 
         if (recalculationRequired) {
             payrollChangeOrchestrator.recalculateForEmployee(employee.getId(), LocalDate.now());

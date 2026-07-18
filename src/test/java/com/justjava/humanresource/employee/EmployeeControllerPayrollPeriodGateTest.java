@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -58,11 +59,12 @@ class EmployeeControllerPayrollPeriodGateTest {
         doThrow(new EmployeeCreationBlockedException(EmployeeCreationGateService.BLOCKED_REASON))
                 .when(employeeCreationGateService).assertCanCreateEmployees(1L);
         MockMultipartFile file = new MockMultipartFile("file", "employees.csv", "text/csv", "email\njane@example.com".getBytes());
+        List<String> groups = List.of("employees");
 
-        ResponseEntity<?> response = controller.uploadCsv(file);
+        ResponseEntity<?> response = controller.uploadCsv(file, groups);
 
         assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
         assertEquals("PAYROLL_PERIOD_NOT_OPEN", ((Map<?, ?>) response.getBody()).get("error"));
-        verify(employeeUploadService, never()).uploadEmployees(file);
+        verify(employeeUploadService, never()).uploadEmployees(file, groups);
     }
 }
