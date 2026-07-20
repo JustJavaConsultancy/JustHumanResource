@@ -114,4 +114,17 @@ public interface EmployeeRepository extends JpaRepository<Employee,Long> {
     ORDER BY e.lastName, e.firstName
 """)
     List<Employee> findByDepartmentIdForStructure(@Param("departmentId") Long departmentId);
+
+    // Employees eligible to be assigned as a Department Head — i.e. those
+    // carrying the "departmentHead" group in Keycloak (mirrored locally on
+    // Employee.groups by KeycloakUserCreationDelegate). Restricted to
+    // ACTIVE, non-restricted-visibility employees only.
+    @Query("""
+       SELECT e FROM Employee e
+       WHERE :groupName MEMBER OF e.groups
+         AND e.status = com.justjava.humanresource.core.enums.RecordStatus.ACTIVE
+         AND e.restrictedVisibility = false
+       ORDER BY e.lastName, e.firstName
+       """)
+    List<Employee> findActiveEmployeesInGroup(@Param("groupName") String groupName);
 }

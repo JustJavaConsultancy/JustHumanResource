@@ -142,7 +142,10 @@
         <div class="flex-1">
           <div class="flex justify-between items-start">
             <div><h4 class="font-bold" id="ndName">—</h4><p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5" id="ndMeta">—</p></div>
-            <button onclick="closeDetail()" class="text-gray-400 hover:text-gray-600 ml-4"><span class="material-icons-round text-lg">close</span></button>
+            <div class="flex items-center gap-1 ml-4">
+              <button onclick="editCurrentDept()" class="text-gray-400 hover:text-primary-600 p-1" title="Edit department"><span class="material-icons-round text-lg">edit</span></button>
+              <button onclick="closeDetail()" class="text-gray-400 hover:text-gray-600 p-1"><span class="material-icons-round text-lg">close</span></button>
+            </div>
           </div>
           <div class="grid grid-cols-3 gap-2 mt-3">
             <div class="bg-white dark:bg-gray-800 rounded-lg p-2 text-center border border-gray-100 dark:border-gray-700"><span class="font-bold text-primary-600 text-lg" id="ndEmp">—</span><div class="text-[10px] text-gray-500">Employees</div></div>
@@ -401,6 +404,12 @@
           </select>
         </div>
         <div>
+          <label class="form-label">Department Head <span class="text-gray-400 font-normal">(optional)</span></label>
+          <select id="deptHeadId" class="form-select">
+            <option value="">— None —</option>
+          </select>
+        </div>
+        <div>
           <label class="form-label">Parent Department <span class="text-gray-400 font-normal">(optional)</span></label>
           <select id="deptParentId" class="form-select">
             <option value="">— None (top-level) —</option>
@@ -416,6 +425,59 @@
         <button onclick="closeModal('deptModal')" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition">Cancel</button>
         <button onclick="saveDept()" id="saveDeptBtn" class="px-5 py-2 bg-primary-600 text-white text-sm font-semibold rounded-lg hover:bg-primary-700 transition flex items-center gap-2">
           <span class="material-icons-round text-sm">add_circle</span> Create Department
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2b. Edit Department -->
+  <div id="editDeptModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+    <div class="modal-backdrop absolute inset-0" onclick="closeModal('editDeptModal')"></div>
+    <div class="modal-card relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md border border-gray-200 dark:border-gray-700">
+      <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+        <div class="flex justify-between items-center">
+          <h3 class="font-bold text-lg">Edit Department</h3>
+          <button onclick="closeModal('editDeptModal')" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"><span class="material-icons-round text-gray-400">close</span></button>
+        </div>
+      </div>
+      <div class="p-6 space-y-4">
+        <input type="hidden" id="editDeptId">
+        <div>
+          <label class="form-label">Department Name *</label>
+          <input type="text" id="editDeptName" placeholder="e.g. Human Resources" class="form-input">
+        </div>
+        <div>
+          <label class="form-label">Department Code <span class="text-gray-400 font-normal">(not editable)</span></label>
+          <input type="text" id="editDeptCode" class="form-input bg-gray-100 dark:bg-gray-700 text-gray-500 cursor-not-allowed" style="font-family:'DM Mono',monospace;" disabled readonly>
+        </div>
+        <div>
+          <label class="form-label">Company *</label>
+          <select id="editDeptCompanyId" class="form-select">
+            <option value="">Select a company</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Department Head <span class="text-gray-400 font-normal">(optional)</span></label>
+          <select id="editDeptHeadId" class="form-select">
+            <option value="">— None —</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Parent Department <span class="text-gray-400 font-normal">(optional)</span></label>
+          <select id="editDeptParentId" class="form-select">
+            <option value="">— None (top-level) —</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Effective From *</label>
+          <input type="date" id="editDeptEffectiveFrom" class="form-input">
+        </div>
+        <div id="editDeptError" class="api-error hidden"></div>
+      </div>
+      <div class="p-5 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
+        <button onclick="closeModal('editDeptModal')" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition">Cancel</button>
+        <button onclick="saveEditDept()" id="saveEditDeptBtn" class="px-5 py-2 bg-primary-600 text-white text-sm font-semibold rounded-lg hover:bg-primary-700 transition flex items-center gap-2">
+          <span class="material-icons-round text-sm">save</span> Save Changes
         </button>
       </div>
     </div>
@@ -602,10 +664,12 @@
       const API_BASE = '/api/organogram';
 
       // ── State ──────────────────────────────────────────────────────────
-      let companyTree  = [];
-      let deptTree     = [];
-      let employees    = [];
-      let companyType  = 'parent';
+      let companyTree      = [];
+      let deptTree         = [];
+      let employees        = [];
+      let departmentHeads  = [];
+      let companyType      = 'parent';
+      let currentDetailNodeId = null;
 
       // Lookup maps so we can safely bind click handlers without inline JSON
       const deptNodeMap = {};
@@ -683,6 +747,16 @@
           name: e.firstName + ' ' + e.lastName
         }));
         populateSelect(selectId, items, 'Select an employee');
+      }
+
+      // Department Head candidates are restricted server-side to employees
+      // who are in the "departmentHead" Keycloak group.
+      function populateDepartmentHeadDropdown(selectId) {
+        const items = departmentHeads.map(e => ({
+          id:   e.id,
+          name: e.firstName + ' ' + e.lastName
+        }));
+        populateSelect(selectId, items, '— None —');
       }
 
       // ── API fetch ──────────────────────────────────────────────────────
@@ -771,6 +845,7 @@
         } else if (id === 'deptModal') {
           populateCompanyDropdown('deptCompanyId');
           populateDepartmentDropdown('deptParentId');
+          populateDepartmentHeadDropdown('deptHeadId');
         } else if (id === 'moveModal') {
           populateDepartmentDropdown('moveDeptId');
           populateDepartmentDropdown('moveNewParentId');
@@ -804,6 +879,7 @@
 
       // ── Node detail panel ──────────────────────────────────────────────
       window.showDetail = function (node) {
+        currentDetailNodeId = node.id || node.departmentId || null;
         const initials = (node.name || '??').split(' ').map(function (w) { return w[0]; }).join('').substring(0, 2).toUpperCase();
         document.getElementById('ndAvatar').textContent = initials;
         document.getElementById('ndName').textContent   = node.name || '—';
@@ -816,6 +892,12 @@
 
       window.closeDetail = function () {
         document.getElementById('nodeDetail').classList.add('hidden');
+      };
+
+      // Wrapper so the inline onclick on the pencil icon (which runs in
+      // global scope) can reach the closure-scoped currentDetailNodeId.
+      window.editCurrentDept = function () {
+        openEditDept(currentDetailNodeId);
       };
 
       // ── Org Chart Rendering ────────────────────────────────────────────
@@ -954,6 +1036,12 @@
           viewBtn.textContent = 'View';
           viewBtn.addEventListener('click', function (e) { e.stopPropagation(); showDetail(n); });
           tdAction.appendChild(viewBtn);
+
+          const editBtn = document.createElement('button');
+          editBtn.className = 'text-primary-600 text-xs hover:underline ml-3';
+          editBtn.textContent = 'Edit';
+          editBtn.addEventListener('click', function (e) { e.stopPropagation(); openEditDept(nodeId); });
+          tdAction.appendChild(editBtn);
 
           tr.appendChild(tdName);
           tr.appendChild(tdCode);
@@ -1212,6 +1300,16 @@
         }
       }
 
+      // ── Fetch: Department Head candidates (employees in the
+      //    "departmentHead" Keycloak group) ────────────────────────────
+      async function fetchDepartmentHeads() {
+        try {
+          departmentHeads = await apiFetch('/employees/department-heads') || [];
+        } catch (e) {
+          departmentHeads = [];
+        }
+      }
+
       // ── Fetch: Reporting lines count ───────────────────────────────────
       async function fetchReportingLinesCount() {
         try {
@@ -1425,6 +1523,7 @@
         const name          = document.getElementById('deptName').value.trim();
         const code          = document.getElementById('deptCode').value.trim();
         const companyId     = document.getElementById('deptCompanyId').value;
+        const headId        = document.getElementById('deptHeadId').value;
         const parentDeptId  = document.getElementById('deptParentId').value;
         const effectiveFrom = document.getElementById('deptEffectiveFrom').value;
         if (!name || !code || !companyId || !effectiveFrom) {
@@ -1435,6 +1534,7 @@
           name:               name,
           code:               code,
           companyId:          parseInt(companyId, 10),
+          departmentHeadId:   headId ? parseInt(headId, 10) : null,
           parentDepartmentId: parentDeptId ? parseInt(parentDeptId, 10) : null,
           effectiveFrom:      effectiveFrom
         };
@@ -1450,6 +1550,71 @@
           showError('deptError', e.message);
         } finally {
           setLoading('saveDeptBtn', false);
+        }
+      };
+
+      // ── Open: Edit Department ────────────────────────────────────────────
+      // Department code is intentionally left disabled in the form and is
+      // never sent back to the server on save.
+      window.openEditDept = async function (id) {
+        if (!id) return;
+        hideError('editDeptError');
+        try {
+          const dept = await apiFetch('/departments/' + id);
+
+          populateCompanyDropdown('editDeptCompanyId');
+          populateDepartmentDropdown('editDeptParentId');
+          populateDepartmentHeadDropdown('editDeptHeadId');
+
+          document.getElementById('editDeptId').value          = dept.id;
+          document.getElementById('editDeptName').value        = dept.name || '';
+          document.getElementById('editDeptCode').value        = dept.code || '';
+          document.getElementById('editDeptCompanyId').value   = dept.companyId || '';
+          document.getElementById('editDeptHeadId').value      = dept.departmentHeadId || '';
+          document.getElementById('editDeptParentId').value    = dept.parentDepartmentId || '';
+          document.getElementById('editDeptEffectiveFrom').value = dept.effectiveFrom || '';
+
+          document.getElementById('editDeptModal').classList.remove('hidden');
+        } catch (e) {
+          showToast('Could not load department details', 'error');
+        }
+      };
+
+      // ── Save: Edit Department ────────────────────────────────────────────
+      window.saveEditDept = async function () {
+        hideError('editDeptError');
+        const id             = document.getElementById('editDeptId').value;
+        const name           = document.getElementById('editDeptName').value.trim();
+        const companyId      = document.getElementById('editDeptCompanyId').value;
+        const headId         = document.getElementById('editDeptHeadId').value;
+        const parentDeptId   = document.getElementById('editDeptParentId').value;
+        const effectiveFrom  = document.getElementById('editDeptEffectiveFrom').value;
+        if (!name || !companyId || !effectiveFrom) {
+          showError('editDeptError', 'Name, company, and effective-from date are all required.');
+          return;
+        }
+        if (parentDeptId && parseInt(parentDeptId, 10) === parseInt(id, 10)) {
+          showError('editDeptError', 'A department cannot be its own parent.');
+          return;
+        }
+        const body = {
+          name:               name,
+          companyId:          parseInt(companyId, 10),
+          departmentHeadId:   headId ? parseInt(headId, 10) : null,
+          parentDepartmentId: parentDeptId ? parseInt(parentDeptId, 10) : null,
+          effectiveFrom:      effectiveFrom
+          // NOTE: code is deliberately omitted — it is not editable.
+        };
+        setLoading('saveEditDeptBtn', true);
+        try {
+          await apiFetch('/departments/' + id, { method: 'PUT', body: JSON.stringify(body) });
+          closeModal('editDeptModal');
+          showToast('Department "' + name + '" updated successfully');
+          fetchDeptTree();
+        } catch (e) {
+          showError('editDeptError', e.message);
+        } finally {
+          setLoading('saveEditDeptBtn', false);
         }
       };
 
@@ -1573,6 +1738,7 @@
       fetchCompanyTree();
       fetchDeptTree();
       fetchEmployees();
+      fetchDepartmentHeads();
       fetchReportingLinesCount();
 
     })();

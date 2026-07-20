@@ -1,5 +1,6 @@
 package com.justjava.humanresource.orgStructure.services;
 
+import com.justjava.humanresource.hr.dto.EmployeeDTO;
 import com.justjava.humanresource.orgStructure.dto.*;
 import com.justjava.humanresource.orgStructure.enums.ReportingType;
 
@@ -23,11 +24,17 @@ public interface OrganogramService {
 
     DepartmentDTO createDepartment(DepartmentDTO dto);
 
+    DepartmentDTO getDepartmentById(Long departmentId);
+
+    DepartmentDTO updateDepartment(Long departmentId, DepartmentDTO dto);
+
     DepartmentDTO moveDepartment(Long departmentId, Long newParentId);
 
     void deactivateDepartment(Long departmentId, LocalDate effectiveTo);
 
     List<DepartmentTreeDTO> getFullDepartmentStructure();
+
+    List<EmployeeDTO> getDepartmentHeadCandidates();
 
     /* =========================
        REPORTING MANAGEMENT

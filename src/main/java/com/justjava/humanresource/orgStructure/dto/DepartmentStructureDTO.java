@@ -25,6 +25,8 @@ public class DepartmentStructureDTO implements Serializable {
     private LocalDate effectiveFrom;
     private LocalDate effectiveTo;
     private RecordStatus status;
+    private Long departmentHeadId;
+    private String departmentHeadName;
 
     private List<EmployeeSummaryDTO> employees;
 }

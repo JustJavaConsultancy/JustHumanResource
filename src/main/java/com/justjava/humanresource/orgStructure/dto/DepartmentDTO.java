@@ -20,4 +20,9 @@ public class DepartmentDTO {
     private LocalDate effectiveFrom;
     private LocalDate effectiveTo;
     private RecordStatus status;
+
+    // Department Head — the employee (must be in the "departmentHead"
+    // Keycloak group) assigned to lead this department. Nullable.
+    private Long departmentHeadId;
+    private String departmentHeadName;
 }

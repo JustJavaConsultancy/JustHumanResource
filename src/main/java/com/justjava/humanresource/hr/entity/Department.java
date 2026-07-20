@@ -39,6 +39,12 @@ public class Department extends BaseEntity {
     private LocalDate effectiveFrom;
 
     private LocalDate effectiveTo;
+
+    /* ===== Department Head (nullable, single employee) ===== */
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "department_head_id", nullable = true)
+    private Employee departmentHead;
 }
 
 
@@ -46,3 +52,7 @@ public class Department extends BaseEntity {
     CREATE SEQUENCE department_code_seq
         START WITH 100001
         INCREMENT BY 1;*/
+
+/* Run this against your DB to add the new department_head_id column
+    ALTER TABLE departments
+        ADD COLUMN department_head_id BIGINT REFERENCES employees(id);*/

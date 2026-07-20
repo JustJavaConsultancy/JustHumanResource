@@ -47,6 +47,17 @@ public class OrganogramController {
         return organogramService.createDepartment(dto);
     }
 
+    @GetMapping("/departments/{departmentId}")
+    public DepartmentDTO getDepartment(@PathVariable Long departmentId) {
+        return organogramService.getDepartmentById(departmentId);
+    }
+
+    @PutMapping("/departments/{departmentId}")
+    public DepartmentDTO updateDepartment(@PathVariable Long departmentId,
+                                          @RequestBody DepartmentDTO dto) {
+        return organogramService.updateDepartment(departmentId, dto);
+    }
+
     @PutMapping("/departments/{departmentId}/move/{newParentId}")
     public DepartmentDTO moveDepartment(@PathVariable Long departmentId,
                                         @PathVariable Long newParentId) {
@@ -73,6 +84,13 @@ public class OrganogramController {
     @GetMapping("/employees/list")
     public List<EmployeeDTO> getAllEmployees() {
         return employeeService.getAllEmployees();
+    }
+
+    // Employees eligible to be assigned as a Department Head — restricted to
+    // employees carrying the "departmentHead" group in Keycloak.
+    @GetMapping("/employees/department-heads")
+    public List<EmployeeDTO> getDepartmentHeadCandidates() {
+        return organogramService.getDepartmentHeadCandidates();
     }
 
     @PostMapping("/reporting/assign")

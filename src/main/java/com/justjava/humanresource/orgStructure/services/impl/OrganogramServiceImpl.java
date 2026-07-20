@@ -1,6 +1,7 @@
 package com.justjava.humanresource.orgStructure.services.impl;
 
 import com.justjava.humanresource.core.enums.RecordStatus;
+import com.justjava.humanresource.hr.dto.EmployeeDTO;
 import com.justjava.humanresource.hr.entity.Department;
 import com.justjava.humanresource.hr.entity.Employee;
 import com.justjava.humanresource.hr.repository.DepartmentRepository;
@@ -26,6 +27,8 @@ import com.justjava.humanresource.orgStructure.entity.*;
 @RequiredArgsConstructor
 @Transactional
 public class OrganogramServiceImpl implements OrganogramService {
+
+    private static final String DEPARTMENT_HEAD_GROUP = "departmentHead";
 
     private final CompanyRepository companyRepository;
     private final DepartmentRepository departmentRepository;
@@ -112,10 +115,82 @@ public class OrganogramServiceImpl implements OrganogramService {
         dept.setParentDepartment(parent);
         dept.setEffectiveFrom(dto.getEffectiveFrom());
         dept.setStatus(RecordStatus.ACTIVE);
+        dept.setDepartmentHead(resolveDepartmentHead(dto.getDepartmentHeadId()));
 
         departmentRepository.save(dept);
 
         return mapToDepartmentDTO(dept);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public DepartmentDTO getDepartmentById(Long departmentId) {
+
+        Department dept = departmentRepository.findById(departmentId)
+                .orElseThrow(() -> new IllegalArgumentException("Department not found: " + departmentId));
+
+        return mapToDepartmentDTO(dept);
+    }
+
+    @Override
+    public DepartmentDTO updateDepartment(Long departmentId, DepartmentDTO dto) {
+
+        Department dept = departmentRepository.findById(departmentId)
+                .orElseThrow(() -> new IllegalArgumentException("Department not found: " + departmentId));
+
+        // NOTE: dept.code is intentionally never touched here — it is not editable.
+
+        if (dto.getName() != null && !dto.getName().isBlank()) {
+            dept.setName(dto.getName().trim());
+        }
+
+        if (dto.getCompanyId() != null) {
+            Company company = companyRepository.findById(dto.getCompanyId())
+                    .orElseThrow(() -> new IllegalArgumentException("Company not found: " + dto.getCompanyId()));
+            dept.setCompany(company);
+        }
+
+        if (dto.getParentDepartmentId() != null) {
+            if (dto.getParentDepartmentId().equals(departmentId)) {
+                throw new IllegalArgumentException("A department cannot be its own parent.");
+            }
+            Department parent = departmentRepository.findById(dto.getParentDepartmentId())
+                    .orElseThrow(() -> new IllegalArgumentException("Parent department not found: " + dto.getParentDepartmentId()));
+            dept.setParentDepartment(parent);
+        } else {
+            dept.setParentDepartment(null);
+        }
+
+        if (dto.getEffectiveFrom() != null) {
+            dept.setEffectiveFrom(dto.getEffectiveFrom());
+        }
+
+        dept.setDepartmentHead(resolveDepartmentHead(dto.getDepartmentHeadId()));
+
+        departmentRepository.save(dept);
+
+        return mapToDepartmentDTO(dept);
+    }
+
+    /**
+     * Resolves and validates the employee selected as a department head.
+     * Returns null when no employee is selected (department head is optional).
+     * Throws if the employee doesn't exist or isn't in the "departmentHead" group.
+     */
+    private Employee resolveDepartmentHead(Long employeeId) {
+        if (employeeId == null) {
+            return null;
+        }
+
+        Employee employee = employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new IllegalArgumentException("Employee not found: " + employeeId));
+
+        if (employee.getGroups() == null || !employee.getGroups().contains(DEPARTMENT_HEAD_GROUP)) {
+            throw new IllegalStateException(
+                    "Selected employee is not in the \"" + DEPARTMENT_HEAD_GROUP + "\" group and cannot be assigned as department head.");
+        }
+
+        return employee;
     }
 
     @Override
@@ -174,6 +249,27 @@ public class OrganogramServiceImpl implements OrganogramService {
         }
 
         return roots;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<EmployeeDTO> getDepartmentHeadCandidates() {
+
+        return employeeRepository.findActiveEmployeesInGroup(DEPARTMENT_HEAD_GROUP).stream()
+                .map(this::mapToDepartmentHeadCandidateDTO)
+                .toList();
+    }
+
+    // Minimal mapping — only the fields the department-head dropdown needs.
+    // Not a full Employee->EmployeeDTO mapper; other EmployeeDTO fields are left null.
+    private EmployeeDTO mapToDepartmentHeadCandidateDTO(Employee e) {
+        EmployeeDTO dto = new EmployeeDTO();
+        dto.setId(e.getId());
+        dto.setEmployeeNumber(e.getEmployeeNumber());
+        dto.setFirstName(e.getFirstName());
+        dto.setLastName(e.getLastName());
+        dto.setEmail(e.getEmail());
+        return dto;
     }
 
     /* =====================================================
@@ -371,6 +467,16 @@ public class OrganogramServiceImpl implements OrganogramService {
                 .effectiveFrom(d.getEffectiveFrom())
                 .effectiveTo(d.getEffectiveTo())
                 .status(d.getStatus())
+                .departmentHeadId(
+                        d.getDepartmentHead() != null
+                                ? d.getDepartmentHead().getId()
+                                : null
+                )
+                .departmentHeadName(
+                        d.getDepartmentHead() != null
+                                ? d.getDepartmentHead().getFullName()
+                                : null
+                )
                 .build();
     }
 }

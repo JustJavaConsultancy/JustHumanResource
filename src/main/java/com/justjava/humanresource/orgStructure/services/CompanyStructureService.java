@@ -57,6 +57,8 @@ public class CompanyStructureService {
                 .map(this::toEmployeeSummaryDTO)
                 .toList();
 
+        Employee departmentHead = department.getDepartmentHead();
+
         return DepartmentStructureDTO.builder()
                 .id(department.getId())
                 .code(department.getCode())
@@ -65,6 +67,8 @@ public class CompanyStructureService {
                 .effectiveFrom(department.getEffectiveFrom())
                 .effectiveTo(department.getEffectiveTo())
                 .status(department.getStatus())
+                .departmentHeadId(departmentHead != null ? departmentHead.getId() : null)
+                .departmentHeadName(departmentHead != null ? departmentHead.getFullName() : null)
                 .employees(employees)
                 .build();
     }
