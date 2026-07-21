@@ -1,5 +1,6 @@
 package com.justjava.humanresource.integration.fam;
 
+import com.justjava.humanresource.integration.fam.service.AssetCatalogService;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -12,9 +13,12 @@ class FamAssetLookupServiceTest {
     @Test
     void returnsTemporarySampleAssetsWhenFamCatalogIsUnavailable() {
         FamAssetClient client = mock(FamAssetClient.class);
+        FamIntegrationProperties properties = mock(FamIntegrationProperties.class);
+        AssetCatalogService assetCatalogService = mock(AssetCatalogService.class);
+
         when(client.listRequestableAssets()).thenThrow(new FamIntegrationException("FAM unavailable"));
 
-        FamAssetLookupService service = new FamAssetLookupService(client);
+        FamAssetLookupService service = new FamAssetLookupService(client, properties, assetCatalogService);
 
         var assets = service.listRequestableAssets();
 
@@ -26,9 +30,12 @@ class FamAssetLookupServiceTest {
     @Test
     void findsTemporarySampleAssetByIdWhenFamCatalogIsUnavailable() {
         FamAssetClient client = mock(FamAssetClient.class);
+        FamIntegrationProperties properties = mock(FamIntegrationProperties.class);
+        AssetCatalogService assetCatalogService = mock(AssetCatalogService.class);
+
         when(client.listRequestableAssets()).thenThrow(new FamIntegrationException("FAM unavailable"));
 
-        FamAssetLookupService service = new FamAssetLookupService(client);
+        FamAssetLookupService service = new FamAssetLookupService(client, properties, assetCatalogService);
 
         FamAssetDTO asset = service.findRequestableAsset("FAM-SAMPLE-LAPTOP-001");
 

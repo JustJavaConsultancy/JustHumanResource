@@ -23,7 +23,31 @@ public class AuthenticationManager {
         if (groups == null) {
             return false;
         }
-        return groups.contains("/employees");
+        return groups.contains("employees");
+    }
+
+    public boolean isAssetManager() {
+        List<String> groups = (List<String>) this.get("groups");
+        if (groups == null) {
+            return false;
+        }
+        return groups.contains("assetManager");
+    }
+
+    public boolean isAuditor() {
+        List<String> groups = (List<String>) this.get("groups");
+        if (groups == null) {
+            return false;
+        }
+        return groups.contains("auditor");
+    }
+
+    public boolean isDepartmentHead() {
+        List<String> groups = (List<String>) this.get("groups");
+        if (groups == null) {
+            return false;
+        }
+        return groups.contains("departmentHead");
     }
 
     public Object getAllAttributes() {

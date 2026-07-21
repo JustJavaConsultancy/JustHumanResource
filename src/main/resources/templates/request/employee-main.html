@@ -60,6 +60,10 @@
                 <span class="material-icons-round text-base">add</span>
                 New Request
             </button>
+            <button type="button" id="manageAssetsBtn" onclick="openManageAssetsModal()" class="request-secondary-btn hidden">
+                <span class="material-icons-round text-base">inventory_2</span>
+                Manage Assets
+            </button>
             <a href="/employee/requests/userGuide" class="request-secondary-btn">
                 <span class="material-icons-round text-base">help</span>
                 User Guide
@@ -266,6 +270,71 @@
         </div>
     </div>
 
+    <div id="manageAssetsModal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black/50" onclick="closeManageAssetsModal()"></div>
+        <div class="absolute inset-0 overflow-y-auto p-4">
+            <div class="request-modal-panel mx-auto my-8">
+                <div class="request-modal-head top-0 flex items-center justify-between border-b px-6 py-4">
+                    <div>
+                        <h3 class="text-lg font-bold">Manage Assets</h3>
+                        <p class="text-sm text-gray-500">Add, edit, and retire items in the local asset catalog.</p>
+                    </div>
+                    <button type="button" onclick="closeManageAssetsModal()" class="text-gray-500 hover:text-gray-700">
+                        <span class="material-icons-round">close</span>
+                    </button>
+                </div>
+                <div class="max-h-[78vh] space-y-5 overflow-y-auto p-6">
+                    <form id="assetCatalogForm" class="request-type-panel space-y-4">
+                        <input type="hidden" id="assetItemId" value="">
+                        <h4 id="assetCatalogFormTitle" class="font-semibold">Add New Asset</h4>
+                        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <label class="text-sm font-medium">Asset Name
+                                <input id="assetItemName" required class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-900">
+                            </label>
+                            <label class="text-sm font-medium">Category
+                                <select id="assetItemCategory" required class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-900"></select>
+                            </label>
+                            <label class="text-sm font-medium">Unit of Measure
+                                <input id="assetItemUnit" placeholder="e.g. Unit, Box, Litre" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-900">
+                            </label>
+                            <label class="text-sm font-medium">Available Quantity
+                                <input id="assetItemQuantity" type="number" min="0" step="1" required class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-900">
+                            </label>
+                            <label id="assetItemStatusGroup" class="text-sm font-medium hidden">Status
+                                <select id="assetItemStatus" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-900">
+                                    <option value="AVAILABLE">AVAILABLE</option>
+                                    <option value="UNAVAILABLE">UNAVAILABLE</option>
+                                    <option value="RETIRED">RETIRED</option>
+                                </select>
+                            </label>
+                        </div>
+                        <div class="flex justify-end gap-2">
+                            <button type="button" id="assetCatalogFormCancel" onclick="resetAssetCatalogForm()" class="request-secondary-btn hidden">Cancel Edit</button>
+                            <button type="submit" class="request-primary-btn">Save Asset</button>
+                        </div>
+                    </form>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full min-w-[680px] text-sm">
+                            <thead class="request-table-head">
+                            <tr>
+                                <th class="px-4 py-3 text-left">Code</th>
+                                <th class="px-4 py-3 text-left">Name</th>
+                                <th class="px-4 py-3 text-left">Category</th>
+                                <th class="px-4 py-3 text-left">Unit</th>
+                                <th class="px-4 py-3 text-left">Quantity</th>
+                                <th class="px-4 py-3 text-left">Status</th>
+                                <th class="px-4 py-3 text-left">Action</th>
+                            </tr>
+                            </thead>
+                            <tbody id="assetCatalogRows" class="divide-y divide-gray-200 dark:divide-gray-700"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div id="toastContainer" class="fixed bottom-4 right-4 z-[80] flex flex-col gap-2"></div>
 
     <div id="confirmModal" class="fixed inset-0 z-[70] hidden">
@@ -311,6 +380,7 @@
 
     <script>
         const api = '/api/requests';
+        const assetApi = '/api/assets';
         const pageBase = '/employee/requests';
         let requests = [];
         let tasks = [];
@@ -320,6 +390,10 @@
         let expenseOptions = {};
         let assetCatalog = [];
         let assetCatalogLoaded = false;
+        let assetCategoryOptions = [];
+        let assetCategoryOptionsLoaded = false;
+        let managedAssetCatalog = [];
+        let editingAssetItemId = null;
 
         function openRequestModal() { document.getElementById('requestModal').classList.remove('hidden'); }
         function closeRequestModal() { document.getElementById('requestModal').classList.add('hidden'); }
@@ -362,6 +436,125 @@
                 cancelBtn.addEventListener('click', onCancel);
             });
         }
+
+        async function checkAssetManagerAccess() {
+            try {
+                const access = await json(assetApi + '/access');
+                document.getElementById('manageAssetsBtn').classList.toggle('hidden', !(access && access.isAssetManager));
+            } catch (e) { /* leave the button hidden if the check fails */ }
+        }
+
+        function openManageAssetsModal() {
+            resetAssetCatalogForm();
+            document.getElementById('manageAssetsModal').classList.remove('hidden');
+            loadAssetCategoryOptions();
+            loadManagedAssetCatalog();
+        }
+        function closeManageAssetsModal() { document.getElementById('manageAssetsModal').classList.add('hidden'); }
+
+        async function loadAssetCategoryOptions() {
+            if (assetCategoryOptionsLoaded) return;
+            try {
+                assetCategoryOptions = await json(assetApi + '/categories') || [];
+                assetCategoryOptionsLoaded = true;
+                document.getElementById('assetItemCategory').innerHTML = '<option value="">Select category</option>' +
+                    assetCategoryOptions.map(option => `<option value="${option.value}">${option.label}</option>`).join('');
+            } catch (e) { showError(e.message); }
+        }
+
+        async function loadManagedAssetCatalog() {
+            try {
+                managedAssetCatalog = await json(assetApi + '/catalog') || [];
+                renderManagedAssetCatalog();
+            } catch (e) { showError(e.message); }
+        }
+
+        function renderManagedAssetCatalog() {
+            document.getElementById('assetCatalogRows').innerHTML = managedAssetCatalog.length ? managedAssetCatalog.map(item => `
+                <tr class="request-row">
+                    <td class="px-4 py-3">${item.assetCode || ''}</td>
+                    <td class="px-4 py-3">${item.assetName || ''}</td>
+                    <td class="px-4 py-3">${fmtType(item.category)}</td>
+                    <td class="px-4 py-3">${item.unitOfMeasure || ''}</td>
+                    <td class="px-4 py-3">${item.availableQuantity != null ? item.availableQuantity : ''}</td>
+                    <td class="px-4 py-3">${badge(item.status)}</td>
+                    <td class="px-4 py-3 space-x-1 whitespace-nowrap">
+                        <button type="button" onclick="editAssetItem(${item.id})" class="rounded border border-gray-300 px-3 py-1 text-xs dark:border-gray-600">Edit</button>
+                        ${item.status !== 'RETIRED' ? `<button type="button" onclick="retireAssetItem(${item.id})" class="rounded bg-red-600 px-3 py-1 text-xs text-white">Retire</button>` : ''}
+                    </td>
+                </tr>`).join('') : '<tr><td colspan="7"><div class="request-empty">No catalog items yet.</div></td></tr>';
+        }
+
+        function editAssetItem(id) {
+            const item = managedAssetCatalog.find(a => a.id === id);
+            if (!item) return;
+            editingAssetItemId = id;
+            document.getElementById('assetItemId').value = id;
+            document.getElementById('assetCatalogFormTitle').textContent = `Edit Asset — ${item.assetCode || ''}`;
+            document.getElementById('assetItemName').value = item.assetName || '';
+            document.getElementById('assetItemCategory').value = item.category || '';
+            document.getElementById('assetItemUnit').value = item.unitOfMeasure || '';
+            document.getElementById('assetItemQuantity').value = item.availableQuantity != null ? item.availableQuantity : '';
+            document.getElementById('assetItemStatus').value = item.status || 'AVAILABLE';
+            document.getElementById('assetItemStatusGroup').classList.remove('hidden');
+            document.getElementById('assetCatalogFormCancel').classList.remove('hidden');
+        }
+
+        function resetAssetCatalogForm() {
+            editingAssetItemId = null;
+            const form = document.getElementById('assetCatalogForm');
+            if (form) form.reset();
+            document.getElementById('assetItemId').value = '';
+            document.getElementById('assetCatalogFormTitle').textContent = 'Add New Asset';
+            document.getElementById('assetItemStatusGroup').classList.add('hidden');
+            document.getElementById('assetCatalogFormCancel').classList.add('hidden');
+        }
+
+        async function retireAssetItem(id) {
+            const item = managedAssetCatalog.find(a => a.id === id);
+            const confirmed = await showConfirmModal({
+                title: 'Retire Asset',
+                message: `Retire "${item ? item.assetName : 'this asset'}"? It will no longer be requestable by employees.`,
+                confirmLabel: 'Retire',
+                danger: true
+            });
+            if (!confirmed) return;
+            try {
+                await json(`${assetApi}/catalog/${id}/retire`, {method:'POST'});
+                showToast('Asset retired.', 'success');
+                if (editingAssetItemId === id) resetAssetCatalogForm();
+                await afterAssetCatalogChange();
+            } catch (e) { showError(e.message); }
+        }
+
+        async function afterAssetCatalogChange() {
+            await loadManagedAssetCatalog();
+            // The employee-facing request dropdown caches the catalog; force it to refetch.
+            assetCatalogLoaded = false;
+            await loadAssetCatalog();
+        }
+
+        document.getElementById('assetCatalogForm').addEventListener('submit', async event => {
+            event.preventDefault();
+            const body = {
+                assetName: document.getElementById('assetItemName').value,
+                category: document.getElementById('assetItemCategory').value,
+                unitOfMeasure: document.getElementById('assetItemUnit').value,
+                availableQuantity: Number(document.getElementById('assetItemQuantity').value)
+            };
+            try {
+                if (editingAssetItemId) {
+                    body.status = document.getElementById('assetItemStatus').value;
+                    await json(`${assetApi}/catalog/${editingAssetItemId}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
+                    showToast('Asset updated.', 'success');
+                } else {
+                    await json(`${assetApi}/catalog`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
+                    showToast('Asset created.', 'success');
+                }
+                resetAssetCatalogForm();
+                await afterAssetCatalogChange();
+            } catch (e) { showError(e.message); }
+        });
 
         let approvalModalState = null;
         function openApprovalModal(taskId, action) {
@@ -756,7 +949,10 @@
                 location.href = `${pageBase}/${created.id}`;
             } catch (e) { showError(e.message); }
         });
-        document.addEventListener('DOMContentLoaded', loadData);
+        document.addEventListener('DOMContentLoaded', () => {
+            loadData();
+            checkAssetManagerAccess();
+        });
     </script>
 </main>
 </body>
