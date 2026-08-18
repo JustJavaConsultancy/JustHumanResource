@@ -48,4 +48,8 @@ public class Deduction extends BaseEntity {
 
     @Column(nullable = false)
     private boolean proratable = false;
+
+    private String payableAccountCode;
+
+    private String payableAccountName;
 }

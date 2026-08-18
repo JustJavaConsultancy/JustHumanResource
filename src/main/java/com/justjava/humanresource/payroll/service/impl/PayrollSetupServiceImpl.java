@@ -173,6 +173,12 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
         if (incoming.getStatus() != null) {
             existing.setStatus(incoming.getStatus());
         }
+        existing.setEmployeePayableAccountCode(incoming.getEmployeePayableAccountCode());
+        existing.setEmployeePayableAccountName(incoming.getEmployeePayableAccountName());
+        existing.setEmployerExpenseAccountCode(incoming.getEmployerExpenseAccountCode());
+        existing.setEmployerExpenseAccountName(incoming.getEmployerExpenseAccountName());
+        existing.setEmployerPayableAccountCode(incoming.getEmployerPayableAccountCode());
+        existing.setEmployerPayableAccountName(incoming.getEmployerPayableAccountName());
         existing.setEffectiveFrom(incoming.getEffectiveFrom());
         existing.setEffectiveTo(incoming.getEffectiveTo());
 
@@ -207,6 +213,8 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
         existing.setPensionable(updated.isPensionable());
         existing.setPartOfGross(updated.isPartOfGross());
         existing.setOutOfPayroll(updated.isOutOfPayroll());
+        existing.setExpenseAccountCode(updated.getExpenseAccountCode());
+        existing.setExpenseAccountName(updated.getExpenseAccountName());
         existing.setStatus(updated.getStatus());
         allowanceRepository.save(existing);
 
@@ -264,6 +272,8 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
         existing.setFormulaExpression(updated.getFormulaExpression());
         existing.setProratable(updated.isProratable());
         existing.setStatutory(updated.isStatutory());
+        existing.setPayableAccountCode(updated.getPayableAccountCode());
+        existing.setPayableAccountName(updated.getPayableAccountName());
         existing.setStatus(updated.getStatus());
         deductionRepository.save(existing);
 
@@ -704,6 +714,8 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
         existing.setPercentageRate(updated.getPercentageRate());
         existing.setFormulaExpression(updated.getFormulaExpression());
         existing.setMaximumAmount(updated.getMaximumAmount());
+        existing.setAccountCode(updated.getAccountCode());
+        existing.setAccountName(updated.getAccountName());
         taxReliefRepository.save(existing);
 
         if (payrollPeriodService.isPayrollDateInOpenPeriod(1L, LocalDate.now())) {

@@ -14,6 +14,7 @@ public class PayrollJournalEntryDTO {
     private Long companyId;
 
     private Long payrollPeriodId;
+    private Long journalBatchId;
     private LocalDate periodStart;
     private LocalDate periodEnd;
 
@@ -24,6 +25,10 @@ public class PayrollJournalEntryDTO {
     private BigDecimal creditAmount;
 
     private String description;
+    private String sourceType;
+    private String sourceCode;
+    private String sourceName;
+    private String lineType;
 
     private boolean exported;
 }
