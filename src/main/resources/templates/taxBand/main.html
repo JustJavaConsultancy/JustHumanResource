@@ -174,6 +174,10 @@
           <span class="material-icons-round text-sm">add</span>
           <span>New Tax Band</span>
         </button>
+        <button id="openBulkUploadModal" class="px-4 py-2 border border-primary-600 text-primary-600 rounded-lg text-sm font-medium hover:bg-primary-50 dark:hover:bg-primary-900/20 flex items-center space-x-2">
+          <span class="material-icons-round text-sm">upload_file</span>
+          <span>Bulk Upload</span>
+        </button>
       </div>
     </div>
 
@@ -225,7 +229,10 @@
               <button class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700" title="Edit" th:onclick="'editTaxBand(this)'">
                 <span class="material-icons-round text-sm text-gray-600 dark:text-gray-400">edit</span>
               </button>
-              </div>
+              <button class="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30" title="Delete" th:onclick="'deleteTaxBand(this)'">
+                <span class="material-icons-round text-sm text-red-600 dark:text-red-400">delete</span>
+              </button>
+            </div>
           </td>
         </tr>
         </tbody>
@@ -421,6 +428,72 @@
     </div>
   </div>
 
+  <!-- MODAL: Bulk Upload Tax Bands via CSV -->
+  <div id="bulkUploadModal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+    <div class="absolute inset-0 bg-black bg-opacity-50 backdrop-blur-sm" id="bulkUploadBackdrop"></div>
+    <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-2xl w-full mx-4 p-6 border border-gray-200 dark:border-gray-700 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-xl font-bold text-gray-900 dark:text-white">Bulk Upload Tax Bands</h3>
+        <button id="closeBulkUploadModalBtn" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+          <span class="material-icons-round">close</span>
+        </button>
+      </div>
+
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
+        CSV columns: <code class="bg-gray-100 dark:bg-gray-700 px-1 rounded">lowerBound,upperBound,rate</code>.
+        Leave <code class="bg-gray-100 dark:bg-gray-700 px-1 rounded">upperBound</code> blank on the last row for an open-ended top band.
+        All bands will be created effective today with status ACTIVE and an auto-generated regime code.
+      </p>
+
+      <button type="button" id="downloadSampleCsvBtn" class="inline-flex items-center space-x-1 text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 mb-4">
+        <span class="material-icons-round text-sm">file_download</span>
+        <span>Download sample CSV</span>
+      </button>
+
+      <div class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center mb-4">
+        <input type="file" id="bulkCsvFileInput" accept=".csv" class="hidden">
+        <button type="button" id="chooseCsvFileBtn" class="px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600">
+          Choose CSV File
+        </button>
+        <p id="chosenFileName" class="text-xs text-gray-500 mt-2">No file selected</p>
+      </div>
+
+      <!-- Preview table -->
+      <div id="csvPreviewSection" class="hidden mb-4">
+        <h4 class="text-sm font-semibold mb-2">Preview</h4>
+        <div class="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg max-h-64 overflow-y-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-50 dark:bg-gray-750 sticky top-0">
+            <tr>
+              <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Row</th>
+              <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Lower</th>
+              <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Upper</th>
+              <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Rate</th>
+              <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+            </tr>
+            </thead>
+            <tbody id="csvPreviewBody" class="divide-y divide-gray-200 dark:divide-gray-700"></tbody>
+          </table>
+        </div>
+        <p id="csvPreviewSummary" class="text-xs text-gray-500 mt-2"></p>
+      </div>
+
+      <!-- Server-side rejection details -->
+      <div id="csvServerErrors" class="hidden mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+        <p class="text-sm font-semibold text-red-700 dark:text-red-400 mb-1">Upload rejected</p>
+        <ul id="csvServerErrorList" class="text-xs text-red-600 dark:text-red-400 list-disc pl-5 space-y-1"></ul>
+      </div>
+
+      <div class="flex justify-end space-x-3">
+        <button type="button" id="cancelBulkUploadBtn" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700">Cancel</button>
+        <button type="button" id="submitBulkUploadBtn" disabled
+                class="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed">
+          Upload Tax Bands
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- ========== EDIT MODAL ========== -->
   <div id="editTaxBandModal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
     <div class="absolute inset-0 bg-black bg-opacity-50 backdrop-blur-sm" id="editModalBackdrop"></div>
@@ -490,7 +563,30 @@
     </div>
   </div>
 
-  <!-- Combined JavaScript: Modal + Pagination + action button fix + Edit Modal -->
+  <!-- ========== DELETE CONFIRMATION MODAL ========== -->
+  <div id="deleteTaxBandModal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+    <div class="absolute inset-0 bg-black bg-opacity-50 backdrop-blur-sm" id="deleteModalBackdrop"></div>
+    <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-sm w-full mx-4 p-6 border border-gray-200 dark:border-gray-700">
+      <div class="flex items-start space-x-3">
+        <div class="p-2 bg-red-100 dark:bg-red-900/30 rounded-full flex-shrink-0">
+          <span class="material-icons-round text-red-600 dark:text-red-400">delete</span>
+        </div>
+        <div>
+          <h3 class="text-lg font-bold text-gray-900 dark:text-white">Delete Tax Band</h3>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Are you sure you want to delete the tax band
+            <span id="deleteRegimeCodeLabel" class="font-semibold text-gray-700 dark:text-gray-300"></span>?
+            This action cannot be undone.
+          </p>
+        </div>
+      </div>
+      <div class="flex justify-end space-x-3 mt-6">
+        <button type="button" id="cancelDeleteModalBtn" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700">Cancel</button>
+        <button type="button" id="confirmDeleteBtn" class="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700">Delete</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     (function() {
       // -------------------- ADD MODAL code (unchanged) --------------------
@@ -632,6 +728,71 @@
         document.body.style.overflow = 'hidden';
       };
 
+      // -------------------- DELETE CONFIRMATION MODAL --------------------
+      const deleteModal = document.getElementById('deleteTaxBandModal');
+      const deleteBackdrop = document.getElementById('deleteModalBackdrop');
+      const cancelDeleteBtn = document.getElementById('cancelDeleteModalBtn');
+      const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+      const deleteRegimeCodeLabel = document.getElementById('deleteRegimeCodeLabel');
+
+      let pendingDeleteId = null;
+      let pendingDeleteButton = null;
+
+      function openDeleteModal(id, regimeCode, triggerButton) {
+        pendingDeleteId = id;
+        pendingDeleteButton = triggerButton;
+        deleteRegimeCodeLabel.textContent = '"' + regimeCode + '"';
+        confirmDeleteBtn.disabled = false;
+        confirmDeleteBtn.innerHTML = 'Delete';
+        deleteModal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+      }
+
+      function closeDeleteModal() {
+        deleteModal.classList.add('hidden');
+        document.body.style.overflow = 'auto';
+        pendingDeleteId = null;
+        pendingDeleteButton = null;
+      }
+
+      if (cancelDeleteBtn) cancelDeleteBtn.addEventListener('click', closeDeleteModal);
+      if (deleteBackdrop) deleteBackdrop.addEventListener('click', closeDeleteModal);
+
+      if (confirmDeleteBtn) confirmDeleteBtn.addEventListener('click', function() {
+        if (!pendingDeleteId) return;
+
+        confirmDeleteBtn.disabled = true;
+        confirmDeleteBtn.innerHTML = 'Deleting...';
+
+        fetch('/delete/tax-band/' + pendingDeleteId, {
+          method: 'DELETE'
+        })
+        .then(response => {
+          if (!response.ok) {
+            return response.text().then(text => { throw new Error(text || 'Delete failed'); });
+          }
+          window.location.reload();
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('Failed to delete tax band: ' + error.message);
+          confirmDeleteBtn.disabled = false;
+          confirmDeleteBtn.innerHTML = 'Delete';
+          if (pendingDeleteButton) pendingDeleteButton.disabled = false;
+        });
+      });
+
+      // Global function called by delete buttons
+      window.deleteTaxBand = function(button) {
+        const row = button.closest('tr');
+        if (!row) return;
+
+        const id = row.dataset.id;
+        const regimeCode = row.dataset.regimeCode;
+
+        openDeleteModal(id, regimeCode, button);
+      };
+
       // -------------------- FIX for action cells (keep) --------------------
       function fixActionCells() {
           const firstRowActions = document.querySelector('#activeBandsBody tr:first-child td:last-child .flex');
@@ -726,6 +887,209 @@
         fixActionCells();
         initPagination();
       });
+
+      // -------------------- BULK UPLOAD MODAL --------------------
+      (function() {
+        const bulkModal = document.getElementById('bulkUploadModal');
+        const openBulkBtn = document.getElementById('openBulkUploadModal');
+        const closeBulkBtn = document.getElementById('closeBulkUploadModalBtn');
+        const cancelBulkBtn = document.getElementById('cancelBulkUploadBtn');
+        const bulkBackdrop = document.getElementById('bulkUploadBackdrop');
+        const downloadSampleBtn = document.getElementById('downloadSampleCsvBtn');
+        const fileInput = document.getElementById('bulkCsvFileInput');
+        const chooseFileBtn = document.getElementById('chooseCsvFileBtn');
+        const chosenFileName = document.getElementById('chosenFileName');
+        const previewSection = document.getElementById('csvPreviewSection');
+        const previewBody = document.getElementById('csvPreviewBody');
+        const previewSummary = document.getElementById('csvPreviewSummary');
+        const submitBtn = document.getElementById('submitBulkUploadBtn');
+        const serverErrorsBox = document.getElementById('csvServerErrors');
+        const serverErrorList = document.getElementById('csvServerErrorList');
+
+        if (!bulkModal) return;
+
+        function resetModal() {
+          fileInput.value = '';
+          chosenFileName.textContent = 'No file selected';
+          previewSection.classList.add('hidden');
+          previewBody.innerHTML = '';
+          previewSummary.textContent = '';
+          serverErrorsBox.classList.add('hidden');
+          serverErrorList.innerHTML = '';
+          submitBtn.disabled = true;
+          submitBtn.textContent = 'Upload Tax Bands';
+        }
+
+        function openModal() {
+          resetModal();
+          bulkModal.classList.remove('hidden');
+          document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+          bulkModal.classList.add('hidden');
+          document.body.style.overflow = '';
+        }
+
+        openBulkBtn.addEventListener('click', openModal);
+        closeBulkBtn.addEventListener('click', closeModal);
+        cancelBulkBtn.addEventListener('click', closeModal);
+        bulkBackdrop.addEventListener('click', closeModal);
+        chooseFileBtn.addEventListener('click', () => fileInput.click());
+
+        if (downloadSampleBtn) {
+          downloadSampleBtn.addEventListener('click', () => {
+            const sampleRows = [
+              'lowerBound,upperBound,rate',
+              '0,300000,7',
+              '300000,600000,11',
+              '600000,1100000,15',
+              '1100000,1600000,19',
+              '1600000,3200000,21',
+              '3200000,,24'
+            ];
+            const csvContent = sampleRows.join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', 'tax-bands-sample.csv');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+          });
+        }
+
+        // Client-side preview only — server re-validates authoritatively
+        function previewCsv(text) {
+          const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
+          if (lines.length <= 1) {
+            previewBody.innerHTML = '<tr><td colspan="5" class="px-3 py-3 text-center text-gray-400">No data rows found</td></tr>';
+            previewSummary.textContent = '';
+            submitBtn.disabled = true;
+            return;
+          }
+
+          const dataLines = lines.slice(1); // skip header
+          const rows = dataLines.map((line, idx) => {
+            const parts = line.split(',');
+            const lower = parts[0] !== undefined ? parts[0].trim() : '';
+            const upper = parts[1] !== undefined ? parts[1].trim() : '';
+            const rate  = parts[2] !== undefined ? parts[2].trim() : '';
+            return { rowNumber: idx + 1, lower, upper, rate };
+          });
+
+          let errorCount = 0;
+          let html = '';
+
+          rows.forEach((row, idx) => {
+            const issues = [];
+            const lowerNum = parseFloat(row.lower);
+            const rateNum = parseFloat(row.rate);
+            const isLastRow = idx === rows.length - 1;
+
+            if (row.lower === '' || isNaN(lowerNum)) issues.push('invalid lower bound');
+            if (row.rate === '' || isNaN(rateNum) || rateNum < 0 || rateNum > 100) issues.push('invalid rate');
+            if (row.upper === '' && !isLastRow) issues.push('upper bound required (only last row can be open-ended)');
+            if (row.upper !== '') {
+              const upperNum = parseFloat(row.upper);
+              if (isNaN(upperNum)) issues.push('invalid upper bound');
+              else if (!isNaN(lowerNum) && upperNum <= lowerNum) issues.push('upper must exceed lower');
+            }
+            if (idx > 0) {
+              const prev = rows[idx - 1];
+              const prevUpper = parseFloat(prev.upper);
+              if (prev.upper !== '' && !isNaN(prevUpper) && !isNaN(lowerNum) && prevUpper > lowerNum) {
+                // overlap detection is informational on the client; not strictly required
+              }
+              if (prev.upper !== '' && !isNaN(prevUpper) && !isNaN(lowerNum) && prevUpper < lowerNum) {
+                issues.push('gap: previous band ends at ' + prev.upper);
+              }
+            }
+
+            const ok = issues.length === 0;
+            if (!ok) errorCount++;
+
+            html += `<tr>
+              <td class="px-3 py-2">${row.rowNumber}</td>
+              <td class="px-3 py-2 font-mono">${row.lower || '—'}</td>
+              <td class="px-3 py-2 font-mono">${row.upper || '∞'}</td>
+              <td class="px-3 py-2">${row.rate || '—'}</td>
+              <td class="px-3 py-2">
+                ${ok
+                  ? '<span class="badge badge-success">OK</span>'
+                  : `<span class="badge badge-error" title="${issues.join('; ')}">${issues[0]}</span>`}
+              </td>
+            </tr>`;
+          });
+
+          previewBody.innerHTML = html;
+          previewSummary.textContent = `${rows.length} row(s) parsed · ${errorCount} with issues`;
+          submitBtn.disabled = errorCount > 0;
+        }
+
+        fileInput.addEventListener('change', () => {
+          serverErrorsBox.classList.add('hidden');
+          serverErrorList.innerHTML = '';
+
+          const file = fileInput.files[0];
+          if (!file) {
+            chosenFileName.textContent = 'No file selected';
+            previewSection.classList.add('hidden');
+            submitBtn.disabled = true;
+            return;
+          }
+          chosenFileName.textContent = file.name;
+          previewSection.classList.remove('hidden');
+
+          const reader = new FileReader();
+          reader.onload = (e) => previewCsv(e.target.result);
+          reader.readAsText(file);
+        });
+
+        submitBtn.addEventListener('click', () => {
+          const file = fileInput.files[0];
+          if (!file) return;
+
+          submitBtn.disabled = true;
+          submitBtn.textContent = 'Uploading...';
+          serverErrorsBox.classList.add('hidden');
+          serverErrorList.innerHTML = '';
+
+          const formData = new FormData();
+          formData.append('file', file);
+
+          fetch('/tax-band/upload-csv', { method: 'POST', body: formData })
+            .then(async (response) => {
+              const body = await response.json();
+              if (!response.ok) {
+                const err = new Error(body.message || 'Upload failed');
+                err.body = body;
+                throw err;
+              }
+              return body;
+            })
+            .then(() => {
+              closeModal();
+              window.location.reload();
+            })
+            .catch((error) => {
+              submitBtn.disabled = false;
+              submitBtn.textContent = 'Upload Tax Bands';
+
+              const body = error.body;
+              if (body && body.rowErrors) {
+                serverErrorsBox.classList.remove('hidden');
+                serverErrorList.innerHTML = body.rowErrors
+                  .map(re => `<li>${re.rowNumber > 0 ? 'Row ' + re.rowNumber + ': ' : ''}${re.message}</li>`)
+                  .join('');
+              } else {
+                alert('Upload failed: ' + error.message);
+              }
+            });
+        });
+      })();
 
     })();
   </script>

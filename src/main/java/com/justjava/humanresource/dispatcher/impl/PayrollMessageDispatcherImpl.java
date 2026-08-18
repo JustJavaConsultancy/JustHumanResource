@@ -91,6 +91,12 @@ public class PayrollMessageDispatcherImpl
         vars.put("approvalRequired", false);
         vars.put("exit", false);
 
+        // Thread the original effective date so InitializePayrollDelegate can
+        // store it on the PayrollRun for retro-adjustment calculation.
+        // When effectiveDate is within the current open period the orchestration
+        // layer treats it as a normal run (retroEffectiveDate is ignored there).
+        vars.put("retroEffectiveDate", effectiveDate);
+
         runtimeService.messageEventReceived(
                 "PAYROLL_MESSAGE",
                 execution.getId(),

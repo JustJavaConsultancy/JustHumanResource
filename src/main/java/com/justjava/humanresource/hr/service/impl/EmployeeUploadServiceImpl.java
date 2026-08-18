@@ -1,6 +1,7 @@
 package com.justjava.humanresource.hr.service.impl;
 
 import com.justjava.humanresource.hr.dto.EmployeeUploadDTO;
+import com.justjava.humanresource.employee.EmployeeCreationGateService;
 import com.justjava.humanresource.hr.entity.*;
 import com.justjava.humanresource.hr.repository.*;
 import com.justjava.humanresource.hr.service.CsvParserService;
@@ -43,6 +44,7 @@ public class EmployeeUploadServiceImpl implements EmployeeUploadService {
     private final KeycloakAdminService keycloakAdminService;
     private final PayrollChangeOrchestrator payrollChangeOrchestrator;
     private final EmployeeBankDetailRepository employeeBankDetailRepository;
+    private final EmployeeCreationGateService employeeCreationGateService;
 
     private final ApplicationContext applicationContext;
 
@@ -54,6 +56,7 @@ public class EmployeeUploadServiceImpl implements EmployeeUploadService {
 
     @Override
     public void uploadEmployees(MultipartFile file) {
+        employeeCreationGateService.assertCanCreateEmployees(1L);
 
         List<EmployeeUploadDTO> records = csvParserService.parse(file);
 

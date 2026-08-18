@@ -119,4 +119,24 @@ public class PayrollRun extends BaseEntity {
     @Column(precision = 19, scale = 2)
     private BigDecimal grossDifference;
 
+    /**
+     * Free-text reason recorded when this run is an AMENDMENT.
+     * Null for ORIGINAL runs. Populated by the initiating action (e.g.
+     * salary change, allowance update, manual correction).
+     */
+    @Column(length = 1000)
+    private String amendmentReason;
+
+    /**
+     * Set when this run includes retro-period catch-up adjustments.
+     * Records the salary/allowance change effective date that triggered
+     * the retro calculation. Null for non-retro runs.
+     *
+     * <p>Example: salary effective 2026-01-01 entered in May 2026 →
+     * {@code retroEffectiveDate = 2026-01-01}, adjustments for Jan–Apr
+     * are added as RETRO_ADJ_YYYY_MM EARNING line items in this run.</p>
+     */
+    @Column(name = "retro_effective_date")
+    private LocalDate retroEffectiveDate;
+
 }

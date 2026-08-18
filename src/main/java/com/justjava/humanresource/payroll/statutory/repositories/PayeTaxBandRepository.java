@@ -4,6 +4,7 @@ import com.justjava.humanresource.core.enums.RecordStatus;
 import com.justjava.humanresource.payroll.statutory.entity.PayeTaxBand;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -35,4 +36,6 @@ public interface PayeTaxBandRepository extends JpaRepository<PayeTaxBand, Long> 
             LocalDate date,
             RecordStatus status
     );
+
+    List<PayeTaxBand> findByEffectiveFromAndLowerBoundIn(LocalDate effectiveFrom, List<BigDecimal> lowerBounds);
 }

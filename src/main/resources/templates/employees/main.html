@@ -588,12 +588,19 @@
                 <p class="text-xs text-gray-500 dark:text-gray-400">Header-driven CSV — column names must match field names (e.g. firstName, secondName, email, grade, gross …). New employees require all 5 core fields; existing emails are treated as edits.</p>
             </div>
         </div>
+        <p th:if="${employeeCreationAllowed == false}"
+           th:text="${employeeCreationBlockedReason}"
+           class="text-xs font-semibold text-red-700 dark:text-red-400 md:ml-auto"></p>
         <div class="flex items-center gap-3 md:ml-auto">
             <input type="file" id="csvFileInput" accept=".csv"
+                   th:disabled="${employeeCreationAllowed == false}"
+                   th:classappend="${employeeCreationAllowed == false} ? ' opacity-50 cursor-not-allowed' : ''"
                    class="text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0
                       file:text-xs file:font-semibold file:bg-green-50 file:text-green-700
                       hover:file:bg-green-100 cursor-pointer" />
             <button type="button" onclick="uploadCsv()" id="csvUploadBtn"
+                    th:disabled="${employeeCreationAllowed == false}"
+                    th:classappend="${employeeCreationAllowed == false} ? ' opacity-50 cursor-not-allowed hover:bg-green-600' : ''"
                     class="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors shadow-sm">
                 <span class="material-icons-round text-sm">cloud_upload</span>
                 Upload
@@ -633,8 +640,14 @@
 
 
     <!-- Add Employee Button -->
-    <div class="flex justify-end mb-4">
-        <button onclick="openModal('addEmployeeModal')" class="hidden md:flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors shadow-sm hover:shadow">
+    <div class="flex flex-col items-end gap-2 mb-4">
+        <p th:if="${employeeCreationAllowed == false}"
+           th:text="${employeeCreationBlockedReason}"
+           class="text-xs font-semibold text-red-700 dark:text-red-400 text-right"></p>
+        <button onclick="openModal('addEmployeeModal')"
+                th:disabled="${employeeCreationAllowed == false}"
+                th:classappend="${employeeCreationAllowed == false} ? ' opacity-50 cursor-not-allowed hover:bg-primary-600 hover:shadow-none' : ''"
+                class="hidden md:flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors shadow-sm hover:shadow">
             <span class="material-icons-round text-sm">person_add</span>
             <span>Add Employee</span>
         </button>
@@ -684,7 +697,10 @@
             </div>
             <div class="flex items-center space-x-3 flex-shrink-0">
                 <span id="filterResultCount" class="text-xs text-gray-500 dark:text-gray-400 hidden"></span>
-                <button onclick="openModal('addEmployeeModal')" class="md:hidden p-2 bg-primary-600 text-white rounded-lg">
+                <button onclick="openModal('addEmployeeModal')"
+                        th:disabled="${employeeCreationAllowed == false}"
+                        th:classappend="${employeeCreationAllowed == false} ? ' opacity-50 cursor-not-allowed' : ''"
+                        class="md:hidden p-2 bg-primary-600 text-white rounded-lg">
                     <span class="material-icons-round">person_add</span>
                 </button>
             </div>
@@ -866,6 +882,11 @@
 
                 <div class="p-6 flex flex-col flex-1 overflow-hidden">
                     <form th:action="@{/onboarding}" method="post" onsubmit="return validateAddBankDetails(this)" class="flex flex-col flex-1 overflow-hidden">
+                        <div th:if="${employeeCreationAllowed == false}"
+                             class="mb-4 p-3 rounded-xl border flex items-start gap-2 text-sm bg-red-50 border-red-200 text-red-700 dark:bg-red-900/10 dark:border-red-800 dark:text-red-400 flex-shrink-0">
+                            <span class="material-icons-round text-base mt-0.5 flex-shrink-0">warning</span>
+                            <span th:text="${employeeCreationBlockedReason}"></span>
+                        </div>
 
                         <!-- Tab Bar -->
                         <div class="tab-bar flex-shrink-0">
@@ -1201,6 +1222,8 @@
                                 Cancel
                             </button>
                             <button type="submit" id="addEmployeeSubmitBtn"
+                                    th:disabled="${employeeCreationAllowed == false}"
+                                    th:classappend="${employeeCreationAllowed == false} ? ' opacity-50 cursor-not-allowed hover:bg-primary-600 hover:shadow-none' : ''"
                                     class="px-5 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors shadow-sm hover:shadow flex items-center space-x-1">
                                 <span class="material-icons-round text-sm">save</span>
                                 <span>Add Employee</span>
@@ -2099,9 +2122,16 @@
 
     <script th:inline="javascript">
         /*<![CDATA[*/
+        const employeeCreationAllowed = /*[[${employeeCreationAllowed}]]*/ true;
+        const employeeCreationBlockedReason = /*[[${employeeCreationBlockedReason}]]*/ '';
 
         // ── ADD FORM: Bank details validation + disable submit ───────────
         function validateAddBankDetails(form) {
+            if (!employeeCreationAllowed) {
+                showPiToast(employeeCreationBlockedReason || 'Employee creation is currently disabled.', 'error');
+                return false;
+            }
+
             const accountName   = document.getElementById('addAccountName').value.trim();
             const bankName      = document.getElementById('addBankName').value.trim();
             const accountNumber = document.getElementById('addAccountNumber').value.trim();
@@ -2151,13 +2181,13 @@
                         // Show the inline error banner
                         errorText.textContent = data.message || 'An employee with this email already exists.';
                         errorBanner.classList.remove('hidden');
-                        // Highlight the email field and scroll it into view
-                        const emailInput = document.getElementById('addEmailInput');
-                        emailInput.classList.add('border-red-500', 'ring-1', 'ring-red-500');
-                        emailInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        // Switch back to the General tab so the user sees the email field
-                        const generalTabBtn = document.querySelector('#addEmployeeModal .tab-btn');
-                        if (generalTabBtn) generalTabBtn.click();
+                        if (data.error === 'DUPLICATE_EMAIL') {
+                            const emailInput = document.getElementById('addEmailInput');
+                            emailInput.classList.add('border-red-500', 'ring-1', 'ring-red-500');
+                            emailInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            const generalTabBtn = document.querySelector('#addEmployeeModal .tab-btn');
+                            if (generalTabBtn) generalTabBtn.click();
+                        }
                         // Reset button
                         submitBtn.disabled = false;
                         submitBtn.innerHTML = '<span class="material-icons-round text-sm">save</span><span>Add Employee</span>';
@@ -3075,6 +3105,11 @@
         const CSV_BANK_FIELDS = new Set(['accountname', 'bankname', 'accountnumber']);
 
         function uploadCsv() {
+            if (!employeeCreationAllowed) {
+                showPiToast(employeeCreationBlockedReason || 'Employee upload is currently disabled.', 'error');
+                return;
+            }
+
             const file = document.getElementById('csvFileInput').files[0];
             if (!file) {
                 showPiToast('Please select a CSV file first', 'error');
@@ -3304,6 +3339,11 @@
         }
 
         function confirmCsvUpload() {
+            if (!employeeCreationAllowed) {
+                showPiToast(employeeCreationBlockedReason || 'Employee upload is currently disabled.', 'error');
+                return;
+            }
+
             if (!_csvFileForUpload) {
                 showPiToast('No file selected', 'error');
                 return;
@@ -3320,7 +3360,16 @@
             fetch('/employees/upload-csv', { method: 'POST', body: formData })
                 .then(async r => {
                     const text = await r.text();
-                    if (!r.ok) throw new Error(text || 'Upload failed');
+                    if (!r.ok) {
+                        let message = text || 'Upload failed';
+                        try {
+                            const data = JSON.parse(text);
+                            message = data.message || message;
+                        } catch (e) {
+                            // Keep the plain response text.
+                        }
+                        throw new Error(message);
+                    }
                     closeModal('csvPreviewModal');
                     document.getElementById('csvFileInput').value = '';
                     _csvFileForUpload = null;

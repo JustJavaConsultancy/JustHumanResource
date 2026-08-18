@@ -17,6 +17,7 @@ import com.justjava.humanresource.leave.repository.LeaveRequestRepository;
 import com.justjava.humanresource.workflow.dto.FlowableTaskDTO;
 import com.justjava.humanresource.workflow.service.FlowableTaskService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.flowable.engine.RuntimeService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +30,7 @@ import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class LeaveWorkflowService {
 
     private final LeaveRequestRepository leaveRequestRepository;
@@ -41,56 +43,99 @@ public class LeaveWorkflowService {
 
     @Transactional
     public LeaveRequest submitLeaveRequest(LeaveRequestCreateCommand command) {
-        Employee applicant = getCurrentEmployee();
-        validateLeaveSubmission(command, applicant);
+        String applicantEmail = getCurrentUserEmail();
+        Long applicantId = null;
+        Long leaveRequestId = null;
 
-        employeeService.getById(command.getStandInEmployeeId());
+        try {
+            log.info(
+                    "Submitting leave request. applicantEmail={}, leaveType={}, startDate={}, endDate={}, standInEmployeeId={}",
+                    applicantEmail,
+                    command != null ? command.getLeaveType() : null,
+                    command != null ? command.getStartDate() : null,
+                    command != null ? command.getEndDate() : null,
+                    command != null ? command.getStandInEmployeeId() : null
+            );
 
-        LeaveRequest request = new LeaveRequest();
-        request.setEmployeeId(applicant.getId());
-        request.setStandInEmployeeId(command.getStandInEmployeeId());
-        request.setLeaveType(command.getLeaveType().trim());
-        request.setStartDate(command.getStartDate());
-        request.setEndDate(command.getEndDate());
-        request.setTotalDays((int) ChronoUnit.DAYS.between(command.getStartDate(), command.getEndDate()) + 1);
-        request.setReason(command.getReason());
-        request.setStatus(LeaveRequestStatus.SUBMITTED);
+            Employee applicant = getCurrentEmployee();
+            applicantId = applicant != null ? applicant.getId() : null;
+            log.info("Resolved leave applicant. applicantEmail={}, applicantId={}", applicantEmail, applicantId);
 
-        request = leaveRequestRepository.save(request);
+            validateLeaveSubmission(command, applicant);
+            log.info("Leave request validation passed. applicantId={}, standInEmployeeId={}", applicantId, command.getStandInEmployeeId());
 
-        ApprovalContext context = ApprovalContext.builder()
-                .moduleType(ApprovalModuleType.LEAVE)
-                .requesterEmployeeId(applicant.getId())
-                .moduleRefId(request.getId())
-                .build();
+            Employee standIn = employeeService.getById(command.getStandInEmployeeId());
+            log.info("Resolved leave stand-in employee. applicantId={}, standInEmployeeId={}", applicantId, standIn.getId());
 
-        List<ApproverRef> route = routeResolverFactory.getResolver(context).resolveApprovers(context);
-        if (route.isEmpty()) {
-            throw new IllegalStateException("No line manager route found for this employee.");
+            LeaveRequest request = new LeaveRequest();
+            request.setEmployeeId(applicant.getId());
+            request.setStandInEmployeeId(command.getStandInEmployeeId());
+            request.setLeaveType(command.getLeaveType().trim());
+            request.setStartDate(command.getStartDate());
+            request.setEndDate(command.getEndDate());
+            request.setTotalDays((int) ChronoUnit.DAYS.between(command.getStartDate(), command.getEndDate()) + 1);
+            request.setReason(command.getReason());
+            request.setStatus(LeaveRequestStatus.SUBMITTED);
+
+            request = leaveRequestRepository.save(request);
+            leaveRequestId = request.getId();
+            log.info("Saved submitted leave request. leaveRequestId={}, applicantId={}", leaveRequestId, applicantId);
+
+            ApprovalContext context = ApprovalContext.builder()
+                    .moduleType(ApprovalModuleType.LEAVE)
+                    .requesterEmployeeId(applicant.getId())
+                    .moduleRefId(request.getId())
+                    .build();
+
+            log.info("Resolving leave approval route. leaveRequestId={}, applicantId={}", leaveRequestId, applicantId);
+            List<ApproverRef> route = routeResolverFactory.getResolver(context).resolveApprovers(context);
+            if (route.isEmpty()) {
+                throw new IllegalStateException("No line manager route found for this employee.");
+            }
+
+            List<String> approverIds = route.stream()
+                    .map(r -> String.valueOf(r.getEmployeeId()))
+                    .toList();
+            log.info("Resolved leave approval route. leaveRequestId={}, applicantId={}, approverIds={}",
+                    leaveRequestId, applicantId, approverIds);
+
+            request.setTotalApprovalLevels(route.size());
+            request.setCurrentApprovalLevel(1);
+            request.setStatus(LeaveRequestStatus.IN_APPROVAL);
+            request = leaveRequestRepository.save(request);
+
+            Map<String, Object> vars = new HashMap<>();
+            vars.put("leaveRequestId", request.getId());
+            vars.put("requesterEmployeeId", request.getEmployeeId());
+            vars.put("approverIds", approverIds);
+            vars.put("totalLevels", approverIds.size());
+
+            log.info("Starting leave approval workflow. leaveRequestId={}, businessKey={}",
+                    leaveRequestId, "LEAVE_" + request.getId());
+            var processInstance = runtimeService.startProcessInstanceByKey(
+                    "leaveApprovalProcess",
+                    "LEAVE_" + request.getId(),
+                    vars
+            );
+            request.setWorkflowInstanceId(processInstance.getProcessInstanceId());
+            LeaveRequest saved = leaveRequestRepository.save(request);
+            log.info("Leave request submitted successfully. leaveRequestId={}, workflowInstanceId={}",
+                    saved.getId(), saved.getWorkflowInstanceId());
+            return saved;
+        } catch (Exception ex) {
+            log.error(
+                    "Leave request submission failed. applicantEmail={}, applicantId={}, leaveRequestId={}, leaveType={}, startDate={}, endDate={}, standInEmployeeId={}",
+                    applicantEmail,
+                    applicantId,
+                    leaveRequestId,
+                    command != null ? command.getLeaveType() : null,
+                    command != null ? command.getStartDate() : null,
+                    command != null ? command.getEndDate() : null,
+                    command != null ? command.getStandInEmployeeId() : null,
+                    ex
+            );
+            throw ex;
         }
-
-        request.setTotalApprovalLevels(route.size());
-        request.setCurrentApprovalLevel(1);
-        request.setStatus(LeaveRequestStatus.IN_APPROVAL);
-        request = leaveRequestRepository.save(request);
-
-        List<String> approverIds = route.stream()
-                .map(r -> String.valueOf(r.getEmployeeId()))
-                .toList();
-
-        Map<String, Object> vars = new HashMap<>();
-        vars.put("leaveRequestId", request.getId());
-        vars.put("requesterEmployeeId", request.getEmployeeId());
-        vars.put("approverIds", approverIds);
-        vars.put("totalLevels", approverIds.size());
-
-        var processInstance = runtimeService.startProcessInstanceByKey(
-                "leaveApprovalProcess",
-                "LEAVE_" + request.getId(),
-                vars
-        );
-        request.setWorkflowInstanceId(processInstance.getProcessInstanceId());
-        return leaveRequestRepository.save(request);
     }
 
     @Transactional(readOnly = true)
@@ -178,8 +223,12 @@ public class LeaveWorkflowService {
     }
 
     private Employee getCurrentEmployee() {
-        String email = (String) authenticationManager.get("email");
+        String email = getCurrentUserEmail();
         return employeeService.getByEmail(email);
+    }
+
+    private String getCurrentUserEmail() {
+        return (String) authenticationManager.get("email");
     }
 
     private Employee tryGetCurrentEmployee() {

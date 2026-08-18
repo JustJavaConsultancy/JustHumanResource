@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.ZoneId;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -76,6 +77,21 @@ public class FlowableTaskService {
 
         return tasks.stream()
                 .map(this::mapToDto)
+                .toList();
+    }
+
+    public List<FlowableTaskDTO> getTasksForAssigneeAcrossProcesses(
+            String assignee,
+            Collection<String> processDefinitionKeys
+    ) {
+        if (processDefinitionKeys == null || processDefinitionKeys.isEmpty()) {
+            return List.of();
+        }
+
+        return processDefinitionKeys.stream()
+                .distinct()
+                .flatMap(processDefinitionKey -> getTasksForAssignee(assignee, processDefinitionKey).stream())
+                .sorted((left, right) -> right.getCreatedTime().compareTo(left.getCreatedTime()))
                 .toList();
     }
 //    GET COMPLETED PROCESS INSTANCES

@@ -17,6 +17,7 @@ public interface PayrollSetupService {
      * ========================= */
     PayeTaxBand createPayeTaxBand(PayeTaxBand band);
     PayeTaxBand updateTax(Long id, PayeTaxBand incoming);
+    void deletePayeTaxBand(Long id);
     List<PayeTaxBand> getActivePayeBands(LocalDate date);
     void validatePayeConfiguration(LocalDate date);
     public List<FutureEmployeeAllowanceDTO> getFutureAllowancesForEmployee(Long employeeId);

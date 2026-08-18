@@ -18,6 +18,7 @@ import com.justjava.humanresource.payroll.enums.PayrollRunType;
 import com.justjava.humanresource.payroll.repositories.PayrollLineItemRepository;
 import com.justjava.humanresource.payroll.repositories.PayrollRunRepository;
 import com.justjava.humanresource.payroll.service.EmployeePositionHistoryService;
+import com.justjava.humanresource.payroll.service.PayrollAuditService;
 import com.justjava.humanresource.payroll.service.PayrollPeriodService;
 import com.justjava.humanresource.payroll.service.PayrollSetupService;
 import com.justjava.humanresource.payroll.statutory.entity.PensionScheme;
@@ -30,12 +31,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.justjava.humanresource.payroll.repositories.PayrollPeriodRepository;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
@@ -55,7 +58,9 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
     private final PensionCalculatorService pensionCalculatorService;
     private final EmployeePositionHistoryService employeePositionHistoryService;
     private final PayrollPeriodService payrollPeriodService;
+    private final PayrollPeriodRepository payrollPeriodRepository;
     private final KpiMeasurementService kpiMeasurementService;
+    private final PayrollAuditService payrollAuditService;
 
     /* ============================================================
        INITIALIZE
@@ -66,6 +71,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
     public Long initializePayrollRun(
             Long employeeId,
             LocalDate payrollDate,
+            LocalDate retroEffectiveDate,
             String processInstanceId) {
 
     /* ============================================================
@@ -165,7 +171,27 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
                 amendment.setFlowableBusinessKey(employee.getId().toString());
                 amendment.setPayrollYear(openPeriod.getPeriodStart().getYear());
 
-                return payrollRunRepository.save(amendment).getId();
+                // Store retro date only when the change pre-dates the current period
+                if (retroEffectiveDate != null
+                        && retroEffectiveDate.isBefore(openPeriod.getPeriodStart())) {
+                    amendment.setRetroEffectiveDate(retroEffectiveDate);
+                }
+
+                PayrollRun savedAmendment = payrollRunRepository.save(amendment);
+
+                payrollAuditService.log(
+                        "PayrollRun",
+                        savedAmendment.getId(),
+                        "AMENDMENT_CREATED",
+                        "Amendment v" + nextVersion + " created for employee " + employeeId
+                                + " — period " + openPeriod.getPeriodStart()
+                                + " to " + openPeriod.getPeriodEnd()
+                                + (savedAmendment.getAmendmentReason() != null
+                                        ? ". Reason: " + savedAmendment.getAmendmentReason()
+                                        : "")
+                );
+
+                return savedAmendment.getId();
             }
         }
 
@@ -192,6 +218,12 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
         run.setFlowableProcessInstanceId(processInstanceId);
         run.setFlowableBusinessKey(employee.getId().toString());
         run.setPayrollYear(openPeriod.getPeriodStart().getYear());
+
+        // Store retro date only when the change pre-dates the current period
+        if (retroEffectiveDate != null
+                && retroEffectiveDate.isBefore(openPeriod.getPeriodStart())) {
+            run.setRetroEffectiveDate(retroEffectiveDate);
+        }
 
         return payrollRunRepository.save(run).getId();
     }
@@ -403,6 +435,98 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
         System.out.println("2 The grossPay ====" + grossPay);
         payrollRunRepository.save(run);
         System.out.println("3 The grossPay ====" + grossPay);
+
+        // ── Retro adjustments (catch-up for closed past periods) ───────────────
+        if (run.getRetroEffectiveDate() != null
+                && run.getRetroEffectiveDate().isBefore(run.getPeriodStart())) {
+            applyRetroAdjustments(run, employee);
+        }
+    }
+
+    /**
+     * Adds per-period gross catch-up line items for every CLOSED period
+     * between {@code run.retroEffectiveDate} and the current open period.
+     *
+     * <p>For each closed period the difference between the employee's
+     * current monthly gross and what was actually posted is saved as a
+     * non-taxable, non-pensionable EARNING line
+     * ({@code RETRO_ADJ_YYYY_MM}).  The total is added to
+     * {@code nonGrossEarnings} so it flows through to net pay without
+     * triggering a PAYE / pension recalculation.</p>
+     */
+    @Transactional
+    protected void applyRetroAdjustments(PayrollRun run, Employee employee) {
+
+        Long companyId = employee.getDepartment().getCompany().getId();
+
+        List<PayrollPeriod> retroPeriods = payrollPeriodRepository
+                .findClosedPeriodsBetween(
+                        companyId,
+                        run.getRetroEffectiveDate(),
+                        run.getPeriodStart()
+                );
+
+        if (retroPeriods.isEmpty()) {
+            log.info("Retro: no closed periods found between {} and {} for company {}",
+                    run.getRetroEffectiveDate(), run.getPeriodStart(), companyId);
+            return;
+        }
+
+        // Current monthly gross (post-recalculation with new salary / allowances)
+        BigDecimal newMonthlyGross = run.getGrossPay();
+
+        BigDecimal totalRetroAdj = BigDecimal.ZERO;
+        DateTimeFormatter labelFmt = DateTimeFormatter.ofPattern("yyyy-MM");
+
+        for (PayrollPeriod period : retroPeriods) {
+
+            Optional<PayrollRun> prevOpt =
+                    payrollRunRepository.findLatestPostedRunForEmployeeAndPeriod(
+                            employee.getId(),
+                            period.getPeriodStart(),
+                            period.getPeriodEnd()
+                    );
+
+            if (prevOpt.isEmpty()) {
+                // No payroll was run in that period for this employee — skip
+                log.debug("Retro: no POSTED run for employee {} in period {} – {}; skipping",
+                        employee.getId(), period.getPeriodStart(), period.getPeriodEnd());
+                continue;
+            }
+
+            BigDecimal oldGross = prevOpt.get().getGrossPay();
+            BigDecimal adj = newMonthlyGross.subtract(oldGross).setScale(2, RoundingMode.HALF_UP);
+
+            if (adj.compareTo(BigDecimal.ZERO) == 0) continue; // no difference — nothing to add
+
+            String yearMonth  = period.getPeriodStart().format(labelFmt);
+            String code       = "RETRO_ADJ_" + yearMonth.replace("-", "_");
+            String description = "Retro Adjustment (" + yearMonth + ")";
+
+            saveLine(run, employee,
+                    code,
+                    description,
+                    adj,
+                    false,  // not taxable  — tax was already settled in the original period
+                    false,  // not pensionable
+                    false,  // not part of gross (catch-up flows to net, not back into gross)
+                    false,  // not out-of-payroll
+                    PayComponentType.EARNING);
+
+            totalRetroAdj = totalRetroAdj.add(adj);
+            log.info("Retro: employee {} — {} adj={}", employee.getId(), yearMonth, adj);
+        }
+
+        if (totalRetroAdj.compareTo(BigDecimal.ZERO) != 0) {
+            BigDecimal updatedNonGross =
+                    run.getNonGrossEarnings().add(totalRetroAdj).setScale(2, RoundingMode.HALF_UP);
+            run.setNonGrossEarnings(updatedNonGross);
+            // Provisional net (will be finalised again in applyStatutoryDeductions)
+            run.setNetPay(run.getGrossPay().add(updatedNonGross).setScale(2, RoundingMode.HALF_UP));
+            payrollRunRepository.save(run);
+            log.info("Retro: employee {} total retro adj={} added to nonGrossEarnings",
+                    employee.getId(), totalRetroAdj);
+        }
     }
 
     /* ============================================================
@@ -683,6 +807,20 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
 
         run.setStatus(PayrollRunStatus.POSTED);
         payrollRunRepository.save(run);
+
+        payrollAuditService.log(
+                "PayrollRun",
+                run.getId(),
+                "PAYROLL_POSTED",
+                "Payroll v" + run.getVersionNumber() + " posted for employee "
+                        + run.getEmployee().getId()
+                        + " — period " + run.getPeriodStart()
+                        + " to " + run.getPeriodEnd()
+                        + ", net pay: " + run.getNetPay()
+                        + (run.getAmendmentReason() != null
+                                ? ". Amendment reason: " + run.getAmendmentReason()
+                                : "")
+        );
     }
 
     @Override

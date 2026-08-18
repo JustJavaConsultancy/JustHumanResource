@@ -23,7 +23,8 @@ public class LineManagerApprovalRouteResolver implements ApprovalRouteResolver {
 
     @Override
     public boolean supports(ApprovalContext context) {
-        return context.getModuleType() == ApprovalModuleType.LEAVE;
+        return context.getModuleType() == ApprovalModuleType.LEAVE
+                || context.getModuleType() == ApprovalModuleType.REQUEST;
     }
 
     @Override

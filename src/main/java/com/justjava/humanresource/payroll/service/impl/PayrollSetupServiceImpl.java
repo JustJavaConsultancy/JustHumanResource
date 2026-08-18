@@ -105,6 +105,15 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
     }
 
     @Override
+    @Transactional
+    public void deletePayeTaxBand(Long id) {
+        if (!payeTaxBandRepository.existsById(id)) {
+            throw new EntityNotFoundException("PayeTaxBand not found");
+        }
+        payeTaxBandRepository.deleteById(id);
+    }
+
+    @Override
     public List<PayeTaxBand> getActivePayeBands(LocalDate date) {
         return payeTaxBandRepository.findByEffectiveFromLessThanEqualAndEffectiveToIsNullAndStatusOrderByLowerBoundAsc(
                 date, RecordStatus.ACTIVE
@@ -319,7 +328,9 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
 
 
         LocalDate affectedDate = determineAffectedPayrollDate(requests);
-        if (payrollPeriodService.isPayrollDateInOpenPeriod(1L,affectedDate)) {
+        // Recalculate for current-period and past (retro) dates; skip future-dated changes.
+        LocalDate openPeriodEnd = payrollPeriodService.getOpenPeriod(1L).getPeriodEnd();
+        if (!affectedDate.isAfter(openPeriodEnd)) {
             payrollChangeOrchestrator.recalculateForPayGroup(payGroupId, affectedDate);
         }
         return response;
@@ -347,10 +358,11 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
             ));
         }
         LocalDate affectedDate = determineAffectedPayrollDate(requests);
-
-        if (payrollPeriodService.isPayrollDateInOpenPeriod(1L,affectedDate)) {
+        // Recalculate for current-period and past (retro) dates; skip future-dated changes.
+        LocalDate openPeriodEnd2 = payrollPeriodService.getOpenPeriod(1L).getPeriodEnd();
+        if (!affectedDate.isAfter(openPeriodEnd2)) {
             payrollChangeOrchestrator.recalculateForPayGroup(payGroupId, affectedDate);
-        };
+        }
         return response;
     }
     /* ============================================================
@@ -495,7 +507,9 @@ public class PayrollSetupServiceImpl implements PayrollSetupService {
             ));
         }
         LocalDate affectedDate = determineAffectedPayrollDate(requests);
-        if (payrollPeriodService.isPayrollDateInOpenPeriod(1L,affectedDate)) {
+        // Recalculate for current-period and past (retro) dates; skip future-dated changes.
+        LocalDate openPeriodEnd3 = payrollPeriodService.getOpenPeriod(1L).getPeriodEnd();
+        if (!affectedDate.isAfter(openPeriodEnd3)) {
             payrollChangeOrchestrator.recalculateForEmployee(employeeId, affectedDate);
         }
 

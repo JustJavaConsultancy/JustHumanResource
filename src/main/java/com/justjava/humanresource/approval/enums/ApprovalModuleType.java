@@ -4,5 +4,6 @@ public enum ApprovalModuleType {
     LEAVE,
     PROMOTION,
     REQUISITION,
+    REQUEST,
     EXIT
 }

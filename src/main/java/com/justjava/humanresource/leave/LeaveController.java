@@ -1,5 +1,6 @@
 package com.justjava.humanresource.leave;
 
+import com.justjava.humanresource.core.config.AuthenticationManager;
 import com.justjava.humanresource.hr.dto.EmployeeDTO;
 import com.justjava.humanresource.hr.service.EmployeeService;
 import com.justjava.humanresource.leave.dto.LeaveApprovalActionCommand;
@@ -21,9 +22,13 @@ public class LeaveController {
 
     private final LeaveWorkflowService leaveWorkflowService;
     private final EmployeeService employeeService;
+    private final AuthenticationManager authenticationManager;
 
     @GetMapping("/leave")
     public String leavePage(Model model) {
+        if (authenticationManager.isEmployee() && !isHrUser()) {
+            return "redirect:/employee/leave";
+        }
         model.addAttribute("title","Leave Management");
         model.addAttribute("subTitle","Approve and manage employee leave requests");
         model.addAttribute("employees", employeeService.getAllEmployees());
@@ -70,5 +75,12 @@ public class LeaveController {
     @ResponseBody
     public List<LeaveApprovalStep> getLeaveSteps(@PathVariable Long id) {
         return leaveWorkflowService.getApprovalSteps(id);
+    }
+
+    private boolean isHrUser() {
+        return authenticationManager.isHumanResource()
+                || authenticationManager.isJobHR()
+                || authenticationManager.isAdmin()
+                || authenticationManager.isRestrictedHr();
     }
 }
