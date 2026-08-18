@@ -1,0 +1,584 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>JustHumanResource Accounting User Guide</title>
+  <style>
+    :root {
+      --bg: #f6f8fb;
+      --card: #ffffff;
+      --ink: #172033;
+      --muted: #667085;
+      --line: #d9e1ec;
+      --blue: #1d4ed8;
+      --blue-soft: #e8f0ff;
+      --green: #047857;
+      --green-soft: #e8f7ef;
+      --amber: #b45309;
+      --amber-soft: #fff4df;
+      --red: #b42318;
+      --red-soft: #fff0ee;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.58;
+    }
+    .wrap {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 28px;
+    }
+    .hero {
+      background: #0f172a;
+      color: white;
+      border-radius: 8px;
+      padding: 28px;
+      margin-bottom: 18px;
+    }
+    .hero h1 {
+      margin: 0 0 8px;
+      font-size: 30px;
+      line-height: 1.2;
+    }
+    .hero p {
+      max-width: 780px;
+      margin: 0;
+      color: #d8e1f0;
+    }
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 5px 10px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      color: #eef4ff;
+      font-size: 13px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 16px;
+    }
+    .card {
+      grid-column: span 12;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 20px;
+    }
+    .half { grid-column: span 6; }
+    .third { grid-column: span 4; }
+    h2, h3 {
+      margin-top: 0;
+      line-height: 1.25;
+    }
+    h2 {
+      font-size: 22px;
+      margin-bottom: 8px;
+    }
+    h3 {
+      font-size: 17px;
+      margin-bottom: 8px;
+    }
+    p { margin: 8px 0 0; }
+    ul, ol {
+      margin: 10px 0 0;
+      padding-left: 22px;
+    }
+    li { margin: 6px 0; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+    }
+    th, td {
+      border-bottom: 1px solid var(--line);
+      padding: 10px 8px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      color: #344054;
+      background: #f8fafc;
+      font-size: 13px;
+    }
+    code {
+      background: #eef2f7;
+      border-radius: 5px;
+      padding: 2px 5px;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 0.95em;
+    }
+    .note, .success, .warning, .danger {
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin-top: 12px;
+      border: 1px solid;
+    }
+    .note {
+      background: var(--blue-soft);
+      border-color: #bfd2ff;
+      color: #173b88;
+    }
+    .success {
+      background: var(--green-soft);
+      border-color: #bce7ce;
+      color: var(--green);
+    }
+    .warning {
+      background: var(--amber-soft);
+      border-color: #f5d28f;
+      color: var(--amber);
+    }
+    .danger {
+      background: var(--red-soft);
+      border-color: #fac7c2;
+      color: var(--red);
+    }
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .flow-step {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      background: #fbfcfe;
+      min-height: 118px;
+    }
+    .flow-step strong {
+      display: block;
+      margin-bottom: 5px;
+      color: #0f172a;
+    }
+    .small { color: var(--muted); font-size: 14px; }
+    .kbd {
+      display: inline-block;
+      min-width: 24px;
+      height: 24px;
+      line-height: 24px;
+      text-align: center;
+      border-radius: 999px;
+      background: var(--blue);
+      color: white;
+      font-size: 12px;
+      font-weight: 700;
+      margin-right: 6px;
+    }
+    .checklist {
+      list-style: none;
+      padding-left: 0;
+    }
+    .checklist li {
+      padding-left: 28px;
+      position: relative;
+    }
+    .checklist li::before {
+      content: "";
+      width: 14px;
+      height: 14px;
+      border: 2px solid var(--blue);
+      border-radius: 3px;
+      position: absolute;
+      left: 0;
+      top: 6px;
+      background: white;
+    }
+    @media (max-width: 860px) {
+      .wrap { padding: 16px; }
+      .half, .third { grid-column: span 12; }
+      .flow { grid-template-columns: 1fr; }
+      .hero h1 { font-size: 24px; }
+    }
+    @media print {
+      body { background: white; }
+      .wrap { max-width: none; padding: 0; }
+      .card, .hero { break-inside: avoid; }
+      .hero { background: white; color: black; border: 1px solid var(--line); }
+      .hero p, .pill { color: black; }
+      .pill { border-color: var(--line); }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <h1>JustHumanResource Accounting User Guide</h1>
+      <p>
+        A practical guide for finance users who configure payroll accounting defaults,
+        review generated journal postings, and export payroll journals for entry into
+        the organization's accounting system.
+      </p>
+      <div class="meta">
+        <span class="pill">Audience: Finance Officer / Payroll Accountant</span>
+        <span class="pill">Module: Finance > Accounting</span>
+        <span class="pill">Format: HTML / Print-ready</span>
+      </div>
+    </section>
+
+    <div class="grid">
+      <section class="card">
+        <h2>1. What The Accounting Module Does</h2>
+        <p>
+          The accounting part of JustHumanResource converts approved payroll results
+          into balanced payroll journal entries. It uses configured ledger accounts
+          to classify earnings, deductions, taxes, pension liabilities, employer
+          pension costs, and net salary payable.
+        </p>
+        <div class="flow">
+          <div class="flow-step">
+            <strong>Configure accounts</strong>
+            Enter default ledger codes and names in Payroll Accounting Settings.
+          </div>
+          <div class="flow-step">
+            <strong>Run payroll</strong>
+            Payroll creates employee pay runs and payroll line items.
+          </div>
+          <div class="flow-step">
+            <strong>Post payroll</strong>
+            The final payroll runs must reach posted status for journal generation.
+          </div>
+          <div class="flow-step">
+            <strong>Generate journal</strong>
+            Period close generates debit and credit lines for the payroll period.
+          </div>
+          <div class="flow-step">
+            <strong>Export CSV</strong>
+            Finance exports the journal from Financial Posting for accounting import.
+          </div>
+        </div>
+      </section>
+
+      <section class="card half">
+        <h2>2. Accessing The Finance Area</h2>
+        <ol>
+          <li>Sign in to JustHumanResource with a user account that has finance access.</li>
+          <li>Open the Finance area.</li>
+          <li>Use the finance sidebar to open <strong>Dashboard</strong>, <strong>Approve Lock Approvals</strong>, <strong>Closed Periods</strong>, <strong>Bank Details</strong>, and <strong>Financial Posting</strong>.</li>
+          <li>Open payroll accounting setup directly at <code>/finance/accounting-settings</code> when you need to configure ledger defaults.</li>
+        </ol>
+        <div class="note">
+          The current sidebar includes Financial Posting but does not expose Accounting Settings as a main menu item. Use the direct URL or the Journal postings link from the settings page after it is opened.
+        </div>
+      </section>
+
+      <section class="card half">
+        <h2>3. Required Before You Start</h2>
+        <ul class="checklist">
+          <li>Confirm the payroll period has been calculated and reviewed.</li>
+          <li>Confirm payroll runs for the period are posted.</li>
+          <li>Confirm default ledger accounts are correct for the company.</li>
+          <li>Confirm allowance, deduction, and pension account mappings where specific mappings are required.</li>
+          <li>Confirm the period is ready for finance review before exporting journals.</li>
+        </ul>
+      </section>
+
+      <section class="card">
+        <h2>4. Configure Payroll Accounting Settings</h2>
+        <p>
+          Accounting settings provide fallback ledger accounts used when individual
+          pay items do not have their own account mapping. To configure them, open
+          <code>/finance/accounting-settings</code>.
+        </p>
+        <ol>
+          <li><span class="kbd">1</span>Review each account section.</li>
+          <li><span class="kbd">2</span>Enter the correct account code from your chart of accounts.</li>
+          <li><span class="kbd">3</span>Enter the matching account name.</li>
+          <li><span class="kbd">4</span>Click <strong>Save settings</strong>.</li>
+          <li><span class="kbd">5</span>Return to <strong>Financial Posting</strong> to review generated journals.</li>
+        </ol>
+        <table>
+          <thead>
+            <tr>
+              <th>Setting</th>
+              <th>Purpose</th>
+              <th>Default Example</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Payroll Suspense</td>
+              <td>Credit account for net salary payable through payroll suspense.</td>
+              <td><code>2000 - Payroll Suspense</code></td>
+            </tr>
+            <tr>
+              <td>Salary Payable</td>
+              <td>Salary payable ledger reference available for payroll accounting setup.</td>
+              <td><code>2000 - Salary Payable</code></td>
+            </tr>
+            <tr>
+              <td>Default Earnings Expense</td>
+              <td>Debit account used for earnings when the allowance has no specific expense account.</td>
+              <td><code>5000 - Salary Expense</code></td>
+            </tr>
+            <tr>
+              <td>Default Deduction Payable</td>
+              <td>Credit account used for deductions without a specific payable account.</td>
+              <td><code>2100 - Payroll Deductions Payable</code></td>
+            </tr>
+            <tr>
+              <td>PAYE Payable</td>
+              <td>Credit account used for employee tax deductions with component code <code>PAYE</code>.</td>
+              <td><code>2110 - PAYE Tax Payable</code></td>
+            </tr>
+            <tr>
+              <td>Employee Pension Payable</td>
+              <td>Credit account used for employee pension deductions when pension scheme mapping is not provided.</td>
+              <td><code>2120 - Pension Payable</code></td>
+            </tr>
+            <tr>
+              <td>Employer Pension Expense</td>
+              <td>Debit account used for employer pension cost when scheme expense mapping is not provided.</td>
+              <td><code>5010 - Employer Pension Expense</code></td>
+            </tr>
+            <tr>
+              <td>Employer Pension Payable</td>
+              <td>Credit account used for employer pension liability when scheme payable mapping is not provided.</td>
+              <td><code>2120 - Pension Payable</code></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="warning">
+          Use real account codes from your accounting system before closing payroll periods. Placeholder defaults are useful for setup, but they may not match the organization's chart of accounts.
+        </div>
+      </section>
+
+      <section class="card half">
+        <h2>5. How Journal Lines Are Created</h2>
+        <ul>
+          <li><strong>Earnings</strong> create debit lines to an allowance expense account or the default earnings expense account.</li>
+          <li><strong>Deductions</strong> create credit lines to PAYE, pension, deduction-specific payable accounts, or the default deduction payable account.</li>
+          <li><strong>Employer pension cost</strong> creates a debit to employer pension expense and a credit to employer pension payable.</li>
+          <li><strong>Net salary</strong> creates a credit to payroll suspense.</li>
+          <li>Out-of-payroll items and zero or negative line items are ignored by journal generation.</li>
+        </ul>
+      </section>
+
+      <section class="card half">
+        <h2>6. Account Mapping Priority</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Pay Item</th>
+              <th>First Choice</th>
+              <th>Fallback</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Allowance / earning</td>
+              <td>Allowance expense account</td>
+              <td>Default Earnings Expense</td>
+            </tr>
+            <tr>
+              <td>PAYE deduction</td>
+              <td>PAYE Payable</td>
+              <td>None</td>
+            </tr>
+            <tr>
+              <td>Employee pension</td>
+              <td>Pension scheme employee payable account</td>
+              <td>Employee Pension Payable</td>
+            </tr>
+            <tr>
+              <td>Other deduction</td>
+              <td>Deduction payable account</td>
+              <td>Default Deduction Payable</td>
+            </tr>
+            <tr>
+              <td>Employer pension</td>
+              <td>Pension scheme employer accounts</td>
+              <td>Employer Pension Expense and Employer Pension Payable</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="card">
+        <h2>7. Review Financial Posting</h2>
+        <p>
+          Open <strong>Finance > Financial Posting</strong> or go to
+          <code>/finance/posting</code>. This page shows unexported payroll journal
+          entries grouped by payroll period.
+        </p>
+        <ol>
+          <li>Check the summary cards for total periods, total entries, total debits, and balanced periods.</li>
+          <li>Open each period section and review the account code, account name, description, debit amount, and credit amount.</li>
+          <li>Confirm each period shows as balanced before exporting.</li>
+          <li>Investigate any period marked unbalanced before using the file in an accounting system.</li>
+        </ol>
+        <div class="success">
+          A healthy payroll journal has total debits equal to total credits for the period.
+        </div>
+      </section>
+
+      <section class="card half">
+        <h2>8. Export Payroll Journal CSV</h2>
+        <ol>
+          <li>Open <strong>Financial Posting</strong>.</li>
+          <li>Locate the payroll period to export.</li>
+          <li>Click <strong>Export CSV</strong>.</li>
+          <li>Save or upload the downloaded CSV according to your accounting import process.</li>
+          <li>After export, the journal batch and entries are marked exported in the system.</li>
+        </ol>
+        <p class="small">
+          Exported filenames follow the pattern <code>payroll-journal-period-[periodId].csv</code>.
+        </p>
+      </section>
+
+      <section class="card half">
+        <h2>9. CSV Columns</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Column</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Batch ID</td><td>System ID for the generated journal batch.</td></tr>
+            <tr><td>Entry ID</td><td>System ID for the journal line.</td></tr>
+            <tr><td>Period Start / End</td><td>Payroll period covered by the journal.</td></tr>
+            <tr><td>Account Code / Name</td><td>Ledger account to post the line against.</td></tr>
+            <tr><td>Debit / Credit</td><td>Journal amount. One side is populated per line.</td></tr>
+            <tr><td>Source Type / Code / Name</td><td>Payroll component information used to create the line.</td></tr>
+            <tr><td>Description</td><td>Human-readable posting description.</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="card">
+        <h2>10. Working With Period Close And Lock Approval</h2>
+        <p>
+          Journal generation is part of the payroll period close workflow. Finance
+          users may also review lock approval tasks from <strong>Approve Lock Approvals</strong>.
+        </p>
+        <ul>
+          <li>Use <strong>Approve Lock Approvals</strong> to approve or reject pending period close requests assigned to finance.</li>
+          <li>Use <strong>Closed Periods</strong> to view finalized payroll periods after completion.</li>
+          <li>Use <strong>Financial Posting</strong> after the period close workflow has generated the journal entries.</li>
+        </ul>
+      </section>
+
+      <section class="card third">
+        <h2>11. No Journal Entries Showing</h2>
+        <ul>
+          <li>Confirm payroll runs exist for the period.</li>
+          <li>Confirm payroll runs are posted.</li>
+          <li>Confirm the period close workflow has reached journal generation.</li>
+          <li>Confirm entries were not already exported.</li>
+        </ul>
+      </section>
+
+      <section class="card third">
+        <h2>12. Missing Account Mapping</h2>
+        <ul>
+          <li>Open Accounting Settings and complete every required account code and name.</li>
+          <li>Review allowance expense accounts.</li>
+          <li>Review deduction payable accounts.</li>
+          <li>Review pension scheme payable and expense accounts.</li>
+        </ul>
+      </section>
+
+      <section class="card third">
+        <h2>13. Unbalanced Journal</h2>
+        <ul>
+          <li>Check payroll line items for the period.</li>
+          <li>Review employer pension configuration.</li>
+          <li>Confirm net pay was calculated correctly.</li>
+          <li>Do not import unbalanced journals into accounting.</li>
+        </ul>
+      </section>
+
+      <section class="card">
+        <h2>14. Recommended Operating Controls</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Control</th>
+              <th>Recommended Practice</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Settings change control</td>
+              <td>Restrict accounting settings updates to authorized finance administrators.</td>
+            </tr>
+            <tr>
+              <td>Pre-export review</td>
+              <td>Confirm every period is balanced and account names match expected ledger accounts.</td>
+            </tr>
+            <tr>
+              <td>Export retention</td>
+              <td>Keep exported CSV files with payroll period records and approval evidence.</td>
+            </tr>
+            <tr>
+              <td>Duplicate prevention</td>
+              <td>Use the exported status to avoid importing the same payroll journal twice.</td>
+            </tr>
+            <tr>
+              <td>Exception handling</td>
+              <td>Resolve missing mappings or unbalanced journals before approving period close.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="card">
+        <h2>15. Quick Reference</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Task</th>
+              <th>Where To Go</th>
+              <th>Outcome</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Set default ledger accounts</td>
+              <td><code>/finance/accounting-settings</code></td>
+              <td>Payroll journals can resolve required debit and credit accounts.</td>
+            </tr>
+            <tr>
+              <td>Review pending journals</td>
+              <td><code>/finance/posting</code></td>
+              <td>Finance can inspect unexported journal lines by payroll period.</td>
+            </tr>
+            <tr>
+              <td>Export journals</td>
+              <td><strong>Financial Posting</strong> > <strong>Export CSV</strong></td>
+              <td>CSV is downloaded and journal entries are marked exported.</td>
+            </tr>
+            <tr>
+              <td>Approve payroll period lock</td>
+              <td><code>/finance/lockApproval</code></td>
+              <td>Finance approves or rejects period close requests.</td>
+            </tr>
+            <tr>
+              <td>View finalized periods</td>
+              <td><code>/finance/lockedPeriods</code></td>
+              <td>Finance sees completed payroll period close tasks.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </div>
+  </div>
+</body>
+</html>
