@@ -198,6 +198,10 @@
                                          th:title="${allowance.formulaExpression}">
                                         Formula: <span th:text="${allowance.formulaExpression}">expression</span>
                                     </div>
+                                    <div th:if="${allowance.expenseAccountCode != null and !#strings.isEmpty(allowance.expenseAccountCode)}"
+                                         class="mt-1 text-xs text-gray-600 dark:text-gray-400">
+                                        Expense A/C: <span th:text="${allowance.expenseAccountCode + ' - ' + allowance.expenseAccountName}">5000 - Salary Expense</span>
+                                    </div>
                                 </div>
                                 <span class="text-lg font-bold text-green-600 dark:text-green-400"
                                       th:text="'+ ₦' + ${#numbers.formatDecimal(allowance.amount, 1, 2)}">+ ₦1,200.00</span>
@@ -283,6 +287,10 @@
                                          th:title="${deduction.formulaExpression}">
                                         Formula: <span th:text="${deduction.formulaExpression}">expression</span>
                                     </div>
+                                    <div th:if="${deduction.payableAccountCode != null and !#strings.isEmpty(deduction.payableAccountCode)}"
+                                         class="mt-1 text-xs text-gray-600 dark:text-gray-400">
+                                        Payable A/C: <span th:text="${deduction.payableAccountCode + ' - ' + deduction.payableAccountName}">2100 - Payroll Deductions Payable</span>
+                                    </div>
                                 </div>
                                 <span class="text-lg font-bold text-red-600 dark:text-red-400"
                                       th:text="'- ₦' + ${#numbers.formatDecimal(deduction.amount, 1, 2)}">- ₦150.00</span>
@@ -367,6 +375,10 @@
                                 <div th:if="${taxRelief.maximumAmount != null}"
                                      class="mt-1 text-xs text-gray-600 dark:text-gray-400">
                                     Max: <span th:text="'₦' + ${#numbers.formatDecimal(taxRelief.maximumAmount, 1, 2)}">₦200,000.00</span>
+                                </div>
+                                <div th:if="${taxRelief.accountCode != null and !#strings.isEmpty(taxRelief.accountCode)}"
+                                     class="mt-1 text-xs text-gray-600 dark:text-gray-400">
+                                    A/C: <span th:text="${taxRelief.accountCode + ' - ' + taxRelief.accountName}">5000 - Tax Relief</span>
                                 </div>
                             </div>
                             <span class="text-lg font-bold text-amber-600 dark:text-amber-400"
@@ -488,6 +500,16 @@
                             <option value="INACTIVE">INACTIVE</option>
                         </select>
                     </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Expense Account Code</label>
+                            <input name="expenseAccountCode" type="text" class="form-input" placeholder="e.g., 5000">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Expense Account Name</label>
+                            <input name="expenseAccountName" type="text" class="form-input" placeholder="e.g., Salary Expense">
+                        </div>
+                    </div>
                     <div class="flex justify-end space-x-3 pt-4">
                         <button type="button" onclick="closeModal('addAllowanceModal')" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">Cancel</button>
                         <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Add Allowance</button>
@@ -577,6 +599,16 @@
                             <option value="INACTIVE">INACTIVE</option>
                         </select>
                     </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Expense Account Code</label>
+                            <input name="expenseAccountCode" type="text" id="editAllowanceExpenseAccountCode" class="form-input">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Expense Account Name</label>
+                            <input name="expenseAccountName" type="text" id="editAllowanceExpenseAccountName" class="form-input">
+                        </div>
+                    </div>
                     <div class="flex justify-end space-x-3 pt-4">
                         <button type="button" onclick="closeModal('editAllowanceModal')" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">Cancel</button>
                         <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Update Allowance</button>
@@ -647,6 +679,16 @@
                             <option value="ACTIVE">ACTIVE</option>
                             <option value="INACTIVE">INACTIVE</option>
                         </select>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Payable Account Code</label>
+                            <input name="payableAccountCode" type="text" class="form-input" placeholder="e.g., 2100">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Payable Account Name</label>
+                            <input name="payableAccountName" type="text" class="form-input" placeholder="e.g., Payroll Deductions Payable">
+                        </div>
                     </div>
                     <div class="flex justify-end space-x-3 pt-4">
                         <button type="button" onclick="closeModal('addDeductionModal')" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">Cancel</button>
@@ -719,6 +761,16 @@
                             <option value="INACTIVE">INACTIVE</option>
                         </select>
                     </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Payable Account Code</label>
+                            <input name="payableAccountCode" type="text" id="editDeductionPayableAccountCode" class="form-input">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Payable Account Name</label>
+                            <input name="payableAccountName" type="text" id="editDeductionPayableAccountName" class="form-input">
+                        </div>
+                    </div>
                     <div class="flex justify-end space-x-3 pt-4">
                         <button type="button" onclick="closeModal('editDeductionModal')" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">Cancel</button>
                         <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Update Deduction</button>
@@ -779,6 +831,16 @@
                         <label class="block text-sm font-medium mb-2">Maximum Amount (Cap)</label>
                         <input name="maximumAmount" type="number" step="0.01" min="0" class="form-input" placeholder="Optional cap e.g., 200000.00">
                     </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Account Code</label>
+                            <input name="accountCode" type="text" class="form-input" placeholder="Optional">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Account Name</label>
+                            <input name="accountName" type="text" class="form-input" placeholder="Optional">
+                        </div>
+                    </div>
                     <div class="flex justify-end space-x-3 pt-4">
                         <button type="button" onclick="closeModal('addTaxReliefModal')" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">Cancel</button>
                         <button type="submit" class="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700">Add Tax Relief</button>
@@ -834,6 +896,16 @@
                     <div>
                         <label class="block text-sm font-medium mb-2">Maximum Amount (Cap)</label>
                         <input name="maximumAmount" type="number" step="0.01" min="0" id="editTaxReliefMaxAmount" class="form-input" placeholder="Optional cap">
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Account Code</label>
+                            <input name="accountCode" type="text" id="editTaxReliefAccountCode" class="form-input">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Account Name</label>
+                            <input name="accountName" type="text" id="editTaxReliefAccountName" class="form-input">
+                        </div>
                     </div>
                     <input type="hidden" name="active" id="editTaxReliefActiveHidden" value="true">
                     <div class="flex justify-end space-x-3 pt-4">
@@ -1006,6 +1078,8 @@ function editAllowance(id) {
     document.getElementById('editAllowancePercentage').value = allowance.percentageRate || '';
     document.getElementById('editAllowanceFormula').value = allowance.formulaExpression || '';
     document.getElementById('editAllowanceStatus').value = allowance.status || 'ACTIVE';
+    document.getElementById('editAllowanceExpenseAccountCode').value = allowance.expenseAccountCode || '';
+    document.getElementById('editAllowanceExpenseAccountName').value = allowance.expenseAccountName || '';
 
     // proratable
     document.getElementById('editAllowanceProratable').checked = allowance.proratable || false;
@@ -1045,6 +1119,8 @@ function editAllowance(id) {
             document.getElementById('editDeductionProratable').checked = deduction.proratable || false;
             document.getElementById('editDeductionStatutory').checked = deduction.statutory || false;
             document.getElementById('editDeductionStatus').value = deduction.status || 'ACTIVE';
+            document.getElementById('editDeductionPayableAccountCode').value = deduction.payableAccountCode || '';
+            document.getElementById('editDeductionPayableAccountName').value = deduction.payableAccountName || '';
             const select = document.getElementById('editDeductionCalcType');
             toggleCalculationFields(select, 'editDeduction');
             openModal('editDeductionModal');
@@ -1069,6 +1145,8 @@ function editAllowance(id) {
             document.getElementById('editTaxReliefPercentage').value = taxRelief.percentageRate || '';
             document.getElementById('editTaxReliefFormula').value = taxRelief.formulaExpression || '';
             document.getElementById('editTaxReliefMaxAmount').value = taxRelief.maximumAmount || '';
+            document.getElementById('editTaxReliefAccountCode').value = taxRelief.accountCode || '';
+            document.getElementById('editTaxReliefAccountName').value = taxRelief.accountName || '';
             document.getElementById('editTaxReliefActiveHidden').value = taxRelief.active ? 'true' : 'false';
             const select = document.getElementById('editTaxReliefCalcType');
             toggleCalculationFields(select, 'editTaxRelief');

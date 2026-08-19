@@ -1,7 +1,9 @@
 package com.justjava.humanresource.finance;
 
 import com.justjava.humanresource.payroll.dto.PayrollJournalEntryDTO;
+import com.justjava.humanresource.payroll.entity.PayrollAccountingSettings;
 import com.justjava.humanresource.payroll.entity.PaySlipDTO;
+import com.justjava.humanresource.payroll.repositories.PayrollAccountingSettingsRepository;
 import com.justjava.humanresource.payroll.service.PayrollJournalService;
 import com.justjava.humanresource.payroll.service.impl.PaySlipServiceImpl;
 import com.justjava.humanresource.workflow.dto.FlowableTaskDTO;
@@ -9,10 +11,15 @@ import com.justjava.humanresource.workflow.service.FlowableTaskService;
 import org.flowable.engine.history.HistoricProcessInstance;
 import org.flowable.task.api.history.HistoricTaskInstance;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.HashMap;
 import java.util.List;
@@ -29,6 +36,9 @@ public class FinanceController {
 
     @Autowired
     PayrollJournalService payrollJournalService;
+
+    @Autowired
+    PayrollAccountingSettingsRepository accountingSettingsRepository;
 
     @GetMapping("/finance")
     public String getFinancePage(Model model) {
@@ -128,6 +138,60 @@ public class FinanceController {
         model.addAttribute("title", "Financial Posting");
         model.addAttribute("subTitle", "Manage financial postings and journal entries");
         return "finance/posting";
+    }
+
+    @GetMapping("/finance/accounting-settings")
+    public String getAccountingSettings(Model model) {
+        PayrollAccountingSettings settings = accountingSettingsRepository.findByCompanyId(1L)
+                .orElseGet(() -> {
+                    PayrollAccountingSettings defaults = new PayrollAccountingSettings();
+                    defaults.setCompanyId(1L);
+                    return accountingSettingsRepository.save(defaults);
+                });
+
+        model.addAttribute("settings", settings);
+        model.addAttribute("title", "Payroll Accounting Settings");
+        model.addAttribute("subTitle", "Configure default payroll ledger accounts");
+        return "finance/accounting-settings";
+    }
+
+    @PostMapping("/finance/accounting-settings")
+    public String updateAccountingSettings(PayrollAccountingSettings incoming) {
+        PayrollAccountingSettings settings = accountingSettingsRepository.findByCompanyId(1L)
+                .orElseGet(PayrollAccountingSettings::new);
+
+        settings.setCompanyId(1L);
+        settings.setSuspenseAccountCode(incoming.getSuspenseAccountCode());
+        settings.setSuspenseAccountName(incoming.getSuspenseAccountName());
+        settings.setSalaryPayableAccountCode(incoming.getSalaryPayableAccountCode());
+        settings.setSalaryPayableAccountName(incoming.getSalaryPayableAccountName());
+        settings.setDefaultEarningExpenseAccountCode(incoming.getDefaultEarningExpenseAccountCode());
+        settings.setDefaultEarningExpenseAccountName(incoming.getDefaultEarningExpenseAccountName());
+        settings.setDefaultDeductionPayableAccountCode(incoming.getDefaultDeductionPayableAccountCode());
+        settings.setDefaultDeductionPayableAccountName(incoming.getDefaultDeductionPayableAccountName());
+        settings.setPayePayableAccountCode(incoming.getPayePayableAccountCode());
+        settings.setPayePayableAccountName(incoming.getPayePayableAccountName());
+        settings.setPensionPayableAccountCode(incoming.getPensionPayableAccountCode());
+        settings.setPensionPayableAccountName(incoming.getPensionPayableAccountName());
+        settings.setEmployerPensionExpenseAccountCode(incoming.getEmployerPensionExpenseAccountCode());
+        settings.setEmployerPensionExpenseAccountName(incoming.getEmployerPensionExpenseAccountName());
+        settings.setEmployerPensionPayableAccountCode(incoming.getEmployerPensionPayableAccountCode());
+        settings.setEmployerPensionPayableAccountName(incoming.getEmployerPensionPayableAccountName());
+        accountingSettingsRepository.save(settings);
+
+        return "redirect:/finance/accounting-settings";
+    }
+
+    @GetMapping("/finance/journals/export")
+    public ResponseEntity<ByteArrayResource> exportJournalCsv(@RequestParam Long periodId) {
+        byte[] csv = payrollJournalService.exportPeriodCsv(1L, periodId, "finance");
+        String filename = "payroll-journal-period-" + periodId + ".csv";
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .contentType(MediaType.parseMediaType("text/csv"))
+                .contentLength(csv.length)
+                .body(new ByteArrayResource(csv));
     }
     @GetMapping("/finance/bankDetails")
     public String getBankDetailsPage(Model model) {

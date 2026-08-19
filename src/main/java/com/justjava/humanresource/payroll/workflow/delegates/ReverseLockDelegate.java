@@ -3,6 +3,7 @@ package com.justjava.humanresource.payroll.workflow.delegates;
 import com.justjava.humanresource.payroll.entity.PayrollPeriod;
 import com.justjava.humanresource.payroll.enums.PayrollPeriodStatus;
 import com.justjava.humanresource.payroll.repositories.PaySlipRepository;
+import com.justjava.humanresource.payroll.repositories.PayrollJournalBatchRepository;
 import com.justjava.humanresource.payroll.repositories.PayrollJournalEntryRepository;
 import com.justjava.humanresource.payroll.repositories.PayrollPeriodRepository;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,7 @@ public class ReverseLockDelegate implements JavaDelegate {
 
     private final PayrollPeriodRepository periodRepository;
     private final PayrollJournalEntryRepository journalRepository;
+    private final PayrollJournalBatchRepository batchRepository;
     private final PaySlipRepository paySlipRepository;
 
     @Override
@@ -46,6 +48,8 @@ public class ReverseLockDelegate implements JavaDelegate {
             journalRepository.deleteAll(journalEntries);
             log.info("Deleted {} journal entries for period {}", journalEntries.size(), periodId);
         }
+        batchRepository.findByCompanyIdAndPayrollPeriodId(companyId, periodId)
+                .ifPresent(batchRepository::delete);
 
         // 3. Delete generated Payslips
         var paySlips = paySlipRepository.findLatestForCompanyAndPeriod(

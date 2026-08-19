@@ -208,7 +208,13 @@
                         data-pensionable-cap=${scheme.pensionableCap},
                         data-effective-from=${scheme.effectiveFrom},
                         data-effective-to=${scheme.effectiveTo},
-                        data-status=${scheme.status}
+                        data-status=${scheme.status},
+                        data-employee-payable-account-code=${scheme.employeePayableAccountCode},
+                        data-employee-payable-account-name=${scheme.employeePayableAccountName},
+                        data-employer-expense-account-code=${scheme.employerExpenseAccountCode},
+                        data-employer-expense-account-name=${scheme.employerExpenseAccountName},
+                        data-employer-payable-account-code=${scheme.employerPayableAccountCode},
+                        data-employer-payable-account-name=${scheme.employerPayableAccountName}
                     ">
                     <td th:text="${scheme.code}" class="px-4 md:px-6 py-4 font-mono text-sm font-medium">PEN-STD</td>
                     <td th:text="${scheme.name}" class="px-4 md:px-6 py-4 text-sm">Standard Auto‑Enrolment</td>
@@ -432,6 +438,38 @@
                             <option value="PENDING">PENDING</option>
                         </select>
                     </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Employee Payable Account Code</label>
+                            <input name="employeePayableAccountCode" type="text"
+                                   class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Employee Payable Account Name</label>
+                            <input name="employeePayableAccountName" type="text"
+                                   class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Employer Expense Account Code</label>
+                            <input name="employerExpenseAccountCode" type="text"
+                                   class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Employer Expense Account Name</label>
+                            <input name="employerExpenseAccountName" type="text"
+                                   class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Employer Payable Account Code</label>
+                            <input name="employerPayableAccountCode" type="text"
+                                   class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Employer Payable Account Name</label>
+                            <input name="employerPayableAccountName" type="text"
+                                   class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+                        </div>
+                    </div>
                 </div>
                 <div class="mt-6 flex justify-end space-x-3">
                     <button type="button" id="cancelModalBtn" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700">Cancel</button>
@@ -508,6 +546,38 @@
                             <option value="INACTIVE">INACTIVE</option>
                             <option value="PENDING">PENDING</option>
                         </select>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Employee Payable Account Code</label>
+                            <input name="employeePayableAccountCode" type="text" id="editEmployeePayableAccountCode"
+                                   class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Employee Payable Account Name</label>
+                            <input name="employeePayableAccountName" type="text" id="editEmployeePayableAccountName"
+                                   class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Employer Expense Account Code</label>
+                            <input name="employerExpenseAccountCode" type="text" id="editEmployerExpenseAccountCode"
+                                   class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Employer Expense Account Name</label>
+                            <input name="employerExpenseAccountName" type="text" id="editEmployerExpenseAccountName"
+                                   class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Employer Payable Account Code</label>
+                            <input name="employerPayableAccountCode" type="text" id="editEmployerPayableAccountCode"
+                                   class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Employer Payable Account Name</label>
+                            <input name="employerPayableAccountName" type="text" id="editEmployerPayableAccountName"
+                                   class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+                        </div>
                     </div>
                 </div>
                 <div class="mt-6 flex justify-end space-x-3">
@@ -599,7 +669,13 @@
                         : null,
                     effectiveFrom: document.getElementById('editEffectiveFrom').value,
                     effectiveTo: document.getElementById('editEffectiveTo').value || null,
-                    status: document.getElementById('editStatus').value
+                    status: document.getElementById('editStatus').value,
+                    employeePayableAccountCode: document.getElementById('editEmployeePayableAccountCode').value || null,
+                    employeePayableAccountName: document.getElementById('editEmployeePayableAccountName').value || null,
+                    employerExpenseAccountCode: document.getElementById('editEmployerExpenseAccountCode').value || null,
+                    employerExpenseAccountName: document.getElementById('editEmployerExpenseAccountName').value || null,
+                    employerPayableAccountCode: document.getElementById('editEmployerPayableAccountCode').value || null,
+                    employerPayableAccountName: document.getElementById('editEmployerPayableAccountName').value || null
                 };
 
                 // Send PUT request with JSON
@@ -647,6 +723,12 @@
                 const effectiveFrom = row.dataset.effectiveFrom;
                 const effectiveTo = row.dataset.effectiveTo === '' ? null : row.dataset.effectiveTo;
                 const status = row.dataset.status;
+                const employeePayableAccountCode = row.dataset.employeePayableAccountCode || '';
+                const employeePayableAccountName = row.dataset.employeePayableAccountName || '';
+                const employerExpenseAccountCode = row.dataset.employerExpenseAccountCode || '';
+                const employerExpenseAccountName = row.dataset.employerExpenseAccountName || '';
+                const employerPayableAccountCode = row.dataset.employerPayableAccountCode || '';
+                const employerPayableAccountName = row.dataset.employerPayableAccountName || '';
 
                 // Populate form fields
                 document.getElementById('editSchemeId').value = id;
@@ -659,6 +741,12 @@
                 document.getElementById('editEffectiveFrom').value = effectiveFrom;
                 document.getElementById('editEffectiveTo').value = effectiveTo !== null ? effectiveTo : '';
                 document.getElementById('editStatus').value = status;
+                document.getElementById('editEmployeePayableAccountCode').value = employeePayableAccountCode;
+                document.getElementById('editEmployeePayableAccountName').value = employeePayableAccountName;
+                document.getElementById('editEmployerExpenseAccountCode').value = employerExpenseAccountCode;
+                document.getElementById('editEmployerExpenseAccountName').value = employerExpenseAccountName;
+                document.getElementById('editEmployerPayableAccountCode').value = employerPayableAccountCode;
+                document.getElementById('editEmployerPayableAccountName').value = employerPayableAccountName;
 
                 // Open modal
                 editModal.classList.remove('hidden');

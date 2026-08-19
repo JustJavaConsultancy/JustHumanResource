@@ -56,4 +56,8 @@ public class Allowance extends BaseEntity {
 
     @Column(nullable = false)
     private boolean outOfPayroll = false;
+
+    private String expenseAccountCode;
+
+    private String expenseAccountName;
 }

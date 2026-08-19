@@ -83,4 +83,16 @@ public class PensionScheme extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private RecordStatus status = RecordStatus.ACTIVE;
+
+    private String employeePayableAccountCode;
+
+    private String employeePayableAccountName;
+
+    private String employerExpenseAccountCode;
+
+    private String employerExpenseAccountName;
+
+    private String employerPayableAccountCode;
+
+    private String employerPayableAccountName;
 }

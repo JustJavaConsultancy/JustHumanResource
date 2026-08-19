@@ -63,4 +63,8 @@ public class TaxRelief extends BaseEntity {
      */
     @Column(precision = 19, scale = 2)
     private BigDecimal maximumAmount;
+
+    private String accountCode;
+
+    private String accountName;
 }

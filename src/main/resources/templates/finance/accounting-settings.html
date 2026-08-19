@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:th="http://www.thymeleaf.org"
+      layout:decorate="layouts/financialOfficerLayout">
+<head>
+    <meta charset="UTF-8">
+    <title>Payroll Accounting Settings</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+<main layout:fragment="content">
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+        <div class="flex items-center justify-between mb-6">
+            <div>
+                <h3 class="text-lg font-bold">Payroll Accounting Defaults</h3>
+                <p class="text-sm text-gray-500">Used when a pay item does not have a specific account head.</p>
+            </div>
+            <a th:href="@{/finance/posting}" class="text-sm text-blue-600 hover:text-blue-800">Journal postings</a>
+        </div>
+
+        <form th:action="@{/finance/accounting-settings}" method="post" th:object="${settings}" class="space-y-6">
+            <input type="hidden" th:field="*{id}">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div th:replace="~{::accountField('suspenseAccountCode','suspenseAccountName','Payroll Suspense')}"></div>
+                <div th:replace="~{::accountField('salaryPayableAccountCode','salaryPayableAccountName','Salary Payable')}"></div>
+                <div th:replace="~{::accountField('defaultEarningExpenseAccountCode','defaultEarningExpenseAccountName','Default Earnings Expense')}"></div>
+                <div th:replace="~{::accountField('defaultDeductionPayableAccountCode','defaultDeductionPayableAccountName','Default Deduction Payable')}"></div>
+                <div th:replace="~{::accountField('payePayableAccountCode','payePayableAccountName','PAYE Payable')}"></div>
+                <div th:replace="~{::accountField('pensionPayableAccountCode','pensionPayableAccountName','Employee Pension Payable')}"></div>
+                <div th:replace="~{::accountField('employerPensionExpenseAccountCode','employerPensionExpenseAccountName','Employer Pension Expense')}"></div>
+                <div th:replace="~{::accountField('employerPensionPayableAccountCode','employerPensionPayableAccountName','Employer Pension Payable')}"></div>
+            </div>
+
+            <div class="flex justify-end">
+                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
+                    Save settings
+                </button>
+            </div>
+        </form>
+    </div>
+</main>
+
+<th:block th:fragment="accountField(codeField,nameField,label)">
+    <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+        <h4 class="text-sm font-semibold mb-3" th:text="${label}">Account</h4>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1">Code</label>
+                <input th:field="*{__${codeField}__}" required
+                       class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1">Name</label>
+                <input th:field="*{__${nameField}__}" required
+                       class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm">
+            </div>
+        </div>
+    </div>
+</th:block>
+</body>
+</html>
