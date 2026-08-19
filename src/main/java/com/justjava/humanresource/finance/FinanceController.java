@@ -177,6 +177,10 @@ public class FinanceController {
         settings.setEmployerPensionExpenseAccountName(incoming.getEmployerPensionExpenseAccountName());
         settings.setEmployerPensionPayableAccountCode(incoming.getEmployerPensionPayableAccountCode());
         settings.setEmployerPensionPayableAccountName(incoming.getEmployerPensionPayableAccountName());
+        settings.setResidualAdjustmentExpenseAccountCode(incoming.getResidualAdjustmentExpenseAccountCode());
+        settings.setResidualAdjustmentExpenseAccountName(incoming.getResidualAdjustmentExpenseAccountName());
+        settings.setResidualClearingAccountCode(incoming.getResidualClearingAccountCode());
+        settings.setResidualClearingAccountName(incoming.getResidualClearingAccountName());
         accountingSettingsRepository.save(settings);
 
         return "redirect:/finance/accounting-settings";

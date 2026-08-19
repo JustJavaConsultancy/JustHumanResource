@@ -19,6 +19,10 @@ import lombok.Setter;
         )
 )
 public class PayrollAccountingSettings extends BaseEntity {
+    public static final String DEFAULT_RESIDUAL_ADJUSTMENT_EXPENSE_ACCOUNT_CODE = "5090";
+    public static final String DEFAULT_RESIDUAL_ADJUSTMENT_EXPENSE_ACCOUNT_NAME = "Payroll Residual Adjustment Expense";
+    public static final String DEFAULT_RESIDUAL_CLEARING_ACCOUNT_CODE = "2190";
+    public static final String DEFAULT_RESIDUAL_CLEARING_ACCOUNT_NAME = "Payroll Residual Clearing";
 
     @Column(name = "company_id", nullable = false)
     private Long companyId;
@@ -70,4 +74,12 @@ public class PayrollAccountingSettings extends BaseEntity {
 
     @Column(nullable = false)
     private String employerPensionPayableAccountName = "Pension Payable";
+
+    private String residualAdjustmentExpenseAccountCode = DEFAULT_RESIDUAL_ADJUSTMENT_EXPENSE_ACCOUNT_CODE;
+
+    private String residualAdjustmentExpenseAccountName = DEFAULT_RESIDUAL_ADJUSTMENT_EXPENSE_ACCOUNT_NAME;
+
+    private String residualClearingAccountCode = DEFAULT_RESIDUAL_CLEARING_ACCOUNT_CODE;
+
+    private String residualClearingAccountName = DEFAULT_RESIDUAL_CLEARING_ACCOUNT_NAME;
 }

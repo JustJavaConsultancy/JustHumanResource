@@ -29,6 +29,14 @@
                 <div th:replace="~{::accountField('pensionPayableAccountCode','pensionPayableAccountName','Employee Pension Payable')}"></div>
                 <div th:replace="~{::accountField('employerPensionExpenseAccountCode','employerPensionExpenseAccountName','Employer Pension Expense')}"></div>
                 <div th:replace="~{::accountField('employerPensionPayableAccountCode','employerPensionPayableAccountName','Employer Pension Payable')}"></div>
+                <div th:replace="~{::optionalAccountField('residualAdjustmentExpenseAccountCode','residualAdjustmentExpenseAccountName','Residual Adjustment Expense','5090','Payroll Residual Adjustment Expense')}"></div>
+                <div th:replace="~{::optionalAccountField('residualClearingAccountCode','residualClearingAccountName','Residual Clearing','2190','Payroll Residual Clearing')}"></div>
+            </div>
+
+            <div class="rounded-lg border border-amber-200 bg-amber-50 text-amber-900 px-4 py-3 text-sm">
+                Residual accounts are optional. If they are left blank, payroll journals use
+                <strong>5090 - Payroll Residual Adjustment Expense</strong> and
+                <strong>2190 - Payroll Residual Clearing</strong>.
             </div>
 
             <div class="flex justify-end">
@@ -52,6 +60,30 @@
             <div>
                 <label class="block text-xs font-medium text-gray-500 mb-1">Name</label>
                 <input th:field="*{__${nameField}__}" required
+                       class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm">
+            </div>
+        </div>
+    </div>
+</th:block>
+
+<th:block th:fragment="optionalAccountField(codeField,nameField,label,defaultCode,defaultName)">
+    <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+        <h4 class="text-sm font-semibold mb-1" th:text="${label}">Account</h4>
+        <p class="text-xs text-gray-500 mb-3">
+            Optional. Blank values use system default
+            <span th:text="${defaultCode}">5090</span>
+            -
+            <span th:text="${defaultName}">Payroll Residual Adjustment Expense</span>.
+        </p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1">Code</label>
+                <input th:field="*{__${codeField}__}" th:placeholder="${defaultCode}"
+                       class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1">Name</label>
+                <input th:field="*{__${nameField}__}" th:placeholder="${defaultName}"
                        class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm">
             </div>
         </div>

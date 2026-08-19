@@ -32,6 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -114,6 +115,42 @@ class PayrollJournalServiceTest {
         assertTrue(ex.getDiagnostics().toLogReport().contains("NET_PAY"));
         verify(batchRepository, never()).save(org.mockito.ArgumentMatchers.any());
         verify(journalRepository, never()).save(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void generateJournalEntries_whenResidualExists_shouldPostBalancedResidualAdjustmentPair() {
+        Long companyId = 1L;
+        Long periodId = 10L;
+        LocalDate start = LocalDate.of(2026, 7, 1);
+        LocalDate end = LocalDate.of(2026, 7, 31);
+        PayrollPeriod period = period(companyId, periodId, start, end);
+        PayrollRun run = payrollRun(20L, employee(30L), start, end);
+        PayrollLineItem earning = lineItem(40L, run, PayComponentType.EARNING, "BASIC", "Basic Salary", "100.00");
+        PayrollLineItem paye = lineItem(41L, run, PayComponentType.DEDUCTION, "PAYE", "PAYE Tax", "20.00");
+        PayrollLineItem residual = lineItem(42L, run, PayComponentType.EARNING, "RESIDUAL", "Residual Adjustment", "20.00");
+
+        when(payrollPeriodRepository.findById(periodId)).thenReturn(Optional.of(period));
+        when(journalRepository.findByCompanyIdAndPayrollPeriodId(companyId, periodId)).thenReturn(List.of());
+        when(batchRepository.findByCompanyIdAndPayrollPeriodId(companyId, periodId)).thenReturn(Optional.empty());
+        when(payrollRunRepository.findLatestByCompanyAndPeriodAndStatus(companyId, start, end, PayrollRunStatus.POSTED))
+                .thenReturn(List.of(run));
+        when(settingsRepository.findByCompanyId(companyId)).thenReturn(Optional.empty());
+        when(settingsRepository.save(org.mockito.ArgumentMatchers.any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(allowanceRepository.findAll()).thenReturn(List.of());
+        when(deductionRepository.findAll()).thenReturn(List.of());
+        when(pensionSchemeRepository.findEffectiveScheme(end, com.justjava.humanresource.core.enums.RecordStatus.ACTIVE))
+                .thenReturn(Optional.empty());
+        when(payrollLineItemRepository.findByPayrollRunId(run.getId())).thenReturn(List.of(earning, paye, residual));
+        when(batchRepository.save(org.mockito.ArgumentMatchers.any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        service.generateJournalEntries(companyId, periodId, start, end);
+
+        verify(batchRepository).save(org.mockito.ArgumentMatchers.argThat(batch ->
+                new BigDecimal("120.00").equals(batch.getTotalDebit())
+                        && new BigDecimal("120.00").equals(batch.getTotalCredit())
+                        && batch.isBalanced()
+        ));
+        verify(journalRepository, times(5)).save(org.mockito.ArgumentMatchers.any());
     }
 
     private PayrollPeriod period(Long companyId, Long periodId, LocalDate start, LocalDate end) {

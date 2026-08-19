@@ -47,6 +47,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Slf4j
 public class PayrollJournalService {
+    private static final String RESIDUAL_COMPONENT_CODE = "RESIDUAL";
 
     private final PayrollRunRepository payrollRunRepository;
     private final PayrollLineItemRepository payrollLineItemRepository;
@@ -298,6 +299,30 @@ public class PayrollJournalService {
             Optional<PensionScheme> pensionScheme,
             PayrollAccountingSettings settings) {
 
+        if (RESIDUAL_COMPONENT_CODE.equalsIgnoreCase(line.getComponentCode())) {
+            AccountRef expense = resolveAccount(
+                    settings.getResidualAdjustmentExpenseAccountCode(),
+                    settings.getResidualAdjustmentExpenseAccountName(),
+                    PayrollAccountingSettings.DEFAULT_RESIDUAL_ADJUSTMENT_EXPENSE_ACCOUNT_CODE,
+                    PayrollAccountingSettings.DEFAULT_RESIDUAL_ADJUSTMENT_EXPENSE_ACCOUNT_NAME,
+                    "Residual adjustment expense settings",
+                    "System default residual adjustment expense"
+            );
+            AccountRef clearing = resolveAccount(
+                    settings.getResidualClearingAccountCode(),
+                    settings.getResidualClearingAccountName(),
+                    PayrollAccountingSettings.DEFAULT_RESIDUAL_CLEARING_ACCOUNT_CODE,
+                    PayrollAccountingSettings.DEFAULT_RESIDUAL_CLEARING_ACCOUNT_NAME,
+                    "Residual clearing settings",
+                    "System default residual clearing"
+            );
+
+            return List.of(
+                    internalAdjustmentLine(expense, line, "DEBIT", "Payroll residual adjustment expense"),
+                    internalAdjustmentLine(clearing, line, "CREDIT", "Payroll residual clearing")
+            );
+        }
+
         if (line.getComponentType() == PayComponentType.EARNING) {
             Allowance allowance = allowances.get(line.getComponentCode());
             AccountRef account = allowance == null
@@ -417,6 +442,18 @@ public class PayrollJournalService {
         ), account.source());
     }
 
+    private JournalLine internalAdjustmentLine(AccountRef account, PayrollLineItem line, String lineType, String description) {
+        return new JournalLine(new JournalKey(
+                account.code(),
+                account.name(),
+                lineType,
+                "INTERNAL_ADJUSTMENT",
+                RESIDUAL_COMPONENT_CODE,
+                line.getDescription(),
+                description + " - " + line.getDescription()
+        ), account.source());
+    }
+
     private AccountRef resolveAccount(
             String accountCode,
             String accountName,
@@ -469,9 +506,9 @@ public class PayrollJournalService {
                 .employeeId(run != null && run.getEmployee() != null ? run.getEmployee().getId() : line.getEmployee() != null ? line.getEmployee().getId() : null)
                 .employeeNumber(run != null && run.getEmployee() != null ? run.getEmployee().getEmployeeNumber() : line.getEmployee() != null ? line.getEmployee().getEmployeeNumber() : null)
                 .employeeName(run != null && run.getEmployee() != null ? run.getEmployee().getFullName() : line.getEmployee() != null ? line.getEmployee().getFullName() : null)
-                .componentType(line.getComponentType() != null ? line.getComponentType().name() : "NET_PAY")
-                .componentCode(line.getComponentCode())
-                .componentName(line.getDescription())
+                .componentType(journalLine != null ? journalLine.key().sourceType() : line.getComponentType() != null ? line.getComponentType().name() : "NET_PAY")
+                .componentCode(journalLine != null ? journalLine.key().sourceCode() : line.getComponentCode())
+                .componentName(journalLine != null ? journalLine.key().sourceName() : line.getDescription())
                 .payrollLineAmount(safe(line.getAmount()))
                 .lineType(lineType)
                 .accountCode(journalLine != null ? journalLine.key().accountCode() : null)
