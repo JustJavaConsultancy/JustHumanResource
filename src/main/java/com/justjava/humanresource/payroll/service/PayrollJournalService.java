@@ -19,9 +19,14 @@ import com.justjava.humanresource.payroll.repositories.PayrollJournalEntryReposi
 import com.justjava.humanresource.payroll.repositories.PayrollLineItemRepository;
 import com.justjava.humanresource.payroll.repositories.PayrollPeriodRepository;
 import com.justjava.humanresource.payroll.repositories.PayrollRunRepository;
+import com.justjava.humanresource.payroll.service.diagnostics.PayrollJournalDiagnosticLine;
+import com.justjava.humanresource.payroll.service.diagnostics.PayrollJournalDiagnostics;
+import com.justjava.humanresource.payroll.service.diagnostics.PayrollJournalImbalanceException;
+import com.justjava.humanresource.payroll.service.diagnostics.PayrollRunDiagnosticSummary;
 import com.justjava.humanresource.payroll.statutory.entity.PensionScheme;
 import com.justjava.humanresource.payroll.statutory.repositories.PensionSchemeRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,6 +45,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class PayrollJournalService {
 
     private final PayrollRunRepository payrollRunRepository;
@@ -92,21 +98,44 @@ public class PayrollJournalService {
                 period.getPeriodEnd(),
                 com.justjava.humanresource.core.enums.RecordStatus.ACTIVE
         );
+        PayrollJournalDiagnostics diagnostics = new PayrollJournalDiagnostics(
+                companyId,
+                periodId,
+                period.getPeriodStart(),
+                period.getPeriodEnd()
+        );
 
         Map<JournalKey, BigDecimal> grouped = new LinkedHashMap<>();
 
         for (PayrollRun run : runs) {
             List<PayrollLineItem> lineItems = payrollLineItemRepository.findByPayrollRunId(run.getId());
+            BigDecimal includedLineItemsTotal = BigDecimal.ZERO;
+            BigDecimal skippedLineItemsTotal = BigDecimal.ZERO;
             for (PayrollLineItem line : lineItems) {
-                if (line.isOutOfPayroll() || line.getAmount() == null
-                        || line.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
+                String skipReason = skipReason(line);
+                if (skipReason != null) {
+                    skippedLineItemsTotal = skippedLineItemsTotal.add(safe(line.getAmount()));
+                    diagnostics.addSkippedLine(diagnosticLine(run, line, null, null, skipReason));
                     continue;
                 }
+                includedLineItemsTotal = includedLineItemsTotal.add(line.getAmount());
 
                 for (JournalLine journalLine : resolveJournalLines(line, allowances, deductions, pensionScheme, settings)) {
                     grouped.merge(journalLine.key(), line.getAmount(), BigDecimal::add);
+                    diagnostics.addGeneratedLine(diagnosticLine(run, line, journalLine, line.getAmount(), null));
                 }
             }
+            diagnostics.addPayrollRun(PayrollRunDiagnosticSummary.builder()
+                    .payrollRunId(run.getId())
+                    .employeeId(run.getEmployee() != null ? run.getEmployee().getId() : null)
+                    .employeeNumber(run.getEmployee() != null ? run.getEmployee().getEmployeeNumber() : null)
+                    .employeeName(run.getEmployee() != null ? run.getEmployee().getFullName() : null)
+                    .grossPay(safe(run.getGrossPay()))
+                    .totalDeductions(safe(run.getTotalDeductions()))
+                    .netPay(safe(run.getNetPay()))
+                    .includedLineItemsTotal(includedLineItemsTotal)
+                    .skippedLineItemsTotal(skippedLineItemsTotal)
+                    .build());
         }
 
         BigDecimal netPay = runs.stream()
@@ -127,6 +156,28 @@ public class PayrollJournalService {
                 netPay,
                 BigDecimal::add
         );
+        for (PayrollRun run : runs) {
+            PayrollLineItem netLine = new PayrollLineItem();
+            netLine.setComponentType(null);
+            netLine.setComponentCode("NET_PAY");
+            netLine.setDescription("Net Salary");
+            netLine.setAmount(safe(run.getNetPay()));
+            diagnostics.addGeneratedLine(diagnosticLine(
+                    run,
+                    netLine,
+                    new JournalLine(new JournalKey(
+                            settings.getSuspenseAccountCode(),
+                            settings.getSuspenseAccountName(),
+                            "CREDIT",
+                            "NET_PAY",
+                            "NET",
+                            "Net Salary",
+                            "Net salary payable through payroll suspense"
+                    ), "Payroll accounting settings"),
+                    safe(run.getNetPay()),
+                    null
+            ));
+        }
 
         BigDecimal totalDebit = grouped.entrySet().stream()
                 .filter(entry -> entry.getKey().lineType().equals("DEBIT"))
@@ -137,12 +188,11 @@ public class PayrollJournalService {
                 .filter(entry -> entry.getKey().lineType().equals("CREDIT"))
                 .map(Map.Entry::getValue)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+        diagnostics.setTotals(totalDebit, totalCredit);
 
         if (totalDebit.compareTo(totalCredit) != 0) {
-            throw new IllegalStateException(
-                    "Generated payroll journal is unbalanced. Debit: "
-                            + totalDebit + ", Credit: " + totalCredit
-            );
+            log.error(diagnostics.toLogReport());
+            throw new PayrollJournalImbalanceException(diagnostics);
         }
 
         PayrollJournalBatch batch = new PayrollJournalBatch();
@@ -251,13 +301,14 @@ public class PayrollJournalService {
         if (line.getComponentType() == PayComponentType.EARNING) {
             Allowance allowance = allowances.get(line.getComponentCode());
             AccountRef account = allowance == null
-                    ? new AccountRef(settings.getDefaultEarningExpenseAccountCode(), settings.getDefaultEarningExpenseAccountName())
+                    ? new AccountRef(settings.getDefaultEarningExpenseAccountCode(), settings.getDefaultEarningExpenseAccountName(), "Default earnings expense")
                     : resolveAccount(
                             allowance.getExpenseAccountCode(),
                             allowance.getExpenseAccountName(),
                             settings.getDefaultEarningExpenseAccountCode(),
                             settings.getDefaultEarningExpenseAccountName(),
-                            "earning " + allowance.getCode()
+                            "Allowance " + allowance.getCode(),
+                            "Default earnings expense"
                     );
 
             return List.of(debit(account, line, "Payroll earning expense"));
@@ -266,7 +317,7 @@ public class PayrollJournalService {
         if (line.getComponentType() == PayComponentType.DEDUCTION) {
             AccountRef account;
             if ("PAYE".equalsIgnoreCase(line.getComponentCode())) {
-                account = new AccountRef(settings.getPayePayableAccountCode(), settings.getPayePayableAccountName());
+                account = new AccountRef(settings.getPayePayableAccountCode(), settings.getPayePayableAccountName(), "PAYE payable settings");
             } else if ("PENSION_EMP".equalsIgnoreCase(line.getComponentCode())) {
                 account = pensionScheme
                         .map(scheme -> resolveAccount(
@@ -274,19 +325,21 @@ public class PayrollJournalService {
                                 scheme.getEmployeePayableAccountName(),
                                 settings.getPensionPayableAccountCode(),
                                 settings.getPensionPayableAccountName(),
-                                "employee pension payable"
+                                "Pension scheme employee payable",
+                                "Employee pension payable settings"
                         ))
-                        .orElse(new AccountRef(settings.getPensionPayableAccountCode(), settings.getPensionPayableAccountName()));
+                        .orElse(new AccountRef(settings.getPensionPayableAccountCode(), settings.getPensionPayableAccountName(), "Employee pension payable settings"));
             } else {
                 Deduction deduction = deductions.get(line.getComponentCode());
                 account = deduction == null
-                        ? new AccountRef(settings.getDefaultDeductionPayableAccountCode(), settings.getDefaultDeductionPayableAccountName())
+                        ? new AccountRef(settings.getDefaultDeductionPayableAccountCode(), settings.getDefaultDeductionPayableAccountName(), "Default deduction payable")
                         : resolveAccount(
                                 deduction.getPayableAccountCode(),
                                 deduction.getPayableAccountName(),
                                 settings.getDefaultDeductionPayableAccountCode(),
                                 settings.getDefaultDeductionPayableAccountName(),
-                                "deduction " + deduction.getCode()
+                                "Deduction " + deduction.getCode(),
+                                "Default deduction payable"
                         );
             }
             return List.of(credit(account, line, "Payroll deduction liability"));
@@ -299,9 +352,10 @@ public class PayrollJournalService {
                             scheme.getEmployerExpenseAccountName(),
                             settings.getEmployerPensionExpenseAccountCode(),
                             settings.getEmployerPensionExpenseAccountName(),
-                            "employer pension expense"
+                            "Pension scheme employer expense",
+                            "Employer pension expense settings"
                     ))
-                    .orElse(new AccountRef(settings.getEmployerPensionExpenseAccountCode(), settings.getEmployerPensionExpenseAccountName()));
+                    .orElse(new AccountRef(settings.getEmployerPensionExpenseAccountCode(), settings.getEmployerPensionExpenseAccountName(), "Employer pension expense settings"));
 
             AccountRef payable = pensionScheme
                     .map(scheme -> resolveAccount(
@@ -309,9 +363,10 @@ public class PayrollJournalService {
                             scheme.getEmployerPayableAccountName(),
                             settings.getEmployerPensionPayableAccountCode(),
                             settings.getEmployerPensionPayableAccountName(),
-                            "employer pension payable"
+                            "Pension scheme employer payable",
+                            "Employer pension payable settings"
                     ))
-                    .orElse(new AccountRef(settings.getEmployerPensionPayableAccountCode(), settings.getEmployerPensionPayableAccountName()));
+                    .orElse(new AccountRef(settings.getEmployerPensionPayableAccountCode(), settings.getEmployerPensionPayableAccountName(), "Employer pension payable settings"));
 
             return List.of(
                     debit(expense, line, "Employer payroll cost"),
@@ -359,7 +414,7 @@ public class PayrollJournalService {
                 line.getComponentCode(),
                 line.getDescription(),
                 description + " - " + line.getDescription()
-        ));
+        ), account.source());
     }
 
     private AccountRef resolveAccount(
@@ -367,18 +422,70 @@ public class PayrollJournalService {
             String accountName,
             String defaultCode,
             String defaultName,
-            String label) {
+            String specificLabel,
+            String defaultLabel) {
 
         String code = hasText(accountCode) ? accountCode.trim() : defaultCode;
         String name = hasText(accountName) ? accountName.trim() : defaultName;
         if (!hasText(code) || !hasText(name)) {
-            throw new IllegalStateException("Missing account mapping for " + label + ".");
+            throw new IllegalStateException("Missing account mapping for " + specificLabel + ".");
         }
-        return new AccountRef(code, name);
+        String source = hasText(accountCode) && hasText(accountName) ? specificLabel : defaultLabel;
+        return new AccountRef(code, name, source);
     }
 
     private boolean hasText(String value) {
         return value != null && !value.isBlank();
+    }
+
+    private String skipReason(PayrollLineItem line) {
+        if (line.isOutOfPayroll()) {
+            return "OUT_OF_PAYROLL";
+        }
+        if (line.getAmount() == null) {
+            return "MISSING_AMOUNT";
+        }
+        if (line.getAmount().compareTo(BigDecimal.ZERO) == 0) {
+            return "ZERO_AMOUNT";
+        }
+        if (line.getAmount().compareTo(BigDecimal.ZERO) < 0) {
+            return "NEGATIVE_AMOUNT";
+        }
+        return null;
+    }
+
+    private PayrollJournalDiagnosticLine diagnosticLine(
+            PayrollRun run,
+            PayrollLineItem line,
+            JournalLine journalLine,
+            BigDecimal amount,
+            String skipReason) {
+
+        String lineType = journalLine != null ? journalLine.key().lineType() : null;
+        BigDecimal debit = "DEBIT".equals(lineType) ? safe(amount) : BigDecimal.ZERO;
+        BigDecimal credit = "CREDIT".equals(lineType) ? safe(amount) : BigDecimal.ZERO;
+        return PayrollJournalDiagnosticLine.builder()
+                .payrollRunId(run != null ? run.getId() : null)
+                .employeeId(run != null && run.getEmployee() != null ? run.getEmployee().getId() : line.getEmployee() != null ? line.getEmployee().getId() : null)
+                .employeeNumber(run != null && run.getEmployee() != null ? run.getEmployee().getEmployeeNumber() : line.getEmployee() != null ? line.getEmployee().getEmployeeNumber() : null)
+                .employeeName(run != null && run.getEmployee() != null ? run.getEmployee().getFullName() : line.getEmployee() != null ? line.getEmployee().getFullName() : null)
+                .componentType(line.getComponentType() != null ? line.getComponentType().name() : "NET_PAY")
+                .componentCode(line.getComponentCode())
+                .componentName(line.getDescription())
+                .payrollLineAmount(safe(line.getAmount()))
+                .lineType(lineType)
+                .accountCode(journalLine != null ? journalLine.key().accountCode() : null)
+                .accountName(journalLine != null ? journalLine.key().accountName() : null)
+                .accountSource(journalLine != null ? journalLine.accountSource() : null)
+                .debitAmount(debit)
+                .creditAmount(credit)
+                .description(journalLine != null ? journalLine.key().description() : line.getDescription())
+                .skipReason(skipReason)
+                .build();
+    }
+
+    private BigDecimal safe(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value;
     }
 
     private String escapeCsv(String value) {
@@ -408,10 +515,10 @@ public class PayrollJournalService {
                 .build();
     }
 
-    private record AccountRef(String code, String name) {
+    private record AccountRef(String code, String name, String source) {
     }
 
-    private record JournalLine(JournalKey key) {
+    private record JournalLine(JournalKey key, String accountSource) {
     }
 
     private record JournalKey(

@@ -12,13 +12,14 @@
             text-align: center;
             margin-top: 100px;
             background: #f8f9fa;
+            color: #1f2937;
         }
 
         .error-box {
             background: white;
             padding: 40px;
             border-radius: 8px;
-            width: 480px;
+            width: min(1120px, calc(100% - 32px));
             margin: auto;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
         }
@@ -60,6 +61,128 @@
             background: #0056b3;
         }
 
+        .diagnostics {
+            text-align: left;
+            margin-top: 28px;
+            border-top: 1px solid #e5e7eb;
+            padding-top: 24px;
+        }
+
+        .diagnostics h2 {
+            margin: 0 0 12px;
+            color: #111827;
+            font-size: 22px;
+        }
+
+        .diagnostics h3 {
+            margin: 24px 0 8px;
+            color: #1f2937;
+            font-size: 17px;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 12px;
+            margin-top: 14px;
+        }
+
+        .summary-card {
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 14px;
+            background: #f9fafb;
+        }
+
+        .summary-card span {
+            display: block;
+            font-size: 12px;
+            color: #6b7280;
+            margin-bottom: 4px;
+        }
+
+        .summary-card strong {
+            display: block;
+            font-size: 18px;
+            color: #111827;
+        }
+
+        .summary-card.danger strong {
+            color: #b02a37;
+        }
+
+        .diagnostic-note {
+            background: #fff4df;
+            border: 1px solid #f5d28f;
+            color: #92400e;
+            padding: 12px 14px;
+            border-radius: 8px;
+            margin-top: 14px;
+        }
+
+        .table-wrap {
+            overflow-x: auto;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            min-width: 720px;
+        }
+
+        th, td {
+            padding: 9px 10px;
+            border-bottom: 1px solid #e5e7eb;
+            vertical-align: top;
+            text-align: left;
+        }
+
+        th {
+            background: #f3f4f6;
+            color: #374151;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: .03em;
+        }
+
+        td.amount {
+            text-align: right;
+            font-family: Consolas, monospace;
+            white-space: nowrap;
+        }
+
+        .muted {
+            color: #6b7280;
+        }
+
+        details {
+            margin-top: 18px;
+        }
+
+        summary {
+            cursor: pointer;
+            font-weight: 700;
+            color: #0056b3;
+        }
+
+        @media (max-width: 840px) {
+            body {
+                margin-top: 24px;
+            }
+
+            .error-box {
+                padding: 20px;
+            }
+
+            .summary-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
     </style>
 
 </head>
@@ -85,6 +208,214 @@
        th:if="${errorMessage == null}">
         Please try again later. If the issue persists, contact support.
     </p>
+
+    <div class="diagnostics" th:if="${journalDiagnostics != null}">
+        <h2>Payroll Journal Diagnostic Details</h2>
+        <p class="muted">
+            Use the information below to identify the payroll component, account mapping, employee run,
+            or skipped payroll line that caused the journal imbalance.
+        </p>
+
+        <div class="summary-grid">
+            <div class="summary-card">
+                <span>Company</span>
+                <strong th:text="${journalDiagnostics.companyId}">1</strong>
+            </div>
+            <div class="summary-card">
+                <span>Payroll Period</span>
+                <strong>
+                    <span th:text="${journalDiagnostics.periodStart}">2026-01-01</span>
+                    to
+                    <span th:text="${journalDiagnostics.periodEnd}">2026-01-31</span>
+                </strong>
+            </div>
+            <div class="summary-card">
+                <span>Total Debit</span>
+                <strong th:text="${journalDiagnostics.totalDebit}">0.00</strong>
+            </div>
+            <div class="summary-card">
+                <span>Total Credit</span>
+                <strong th:text="${journalDiagnostics.totalCredit}">0.00</strong>
+            </div>
+            <div class="summary-card danger">
+                <span>Difference</span>
+                <strong th:text="${journalDiagnostics.difference}">0.00</strong>
+            </div>
+            <div class="summary-card">
+                <span>Generated Lines</span>
+                <strong th:text="${journalDiagnostics.generatedLineCount}">0</strong>
+            </div>
+            <div class="summary-card">
+                <span>Skipped Lines</span>
+                <strong th:text="${journalDiagnostics.skippedLineCount}">0</strong>
+            </div>
+            <div class="summary-card">
+                <span>Payroll Runs</span>
+                <strong th:text="${journalDiagnostics.payrollRuns.size()}">0</strong>
+            </div>
+        </div>
+
+        <div class="diagnostic-note">
+            If debit is higher than credit, review earnings, employer cost, net pay, and skipped lines.
+            If credit is higher than debit, review deductions, net pay, and payable account mappings.
+        </div>
+
+        <h3>Totals By Component</h3>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                <tr>
+                    <th>Component</th>
+                    <th>Debit</th>
+                    <th>Credit</th>
+                    <th>Difference</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="row : ${journalDiagnostics.componentSummaries}">
+                    <td th:text="${row.label}">EARNING / BASIC</td>
+                    <td class="amount" th:text="${row.debitAmount}">0.00</td>
+                    <td class="amount" th:text="${row.creditAmount}">0.00</td>
+                    <td class="amount" th:text="${row.difference}">0.00</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <h3>Totals By Account</h3>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                <tr>
+                    <th>Account</th>
+                    <th>Debit</th>
+                    <th>Credit</th>
+                    <th>Difference</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="row : ${journalDiagnostics.accountSummaries}">
+                    <td th:text="${row.label}">5000 - Salary Expense</td>
+                    <td class="amount" th:text="${row.debitAmount}">0.00</td>
+                    <td class="amount" th:text="${row.creditAmount}">0.00</td>
+                    <td class="amount" th:text="${row.difference}">0.00</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <h3>Payroll Runs Included</h3>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                <tr>
+                    <th>Run</th>
+                    <th>Employee</th>
+                    <th>Gross Pay</th>
+                    <th>Deductions</th>
+                    <th>Net Pay</th>
+                    <th>Included Lines</th>
+                    <th>Skipped Lines</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="run : ${journalDiagnostics.payrollRuns}">
+                    <td th:text="${run.payrollRunId}">1</td>
+                    <td>
+                        <span th:text="${run.employeeNumber}">EMP001</span>
+                        -
+                        <span th:text="${run.employeeName}">Employee Name</span>
+                    </td>
+                    <td class="amount" th:text="${run.grossPay}">0.00</td>
+                    <td class="amount" th:text="${run.totalDeductions}">0.00</td>
+                    <td class="amount" th:text="${run.netPay}">0.00</td>
+                    <td class="amount" th:text="${run.includedLineItemsTotal}">0.00</td>
+                    <td class="amount" th:text="${run.skippedLineItemsTotal}">0.00</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div th:if="${journalDiagnostics.skippedLineCount > 0}">
+            <h3>Skipped Payroll Lines</h3>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>Run</th>
+                        <th>Employee</th>
+                        <th>Component</th>
+                        <th>Amount</th>
+                        <th>Reason</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="line : ${journalDiagnostics.skippedLines}">
+                        <td th:text="${line.payrollRunId}">1</td>
+                        <td>
+                            <span th:text="${line.employeeNumber}">EMP001</span>
+                            -
+                            <span th:text="${line.employeeName}">Employee Name</span>
+                        </td>
+                        <td>
+                            <span th:text="${line.componentType}">EARNING</span>
+                            /
+                            <span th:text="${line.componentCode}">BASIC</span>
+                            <br>
+                            <span class="muted" th:text="${line.componentName}">Basic Salary</span>
+                        </td>
+                        <td class="amount" th:text="${line.payrollLineAmount}">0.00</td>
+                        <td th:text="${line.skipReason}">ZERO_AMOUNT</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <details>
+            <summary>Show generated journal line preview</summary>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>Run</th>
+                        <th>Employee</th>
+                        <th>Component</th>
+                        <th>Account</th>
+                        <th>Source</th>
+                        <th>Debit</th>
+                        <th>Credit</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="line : ${journalDiagnostics.topGeneratedLines}">
+                        <td th:text="${line.payrollRunId}">1</td>
+                        <td>
+                            <span th:text="${line.employeeNumber}">EMP001</span>
+                            -
+                            <span th:text="${line.employeeName}">Employee Name</span>
+                        </td>
+                        <td>
+                            <span th:text="${line.componentType}">EARNING</span>
+                            /
+                            <span th:text="${line.componentCode}">BASIC</span>
+                            <br>
+                            <span class="muted" th:text="${line.componentName}">Basic Salary</span>
+                        </td>
+                        <td>
+                            <span th:text="${line.accountCode}">5000</span>
+                            -
+                            <span th:text="${line.accountName}">Salary Expense</span>
+                        </td>
+                        <td th:text="${line.accountSource}">Default earnings expense</td>
+                        <td class="amount" th:text="${line.debitAmount}">0.00</td>
+                        <td class="amount" th:text="${line.creditAmount}">0.00</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </details>
+    </div>
 
     <a class="home-link" th:href="@{/}">
         Return Home
