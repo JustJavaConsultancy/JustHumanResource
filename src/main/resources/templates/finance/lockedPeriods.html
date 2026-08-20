@@ -213,14 +213,22 @@
         -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
 
-            <!-- Total locked periods -->
+            <!-- Total closed periods + Average employees (merged) -->
             <div class="stat-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
                 <div class="flex items-center justify-between mb-2">
-                    <span class="text-xs text-gray-500 dark:text-gray-400">Total closed periods</span>
+                    <span class="text-xs text-gray-500 dark:text-gray-400">Closed periods</span>
                     <span class="material-icons-round text-primary-500">archive</span>
                 </div>
-                <p class="text-2xl font-bold" th:text="${#lists.size(completedProcesses)}">0</p>
-                <p class="text-xs text-gray-500 mt-1">All time</p>
+                <div class="flex items-end justify-between gap-3">
+                    <div>
+                        <p class="text-2xl font-bold" th:text="${#lists.size(completedProcesses)}">0</p>
+                        <p class="text-xs text-gray-500 mt-1">All time</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-2xl font-bold" id="stat-avg-employees">—</p>
+                        <p class="text-xs text-gray-500 mt-1">Avg employees</p>
+                    </div>
+                </div>
             </div>
 
             <!-- Total net paid — populated by JS -->
@@ -233,14 +241,36 @@
                 <p class="text-xs text-gray-500 mt-1">All closed periods</p>
             </div>
 
-            <!-- Average employees — populated by JS -->
+            <!-- YTD Summary (Jan – Dec): gross, net, PAYE, pension in one card -->
             <div class="stat-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
-                <div class="flex items-center justify-between mb-2">
-                    <span class="text-xs text-gray-500 dark:text-gray-400">Average employees</span>
-                    <span class="material-icons-round text-blue-500">people</span>
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-xs text-gray-500 dark:text-gray-400"
+                          th:text="'YTD Summary · ' + ${reportYear}">YTD Summary</span>
+                    <span class="material-icons-round text-amber-500">insights</span>
                 </div>
-                <p class="text-2xl font-bold" id="stat-avg-employees">—</p>
-                <p class="text-xs text-gray-500 mt-1">Per period</p>
+                <div class="grid grid-cols-2 gap-x-3 gap-y-2.5">
+                    <div>
+                        <p class="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Gross pay</p>
+                        <p class="text-sm font-bold break-words"
+                           th:text="${ytdGrossPay != null} ? '₦' + ${#numbers.formatDecimal(ytdGrossPay, 1, 'COMMA', 2, 'POINT')} : '—'">—</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Net pay</p>
+                        <p class="text-sm font-bold break-words"
+                           th:text="${ytdNetPay != null} ? '₦' + ${#numbers.formatDecimal(ytdNetPay, 1, 'COMMA', 2, 'POINT')} : '—'">—</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">PAYE remitted</p>
+                        <p class="text-sm font-bold break-words"
+                           th:text="${ytdPaye != null} ? '₦' + ${#numbers.formatDecimal(ytdPaye, 1, 'COMMA', 2, 'POINT')} : '—'">—</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Pension fund</p>
+                        <p class="text-sm font-bold break-words"
+                           th:text="${ytdPension != null} ? '₦' + ${#numbers.formatDecimal(ytdPension, 1, 'COMMA', 2, 'POINT')} : '—'">—</p>
+                    </div>
+                </div>
+                <p class="text-xs text-gray-500 mt-2.5" th:text="'Jan – Dec ' + ${reportYear}">Jan – Dec</p>
             </div>
 
             <!-- Last locked — first item in sorted list -->

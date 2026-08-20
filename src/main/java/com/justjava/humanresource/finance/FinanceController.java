@@ -3,8 +3,10 @@ package com.justjava.humanresource.finance;
 import com.justjava.humanresource.payroll.dto.PayrollJournalEntryDTO;
 import com.justjava.humanresource.payroll.entity.PayrollAccountingSettings;
 import com.justjava.humanresource.payroll.entity.PaySlipDTO;
+import com.justjava.humanresource.payroll.report.dto.PayrollSummaryDTO;
 import com.justjava.humanresource.payroll.repositories.PayrollAccountingSettingsRepository;
 import com.justjava.humanresource.payroll.service.PayrollJournalService;
+import com.justjava.humanresource.payroll.service.PayrollRunService;
 import com.justjava.humanresource.payroll.service.impl.PaySlipServiceImpl;
 import com.justjava.humanresource.workflow.dto.FlowableTaskDTO;
 import com.justjava.humanresource.workflow.service.FlowableTaskService;
@@ -21,6 +23,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,6 +43,9 @@ public class FinanceController {
 
     @Autowired
     PayrollAccountingSettingsRepository accountingSettingsRepository;
+
+    @Autowired
+    PayrollRunService payrollRunService;
 
     @GetMapping("/finance")
     public String getFinancePage(Model model) {
@@ -124,6 +131,34 @@ public class FinanceController {
                 process -> System.out.println(process)
         );
         model.addAttribute("completedProcesses", completedProcess);
+
+        // ── YTD (Jan 1 – Dec 31) payroll summary for the "YTD Summary" card ──────
+        int reportYear = LocalDate.now().getYear();
+        LocalDate ytdStart = LocalDate.of(reportYear, 1, 1);
+        LocalDate ytdEnd   = LocalDate.of(reportYear, 12, 31);
+
+        List<PayrollSummaryDTO> ytdSummary =
+                payrollRunService.getPayrollSummary(1L, ytdStart, ytdEnd);
+
+        BigDecimal ytdGrossPay = ytdSummary.stream()
+                .map(s -> s.getTotalGross() != null ? s.getTotalGross() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal ytdNetPay = ytdSummary.stream()
+                .map(s -> s.getTotalNet() != null ? s.getTotalNet() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal ytdPaye = ytdSummary.stream()
+                .map(s -> s.getTotalPaye() != null ? s.getTotalPaye() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal ytdPension = ytdSummary.stream()
+                .map(s -> s.getTotalPension() != null ? s.getTotalPension() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        model.addAttribute("ytdGrossPay", ytdGrossPay);
+        model.addAttribute("ytdNetPay",   ytdNetPay);
+        model.addAttribute("ytdPaye",     ytdPaye);
+        model.addAttribute("ytdPension",  ytdPension);
+        model.addAttribute("reportYear",  reportYear);
+
         model.addAttribute("title", "Locked Periods");
         model.addAttribute("subTitle", "All finalised payroll periods");
         return "finance/lockedPeriods";
