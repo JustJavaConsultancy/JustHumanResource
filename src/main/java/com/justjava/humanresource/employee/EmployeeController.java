@@ -220,6 +220,13 @@ public class EmployeeController {
         return "redirect:/employees";
     }
 
+    @PostMapping("/employees/{id}/unsuspend")
+    public String unsuspendEmployee(@PathVariable Long id) {
+        jobHrEmployeeAccessService.assertCanAccessEmployee(id);
+        employeeService.unsuspendEmployee(id);
+        return "redirect:/employees";
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
 //  TOGGLE RESTRICTED VISIBILITY
 // ─────────────────────────────────────────────────────────────────────────

@@ -296,6 +296,64 @@ public class EmployeeServiceImpl implements EmployeeService {
 
     @Override
     @Transactional
+    public void unsuspendEmployee(Long employeeId) {
+        Employee employee = getById(employeeId);
+
+        if (employee.getStatus() != RecordStatus.SUSPENDED) {
+            throw new IllegalStateException("Employee is not currently suspended.");
+        }
+
+        employee.setStatus(RecordStatus.ACTIVE);
+        employee.setPayrollEnabled(true);
+        employee.setSuspensionFrom(null);
+        employee.setSuspensionTo(null);
+        employeeRepository.save(employee);
+
+        List<EmployeeBankDetail> banks = employee.getBankDetails();
+        if (banks != null && !banks.isEmpty()) {
+            // banks is ordered "status ASC, effectiveFrom DESC" (see Employee entity).
+            // Right after a suspend, every record is INACTIVE, so the first entry
+            // here is the most recently closed one - i.e. the account that was
+            // active before suspension.
+            EmployeeBankDetail lastActive = banks.get(0);
+            if (lastActive.getStatus() == RecordStatus.INACTIVE) {
+                EmployeeBankDetail restored = EmployeeBankDetail.builder()
+                        .employee(employee)
+                        .bankName(lastActive.getBankName())
+                        .accountName(lastActive.getAccountName())
+                        .accountNumber(lastActive.getAccountNumber())
+                        .effectiveFrom(LocalDate.now())
+                        .status(RecordStatus.ACTIVE)
+                        .primaryAccount(true)
+                        .build();
+                bankDetailRepository.save(restored);
+            }
+        }
+
+        for (EmployeeAllowance a : employeeAllowanceRepository.findByEmployeeId(employeeId)) {
+            if (a.getStatus() == RecordStatus.INACTIVE) {
+                a.setStatus(RecordStatus.ACTIVE);
+                employeeAllowanceRepository.save(a);
+            }
+        }
+        for (EmployeeDeduction d : employeeDeductionRepository.findByEmployeeId(employeeId)) {
+            if (d.getStatus() == RecordStatus.INACTIVE) {
+                d.setStatus(RecordStatus.ACTIVE);
+                employeeDeductionRepository.save(d);
+            }
+        }
+        for (EmployeeTaxRelief t : employeeTaxReliefRepository.findByEmployeeId(employeeId)) {
+            if (t.getStatus() == RecordStatus.INACTIVE) {
+                t.setStatus(RecordStatus.ACTIVE);
+                employeeTaxReliefRepository.save(t);
+            }
+        }
+
+        payrollChangeOrchestrator.recalculateForEmployee(employeeId, LocalDate.now());
+    }
+
+    @Override
+    @Transactional
     public Employee toggleRestrictedVisibility(Long employeeId) {
         Employee employee = getById(employeeId);
         employee.setRestrictedVisibility(!employee.isRestrictedVisibility());

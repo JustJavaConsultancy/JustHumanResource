@@ -766,10 +766,18 @@
                                 <span class="material-icons-round text-sm">payments</span>
                             </button>
                             <button type="button"
+                                    th:if="${employee.status == null or employee.status.name() != 'SUSPENDED'}"
                                     th:onclick="'event.stopPropagation(); openSuspendModal(' + ${employee.id} + ')'"
                                     title="Suspend"
                                     class="text-red-600 hover:text-red-700">
                                 <span class="material-icons-round text-sm">block</span>
+                            </button>
+                            <button type="button"
+                                    th:if="${employee.status != null and employee.status.name() == 'SUSPENDED'}"
+                                    th:onclick="'event.stopPropagation(); openUnsuspendModal(' + ${employee.id} + ')'"
+                                    title="Unsuspend"
+                                    class="text-green-600 hover:text-green-700">
+                                <span class="material-icons-round text-sm">play_circle</span>
                             </button>
                             <button type="button"
                                     th:if="${!isRestrictedHr}"
@@ -2079,6 +2087,29 @@
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <div id="unsuspendEmployeeModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4 modal-transition">
+        <div class="bg-white dark:bg-gray-800 w-full max-w-md rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700">
+                <h3 class="text-base font-semibold">Unsuspend Employee</h3>
+            </div>
+            <div class="p-5 space-y-4">
+                <p class="text-sm text-gray-600 dark:text-gray-300">
+                    This will reactivate this employee. Are you sure?
+                </p>
+                <form id="unsuspendEmployeeForm" method="post">
+                    <div class="flex justify-end gap-2 pt-2">
+                        <button type="button" onclick="closeModal('unsuspendEmployeeModal')" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm">
+                            Cancel
+                        </button>
+                        <button type="submit" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-semibold">
+                            Confirm
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 
@@ -3454,6 +3485,12 @@ function confirmToggleVisibility() {
             document.getElementById('suspendFromDate').value = '';
             document.getElementById('suspendToDate').value = '';
             openModal('suspendEmployeeModal');
+        }
+
+        function openUnsuspendModal(employeeId) {
+            const form = document.getElementById('unsuspendEmployeeForm');
+            form.action = '/employees/' + employeeId + '/unsuspend';
+            openModal('unsuspendEmployeeModal');
         }
 
         function applyEmployeeFilters() {
