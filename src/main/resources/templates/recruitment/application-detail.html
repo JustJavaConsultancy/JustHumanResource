@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+    <title>Application</title>
+</head>
+<body>
+<main layout:fragment="content" class="space-y-6">
+    <section class="grid lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+            <div class="flex flex-wrap justify-between gap-4">
+                <div>
+                    <h2 class="text-xl font-bold" th:text="${candidate.fullName}">Candidate</h2>
+                    <p class="text-gray-500" th:text="${candidate.email}">email</p>
+                </div>
+                <span class="badge badge-info h-fit" th:text="${application.currentStage}">SCREENING</span>
+            </div>
+            <div class="grid sm:grid-cols-3 gap-4 mt-6 text-sm">
+                <div>
+                    <p class="text-gray-400">Role</p>
+                    <p class="font-medium" th:text="${opening.jobTitle}">Role</p>
+                </div>
+                <div>
+                    <p class="text-gray-400">Application</p>
+                    <p class="font-medium" th:text="${application.applicationNumber}">APP</p>
+                </div>
+                <div>
+                    <p class="text-gray-400">Status</p>
+                    <p class="font-medium" th:text="${application.status}">SUBMITTED</p>
+                </div>
+            </div>
+        </div>
+
+        <aside class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 h-fit">
+            <h3 class="font-bold">Workflow action</h3>
+            <p class="text-sm text-gray-500 mt-2" th:text="${activeTask != null ? activeTask.name : 'No active task'}">Task</p>
+            <form th:if="${activeTask != null}" method="post"
+                  th:action="@{/recruitment/applications/{id}/decision(id=${application.id})}"
+                  class="mt-4 space-y-3">
+                <textarea name="recruitmentComment" class="form-input" rows="3" placeholder="Decision comments"></textarea>
+                <div class="grid grid-cols-2 gap-2">
+                    <button name="recruitmentDecision" value="REJECT" class="px-2 py-2 bg-red-50 text-red-700 rounded-lg text-sm">Reject</button>
+                    <button name="recruitmentDecision" value="HOLD" class="px-2 py-2 bg-amber-50 text-amber-700 rounded-lg text-sm">Hold</button>
+                    <button th:if="${application.currentStage.name() != 'OFFER'}" name="recruitmentDecision" value="ADVANCE" class="px-2 py-2 bg-primary-600 text-white rounded-lg text-sm">Advance</button>
+                    <button th:if="${application.currentStage.name() == 'OFFER'}" name="recruitmentDecision" value="DECLINE_OFFER" class="px-2 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg text-sm">Declined</button>
+                </div>
+            </form>
+        </aside>
+    </section>
+
+    <section class="grid xl:grid-cols-2 gap-6">
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+            <h3 class="font-bold mb-4">Schedule interview</h3>
+            <form method="post" th:action="@{/recruitment/applications/{id}/interviews(id=${application.id})}" class="space-y-3">
+                <input class="form-input" name="title" placeholder="Interview title" required>
+                <div class="grid md:grid-cols-2 gap-3">
+                    <input class="form-input" type="datetime-local" name="scheduledStart" required>
+                    <input class="form-input" type="datetime-local" name="scheduledEnd" required>
+                </div>
+                <input class="form-input" name="locationOrMeetingLink" placeholder="Location or meeting link">
+                <div class="grid md:grid-cols-2 gap-3">
+                    <input class="form-input" type="number" name="coordinatorEmployeeId" placeholder="Coordinator employee ID" required>
+                    <input class="form-input" name="panelEmployeeIds" placeholder="Panel employee IDs, comma separated" required>
+                </div>
+                <div class="flex justify-end">
+                    <button class="px-4 py-2 bg-primary-600 text-white rounded-lg">Schedule</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+            <h3 class="font-bold mb-4">Create offer</h3>
+            <form method="post" th:action="@{/recruitment/applications/{id}/offers(id=${application.id})}" class="space-y-3">
+                <div class="grid md:grid-cols-2 gap-3">
+                    <input class="form-input" type="number" step="0.01" name="annualGrossCompensation" placeholder="Annual gross" required>
+                    <input class="form-input" name="currency" value="NGN" maxlength="3">
+                </div>
+                <div class="grid md:grid-cols-2 gap-3">
+                    <input class="form-input" type="number" name="jobStepId" placeholder="Job step ID">
+                    <input class="form-input" type="number" name="payGroupId" placeholder="Pay group ID">
+                </div>
+                <div class="grid md:grid-cols-2 gap-3">
+                    <input class="form-input" type="date" name="proposedStartDate" required>
+                    <input class="form-input" type="date" name="expiresOn" required>
+                </div>
+                <textarea class="form-input" name="terms" rows="3" placeholder="Offer terms"></textarea>
+                <div class="flex justify-end">
+                    <button class="px-4 py-2 bg-primary-600 text-white rounded-lg">Create offer</button>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <section class="grid xl:grid-cols-2 gap-6">
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+            <h3 class="font-bold mb-4">Interviews</h3>
+            <div class="space-y-4">
+                <article th:each="interview : ${interviews}" class="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                    <div class="flex flex-wrap justify-between gap-3">
+                        <div>
+                            <p class="font-semibold" th:text="${interview.title}">Interview</p>
+                            <p class="text-sm text-gray-500" th:text="${interview.scheduledStart + ' - ' + interview.scheduledEnd}">Schedule</p>
+                        </div>
+                        <span class="badge badge-info" th:text="${interview.status}">SCHEDULED</span>
+                    </div>
+                    <form method="post"
+                          th:action="@{/recruitment/applications/{id}/interviews/{interviewId}/scorecards(id=${application.id},interviewId=${interview.id})}"
+                          class="grid md:grid-cols-5 gap-2 mt-4">
+                        <input class="form-input md:col-span-1" type="number" name="reviewerEmployeeId" placeholder="Reviewer ID" required>
+                        <input class="form-input md:col-span-1" type="number" min="1" max="5" name="overallScore" placeholder="Score" required>
+                        <select class="form-input md:col-span-1" name="recommendation" required>
+                            <option value="HIRE">Hire</option>
+                            <option value="STRONG_HIRE">Strong hire</option>
+                            <option value="HOLD">Hold</option>
+                            <option value="NO_HIRE">No hire</option>
+                            <option value="STRONG_NO_HIRE">Strong no hire</option>
+                        </select>
+                        <input class="form-input md:col-span-1" name="comments" placeholder="Comments">
+                        <button class="px-3 py-2 bg-primary-600 text-white rounded-lg text-sm">Submit</button>
+                    </form>
+                    <div class="mt-3 text-sm text-gray-500" th:if="${scorecards[interview.id] != null}">
+                        <p th:each="card : ${scorecards[interview.id]}" th:text="${card.reviewerEmployeeId + ': ' + card.overallScore + '/5 ' + card.recommendation}">Score</p>
+                    </div>
+                </article>
+                <p th:if="${#lists.isEmpty(interviews)}" class="text-sm text-gray-400">No interviews scheduled.</p>
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+            <h3 class="font-bold mb-4">Offers</h3>
+            <div class="space-y-4">
+                <article th:each="offer : ${offers}" class="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                    <div class="flex flex-wrap justify-between gap-3">
+                        <div>
+                            <p class="font-semibold" th:text="${offer.currency + ' ' + offer.annualGrossCompensation}">Offer</p>
+                            <p class="text-sm text-gray-500" th:text="${'Version ' + offer.offerVersion + ' expires ' + offer.expiresOn}">Version</p>
+                        </div>
+                        <span class="badge badge-info" th:text="${offer.status}">DRAFT</span>
+                    </div>
+                    <div class="flex flex-wrap gap-2 mt-4">
+                        <form th:if="${offer.status.name() == 'IN_APPROVAL'}" method="post" th:action="@{/recruitment/offers/{offerId}/approve(offerId=${offer.id})}">
+                            <input type="hidden" name="applicationId" th:value="${application.id}">
+                            <input class="form-input w-40" type="number" name="approverEmployeeId" placeholder="Approver ID" required>
+                            <button class="px-3 py-2 bg-emerald-600 text-white rounded-lg text-sm mt-2">Approve</button>
+                        </form>
+                        <form th:if="${offer.status.name() == 'IN_APPROVAL'}" method="post" th:action="@{/recruitment/offers/{offerId}/reject(offerId=${offer.id})}">
+                            <input type="hidden" name="applicationId" th:value="${application.id}">
+                            <button class="px-3 py-2 bg-red-50 text-red-700 rounded-lg text-sm">Reject</button>
+                        </form>
+                        <form th:if="${offer.status.name() == 'APPROVED'}" method="post" th:action="@{/recruitment/offers/{offerId}/send(offerId=${offer.id})}">
+                            <input type="hidden" name="applicationId" th:value="${application.id}">
+                            <button class="px-3 py-2 bg-primary-600 text-white rounded-lg text-sm">Send</button>
+                        </form>
+                    </div>
+                </article>
+                <p th:if="${#lists.isEmpty(offers)}" class="text-sm text-gray-400">No offers created.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="grid xl:grid-cols-2 gap-6">
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+            <h3 class="font-bold mb-4">Start onboarding</h3>
+            <form method="post" th:action="@{/recruitment/applications/{id}/onboarding(id=${application.id})}" class="space-y-3">
+                <div class="grid md:grid-cols-2 gap-3">
+                    <input class="form-input" type="number" name="departmentId" th:value="${opening.departmentId}" placeholder="Department ID" required>
+                    <input class="form-input" type="number" name="managerId" placeholder="Manager ID">
+                </div>
+                <div class="grid md:grid-cols-2 gap-3">
+                    <input class="form-input" type="number" name="jobStepId" placeholder="Job step ID">
+                    <input class="form-input" type="number" name="payGroupId" placeholder="Pay group ID">
+                </div>
+                <input class="form-input" name="groups" value="employees" placeholder="Employee groups">
+                <div class="grid md:grid-cols-2 gap-3">
+                    <input class="form-input" name="tinNumber" placeholder="TIN">
+                    <input class="form-input" name="rsaPin" placeholder="RSA PIN">
+                    <input class="form-input" name="ninNumber" placeholder="NIN">
+                    <input class="form-input" name="bvnNumber" placeholder="BVN">
+                </div>
+                <div class="flex justify-end">
+                    <button class="px-4 py-2 bg-emerald-600 text-white rounded-lg"
+                            th:disabled="${application.status.name() != 'OFFER_ACCEPTED'}">Start onboarding</button>
+                </div>
+            </form>
+            <p th:if="${conversion != null}" class="text-sm text-emerald-600 mt-3" th:text="${'Onboarding started for employee #' + conversion.employeeId}">Converted</p>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+            <h3 class="font-bold mb-4">Activity</h3>
+            <div class="space-y-4">
+                <div th:each="h : ${history}" class="border-l-2 border-primary-200 pl-4">
+                    <p class="font-medium" th:text="${h.newStage + ' - ' + h.newStatus}">Stage</p>
+                    <p class="text-sm text-gray-500" th:text="${h.reason ?: 'Workflow transition'}">Reason</p>
+                </div>
+                <p th:if="${#lists.isEmpty(history)}" class="text-sm text-gray-400">No activity yet.</p>
+            </div>
+        </div>
+    </section>
+</main>
+</body>
+</html>

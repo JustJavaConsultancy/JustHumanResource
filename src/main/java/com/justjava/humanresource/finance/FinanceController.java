@@ -200,6 +200,8 @@ public class FinanceController {
         settings.setSuspenseAccountName(incoming.getSuspenseAccountName());
         settings.setSalaryPayableAccountCode(incoming.getSalaryPayableAccountCode());
         settings.setSalaryPayableAccountName(incoming.getSalaryPayableAccountName());
+        settings.setBankAccountCode(incoming.getBankAccountCode());
+        settings.setBankAccountName(incoming.getBankAccountName());
         settings.setDefaultEarningExpenseAccountCode(incoming.getDefaultEarningExpenseAccountCode());
         settings.setDefaultEarningExpenseAccountName(incoming.getDefaultEarningExpenseAccountName());
         settings.setDefaultDeductionPayableAccountCode(incoming.getDefaultDeductionPayableAccountCode());

@@ -40,6 +40,12 @@ public class PayrollAccountingSettings extends BaseEntity {
     private String salaryPayableAccountName = "Salary Payable";
 
     @Column(nullable = false)
+    private String bankAccountCode = "1000";
+
+    @Column(nullable = false)
+    private String bankAccountName = "Bank/Cash";
+
+    @Column(nullable = false)
     private String defaultEarningExpenseAccountCode = "5000";
 
     @Column(nullable = false)

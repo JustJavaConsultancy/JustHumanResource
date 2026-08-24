@@ -44,24 +44,28 @@
         <design:stencilsuperid><![CDATA[Task]]></design:stencilsuperid>
       </extensionElements>
     </serviceTask>
-    <serviceTask id="ServiceTask_20" name="Confirm Payment" flowable:delegateExpression="${confirmPaymentDelegate}">
+    <serviceTask id="ServiceTask_20" name="Resolve Payment Mode" flowable:delegateExpression="${resolvePaymentModeDelegate}">
       <extensionElements>
         <design:stencilid><![CDATA[ServiceTask]]></design:stencilid>
         <design:stencilsuperid><![CDATA[Task]]></design:stencilsuperid>
       </extensionElements>
     </serviceTask>
-    <serviceTask id="ServiceTask_16" name="Initiate Bank Transfer" flowable:delegateExpression="${initiateBankTransferDelegate}">
+    <serviceTask id="ServiceTask_16" name="Create Payment Records" flowable:delegateExpression="${initiateBankTransferDelegate}">
       <extensionElements>
         <design:stencilid><![CDATA[ServiceTask]]></design:stencilid>
         <design:stencilsuperid><![CDATA[Task]]></design:stencilsuperid>
       </extensionElements>
     </serviceTask>
-    <serviceTask id="ServiceTask_19" name="Process Payment" flowable:expression="${processPaymentsDelegate}">
+    <serviceTask id="ServiceTask_19" name="Submit Payments to Gateway" flowable:delegateExpression="${processPaymentsDelegate}">
       <extensionElements>
         <design:stencilid><![CDATA[ServiceTask]]></design:stencilid>
         <design:stencilsuperid><![CDATA[Task]]></design:stencilsuperid>
       </extensionElements>
     </serviceTask>
+    <serviceTask id="assumePaymentSuccess" name="Assume Internal Payments Successful" flowable:delegateExpression="${assumePaymentSuccessDelegate}" />
+    <serviceTask id="clearPayrollSuspense" name="Clear Payroll Suspense" flowable:delegateExpression="${clearPayrollSuspenseDelegate}" />
+    <serviceTask id="verifyPayrollSuspense" name="Verify Payroll Suspense Is Zero" flowable:delegateExpression="${verifyPayrollSuspenseDelegate}" />
+    <exclusiveGateway id="paymentModeGateway" name="Transfer Enabled?" default="paymentModeDisabled" />
     <serviceTask id="ServiceTask_21" name="Reverse Lock " flowable:delegateExpression="${reverseLockDelegate}">
       <extensionElements>
         <design:stencilid><![CDATA[ServiceTask]]></design:stencilid>
@@ -120,21 +124,30 @@
         <design:stencilid><![CDATA[SequenceFlow]]></design:stencilid>
       </extensionElements>
     </sequenceFlow>
-    <sequenceFlow id="SequenceFlow_21" sourceRef="ServiceTask_20" targetRef="IntermediateMessageEventCatching_10">
+    <sequenceFlow id="SequenceFlow_21" sourceRef="ServiceTask_20" targetRef="paymentModeGateway">
       <extensionElements>
         <design:stencilid><![CDATA[SequenceFlow]]></design:stencilid>
       </extensionElements>
     </sequenceFlow>
-    <sequenceFlow id="SequenceFlow_18" sourceRef="ServiceTask_16" targetRef="ServiceTask_19">
+    <sequenceFlow id="SequenceFlow_18" sourceRef="ServiceTask_16" targetRef="ServiceTask_20">
       <extensionElements>
         <design:stencilid><![CDATA[SequenceFlow]]></design:stencilid>
       </extensionElements>
     </sequenceFlow>
-    <sequenceFlow id="SequenceFlow_20" sourceRef="ServiceTask_19" targetRef="ServiceTask_20">
+    <sequenceFlow id="SequenceFlow_20" sourceRef="ServiceTask_19" targetRef="IntermediateMessageEventCatching_10">
       <extensionElements>
         <design:stencilid><![CDATA[SequenceFlow]]></design:stencilid>
       </extensionElements>
     </sequenceFlow>
+    <sequenceFlow id="paymentModeEnabled" sourceRef="paymentModeGateway" targetRef="ServiceTask_19">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${transferEnabled == true}]]></conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="paymentModeDisabled" sourceRef="paymentModeGateway" targetRef="assumePaymentSuccess">
+    </sequenceFlow>
+    <sequenceFlow id="internalPaymentToClearing" sourceRef="assumePaymentSuccess" targetRef="clearPayrollSuspense" />
+    <sequenceFlow id="gatewaySuccessToClearing" sourceRef="IntermediateMessageEventCatching_10" targetRef="clearPayrollSuspense" />
+    <sequenceFlow id="clearingToVerification" sourceRef="clearPayrollSuspense" targetRef="verifyPayrollSuspense" />
+    <sequenceFlow id="verificationToEnd" sourceRef="verifyPayrollSuspense" targetRef="EndNoneEvent_9" />
     <sequenceFlow id="SequenceFlow_24" sourceRef="ServiceTask_21" targetRef="EndNoneEvent_9">
       <extensionElements>
         <design:stencilid><![CDATA[SequenceFlow]]></design:stencilid>
@@ -153,11 +166,6 @@
       <conditionExpression xsi:type="tFormalExpression"><![CDATA[${!approved}]]></conditionExpression>
     </sequenceFlow>
     <sequenceFlow id="SequenceFlow_2" sourceRef="startnoneevent1" targetRef="ServiceTask_1">
-      <extensionElements>
-        <design:stencilid><![CDATA[SequenceFlow]]></design:stencilid>
-      </extensionElements>
-    </sequenceFlow>
-    <sequenceFlow id="SequenceFlow_12" sourceRef="IntermediateMessageEventCatching_10" targetRef="EndNoneEvent_9">
       <extensionElements>
         <design:stencilid><![CDATA[SequenceFlow]]></design:stencilid>
       </extensionElements>
@@ -233,10 +241,6 @@
         <omgdi:waypoint x="1412.423097674543" y="295.0"></omgdi:waypoint>
         <omgdi:waypoint x="1412.423097674543" y="563.0"></omgdi:waypoint>
         <omgdi:waypoint x="1911.0" y="563.0"></omgdi:waypoint>
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge bpmnElement="SequenceFlow_12" id="BPMNEdge_SequenceFlow_12" flowable:sourceDockerX="15.0" flowable:sourceDockerY="15.0" flowable:targetDockerX="14.0" flowable:targetDockerY="14.0">
-        <omgdi:waypoint x="2442.6543454600073" y="275.0"></omgdi:waypoint>
-        <omgdi:waypoint x="2507.6543454600073" y="275.0"></omgdi:waypoint>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="SequenceFlow_13" id="BPMNEdge_SequenceFlow_13" flowable:sourceDockerX="50.0" flowable:sourceDockerY="40.0" flowable:targetDockerX="50.0" flowable:targetDockerY="40.0">
         <omgdi:waypoint x="497.0" y="275.0"></omgdi:waypoint>

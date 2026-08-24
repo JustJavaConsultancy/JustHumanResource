@@ -26,4 +26,9 @@ public class PaymentScheduler {
     public void processPendingPayments() {
         paymentService.processPendingPayments();
     }
+
+    @Scheduled(fixedDelay = 30000)
+    public void confirmCompletedPayments() {
+        paymentService.confirmCompletedPayments();
+    }
 }

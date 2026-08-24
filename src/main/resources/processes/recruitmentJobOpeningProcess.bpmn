@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:flowable="http://flowable.org/bpmn" targetNamespace="http://justjava.com/recruitment">
+  <message id="JOB_OPENING_CLOSE" name="JOB_OPENING_CLOSE"/>
+  <process id="recruitmentJobOpeningProcess" name="Recruitment Job Opening" isExecutable="true">
+    <startEvent id="start"/>
+    <userTask id="prepareJobOpening" name="Prepare Job Opening" flowable:candidateGroups="humanResource"/>
+    <userTask id="reviewJobOpening" name="Review Job Opening" flowable:assignee="${hiringManagerEmployeeId}"/>
+    <exclusiveGateway id="reviewDecision" default="returnForCorrection"/>
+    <serviceTask id="publish" name="Publish Job Opening" flowable:delegateExpression="${publishJobOpeningDelegate}"/>
+    <intermediateCatchEvent id="waitForClose"><messageEventDefinition messageRef="JOB_OPENING_CLOSE"/></intermediateCatchEvent>
+    <serviceTask id="cancel" name="Cancel Job Opening" flowable:delegateExpression="${cancelJobOpeningDelegate}"/>
+    <endEvent id="closedEnd"/><endEvent id="cancelledEnd"/>
+    <sequenceFlow id="f1" sourceRef="start" targetRef="prepareJobOpening"/>
+    <sequenceFlow id="f2" sourceRef="prepareJobOpening" targetRef="reviewJobOpening"/>
+    <sequenceFlow id="f3" sourceRef="reviewJobOpening" targetRef="reviewDecision"/>
+    <sequenceFlow id="approvePublication" sourceRef="reviewDecision" targetRef="publish"><conditionExpression xsi:type="tFormalExpression"><![CDATA[${publicationDecision == 'APPROVE'}]]></conditionExpression></sequenceFlow>
+    <sequenceFlow id="cancelPublication" sourceRef="reviewDecision" targetRef="cancel"><conditionExpression xsi:type="tFormalExpression"><![CDATA[${publicationDecision == 'CANCEL'}]]></conditionExpression></sequenceFlow>
+    <sequenceFlow id="returnForCorrection" sourceRef="reviewDecision" targetRef="prepareJobOpening"/>
+    <sequenceFlow id="f7" sourceRef="publish" targetRef="waitForClose"/>
+    <sequenceFlow id="f8" sourceRef="waitForClose" targetRef="closedEnd"/>
+    <sequenceFlow id="f9" sourceRef="cancel" targetRef="cancelledEnd"/>
+  </process>
+</definitions>

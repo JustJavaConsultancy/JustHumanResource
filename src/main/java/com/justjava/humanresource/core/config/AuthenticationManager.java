@@ -12,7 +12,7 @@ public class AuthenticationManager {
     public Object get(String fieldName){
         Authentication authentication=SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null) return null;
-        DefaultOidcUser defaultOidcUser = (DefaultOidcUser) authentication.getPrincipal();
+        if (!(authentication.getPrincipal() instanceof DefaultOidcUser defaultOidcUser)) return null;
 //        System.out.println(" The token here =="+defaultOidcUser.getClaims());
         return defaultOidcUser.getClaims().get(fieldName);
     }
@@ -60,7 +60,7 @@ public class AuthenticationManager {
 
     public Object getAllAttributes() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        DefaultOidcUser defaultOidcUser = (DefaultOidcUser) authentication.getPrincipal();
+        if (authentication == null || !(authentication.getPrincipal() instanceof DefaultOidcUser defaultOidcUser)) return null;
         return defaultOidcUser.getClaims();
     }
 }

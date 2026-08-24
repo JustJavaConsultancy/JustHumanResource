@@ -4,6 +4,9 @@ import com.justjava.humanresource.core.enums.EmploymentStatus;
 import com.justjava.humanresource.core.enums.PayrollRunStatus;
 import com.justjava.humanresource.hr.entity.Employee;
 import com.justjava.humanresource.payroll.entity.PayrollLineItem;
+import com.justjava.humanresource.payroll.entity.PayrollAccountingSettings;
+import com.justjava.humanresource.payroll.entity.PayrollJournalBatch;
+import com.justjava.humanresource.payroll.entity.PayrollJournalEntry;
 import com.justjava.humanresource.payroll.entity.PayrollPeriod;
 import com.justjava.humanresource.payroll.entity.PayrollRun;
 import com.justjava.humanresource.payroll.enums.PayComponentType;
@@ -151,6 +154,69 @@ class PayrollJournalServiceTest {
                         && batch.isBalanced()
         ));
         verify(journalRepository, times(5)).save(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void generatePaymentClearingEntries_whenPaymentMatchesSuspense_shouldPostSecondLeg() {
+        Long companyId = 1L;
+        Long periodId = 10L;
+        PayrollPeriod period = period(companyId, periodId, LocalDate.of(2026, 7, 1), LocalDate.of(2026, 7, 31));
+        PayrollAccountingSettings settings = new PayrollAccountingSettings();
+        settings.setCompanyId(companyId);
+        PayrollJournalBatch batch = new PayrollJournalBatch();
+        batch.setTotalDebit(new BigDecimal("100.00"));
+        batch.setTotalCredit(new BigDecimal("100.00"));
+        PayrollJournalEntry initialSuspense = journalEntry("2000", "0.00", "80.00");
+
+        when(payrollPeriodRepository.findById(periodId)).thenReturn(Optional.of(period));
+        when(settingsRepository.findByCompanyId(companyId)).thenReturn(Optional.of(settings));
+        when(batchRepository.findByCompanyIdAndPayrollPeriodId(companyId, periodId)).thenReturn(Optional.of(batch));
+        when(journalRepository.findByCompanyIdAndPayrollPeriodId(companyId, periodId)).thenReturn(List.of(initialSuspense));
+        when(journalRepository.existsByCompanyIdAndPayrollPeriodIdAndSourceTypeAndSourceCode(
+                companyId, periodId, "PAYMENT_CLEARING", "BANK_PAYMENT:batch-1")).thenReturn(false);
+
+        service.generatePaymentClearingEntries(companyId, periodId, new BigDecimal("80.00"), "batch-1");
+
+        verify(journalRepository).save(org.mockito.ArgumentMatchers.argThat(entry ->
+                "2000".equals(entry.getAccountCode())
+                        && new BigDecimal("80.00").equals(entry.getDebitAmount())
+                        && "BANK_PAYMENT:batch-1".equals(entry.getSourceCode())));
+        verify(journalRepository).save(org.mockito.ArgumentMatchers.argThat(entry ->
+                "1000".equals(entry.getAccountCode())
+                        && new BigDecimal("80.00").equals(entry.getCreditAmount())
+                        && "BANK_PAYMENT:batch-1".equals(entry.getSourceCode())));
+        assertEquals(new BigDecimal("180.00"), batch.getTotalDebit());
+        assertEquals(new BigDecimal("180.00"), batch.getTotalCredit());
+        assertTrue(batch.isBalanced());
+    }
+
+    @Test
+    void generatePaymentClearingEntries_whenPaymentDoesNotMatchSuspense_shouldFailClosed() {
+        Long companyId = 1L;
+        Long periodId = 10L;
+        PayrollPeriod period = period(companyId, periodId, LocalDate.of(2026, 7, 1), LocalDate.of(2026, 7, 31));
+        PayrollAccountingSettings settings = new PayrollAccountingSettings();
+        settings.setCompanyId(companyId);
+
+        when(payrollPeriodRepository.findById(periodId)).thenReturn(Optional.of(period));
+        when(settingsRepository.findByCompanyId(companyId)).thenReturn(Optional.of(settings));
+        when(batchRepository.findByCompanyIdAndPayrollPeriodId(companyId, periodId)).thenReturn(Optional.of(new PayrollJournalBatch()));
+        when(journalRepository.findByCompanyIdAndPayrollPeriodId(companyId, periodId))
+                .thenReturn(List.of(journalEntry("2000", "0.00", "80.00")));
+
+        IllegalStateException error = assertThrows(IllegalStateException.class,
+                () -> service.generatePaymentClearingEntries(companyId, periodId, new BigDecimal("75.00"), "batch-1"));
+
+        assertTrue(error.getMessage().contains("does not match outstanding payroll suspense"));
+        verify(journalRepository, never()).save(org.mockito.ArgumentMatchers.any());
+    }
+
+    private PayrollJournalEntry journalEntry(String accountCode, String debit, String credit) {
+        PayrollJournalEntry entry = new PayrollJournalEntry();
+        entry.setAccountCode(accountCode);
+        entry.setDebitAmount(new BigDecimal(debit));
+        entry.setCreditAmount(new BigDecimal(credit));
+        return entry;
     }
 
     private PayrollPeriod period(Long companyId, Long periodId, LocalDate start, LocalDate end) {

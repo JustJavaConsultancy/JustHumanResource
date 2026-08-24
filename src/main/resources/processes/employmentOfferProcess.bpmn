@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:flowable="http://flowable.org/bpmn" targetNamespace="http://justjava.com/humanresource/recruitment">
+  <process id="employmentOfferProcess" name="Employment Offer Approval" isExecutable="true">
+    <startEvent id="offerDrafted" name="Offer Drafted"/><sequenceFlow id="of1" sourceRef="offerDrafted" targetRef="approveEmploymentOffer"/>
+    <userTask id="approveEmploymentOffer" name="Approve Employment Offer" flowable:candidateGroups="humanResource,financialOfficer"/>
+    <sequenceFlow id="of2" sourceRef="approveEmploymentOffer" targetRef="offerDecision"/>
+    <exclusiveGateway id="offerDecision" name="Approval Decision"/>
+    <sequenceFlow id="of3" sourceRef="offerDecision" targetRef="approveOffer"><conditionExpression xsi:type="tFormalExpression"><![CDATA[${offerApprovalDecision == 'APPROVE'}]]></conditionExpression></sequenceFlow>
+    <sequenceFlow id="of4" sourceRef="offerDecision" targetRef="rejectOffer"><conditionExpression xsi:type="tFormalExpression"><![CDATA[${offerApprovalDecision == 'REJECT'}]]></conditionExpression></sequenceFlow>
+    <serviceTask id="approveOffer" name="Approve Offer" flowable:delegateExpression="${approveEmploymentOfferDelegate}"/><sequenceFlow id="of5" sourceRef="approveOffer" targetRef="offerApproved"/>
+    <serviceTask id="rejectOffer" name="Reject Offer" flowable:delegateExpression="${rejectEmploymentOfferDelegate}"/><sequenceFlow id="of6" sourceRef="rejectOffer" targetRef="offerRejected"/>
+    <endEvent id="offerApproved" name="Offer Approved"/><endEvent id="offerRejected" name="Offer Rejected"/>
+  </process>
+</definitions>

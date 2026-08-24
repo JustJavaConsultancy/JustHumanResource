@@ -68,6 +68,18 @@ public interface PayrollPaymentRepository extends JpaRepository<PayrollPayment, 
             Long companyId
     );
 
+    List<PayrollPayment> findByProcessInstanceId(String processInstanceId);
+
+    long countByProcessInstanceIdAndStatus(
+            String processInstanceId,
+            PaymentStatus status
+    );
+
+    long countByProcessInstanceIdAndStatusIn(
+            String processInstanceId,
+            Collection<PaymentStatus> statuses
+    );
+
     /* ============================================================
        FLOWABLE COMPLETION CHECK HELPERS
        ============================================================ */
@@ -91,4 +103,12 @@ AND (p.nextRetryAt IS NULL OR p.nextRetryAt <= CURRENT_TIMESTAMP)
     List<PayrollPayment> findRetryablePayments();
 
     Optional<PayrollPayment> findByExternalReference(String reference);
+
+    @Query("""
+SELECT DISTINCT p.processInstanceId
+FROM PayrollPayment p
+WHERE p.status = com.justjava.humanresource.payroll.dto.PaymentStatus.SUCCESS
+AND p.processInstanceId IS NOT NULL
+""")
+    List<String> findSuccessProcessInstanceIds();
 }

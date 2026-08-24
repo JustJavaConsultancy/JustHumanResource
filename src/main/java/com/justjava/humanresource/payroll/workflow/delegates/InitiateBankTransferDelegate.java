@@ -18,9 +18,10 @@ public class InitiateBankTransferDelegate implements JavaDelegate {
     public void execute(DelegateExecution execution) {
 
         Long companyId = (Long) execution.getVariable("companyId");
+        Long periodId = (Long) execution.getVariable("periodId");
         LocalDate start = (LocalDate) execution.getVariable("periodStart");
         LocalDate end = (LocalDate) execution.getVariable("periodEnd");
 
-        paymentService.initiateBulkPayments(companyId,execution.getProcessInstanceId(), start, end);
+        paymentService.initiateBulkPayments(companyId, periodId, execution.getProcessInstanceId(), start, end);
     }
 }

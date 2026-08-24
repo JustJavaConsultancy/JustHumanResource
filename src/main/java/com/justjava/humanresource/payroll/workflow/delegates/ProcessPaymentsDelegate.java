@@ -14,7 +14,6 @@ public class ProcessPaymentsDelegate implements JavaDelegate {
 
     @Override
     public void execute(DelegateExecution execution) {
-
-        paymentService.processPendingPayments();
+        paymentService.submitBatchToGateway(execution.getProcessInstanceId());
     }
 }

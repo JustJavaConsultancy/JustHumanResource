@@ -48,6 +48,8 @@ import java.util.stream.Collectors;
 @Slf4j
 public class PayrollJournalService {
     private static final String RESIDUAL_COMPONENT_CODE = "RESIDUAL";
+    private static final String PAYMENT_CLEARING_SOURCE_TYPE = "PAYMENT_CLEARING";
+    private static final String BANK_PAYMENT_SOURCE_CODE = "BANK_PAYMENT";
 
     private final PayrollRunRepository payrollRunRepository;
     private final PayrollLineItemRepository payrollLineItemRepository;
@@ -59,6 +61,91 @@ public class PayrollJournalService {
     private final AllowanceRepository allowanceRepository;
     private final DeductionRepository deductionRepository;
     private final PensionSchemeRepository pensionSchemeRepository;
+
+    @Transactional
+    public void generatePaymentClearingEntries(
+            Long companyId,
+            Long periodId,
+            BigDecimal amount,
+            String paymentBatchReference) {
+
+        BigDecimal clearingAmount = safe(amount);
+        if (clearingAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalStateException("Payment clearing amount must be greater than zero.");
+        }
+
+        PayrollPeriod period = payrollPeriodRepository.findById(periodId)
+                .orElseThrow(() -> new IllegalStateException("Payroll period not found."));
+
+        if (!period.getCompanyId().equals(companyId)) {
+            throw new IllegalStateException("Period does not belong to provided company.");
+        }
+
+        String clearingSourceCode = paymentClearingSourceCode(paymentBatchReference);
+        if (journalRepository.existsByCompanyIdAndPayrollPeriodIdAndSourceTypeAndSourceCode(
+                companyId,
+                periodId,
+                PAYMENT_CLEARING_SOURCE_TYPE,
+                clearingSourceCode)) {
+            log.info("Payment clearing journal already exists for company {} period {} batch {}. Skipping.",
+                    companyId, periodId, paymentBatchReference);
+            return;
+        }
+
+        PayrollJournalBatch batch = batchRepository.findByCompanyIdAndPayrollPeriodId(companyId, periodId)
+                .orElseThrow(() -> new IllegalStateException("Journal batch not found for period."));
+
+        PayrollAccountingSettings settings = resolveSettings(companyId);
+        BigDecimal outstandingSuspense = suspenseBalance(companyId, periodId, settings.getSuspenseAccountCode());
+        if (outstandingSuspense.compareTo(clearingAmount) != 0) {
+            throw new IllegalStateException("Successful payment total " + clearingAmount
+                    + " does not match outstanding payroll suspense " + outstandingSuspense + ".");
+        }
+
+        PayrollJournalEntry suspenseDebit = paymentClearingEntry(
+                companyId,
+                period,
+                batch,
+                settings.getSuspenseAccountCode(),
+                settings.getSuspenseAccountName(),
+                clearingAmount,
+                BigDecimal.ZERO,
+                "DEBIT",
+                "Clear payroll suspense after successful salary payment",
+                clearingSourceCode
+        );
+
+        PayrollJournalEntry bankCredit = paymentClearingEntry(
+                companyId,
+                period,
+                batch,
+                settings.getBankAccountCode(),
+                settings.getBankAccountName(),
+                BigDecimal.ZERO,
+                clearingAmount,
+                "CREDIT",
+                "Record bank/cash outflow for salary payment",
+                clearingSourceCode
+        );
+
+        journalRepository.save(suspenseDebit);
+        journalRepository.save(bankCredit);
+
+        batch.setTotalDebit(safe(batch.getTotalDebit()).add(clearingAmount));
+        batch.setTotalCredit(safe(batch.getTotalCredit()).add(clearingAmount));
+        batch.setBalanced(batch.getTotalDebit().compareTo(batch.getTotalCredit()) == 0);
+        batchRepository.save(batch);
+    }
+
+    @Transactional(readOnly = true)
+    public void verifyPaymentSuspenseCleared(Long companyId, Long periodId) {
+        PayrollAccountingSettings settings = resolveSettings(companyId);
+        BigDecimal balance = suspenseBalance(companyId, periodId, settings.getSuspenseAccountCode());
+        if (balance.compareTo(BigDecimal.ZERO) != 0) {
+            throw new IllegalStateException("Payroll suspense is not cleared for period " + periodId
+                    + ". Outstanding credit balance: " + balance + ".");
+        }
+    }
 
     @Transactional
     public void generateJournalEntries(
@@ -420,6 +507,55 @@ public class PayrollJournalService {
         entry.setLineType(key.lineType());
         entry.setExported(false);
         journalRepository.save(entry);
+    }
+
+    private PayrollJournalEntry paymentClearingEntry(
+            Long companyId,
+            PayrollPeriod period,
+            PayrollJournalBatch batch,
+            String accountCode,
+            String accountName,
+            BigDecimal debitAmount,
+            BigDecimal creditAmount,
+            String lineType,
+            String description,
+            String sourceCode) {
+
+        if (!hasText(accountCode) || !hasText(accountName)) {
+            throw new IllegalStateException("Missing account mapping for payroll payment clearing.");
+        }
+
+        PayrollJournalEntry entry = new PayrollJournalEntry();
+        entry.setCompanyId(companyId);
+        entry.setPayrollPeriodId(period.getId());
+        entry.setJournalBatch(batch);
+        entry.setPeriodStart(period.getPeriodStart());
+        entry.setPeriodEnd(period.getPeriodEnd());
+        entry.setAccountCode(accountCode);
+        entry.setAccountName(accountName);
+        entry.setDebitAmount(safe(debitAmount));
+        entry.setCreditAmount(safe(creditAmount));
+        entry.setDescription(description);
+        entry.setSourceType(PAYMENT_CLEARING_SOURCE_TYPE);
+        entry.setSourceCode(sourceCode);
+        entry.setSourceName("Payroll bank payment");
+        entry.setLineType(lineType);
+        entry.setExported(false);
+        return entry;
+    }
+
+    private BigDecimal suspenseBalance(Long companyId, Long periodId, String suspenseAccountCode) {
+        return journalRepository.findByCompanyIdAndPayrollPeriodId(companyId, periodId).stream()
+                .filter(entry -> Objects.equals(suspenseAccountCode, entry.getAccountCode()))
+                .map(entry -> safe(entry.getCreditAmount()).subtract(safe(entry.getDebitAmount())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private String paymentClearingSourceCode(String paymentBatchReference) {
+        if (!hasText(paymentBatchReference)) {
+            throw new IllegalStateException("Payment batch reference is required for journal clearing.");
+        }
+        return BANK_PAYMENT_SOURCE_CODE + ":" + paymentBatchReference;
     }
 
     private JournalLine debit(AccountRef account, PayrollLineItem line, String description) {

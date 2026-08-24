@@ -16,6 +16,13 @@ public interface PayrollJournalEntryRepository
 
     List<PayrollJournalEntry> findByCompanyIdAndPayrollPeriodId(Long companyId, Long periodId);
 
+    boolean existsByCompanyIdAndPayrollPeriodIdAndSourceTypeAndSourceCode(
+            Long companyId,
+            Long periodId,
+            String sourceType,
+            String sourceCode
+    );
+
 
     List<PayrollJournalEntry> findByCompanyIdAndExportedFalse(Long companyId);
 

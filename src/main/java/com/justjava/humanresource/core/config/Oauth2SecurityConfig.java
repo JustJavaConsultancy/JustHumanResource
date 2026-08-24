@@ -55,7 +55,7 @@ public class Oauth2SecurityConfig {
         log.debug("Configuring security");
 
         http.securityMatcher("/**")
-                .anonymous(AnonymousConfigurer::disable)
+                .anonymous(Customizer.withDefaults())
                 .sessionManagement(httpSecuritySessionManagementConfigurer ->
                         httpSecuritySessionManagementConfigurer
                                 .sessionCreationPolicy(SessionCreationPolicy.ALWAYS)
@@ -71,6 +71,7 @@ public class Oauth2SecurityConfig {
                 .authorizeHttpRequests(
                         authorize -> {
                             authorize.requestMatchers(new AntPathRequestMatcher("/login")).permitAll();
+                            authorize.requestMatchers(new AntPathRequestMatcher("/careers/**")).permitAll();
                             authorize.requestMatchers(new AntPathRequestMatcher("/mobile/biometric/bootstrap")).permitAll();
                             authorize.requestMatchers(new AntPathRequestMatcher("/mobile/auth/refresh")).permitAll();
                             authorize.requestMatchers(new AntPathRequestMatcher("/mobile/auth/session/login")).permitAll();

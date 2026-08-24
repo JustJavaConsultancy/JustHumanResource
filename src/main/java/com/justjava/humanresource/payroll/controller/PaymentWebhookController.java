@@ -1,18 +1,22 @@
 package com.justjava.humanresource.payroll.controller;
 
-import com.justjava.humanresource.payroll.dto.PaymentStatus;
-import com.justjava.humanresource.payroll.entity.PayrollPayment;
-import com.justjava.humanresource.payroll.repositories.PayrollPaymentRepository;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.justjava.humanresource.payroll.service.PayrollPaymentService;
 import lombok.RequiredArgsConstructor;
-import org.flowable.engine.RuntimeService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.HexFormat;
 import java.util.Map;
 
 @RestController
@@ -20,12 +24,27 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class PaymentWebhookController {
 
-    private final PayrollPaymentRepository paymentRepository;
-    private final RuntimeService runtimeService;
+    private final PayrollPaymentService paymentService;
+    private final ObjectMapper objectMapper;
+
+    @Value("${paystack.secret.key}")
+    private String paystackSecretKey;
 
     @PostMapping
-    @Transactional
-    public ResponseEntity<?> handleWebhook(@RequestBody Map<String, Object> payload) {
+    public ResponseEntity<?> handleWebhook(
+            @RequestBody String rawPayload,
+            @RequestHeader(value = "x-paystack-signature", required = false) String signature) {
+
+        if (!validSignature(rawPayload, signature)) {
+            return ResponseEntity.status(401).body("Invalid webhook signature");
+        }
+
+        Map<String, Object> payload;
+        try {
+            payload = objectMapper.readValue(rawPayload, new TypeReference<>() {});
+        } catch (Exception ex) {
+            return ResponseEntity.badRequest().body("Invalid JSON payload");
+        }
 
         // Paystack sends data inside a "data" object
         Map<String, Object> data = (Map<String, Object>) payload.get("data");
@@ -39,60 +58,27 @@ public class PaymentWebhookController {
         if (reference == null) {
             return ResponseEntity.badRequest().body("Missing reference");
         }
-
-        PayrollPayment payment = paymentRepository
-                .findByExternalReference(reference)
-                .orElseThrow(() -> new IllegalStateException("Payment not found"));
-
-        // ----------------------------------------------------
-        // 1. UPDATE PAYMENT STATUS
-        // ----------------------------------------------------
-
-        if ("success".equalsIgnoreCase(status)) {
-            payment.setStatus(PaymentStatus.SUCCESS);
-        } else if ("failed".equalsIgnoreCase(status)) {
-            payment.setStatus(PaymentStatus.FAILED);
-            payment.setFailureReason((String) data.get("reason"));
+        if (!"success".equalsIgnoreCase(status) && !"failed".equalsIgnoreCase(status)) {
+            return ResponseEntity.badRequest().body("Unsupported payment status");
         }
 
-        paymentRepository.save(payment);
-
-        // ----------------------------------------------------
-        // 2. CHECK IF ALL PAYMENTS COMPLETED
-        // ----------------------------------------------------
-
-        Long companyId = payment.getCompanyId();
-
-        long stillProcessing =
-                paymentRepository.countByCompanyIdAndStatusIn(
-                        companyId,
-                        List.of(
-                                PaymentStatus.PENDING,
-                                PaymentStatus.PROCESSING
-                        )
-                );
-
-        long failed =
-                paymentRepository.countByCompanyIdAndStatus(
-                        companyId,
-                        PaymentStatus.FAILED
-                );
-
-        // ----------------------------------------------------
-        // 3. TRIGGER FLOWABLE (ONLY WHEN DONE)
-        // ----------------------------------------------------
-
-
-        if (stillProcessing == 0) {
-            try {
-                String processInstanceId = payment.getProcessInstanceId();
-                runtimeService.messageEventReceived("PAYMENT_MADE", processInstanceId);
-            } catch (Exception e) {
-                // Log the error but DON'T let it crash the whole method
-                System.err.println("Flowable not ready for message: " + e.getMessage());
-            }
-        }
+        paymentService.recordPaymentResult(reference, status, (String) data.get("reason"));
         return ResponseEntity.ok().build();
 
+    }
+
+    private boolean validSignature(String payload, String signature) {
+        if (signature == null || signature.isBlank() || paystackSecretKey == null || paystackSecretKey.isBlank()) {
+            return false;
+        }
+        try {
+            Mac mac = Mac.getInstance("HmacSHA512");
+            mac.init(new SecretKeySpec(paystackSecretKey.getBytes(StandardCharsets.UTF_8), "HmacSHA512"));
+            byte[] expected = mac.doFinal(payload.getBytes(StandardCharsets.UTF_8));
+            byte[] actual = HexFormat.of().parseHex(signature.trim());
+            return MessageDigest.isEqual(expected, actual);
+        } catch (Exception ex) {
+            return false;
+        }
     }
 }

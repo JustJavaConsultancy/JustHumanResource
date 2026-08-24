@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Application status</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>tailwind.config={theme:{extend:{colors:{primary:{600:'#2563eb',700:'#1d4ed8'}}}}}</script>
+    <style>*{font-family:Inter,sans-serif}</style>
+</head>
+<body class="bg-gray-50 text-gray-900 min-h-screen">
+<header class="bg-white border-b">
+    <div class="max-w-5xl mx-auto px-4 py-5">
+        <a href="/careers" class="font-bold text-xl">JUST<span class="text-primary-600">HR</span> Careers</a>
+    </div>
+</header>
+<main class="max-w-5xl mx-auto px-4 py-10 space-y-6">
+    <section class="bg-white rounded-xl border border-gray-200 p-7">
+        <p class="text-sm text-gray-500">Application reference</p>
+        <h1 class="text-2xl font-bold mt-1" th:text="${application.applicationNumber}">APP</h1>
+        <div class="grid md:grid-cols-3 gap-4 mt-6 text-sm">
+            <div>
+                <p class="text-gray-400">Candidate</p>
+                <p class="font-medium" th:text="${candidate.fullName}">Candidate</p>
+            </div>
+            <div>
+                <p class="text-gray-400">Role</p>
+                <p class="font-medium" th:text="${job.jobTitle}">Role</p>
+            </div>
+            <div>
+                <p class="text-gray-400">Status</p>
+                <p class="font-medium" th:text="${application.status}">SUBMITTED</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="bg-white rounded-xl border border-gray-200 p-7">
+        <h2 class="font-bold text-lg">Offers</h2>
+        <div class="space-y-4 mt-4">
+            <article th:each="offer : ${offers}" class="border border-gray-200 rounded-lg p-4">
+                <div class="flex flex-wrap justify-between gap-3">
+                    <div>
+                        <p class="font-semibold" th:text="${offer.currency + ' ' + offer.annualGrossCompensation}">Offer</p>
+                        <p class="text-sm text-gray-500" th:text="${'Version ' + offer.offerVersion + ' expires ' + offer.expiresOn}">Version</p>
+                    </div>
+                    <span class="px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-sm" th:text="${offer.status}">SENT</span>
+                </div>
+                <form th:if="${offer.status.name() == 'SENT'}" method="post"
+                      th:action="@{/careers/applications/{token}/offers/{offerId}/respond(token=${token},offerId=${offer.id})}"
+                      class="flex flex-wrap gap-2 mt-4">
+                    <button name="accepted" value="true" class="px-4 py-2 bg-emerald-600 text-white rounded-lg">Accept offer</button>
+                    <button name="accepted" value="false" class="px-4 py-2 bg-gray-100 rounded-lg">Decline offer</button>
+                </form>
+            </article>
+            <p th:if="${#lists.isEmpty(offers)}" class="text-sm text-gray-500">No offer is available yet.</p>
+        </div>
+    </section>
+</main>
+</body>
+</html>

@@ -26,6 +26,7 @@ public class PayrollPayment extends BaseEntity {
     private Long payrollRunId;
     private Long employeeId;
     private Long companyId;
+    private Long payrollPeriodId;
 
     private BigDecimal amount;
 
