@@ -15,6 +15,7 @@ public class InterviewService {
     private final InterviewPanelMemberRepository panelRepository;
     private final InterviewScorecardRepository scorecardRepository;
     private final JobApplicationRepository applicationRepository;
+    private final RecruitmentService recruitmentService;
 
     @Transactional
     public Interview schedule(Long applicationId, String title, LocalDateTime start, LocalDateTime end,
@@ -34,9 +35,8 @@ public class InterviewService {
             member.setInterviewId(saved.getId()); member.setEmployeeId(employeeId);
             member.setChairperson(employeeId.equals(coordinatorId)); panelRepository.save(member);
         });
-        application.setCurrentStage(RecruitmentStage.INTERVIEW);
-        application.setStatus(ApplicationStatus.IN_PROCESS);
-        applicationRepository.save(application);
+        recruitmentService.moveApplication(applicationId, RecruitmentStage.INTERVIEW, ApplicationStatus.IN_PROCESS,
+                "Interview scheduled", null, coordinatorId);
         return saved;
     }
 
@@ -49,6 +49,9 @@ public class InterviewService {
         boolean panelMember = panelRepository.findByInterviewId(interviewId).stream()
                 .anyMatch(member -> member.getEmployeeId().equals(reviewerId));
         if (!panelMember) throw new IllegalStateException("Only an assigned panel member may submit a scorecard.");
+        if (scorecardRepository.existsByInterviewIdAndReviewerEmployeeId(interviewId, reviewerId)) {
+            throw new IllegalStateException("This panel member has already submitted a scorecard for this interview.");
+        }
         InterviewScorecard card = new InterviewScorecard();
         card.setInterviewId(interviewId); card.setReviewerEmployeeId(reviewerId); card.setOverallScore(score);
         card.setRecommendation(recommendation); card.setComments(comments); card.setSubmittedAt(LocalDateTime.now());

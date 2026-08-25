@@ -31,6 +31,7 @@ public class CandidateHireService {
         EmploymentOffer offer = offerRepository.findFirstByApplicationIdOrderByOfferVersionDesc(applicationId)
                 .filter(o -> o.getStatus() == OfferStatus.ACCEPTED)
                 .orElseThrow(() -> new IllegalStateException("An accepted offer is required before onboarding."));
+        validateHireCommand(hire, offer);
         Candidate candidate = candidateRepository.findById(application.getCandidateId())
                 .orElseThrow(() -> new IllegalStateException("Candidate record not found."));
         StartEmployeeOnboardingCommand command = map(candidate, offer, hire);
@@ -48,7 +49,6 @@ public class CandidateHireService {
     }
 
     private StartEmployeeOnboardingCommand map(Candidate candidate, EmploymentOffer offer, HireCandidateCommand hire) {
-        if (hire.getGroups() == null || hire.getGroups().isEmpty()) throw new IllegalArgumentException("At least one employee group is required.");
         StartEmployeeOnboardingCommand command = new StartEmployeeOnboardingCommand();
         command.setFirstName(candidate.getFirstName()); command.setLastName(candidate.getLastName());
         command.setEmail(candidate.getEmail()); command.setPhoneNumber(candidate.getPhone());
@@ -64,5 +64,13 @@ public class CandidateHireService {
         command.setGuarantorEmail(hire.getGuarantorEmail()); command.setGuarantorAddress(hire.getGuarantorAddress());
         command.setGuarantorNinNumber(hire.getGuarantorNinNumber());
         return command;
+    }
+
+    private void validateHireCommand(HireCandidateCommand hire, EmploymentOffer offer) {
+        if (hire == null) throw new IllegalArgumentException("Onboarding details are required.");
+        if (hire.getDepartmentId() == null) throw new IllegalArgumentException("Department is required before onboarding.");
+        if (hire.getGroups() == null || hire.getGroups().isEmpty()) throw new IllegalArgumentException("At least one employee group is required.");
+        if (hire.getJobStepId() == null && offer.getJobStepId() == null) throw new IllegalArgumentException("Job step is required before onboarding.");
+        if (hire.getPayGroupId() == null && offer.getPayGroupId() == null) throw new IllegalArgumentException("Pay group is required before onboarding.");
     }
 }
