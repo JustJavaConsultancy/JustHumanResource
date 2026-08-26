@@ -110,8 +110,10 @@ public class RecruitmentController {
     public String application(@PathVariable Long id, Model model) {
         var application = applicationRepository.findById(id).orElseThrow();
         requireApplicationAccess(application);
+        model.addAttribute("applicationId",id);
         model.addAttribute("title", application.getApplicationNumber());
         model.addAttribute("subTitle", "Application workflow and activity");
+        model.addAttribute("applicationStatus", application.getStatus().name());
         model.addAttribute("application", application);
         model.addAttribute("candidate", candidateRepository.findById(application.getCandidateId()).orElseThrow());
         model.addAttribute("opening", openingRepository.findById(application.getJobOpeningId()).orElseThrow());
