@@ -1,0 +1,560 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>JustHumanResource Testing Guide</title>
+  <style>
+    :root {
+      --bg: #f6f8fb;
+      --card: #ffffff;
+      --ink: #172033;
+      --muted: #667085;
+      --line: #d9e1ec;
+      --blue: #1d4ed8;
+      --blue-soft: #e8f0ff;
+      --green: #047857;
+      --green-soft: #e8f7ef;
+      --amber: #b45309;
+      --amber-soft: #fff4df;
+      --red: #b42318;
+      --red-soft: #fff0ee;
+      --slate: #0f172a;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.58;
+    }
+    .wrap {
+      max-width: 1160px;
+      margin: 0 auto;
+      padding: 28px;
+    }
+    .hero {
+      background: var(--slate);
+      color: #ffffff;
+      border-radius: 8px;
+      padding: 28px;
+      margin-bottom: 18px;
+    }
+    .hero h1 {
+      margin: 0 0 8px;
+      font-size: 30px;
+      line-height: 1.2;
+    }
+    .hero p {
+      max-width: 860px;
+      margin: 0;
+      color: #d8e1f0;
+    }
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 5px 10px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      color: #eef4ff;
+      font-size: 13px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 16px;
+    }
+    .card {
+      grid-column: span 12;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 20px;
+    }
+    .half { grid-column: span 6; }
+    .third { grid-column: span 4; }
+    h2, h3 {
+      margin-top: 0;
+      line-height: 1.25;
+    }
+    h2 {
+      font-size: 22px;
+      margin-bottom: 8px;
+    }
+    h3 {
+      font-size: 17px;
+      margin-bottom: 8px;
+    }
+    p { margin: 8px 0 0; }
+    ul, ol {
+      margin: 10px 0 0;
+      padding-left: 22px;
+    }
+    li { margin: 6px 0; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+    }
+    th, td {
+      border-bottom: 1px solid var(--line);
+      padding: 10px 8px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      color: #344054;
+      background: #f8fafc;
+      font-size: 13px;
+    }
+    code {
+      background: #eef2f7;
+      color: #111827;
+      border-radius: 5px;
+      padding: 2px 6px;
+      font-family: Consolas, Monaco, monospace;
+      font-size: 13px;
+    }
+    .muted { color: var(--muted); }
+    .callout {
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin: 12px 0 0;
+      border: 1px solid var(--line);
+      background: #f8fafc;
+    }
+    .ok { background: var(--green-soft); border-color: #b7e4ca; }
+    .warn { background: var(--amber-soft); border-color: #f4d08e; }
+    .risk { background: var(--red-soft); border-color: #f4b4ad; }
+    .blue { background: var(--blue-soft); border-color: #c6d7ff; }
+    .tag {
+      display: inline-block;
+      border-radius: 999px;
+      padding: 3px 8px;
+      font-size: 12px;
+      font-weight: bold;
+      white-space: nowrap;
+    }
+    .tag.blue { color: var(--blue); }
+    .tag.green { color: var(--green); }
+    .tag.amber { color: var(--amber); }
+    .tag.red { color: var(--red); }
+    .toc a {
+      color: var(--blue);
+      text-decoration: none;
+    }
+    .checklist td:first-child {
+      width: 28px;
+      color: var(--muted);
+    }
+    @media (max-width: 780px) {
+      .wrap { padding: 18px; }
+      .half, .third { grid-column: span 12; }
+      table { font-size: 14px; }
+      th, td { padding: 8px 6px; }
+    }
+    @media print {
+      body { background: #ffffff; }
+      .wrap { max-width: none; padding: 0; }
+      .card, .hero { break-inside: avoid; }
+      .hero { background: #ffffff; color: #000000; border: 1px solid #999999; }
+      .hero p, .pill { color: #000000; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <h1>JustHumanResource Testing Guide</h1>
+      <p>
+        End-to-end tester walkthrough for validating the JustHumanResource application as a whole, including setup,
+        employee lifecycle, payroll, leave, KPI, recruitment, requests, finance, reports, mobile views, and access control.
+      </p>
+      <div class="meta">
+        <span class="pill">Format: HTML</span>
+        <span class="pill">Application: JustHumanResource</span>
+        <span class="pill">Stack: Spring Boot, Thymeleaf, Flowable, Keycloak</span>
+        <span class="pill">Last updated: 2026-08-26</span>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="card half toc">
+        <h2>How To Use This Guide</h2>
+        <ol>
+          <li>Run tests in the same logical order as the guide, because later flows depend on earlier setup data.</li>
+          <li>Record evidence for every major step: screenshot, created record number, downloaded file, email result, or API response.</li>
+          <li>Retest failed items after fixes using the same user role and the same data condition.</li>
+          <li>Use a clean test company, test employees, and test payroll periods. Do not run finance/payment tests against real payroll data.</li>
+        </ol>
+      </div>
+
+      <div class="card half">
+        <h2>Suggested Test Accounts</h2>
+        <table>
+          <thead><tr><th>Role</th><th>Purpose</th><th>Expected Area</th></tr></thead>
+          <tbody>
+            <tr><td>Admin</td><td>User and group administration</td><td><code>/admin/users</code></td></tr>
+            <tr><td>HR Admin</td><td>Organization setup, employee setup, payroll setup, reports</td><td>Main HR sidebar</td></tr>
+            <tr><td>Restricted HR</td><td>Validate employee/payroll visibility restrictions</td><td>HR screens with filtered records</td></tr>
+            <tr><td>Job HR</td><td>Validate job-grade scoped employee access</td><td>Employee and payroll records for assigned grade</td></tr>
+            <tr><td>Line Manager</td><td>Leave, request, KPI, and appraisal approvals</td><td>Approval task lists</td></tr>
+            <tr><td>Employee</td><td>Self-service portal and mobile portal</td><td><code>/employee/dashboard</code></td></tr>
+            <tr><td>Finance Officer</td><td>Period close approval, bank details, journals, posting</td><td><code>/finance/dashboard</code></td></tr>
+            <tr><td>Asset Manager</td><td>Asset catalog and asset request validation</td><td>Asset catalog and request flow</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>Pre-Test Environment Checklist</h2>
+        <table class="checklist">
+          <tbody>
+            <tr><td>[ ]</td><td>Application is running and the tester can reach the base URL, login page, and Swagger/OpenAPI page if enabled.</td></tr>
+            <tr><td>[ ]</td><td>PostgreSQL database is connected and contains a test company context.</td></tr>
+            <tr><td>[ ]</td><td>Keycloak/OIDC login works for each tester role, and logout returns the user to a non-authenticated state.</td></tr>
+            <tr><td>[ ]</td><td>Flowable process definitions are deployed: onboarding, leave approval, payroll approval, payroll close, recruitment, KPI, and generic requests.</td></tr>
+            <tr><td>[ ]</td><td>Email provider settings are either valid for testing or intentionally stubbed, with expected behavior documented.</td></tr>
+            <tr><td>[ ]</td><td>Payment gateway/webhook settings are test-mode only.</td></tr>
+            <tr><td>[ ]</td><td>Fixed Asset Management integration is configured or the local asset catalog fallback is populated.</td></tr>
+            <tr><td>[ ]</td><td>Browser matrix is defined. At minimum test current Chrome/Edge desktop and a mobile viewport.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card" id="flow">
+        <h2>Full End-To-End Walkthrough</h2>
+        <p class="muted">This is the recommended happy-path order for walking through the whole application.</p>
+        <ol>
+          <li>Login as Admin and confirm users, groups, roles, enable/disable, and password reset actions.</li>
+          <li>Login as HR and create core organization data: departments, job grades, job steps, pay groups, PAYE bands, pension schemes, and payroll pay items.</li>
+          <li>Create or onboard employees, attach job/payroll data, upload documents, and assign employee-specific pay items.</li>
+          <li>Login as Employee and validate profile, bank information, documents, payroll view, leave request, KPI view, and generic request creation.</li>
+          <li>Login as Manager/Approver and approve, reject, or return employee leave and generic requests.</li>
+          <li>Run KPI setup, assignment, measurement upload/manual entry, appraisal start, self-review, manager review, and reports.</li>
+          <li>Run recruitment from job opening to candidate application, interview, offer, approval, and candidate onboarding.</li>
+          <li>Run payroll from setup to calculation, review, payslip generation, approval, reports, payment/posting, and period close.</li>
+          <li>Login as Finance Officer and validate lock approval, closed periods, bank details, journals, and posting exports.</li>
+          <li>Validate mobile employee screens and biometric wrapper expectations if testing the packaged mobile build.</li>
+          <li>Repeat key screens with restricted roles to confirm records and actions are hidden where required.</li>
+        </ol>
+      </div>
+
+      <div class="card">
+        <h2>1. Authentication, Navigation, And Access Control</h2>
+        <table>
+          <thead><tr><th>Step</th><th>Action</th><th>Expected Result</th></tr></thead>
+          <tbody>
+            <tr><td>1.1</td><td>Open the base URL and access a protected page such as <code>/employees</code>.</td><td>User is redirected to login when unauthenticated.</td></tr>
+            <tr><td>1.2</td><td>Login with each role listed in the test accounts table.</td><td>Correct landing page, sidebar, display name, and role-specific menu items appear.</td></tr>
+            <tr><td>1.3</td><td>Use the sidebar, browser back button, page refresh, and direct URL entry.</td><td>Navigation remains stable and protected pages preserve authorization checks.</td></tr>
+            <tr><td>1.4</td><td>Toggle light/dark mode and open the mobile sidebar at a narrow viewport.</td><td>Theme persists, sidebar opens/closes, and no text overlaps on desktop or mobile widths.</td></tr>
+            <tr><td>1.5</td><td>Logout from each role.</td><td>Confirmation modal appears, logout completes via POST, and protected pages require login again.</td></tr>
+            <tr><td>1.6</td><td>Try HR-only pages as Employee and finance pages as HR if not permitted.</td><td>Access is denied or user is redirected to the correct portal.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>2. Admin User Management</h2>
+        <p>Primary screen: <code>/admin/users</code>.</p>
+        <table class="checklist">
+          <tbody>
+            <tr><td>[ ]</td><td>Create a new user with valid identity details and confirm the user appears in the list.</td></tr>
+            <tr><td>[ ]</td><td>Create a group and assign a user to the group. Confirm group membership can be read back from the UI/API.</td></tr>
+            <tr><td>[ ]</td><td>Remove a user from a group and confirm permissions update after re-login.</td></tr>
+            <tr><td>[ ]</td><td>Disable a user and confirm the user can no longer login.</td></tr>
+            <tr><td>[ ]</td><td>Re-enable the user and confirm login works again.</td></tr>
+            <tr><td>[ ]</td><td>Trigger password reset email and verify either the email is sent or the configured stub/failure message is clear.</td></tr>
+            <tr><td>[ ]</td><td>Delete only a throwaway test user and verify it is removed from the list and identity provider.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>3. Organization And HR Setup</h2>
+        <table>
+          <thead><tr><th>Area</th><th>Steps</th><th>Expected Result</th></tr></thead>
+          <tbody>
+            <tr><td>Departments and organogram</td><td>Open <code>/departments</code>, add departments, and review hierarchy/organogram display.</td><td>Department is saved, listed, and selectable from employee/job screens.</td></tr>
+            <tr><td>Job structure</td><td>Open <code>/job-structure</code>, create job grades and job steps with gross salary values.</td><td>Job steps are associated with grades and available during employee onboarding.</td></tr>
+            <tr><td>Pay groups</td><td>Open Payroll, Pay Groups tab, create a pay group, set pay frequency, and assign allowances/deductions/tax reliefs.</td><td>Pay group is active and its effective-dated pay items are visible.</td></tr>
+            <tr><td>PAYE bands</td><td>Open <code>/tax-band</code>, create/update PAYE bands and upload CSV where applicable.</td><td>Effective bands are listed with valid range, rate, regime, and status.</td></tr>
+            <tr><td>Pension schemes</td><td>Open <code>/pension</code>, create and update pension setup records.</td><td>Pension configuration is available for payroll calculations and reports.</td></tr>
+            <tr><td>Asset catalog</td><td>Validate asset catalog records or external FAM-backed asset lookup.</td><td>Requestable assets have code, name, category, unit, and available quantity.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>4. Employee Lifecycle</h2>
+        <p>Primary screens: <code>/employees</code>, <code>/employee/dashboard</code>, <code>/employee/profile</code>, <code>/employee/documents</code>.</p>
+        <ol>
+          <li>As HR, create an employee/onboarding record with department, job step, pay group, line manager, email, TIN/RSA/PFA, and bank details.</li>
+          <li>Confirm duplicate email validation blocks duplicate work or personal email values.</li>
+          <li>Upload an employee CSV using the supplied employee template and confirm valid rows are imported and invalid rows return readable errors.</li>
+          <li>Open the employee record, update personal, job, pay group, and bank information. Confirm position history updates where applicable.</li>
+          <li>Upload employee documents, view, download, and delete a test document.</li>
+          <li>Assign employee-specific allowances, deductions, and tax reliefs. Confirm they appear in payroll pay item views.</li>
+          <li>Suspend an employee for a date range and confirm payroll excludes the employee where the period overlaps the suspension.</li>
+          <li>Unsuspend the employee and confirm the employee returns to active payroll eligibility.</li>
+          <li>Toggle restricted visibility and verify Restricted HR and Job HR users see only permitted employee records.</li>
+        </ol>
+        <div class="callout blue">
+          Evidence to capture: employee ID, onboarding/workflow status, uploaded document name, pay item assignment, and visibility result for restricted roles.
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>5. Employee Self-Service Portal</h2>
+        <table class="checklist">
+          <tbody>
+            <tr><td>[ ]</td><td>Dashboard shows employee summary cards, pending items, and recent activity without HR-only actions.</td></tr>
+            <tr><td>[ ]</td><td>Profile page allows employee personal info and bank info updates according to allowed fields.</td></tr>
+            <tr><td>[ ]</td><td>Documents page lists available employee documents and supports download/view where permitted.</td></tr>
+            <tr><td>[ ]</td><td>Payroll page shows current and previous payslips only for the logged-in employee.</td></tr>
+            <tr><td>[ ]</td><td>Leave page lets the employee create leave requests and view request history.</td></tr>
+            <tr><td>[ ]</td><td>KPI page shows assigned KPIs, measurements, appraisal/self-review tasks, and score information.</td></tr>
+            <tr><td>[ ]</td><td>Requests page lets the employee create, save, submit, comment on, attach files to, cancel, and monitor requests.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>6. Leave Management Flow</h2>
+        <p>Primary screens: <code>/leave</code> for HR/approvers and <code>/employee/leave</code> for employees.</p>
+        <table>
+          <thead><tr><th>Step</th><th>Tester Action</th><th>Expected Result</th></tr></thead>
+          <tbody>
+            <tr><td>6.1</td><td>Create leave request with leave type, start/end dates, reason, and stand-in if required.</td><td>Leave request is created with pending approval status and visible in My Leaves.</td></tr>
+            <tr><td>6.2</td><td>Check required field validation and invalid date ranges.</td><td>Missing/invalid data is rejected with a clear message.</td></tr>
+            <tr><td>6.3</td><td>Login as line manager/approver and open pending leave tasks.</td><td>Task appears with employee, dates, comments, and action buttons.</td></tr>
+            <tr><td>6.4</td><td>Approve the leave request.</td><td>Status advances through the approval chain and eventually becomes approved.</td></tr>
+            <tr><td>6.5</td><td>Create another leave request and reject it with a comment.</td><td>Status becomes rejected and the employee can see the rejection/comment.</td></tr>
+            <tr><td>6.6</td><td>Open approval steps/timeline.</td><td>Each approver decision, pending step, and timestamp is displayed consistently.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>7. Request Workflow</h2>
+        <p>Primary screens: <code>/requests</code>, <code>/employee/requests</code>, and request detail pages.</p>
+        <table>
+          <thead><tr><th>Request Type</th><th>Required Checks</th><th>Expected Result</th></tr></thead>
+          <tbody>
+            <tr><td>General Request</td><td>Create, save draft, edit, submit, approve, reject, return for correction, comment, close.</td><td>Request status and timeline match each action.</td></tr>
+            <tr><td>Staff Requisition</td><td>Enter department, job grade, employment type, headcount, reason, justification, and expected date.</td><td>Approvers can review staffing details before approval.</td></tr>
+            <tr><td>File Request</td><td>Enter file category, confidentiality, access type, purpose, and attach supporting document if needed.</td><td>Request is routed and displays access details clearly.</td></tr>
+            <tr><td>Asset Request</td><td>Select FAM/local catalog asset, quantity, required date, and business justification.</td><td>Submission requires at least one valid asset and respects available quantity.</td></tr>
+            <tr><td>Expense Reimbursement</td><td>Add expense period, purpose, payment method, currency, receipt, and expense lines.</td><td>Total is calculated from lines and receipt/supporting file is required.</td></tr>
+          </tbody>
+        </table>
+        <div class="callout warn">
+          Include negative tests for attachments: unsupported type, oversized file if configured, delete attachment, and download by unauthorized user.
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>8. Approval Paths And Routing</h2>
+        <p>Primary API surface: <code>/api/approval-paths</code> and request type route settings.</p>
+        <table class="checklist">
+          <tbody>
+            <tr><td>[ ]</td><td>Create a custom approval path with ordered approver steps.</td></tr>
+            <tr><td>[ ]</td><td>Enable and disable the custom path and confirm only enabled paths are selectable.</td></tr>
+            <tr><td>[ ]</td><td>Assign a request type to line-manager routing and confirm the employee's manager receives the task.</td></tr>
+            <tr><td>[ ]</td><td>Assign a request type to custom routing and confirm each configured approver receives the task in sequence.</td></tr>
+            <tr><td>[ ]</td><td>Confirm returned requests can be corrected and resubmitted without losing comments/attachments.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>9. KPI And Appraisal Flow</h2>
+        <p>Primary screens: <code>/kpi</code>, <code>/kpi-report/dashboard</code>, <code>/kpi-report/scorecard</code>, and employee KPI screens.</p>
+        <ol>
+          <li>Create KPI definitions with code/name, category, unit, target, weight, and scoring details.</li>
+          <li>Assign KPIs by employee, department, and job step. Confirm assignment totals respect maximum KPI weight.</li>
+          <li>Record KPI measurements manually for a selected period and confirm score calculations update.</li>
+          <li>Download the KPI CSV template, upload valid and invalid measurement files, and verify row-level import feedback.</li>
+          <li>Start an appraisal cycle for an employee and confirm Flowable tasks are generated.</li>
+          <li>Login as Employee and complete self-review from the employee KPI/performance screen.</li>
+          <li>Login as Manager and complete manager review/finalize appraisal.</li>
+          <li>Review KPI dashboard, scorecard, department report, top performers, appraisal summary, and employee scorecard.</li>
+          <li>Validate quarterly and monthly orchestrator behavior if scheduled process testing is in scope.</li>
+        </ol>
+      </div>
+
+      <div class="card">
+        <h2>10. Recruitment-To-Onboarding Flow</h2>
+        <p>Primary screens: <code>/recruitment</code>, <code>/recruitment/job-openings</code>, <code>/recruitment/applications</code>, and public <code>/careers</code> pages.</p>
+        <table>
+          <thead><tr><th>Step</th><th>Action</th><th>Expected Result</th></tr></thead>
+          <tbody>
+            <tr><td>10.1</td><td>Create a job opening with title, department, job grade, vacancies, and description.</td><td>Opening starts in draft/preparation state.</td></tr>
+            <tr><td>10.2</td><td>Prepare and review the opening for publication.</td><td>Approved opening appears on public careers pages.</td></tr>
+            <tr><td>10.3</td><td>As candidate, open job detail and submit application with required details/documents.</td><td>Application success page appears and status can be tracked.</td></tr>
+            <tr><td>10.4</td><td>As recruiter, review application detail and move candidate through decision stages.</td><td>Application status and activity history update.</td></tr>
+            <tr><td>10.5</td><td>Schedule interview and submit scorecard.</td><td>Interview result is saved and visible on the application.</td></tr>
+            <tr><td>10.6</td><td>Create offer, approve/reject offer, and send approved offer.</td><td>Offer status changes correctly and candidate/application reflects the outcome.</td></tr>
+            <tr><td>10.7</td><td>Start onboarding from a successful application.</td><td>Employee onboarding is created and candidate data flows into employee setup.</td></tr>
+            <tr><td>10.8</td><td>Close the job opening.</td><td>Opening is no longer available for new public applications.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>11. Payroll Setup And Processing</h2>
+        <p>Primary screens: <code>/payroll</code>, payroll fragments/tabs, <code>/payroll/historical-adjustments</code>, and payroll reports.</p>
+        <ol>
+          <li>Create allowances, deductions, and tax reliefs. Include taxable allowance and statutory deduction cases.</li>
+          <li>Update pay items and verify inactive/deleted items no longer apply to future payroll calculations.</li>
+          <li>Assign pay items to pay groups with effective dates and confirm removed items are deactivated, not duplicated.</li>
+          <li>Assign pay items directly to an employee and confirm employee-level overrides are reflected.</li>
+          <li>Create or identify the current payroll period and confirm status before processing.</li>
+          <li>Run payroll processing for the current period and confirm employee runs are generated.</li>
+          <li>Inspect payroll run calculations: gross salary, allowances, taxable income, PAYE, pension, deductions, net pay, and employer pension where shown.</li>
+          <li>Approve/post payroll through the configured payroll approval workflow.</li>
+          <li>Generate payslips, view current payslips, and verify employee self-service can see only their own payslip.</li>
+          <li>Email current and past payslips, confirming success or configured email failure behavior.</li>
+          <li>Close/lock the payroll period and confirm no blocked employee creation or payroll changes can affect the closed period.</li>
+          <li>Create a historical payroll adjustment for a closed period and verify versioned correction/audit behavior.</li>
+        </ol>
+        <div class="callout risk">
+          Do not test real payment disbursement in a shared environment. Use a payment sandbox and capture only test transaction references.
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>12. Payroll Reports</h2>
+        <table class="checklist">
+          <tbody>
+            <tr><td>[ ]</td><td>Open <code>/reporting</code> and verify payroll report totals match the processed period.</td></tr>
+            <tr><td>[ ]</td><td>Open <code>/payroll/master-report</code> and confirm employee-level payroll details are complete.</td></tr>
+            <tr><td>[ ]</td><td>Open PAYE report and verify PAYE totals match payslip deduction lines.</td></tr>
+            <tr><td>[ ]</td><td>Open Pension report and verify employee pension, employer pension, RSA PIN, and PFA information.</td></tr>
+            <tr><td>[ ]</td><td>Open variance report and compare current period against a previous closed period.</td></tr>
+            <tr><td>[ ]</td><td>Group reports by job grade and pay group where available and verify totals remain consistent.</td></tr>
+            <tr><td>[ ]</td><td>Export/download available report files and verify filenames, columns, and totals.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>13. Finance And Accounting</h2>
+        <p>Primary screens: <code>/finance/dashboard</code>, <code>/finance/lockApproval</code>, <code>/finance/lockedPeriods</code>, <code>/finance/bankDetails</code>, <code>/finance/posting</code>, <code>/finance/accounting-settings</code>.</p>
+        <table>
+          <thead><tr><th>Area</th><th>Steps</th><th>Expected Result</th></tr></thead>
+          <tbody>
+            <tr><td>Dashboard</td><td>Review current period, YTD gross/net/PAYE/pension summaries, and recent closed periods.</td><td>Totals match payroll source data.</td></tr>
+            <tr><td>Lock approval</td><td>Approve and reject period lock tasks as Finance Officer.</td><td>Task status and period status update correctly.</td></tr>
+            <tr><td>Closed periods</td><td>Open closed period history and inspect payroll totals.</td><td>Closed periods are immutable except through approved historical adjustment flows.</td></tr>
+            <tr><td>Bank details</td><td>Review employee bank details for payroll payment readiness.</td><td>Missing/invalid bank details are visible for correction.</td></tr>
+            <tr><td>Posting</td><td>Generate/review accounting journal entries and export journal CSV.</td><td>Debit and credit lines balance, account mappings are applied, and CSV downloads correctly.</td></tr>
+            <tr><td>Accounting settings</td><td>Update default earning, PAYE, pension, employer pension, and residual adjustment accounts.</td><td>Settings persist and drive subsequent journal generation.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>14. Asset Catalog And Integrations</h2>
+        <table class="checklist">
+          <tbody>
+            <tr><td>[ ]</td><td>Create asset catalog items with name, category, available quantity, status, and generated/entered asset code.</td></tr>
+            <tr><td>[ ]</td><td>Update asset catalog item details and confirm request screens receive updated values.</td></tr>
+            <tr><td>[ ]</td><td>Deactivate/unrequestable assets and verify they are hidden from new asset requests.</td></tr>
+            <tr><td>[ ]</td><td>Simulate FAM integration failure and confirm the user sees a clear unavailable/retry message.</td></tr>
+            <tr><td>[ ]</td><td>Validate payment webhook behavior with a sandbox event and confirm duplicate webhook handling is safe.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>15. Mobile Employee Experience</h2>
+        <p>Primary routes: <code>/mobile/employee/dashboard</code>, <code>/mobile/employee/performance</code>, <code>/mobile/employee/payroll</code>, <code>/mobile/employee/profile</code>, plus mobile leave/documents where enabled.</p>
+        <ol>
+          <li>Open the mobile routes in a phone-sized viewport and confirm bottom navigation highlights the current screen.</li>
+          <li>Validate mobile dashboard data matches desktop employee dashboard data.</li>
+          <li>Validate mobile KPI, payroll, and profile screens show only the logged-in employee data.</li>
+          <li>Open the static wrapper at <code>/hr-mobile-v1/index.html</code> if testing the packaged mobile app shell.</li>
+          <li>For biometric testing, confirm first login uses normal OIDC login, later launches use biometric prompt plus refresh-token flow, and expired refresh falls back to login.</li>
+          <li>Rotate viewport/device orientation and confirm layout remains readable with no clipped critical actions.</li>
+        </ol>
+      </div>
+
+      <div class="card">
+        <h2>16. Audit, Logs, Errors, And Security Regression</h2>
+        <table class="checklist">
+          <tbody>
+            <tr><td>[ ]</td><td>Create, update, and delete representative records and confirm audit log/access log entries are created where expected.</td></tr>
+            <tr><td>[ ]</td><td>Trigger validation errors on forms and APIs and confirm messages are understandable and do not expose stack traces.</td></tr>
+            <tr><td>[ ]</td><td>Open a non-existent page and a forced server-error scenario if available. Confirm branded error pages appear.</td></tr>
+            <tr><td>[ ]</td><td>Attempt direct object access: employee A trying to download employee B documents, payslips, requests, or attachments.</td></tr>
+            <tr><td>[ ]</td><td>Verify CSRF/session behavior for form posts and logout.</td></tr>
+            <tr><td>[ ]</td><td>Confirm restricted HR and Job HR scoping applies consistently across employee list, payroll, reports, documents, and APIs.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>17. Cross-Browser And UI Regression</h2>
+        <table>
+          <thead><tr><th>Check</th><th>Expected Result</th></tr></thead>
+          <tbody>
+            <tr><td>Desktop widths: 1440px, 1280px, 1024px</td><td>Sidebar, header, modals, tables, and tabs are readable without horizontal page overflow.</td></tr>
+            <tr><td>Mobile widths: 390px and 360px</td><td>Navigation, forms, date inputs, tables, and action buttons remain usable.</td></tr>
+            <tr><td>Modal dialogs</td><td>Open, close, submit, and validation states work with mouse and keyboard.</td></tr>
+            <tr><td>Tables and reports</td><td>Long names, account numbers, salary values, and comments wrap or scroll cleanly.</td></tr>
+            <tr><td>HTMX/fragment updates</td><td>Submitting a form refreshes only the intended section and does not duplicate rows or lose state.</td></tr>
+            <tr><td>Dark mode</td><td>Text, badges, tables, and form fields remain legible.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>18. Test Completion Checklist</h2>
+        <table class="checklist">
+          <tbody>
+            <tr><td>[ ]</td><td>All critical happy-path flows completed: employee onboarding, leave, request, KPI/appraisal, recruitment, payroll, finance close/posting.</td></tr>
+            <tr><td>[ ]</td><td>At least one reject/return path was tested for leave, requests, recruitment offer, and payroll/finance approval.</td></tr>
+            <tr><td>[ ]</td><td>All generated files were checked: payslip, payroll reports, journal CSV, CSV templates/import result files if available.</td></tr>
+            <tr><td>[ ]</td><td>All role-based access checks passed or defects were logged with user, URL, expected result, and actual result.</td></tr>
+            <tr><td>[ ]</td><td>All failed validations show actionable messages and no sensitive technical details.</td></tr>
+            <tr><td>[ ]</td><td>Defects include reproduction steps, role, browser, test data IDs, screenshots, and environment details.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>Appendix: Main Tester Navigation Map</h2>
+        <table>
+          <thead><tr><th>Module</th><th>Primary Paths</th></tr></thead>
+          <tbody>
+            <tr><td>Login/Home</td><td><code>/login</code>, <code>/</code></td></tr>
+            <tr><td>Admin</td><td><code>/admin/users</code></td></tr>
+            <tr><td>Departments/Organogram</td><td><code>/departments</code></td></tr>
+            <tr><td>Employees</td><td><code>/employees</code>, <code>/employee/dashboard</code>, <code>/employee/profile</code>, <code>/employee/documents</code></td></tr>
+            <tr><td>Job Structure</td><td><code>/job-structure</code></td></tr>
+            <tr><td>Payroll</td><td><code>/payroll</code>, <code>/payroll/historical-adjustments</code>, <code>/payroll/master-report</code></td></tr>
+            <tr><td>PAYE/Pension</td><td><code>/tax-band</code>, <code>/pension</code>, <code>/reporting/paye-report</code>, <code>/reporting/pension-report</code></td></tr>
+            <tr><td>Leave</td><td><code>/leave</code>, <code>/employee/leave</code></td></tr>
+            <tr><td>Requests</td><td><code>/requests</code>, <code>/employee/requests</code>, <code>/requests/userGuide</code></td></tr>
+            <tr><td>KPI</td><td><code>/kpi</code>, <code>/kpi/user-guide</code>, <code>/kpi-report/dashboard</code>, <code>/kpi-report/top-performers</code>, <code>/kpi-report/scorecard</code></td></tr>
+            <tr><td>Recruitment/Careers</td><td><code>/recruitment</code>, <code>/recruitment/job-openings</code>, <code>/recruitment/applications</code>, <code>/careers</code></td></tr>
+            <tr><td>Finance</td><td><code>/finance/dashboard</code>, <code>/finance/lockApproval</code>, <code>/finance/lockedPeriods</code>, <code>/finance/bankDetails</code>, <code>/finance/posting</code>, <code>/finance/accounting-settings</code></td></tr>
+            <tr><td>Mobile</td><td><code>/mobile/employee/dashboard</code>, <code>/mobile/employee/performance</code>, <code>/mobile/employee/payroll</code>, <code>/mobile/employee/profile</code>, <code>/hr-mobile-v1/index.html</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</body>
+</html>
