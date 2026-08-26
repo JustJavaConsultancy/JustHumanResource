@@ -240,7 +240,8 @@ public class RecruitmentController {
     }
     private boolean hasRecruitmentAccess() {
         return authenticationManager.isHumanResource() || authenticationManager.isAdmin()
-                || authenticationManager.isJobHR() || authenticationManager.isRestrictedHr();
+                || authenticationManager.isJobHR() || authenticationManager.isRestrictedHr()
+                || authenticationManager.isHiringManager();
     }
     private void requireRecruitmentAccess() {
         if (!hasRecruitmentAccess()) throw new IllegalStateException("Recruitment access is required.");

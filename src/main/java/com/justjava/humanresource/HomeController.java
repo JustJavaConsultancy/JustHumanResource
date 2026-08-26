@@ -21,6 +21,8 @@ public class HomeController {
 
         if (authenticationManager.isEmployee()) {
             return "redirect:/employee/dashboard";
+        } else if (authenticationManager.isHiringManager()) {
+            return "redirect:/recruitment";
         } else if (authenticationManager.isFinancialOfficer()) {
             return "redirect:/finance/dashboard";
         } else if (authenticationManager.isAdmin()) {

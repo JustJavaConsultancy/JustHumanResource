@@ -40,7 +40,8 @@ public class Oauth2SecurityConfig {
             "admin",
             "humanresource",
             "jobhr",
-            "restrictedhr"
+            "restrictedhr",
+            "hiringmanager"
     );
 
     private static final Set<String> MOBILE_ALLOWED_GROUPS = Set.of(
