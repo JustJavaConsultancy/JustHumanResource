@@ -255,6 +255,7 @@ public class OrganogramServiceImpl implements OrganogramService {
     @Transactional(readOnly = true)
     public List<EmployeeDTO> getDepartmentHeadCandidates() {
 
+        System.out.println("The employes in the group auditor" + employeeRepository.findActiveEmployeesInGroup("employees"));
         return employeeRepository.findActiveEmployeesInGroup(DEPARTMENT_HEAD_GROUP).stream()
                 .map(this::mapToDepartmentHeadCandidateDTO)
                 .toList();

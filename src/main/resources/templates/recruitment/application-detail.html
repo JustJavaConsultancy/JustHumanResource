@@ -39,11 +39,11 @@
                   th:action="@{/recruitment/applications/{id}/decision(id=${application.id})}"
                   class="mt-4 space-y-3">
                 <textarea name="recruitmentComment" class="form-input" rows="3" placeholder="Decision comments"></textarea>
-                <div class="grid grid-cols-2 gap-2" th:if="${application.currentStage.name() != 'PRE_EMPLOYMENT'}">
-                    <button th:if="${application.currentStage.name() != 'OFFER'}" name="recruitmentDecision" value="REJECT" class="px-2 py-2 bg-red-50 text-red-700 rounded-lg text-sm">Reject</button>
-                    <button th:if="${application.currentStage.name() != 'OFFER'}" name="recruitmentDecision" value="HOLD" class="px-2 py-2 bg-amber-50 text-amber-700 rounded-lg text-sm">Hold</button>
-                    <button th:if="${application.currentStage.name() != 'OFFER'}" name="recruitmentDecision" value="ADVANCE" class="px-2 py-2 bg-primary-600 text-white rounded-lg text-sm">Advance</button>
-                    <button th:if="${application.currentStage.name() == 'OFFER'}" name="recruitmentDecision" value="DECLINE_OFFER" class="px-2 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg text-sm">Record decline</button>
+                <div class="grid grid-cols-2 gap-2" th:if="${application.currentStage != null and application.currentStage.name() != 'PRE_EMPLOYMENT'}">
+                    <button th:if="${application.currentStage == null or application.currentStage.name() != 'OFFER'}" name="recruitmentDecision" value="REJECT" class="px-2 py-2 bg-red-50 text-red-700 rounded-lg text-sm">Reject</button>
+                    <button th:if="${application.currentStage == null or application.currentStage.name() != 'OFFER'}" name="recruitmentDecision" value="HOLD" class="px-2 py-2 bg-amber-50 text-amber-700 rounded-lg text-sm">Hold</button>
+                    <button th:if="${application.currentStage == null or application.currentStage.name() != 'OFFER'}" name="recruitmentDecision" value="ADVANCE" class="px-2 py-2 bg-primary-600 text-white rounded-lg text-sm">Advance</button>
+                    <button th:if="${application.currentStage != null and application.currentStage.name() == 'OFFER'}" name="recruitmentDecision" value="DECLINE_OFFER" class="px-2 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg text-sm">Record decline</button>
                 </div>
             </form>
         </aside>
@@ -199,7 +199,7 @@
                 </div>
                 <div class="flex justify-end">
                     <button class="px-4 py-2 bg-emerald-600 text-white rounded-lg"
-                            th:disabled="${application.status.name() != 'OFFER_ACCEPTED'}">Start onboarding</button>
+                            th:disabled="${application.status == null or application.status.name() != 'OFFER_ACCEPTED'}">Start onboarding</button>
                 </div>
             </form>
             <p th:if="${conversion != null}" class="text-sm text-emerald-600 mt-3" th:text="${'Onboarding started for employee #' + conversion.employeeId}">Converted</p>

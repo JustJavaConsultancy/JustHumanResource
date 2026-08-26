@@ -90,6 +90,7 @@ public class OrganogramController {
     // employees carrying the "departmentHead" group in Keycloak.
     @GetMapping("/employees/department-heads")
     public List<EmployeeDTO> getDepartmentHeadCandidates() {
+        System.out.println("This are the department head candidates" + organogramService.getDepartmentHeadCandidates());
         return organogramService.getDepartmentHeadCandidates();
     }
 
