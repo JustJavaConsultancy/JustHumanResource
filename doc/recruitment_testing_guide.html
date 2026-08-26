@@ -1,0 +1,664 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JustHumanResource Recruitment Testing Guide</title>
+  <style>
+    :root {
+      --bg: #f6f8fb;
+      --card: #ffffff;
+      --ink: #172033;
+      --muted: #667085;
+      --line: #d9e1ec;
+      --blue: #1d4ed8;
+      --green: #047857;
+      --amber: #b45309;
+      --red: #b42318;
+      --slate: #0f172a;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.55;
+    }
+    .wrap {
+      max-width: 1040px;
+      margin: 0 auto;
+      padding: 28px;
+    }
+    .hero {
+      background: var(--slate);
+      color: #ffffff;
+      border-radius: 8px;
+      padding: 28px;
+      margin-bottom: 16px;
+    }
+    .hero h1 {
+      margin: 0 0 8px;
+      font-size: 30px;
+      line-height: 1.2;
+    }
+    .hero p {
+      max-width: 820px;
+      margin: 0;
+      color: #d8e1f0;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    h2, h3 {
+      margin-top: 0;
+      line-height: 1.25;
+    }
+    h2 {
+      font-size: 22px;
+      margin-bottom: 10px;
+    }
+    h3 {
+      font-size: 17px;
+      margin-bottom: 8px;
+    }
+    p { margin: 8px 0 0; }
+    ol, ul {
+      margin: 10px 0 0;
+      padding-left: 22px;
+    }
+    li { margin: 7px 0; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+    }
+    th, td {
+      border-bottom: 1px solid var(--line);
+      padding: 10px 8px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      background: #f8fafc;
+      color: #344054;
+      font-size: 13px;
+    }
+    .muted { color: var(--muted); }
+    .note {
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin-top: 12px;
+      background: #eef4ff;
+      border: 1px solid #c6d7ff;
+    }
+    .warning {
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin-top: 12px;
+      background: #fff4df;
+      border: 1px solid #f4d08e;
+    }
+    .ok { color: var(--green); font-weight: bold; }
+    .bad { color: var(--red); font-weight: bold; }
+    .label {
+      display: inline-block;
+      font-weight: bold;
+      color: var(--blue);
+    }
+    @media (max-width: 720px) {
+      .wrap { padding: 18px; }
+      table { font-size: 14px; }
+      th, td { padding: 8px 6px; }
+    }
+    @media print {
+      body { background: #ffffff; }
+      .wrap { max-width: none; padding: 0; }
+      .card, .hero { break-inside: avoid; }
+      .hero { background: #ffffff; color: #000000; border: 1px solid #999999; }
+      .hero p { color: #000000; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="hero">
+      <h1>Recruitment Testing Guide</h1>
+      <p>
+        A simple step by step guide for testing the full recruitment journey in JustHumanResource, from requesting a new staff member to onboarding the successful candidate.
+      </p>
+    </section>
+
+    <section class="card">
+      <h2>Before You Start</h2>
+      <p>Prepare these test users and test records before starting.</p>
+      <table>
+        <thead>
+          <tr>
+            <th>What You Need</th>
+            <th>Why You Need It</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>HR user</td>
+            <td>To open Recruitment and manage job openings, applications, interviews, offers, and onboarding.</td>
+          </tr>
+          <tr>
+            <td>Employee user</td>
+            <td>To raise a Staff Requisition if the company uses employee self service for requests.</td>
+          </tr>
+          <tr>
+            <td>Approver or Manager user</td>
+            <td>To approve the Staff Requisition and review job publication when required.</td>
+          </tr>
+          <tr>
+            <td>Finance Officer user</td>
+            <td>To approve an employment offer if the offer approval is assigned to Finance.</td>
+          </tr>
+          <tr>
+            <td>Test candidate information</td>
+            <td>Use a fake name, email address, phone number, and address. Do not use a real person without permission.</td>
+          </tr>
+          <tr>
+            <td>Existing Department, Job Grade, Job Step, and Pay Group</td>
+            <td>These are needed when creating the staff request, preparing the job, making the offer, and starting onboarding.</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="note">
+        If the required Department, Job Grade, Job Step, or Pay Group does not exist, ask the HR setup user to create them first from the side menu of the HR role.
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>What To Record During Testing</h2>
+      <ul>
+        <li>Take a screenshot after each important action.</li>
+        <li>Write down the job title used for the test.</li>
+        <li>Write down the application reference shown after the candidate applies.</li>
+        <li>Write down the candidate name and email address.</li>
+        <li>Write down any error message exactly as it appears.</li>
+        <li>For every problem, record the user role, page name, button clicked, expected result, and actual result.</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>Full Recruitment Flow</h2>
+      <p>Follow these steps in order. Each step depends on the step before it.</p>
+    </section>
+
+    <section class="card">
+      <h2>Step 1. Create A Staff Requisition</h2>
+      <p><span class="label">Where to go:</span> Requests, at the side menu of the Employee role or HR role.</p>
+      <ol>
+        <li>Sign in as the user who is allowed to request a new staff member.</li>
+        <li>Open Requests from the side menu.</li>
+        <li>Click the button for creating a new request.</li>
+        <li>Select Staff Requisition as the request type.</li>
+        <li>Enter the job title for the new position.</li>
+        <li>Select the Department for the position.</li>
+        <li>Select the Job Grade if the field is shown.</li>
+        <li>Enter the number of people needed.</li>
+        <li>Select the employment type if the field is shown.</li>
+        <li>Enter the target start date.</li>
+        <li>Enter a clear reason for the request.</li>
+        <li>Add any supporting note or attachment if required.</li>
+        <li>Save the request if a Save button is available.</li>
+        <li>Submit the request.</li>
+      </ol>
+      <h3>Expected Result</h3>
+      <ul>
+        <li>The request is saved successfully.</li>
+        <li>The request status shows that it is waiting for approval.</li>
+        <li>The request appears in the request list for the person who created it.</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>Step 2. Approve The Staff Requisition</h2>
+      <p><span class="label">Where to go:</span> Requests, at the side menu of the Approver, Manager, or HR role.</p>
+      <ol>
+        <li>Sign out from the request creator account.</li>
+        <li>Sign in as the person expected to approve the request.</li>
+        <li>Open Requests from the side menu.</li>
+        <li>Find the Staff Requisition created in Step 1.</li>
+        <li>Open the request details.</li>
+        <li>Check that the job title, department, number of positions, start date, and reason are correct.</li>
+        <li>Add a short approval comment.</li>
+        <li>Click Approve.</li>
+        <li>If there is another approver, repeat this step with the next approver.</li>
+      </ol>
+      <h3>Expected Result</h3>
+      <ul>
+        <li>The request shows as approved after the final approval.</li>
+        <li>A job opening is created for the approved request.</li>
+        <li>The approval history shows who approved it and when.</li>
+      </ul>
+      <div class="warning">
+        Also test one rejected staff requisition. The rejected request should not create a job opening.
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Step 3. Confirm The Job Opening Was Created</h2>
+      <p><span class="label">Where to go:</span> Recruitment, at the side menu of the HR role. Then open Job openings.</p>
+      <ol>
+        <li>Sign in as HR.</li>
+        <li>Open Recruitment from the side menu.</li>
+        <li>Open Job openings from the Recruitment page.</li>
+        <li>Look for the job title from the approved Staff Requisition.</li>
+        <li>Click Open on the job row.</li>
+      </ol>
+      <h3>Expected Result</h3>
+      <ul>
+        <li>The job opening is visible in the Job openings list.</li>
+        <li>The job opening shows the correct job title.</li>
+        <li>The number of positions matches the approved Staff Requisition.</li>
+        <li>The job opening is not yet published unless it was already approved for publication.</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>Step 4. Prepare The Job For Publication</h2>
+      <p><span class="label">Where to go:</span> Job openings, inside Recruitment at the side menu of the HR role. Then open the job.</p>
+      <ol>
+        <li>On the job opening page, find the Publication content section.</li>
+        <li>Enter the Job description.</li>
+        <li>Enter the Responsibilities.</li>
+        <li>Enter the Requirements.</li>
+        <li>Enter Preferred qualifications if available.</li>
+        <li>Enter the Location.</li>
+        <li>Enter the Work arrangement, such as onsite, hybrid, or remote.</li>
+        <li>Select the Application open date.</li>
+        <li>Select the Application close date.</li>
+        <li>Click Save and send for review.</li>
+      </ol>
+      <h3>Expected Result</h3>
+      <ul>
+        <li>The publication details are saved.</li>
+        <li>The job is sent for review.</li>
+        <li>The information entered remains visible when the page is opened again.</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>Step 5. Review And Publish The Job</h2>
+      <p><span class="label">Where to go:</span> Job openings, inside Recruitment at the side menu of the HR role or Hiring Manager role. Then open the job.</p>
+      <ol>
+        <li>Sign in as the person who should review the job publication.</li>
+        <li>Open Recruitment from the side menu.</li>
+        <li>Open Job openings.</li>
+        <li>Open the job prepared in Step 4.</li>
+        <li>Read the job description, responsibilities, requirements, location, and dates.</li>
+        <li>Click Approve and publish.</li>
+      </ol>
+      <h3>Expected Result</h3>
+      <ul>
+        <li>The job status changes to published.</li>
+        <li>The job becomes visible to candidates on the Careers page.</li>
+      </ul>
+      <div class="warning">
+        Also test Return and Cancel. Return should send the job back for correction. Cancel should stop the job from being published.
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Step 6. Check The Job On The Careers Page</h2>
+      <p><span class="label">Where to go:</span> Careers, the public careers page for applicants.</p>
+      <ol>
+        <li>Sign out or open a private browsing window.</li>
+        <li>Open the Careers page.</li>
+        <li>Find the published job title.</li>
+        <li>Open the job details.</li>
+        <li>Read the job description, responsibilities, and requirements.</li>
+      </ol>
+      <h3>Expected Result</h3>
+      <ul>
+        <li>The published job appears on the Careers page.</li>
+        <li>The job details match what HR entered.</li>
+        <li>Jobs that are not published do not appear on the Careers page.</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>Step 7. Submit A Candidate Application</h2>
+      <p><span class="label">Where to go:</span> Careers page. Open the published job and use the Apply now form.</p>
+      <ol>
+        <li>Open the published job on the Careers page.</li>
+        <li>Find the Apply now form.</li>
+        <li>Enter the candidate first name.</li>
+        <li>Enter the candidate last name.</li>
+        <li>Enter the candidate email address.</li>
+        <li>Enter the candidate phone number.</li>
+        <li>Enter the candidate address if required.</li>
+        <li>Enter LinkedIn or portfolio information if available.</li>
+        <li>Select how the candidate heard about the job if the field is shown.</li>
+        <li>Tick the consent checkbox.</li>
+        <li>Click Submit application.</li>
+      </ol>
+      <h3>Expected Result</h3>
+      <ul>
+        <li>The application is submitted successfully.</li>
+        <li>A success page is shown.</li>
+        <li>An application reference is shown or available in the system.</li>
+        <li>The candidate can later check the application status if a status link is provided.</li>
+      </ul>
+      <div class="warning">
+        Also test submitting without required fields and without ticking consent. The form should show a clear message and should not submit.
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Step 8. Confirm The Application Appears For HR</h2>
+      <p><span class="label">Where to go:</span> Recruitment, at the side menu of the HR role. Then open Applications.</p>
+      <ol>
+        <li>Sign in as HR.</li>
+        <li>Open Recruitment from the side menu.</li>
+        <li>Open Applications.</li>
+        <li>Find the candidate application submitted in Step 7.</li>
+        <li>Open the application.</li>
+      </ol>
+      <h3>Expected Result</h3>
+      <ul>
+        <li>The candidate appears in the Applications list.</li>
+        <li>The candidate name and email address are correct.</li>
+        <li>The role name is correct.</li>
+        <li>The application has a status showing it has been submitted or is ready for review.</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>Step 9. Review The Candidate Application</h2>
+      <p><span class="label">Where to go:</span> Applications, inside Recruitment at the side menu of the HR role. Then open the candidate application.</p>
+      <ol>
+        <li>Read the candidate details.</li>
+        <li>Read the role details.</li>
+        <li>In the action section, enter a short comment.</li>
+        <li>Click Advance to move the candidate forward.</li>
+      </ol>
+      <h3>Expected Result</h3>
+      <ul>
+        <li>The candidate moves to the next recruitment stage.</li>
+        <li>The comment is saved in the activity area.</li>
+        <li>The application history shows that the candidate moved forward.</li>
+      </ul>
+      <div class="warning">
+        Also test Hold and Reject on a separate candidate. Hold should keep the candidate for later review. Reject should stop the candidate from moving forward.
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Step 10. Schedule An Interview</h2>
+      <p><span class="label">Where to go:</span> Candidate application page, inside Applications under Recruitment.</p>
+      <ol>
+        <li>On the candidate application page, find Schedule interview.</li>
+        <li>Enter the interview title.</li>
+        <li>Select the interview start date and time.</li>
+        <li>Select the interview end date and time.</li>
+        <li>Enter the location or meeting link.</li>
+        <li>Enter the coordinator employee number if requested.</li>
+        <li>Enter the panel member employee numbers if requested.</li>
+        <li>Click Schedule.</li>
+      </ol>
+      <h3>Expected Result</h3>
+      <ul>
+        <li>The interview is saved.</li>
+        <li>The interview appears in the Interviews section.</li>
+        <li>The interview date, time, and status are correct.</li>
+      </ul>
+      <div class="warning">
+        Also test an interview end time that is earlier than the start time. The system should not allow an invalid interview time.
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Step 11. Submit Interview Score</h2>
+      <p><span class="label">Where to go:</span> Interviews section on the candidate application page.</p>
+      <ol>
+        <li>Find the interview created in Step 10.</li>
+        <li>Enter the reviewer employee number if requested.</li>
+        <li>Enter the overall score.</li>
+        <li>Select the recommendation, such as Hire, Strong hire, Hold, No hire, or Strong no hire.</li>
+        <li>Enter a short comment.</li>
+        <li>Click Submit.</li>
+      </ol>
+      <h3>Expected Result</h3>
+      <ul>
+        <li>The interview score is saved.</li>
+        <li>The score and recommendation are shown under the interview.</li>
+        <li>The application can continue to the next stage when the candidate is successful.</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>Step 12. Move Candidate To Offer Stage</h2>
+      <p><span class="label">Where to go:</span> Candidate application page, inside Applications under Recruitment.</p>
+      <ol>
+        <li>Return to the action section of the candidate application page.</li>
+        <li>Enter a comment saying the candidate passed the interview.</li>
+        <li>Click Advance until the candidate reaches the offer stage.</li>
+      </ol>
+      <h3>Expected Result</h3>
+      <ul>
+        <li>The candidate stage changes to offer stage.</li>
+        <li>The Create offer section is available to HR.</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>Step 13. Create An Employment Offer</h2>
+      <p><span class="label">Where to go:</span> Create offer section on the candidate application page.</p>
+      <ol>
+        <li>Enter the annual gross pay.</li>
+        <li>Confirm the currency.</li>
+        <li>Enter or select the Job Step if the field is shown.</li>
+        <li>Enter or select the Pay Group if the field is shown.</li>
+        <li>Select the proposed start date.</li>
+        <li>Select the offer expiry date.</li>
+        <li>Enter offer terms.</li>
+        <li>Click Create offer.</li>
+      </ol>
+      <h3>Expected Result</h3>
+      <ul>
+        <li>The offer is created and appears in the Offers section.</li>
+        <li>The pay, currency, proposed start date, expiry date, and terms are correct.</li>
+        <li>The offer is ready for approval if approval is required.</li>
+      </ul>
+      <div class="warning">
+        Also test an offer expiry date that is earlier than the proposed start date. The system should reject dates that do not make sense.
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Step 14. Approve Or Reject The Offer</h2>
+      <p><span class="label">Where to go:</span> Offers section on the candidate application page. Use the HR role or Finance Officer role, depending on who approves offers.</p>
+      <ol>
+        <li>Sign in as the offer approver.</li>
+        <li>Open Recruitment from the side menu if the approver uses the Recruitment area.</li>
+        <li>Open Applications.</li>
+        <li>Open the candidate application.</li>
+        <li>Find the offer in the Offers section.</li>
+        <li>Review the pay, dates, job step, pay group, and terms.</li>
+        <li>Enter the approver employee number if requested.</li>
+        <li>Click Approve.</li>
+      </ol>
+      <h3>Expected Result</h3>
+      <ul>
+        <li>The offer status changes to approved.</li>
+        <li>The Send button becomes available to HR after approval.</li>
+      </ul>
+      <div class="warning">
+        Also test Reject on a separate offer. A rejected offer should not be sent to the candidate.
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Step 15. Send The Offer To The Candidate</h2>
+      <p><span class="label">Where to go:</span> Offers section on the candidate application page, inside Applications under Recruitment.</p>
+      <ol>
+        <li>Sign in as HR.</li>
+        <li>Open the candidate application.</li>
+        <li>Find the approved offer.</li>
+        <li>Click Send.</li>
+      </ol>
+      <h3>Expected Result</h3>
+      <ul>
+        <li>The offer status changes to sent.</li>
+        <li>The candidate can see the offer on the application status page if that page is enabled.</li>
+        <li>If email sending is enabled, the candidate receives the offer notice.</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>Step 16. Candidate Accepts The Offer</h2>
+      <p><span class="label">Where to go:</span> Candidate application status page from the candidate status link.</p>
+      <ol>
+        <li>Open the candidate application status page.</li>
+        <li>Find the Offers section.</li>
+        <li>Review the offer details.</li>
+        <li>Click Accept offer.</li>
+      </ol>
+      <h3>Expected Result</h3>
+      <ul>
+        <li>The offer is marked as accepted.</li>
+        <li>The application status shows that the offer was accepted.</li>
+        <li>The application becomes ready for onboarding.</li>
+      </ul>
+      <div class="warning">
+        Also test Decline offer on a separate candidate. A declined offer should not allow onboarding for that candidate.
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Step 17. Start Candidate Onboarding</h2>
+      <p><span class="label">Where to go:</span> Start onboarding section on the candidate application page, inside Applications under Recruitment.</p>
+      <ol>
+        <li>Sign in as HR.</li>
+        <li>Open Recruitment from the side menu.</li>
+        <li>Open Applications.</li>
+        <li>Open the candidate who accepted the offer.</li>
+        <li>Find Start onboarding.</li>
+        <li>Select or enter the Department.</li>
+        <li>Select or enter the Manager if needed.</li>
+        <li>Select or enter the Job Step.</li>
+        <li>Select or enter the Pay Group.</li>
+        <li>Enter employee group information if shown.</li>
+        <li>Enter TIN, RSA PIN, PFA, NIN, and BVN if available.</li>
+        <li>Enter next of kin details.</li>
+        <li>Enter guarantor details.</li>
+        <li>Click Start onboarding.</li>
+      </ol>
+      <h3>Expected Result</h3>
+      <ul>
+        <li>Onboarding starts successfully.</li>
+        <li>The page shows that onboarding has started for the candidate.</li>
+        <li>The candidate is linked to a new employee record.</li>
+        <li>The new employee can be found in Employees, at the side menu of the HR role.</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>Step 18. Confirm The New Employee Record</h2>
+      <p><span class="label">Where to go:</span> Employees, at the side menu of the HR role.</p>
+      <ol>
+        <li>Open Employees from the HR side menu.</li>
+        <li>Search for the candidate name or email address.</li>
+        <li>Open the employee record if the list provides an open or view action.</li>
+        <li>Check the employee name, email, department, job step, pay group, manager, and personal details.</li>
+      </ol>
+      <h3>Expected Result</h3>
+      <ul>
+        <li>The employee record exists.</li>
+        <li>The employee details match the accepted candidate and onboarding form.</li>
+        <li>The recruitment application shows that the candidate has been converted to an employee.</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>Step 19. Close The Job Opening</h2>
+      <p><span class="label">Where to go:</span> Job openings, inside Recruitment at the side menu of the HR role. Then open the job.</p>
+      <ol>
+        <li>Open Recruitment from the HR side menu.</li>
+        <li>Open Job openings.</li>
+        <li>Open the job used for this test.</li>
+        <li>Confirm the application count and filled positions are correct.</li>
+        <li>Find Close opening.</li>
+        <li>Click Close opening.</li>
+      </ol>
+      <h3>Expected Result</h3>
+      <ul>
+        <li>The job opening is closed.</li>
+        <li>The job no longer accepts new applications.</li>
+        <li>The job should no longer appear as an open role on the Careers page.</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>Extra Checks</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Check</th>
+            <th>What To Do</th>
+            <th>Expected Result</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Required fields</td>
+            <td>Try to save each form with one important field left empty.</td>
+            <td>The form should not save and should show a clear message.</td>
+          </tr>
+          <tr>
+            <td>Duplicate candidate</td>
+            <td>Apply twice to the same job using the same candidate email address.</td>
+            <td>The system should either prevent the duplicate or show both records clearly if duplicates are allowed.</td>
+          </tr>
+          <tr>
+            <td>Closed job</td>
+            <td>Try to apply after the job is closed.</td>
+            <td>The job should not allow new applications.</td>
+          </tr>
+          <tr>
+            <td>Wrong user access</td>
+            <td>Sign in as an Employee and try to manage recruitment records.</td>
+            <td>The employee should not be able to manage recruitment records.</td>
+          </tr>
+          <tr>
+            <td>Finance offer approval</td>
+            <td>Sign in as Finance Officer and check if an offer waiting for finance approval is visible.</td>
+            <td>The Finance Officer should see only the offer approval items allowed for that role.</td>
+          </tr>
+          <tr>
+            <td>Screen size</td>
+            <td>Repeat the main pages on a phone sized screen.</td>
+            <td>Buttons, forms, and tables should remain readable and usable.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="card">
+      <h2>Final Pass Checklist</h2>
+      <ul>
+        <li><span class="ok">Done</span> Staff Requisition was created and approved.</li>
+        <li><span class="ok">Done</span> Job opening was created from the approved request.</li>
+        <li><span class="ok">Done</span> Job was prepared, reviewed, and published.</li>
+        <li><span class="ok">Done</span> Candidate applied from the Careers page.</li>
+        <li><span class="ok">Done</span> HR reviewed and advanced the candidate.</li>
+        <li><span class="ok">Done</span> Interview was scheduled and scored.</li>
+        <li><span class="ok">Done</span> Offer was created, approved, sent, and accepted.</li>
+        <li><span class="ok">Done</span> Candidate onboarding was started.</li>
+        <li><span class="ok">Done</span> New employee record was confirmed.</li>
+        <li><span class="ok">Done</span> Job opening was closed.</li>
+        <li><span class="bad">Log defects</span> Any failed step has a screenshot, user role, page name, button clicked, expected result, and actual result.</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

@@ -20,6 +20,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Optional;
+import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -66,7 +67,7 @@ class RecruitmentServiceTest {
 
     @Test void publicApplicationStartsCandidateWorkflow() {
         JobOpening opening = publishedOpening();
-        when(openingRepository.findByPublicSlugAndStatus("software-engineer-10", JobOpeningStatus.PUBLISHED)).thenReturn(Optional.of(opening));
+        when(openingRepository.findPubliclyAvailableBySlug(eq("software-engineer-10"), eq(JobOpeningStatus.PUBLISHED), any(LocalDate.class))).thenReturn(Optional.of(opening));
         when(candidateRepository.findFirstByNormalizedEmailOrderByCreatedAtDesc("ada@example.com")).thenReturn(Optional.empty());
         when(candidateRepository.save(any())).thenAnswer(i -> { var c=(com.justjava.humanresource.recruitment.entity.Candidate)i.getArgument(0); c.setId(30L); return c; });
         when(applicationRepository.existsByCandidateIdAndJobOpeningId(30L,20L)).thenReturn(false);
@@ -81,6 +82,16 @@ class RecruitmentServiceTest {
         assertEquals(40L,result.applicationId()); assertNotNull(result.accessToken());
         verify(historyRepository).save(any());
         verify(runtimeService).startProcessInstanceByKey(eq("candidateApplicationProcess"),eq("JOB_APPLICATION_40"),anyMap());
+    }
+
+    @Test void unavailablePublicOpeningCannotReceiveApplications() {
+        when(openingRepository.findPubliclyAvailableBySlug(eq("software-engineer-10"), eq(JobOpeningStatus.PUBLISHED), any(LocalDate.class)))
+                .thenReturn(Optional.empty());
+        PublicApplicationCommand command=new PublicApplicationCommand(); command.setFirstName("Ada");command.setLastName("Lovelace");command.setEmail("ada@example.com");command.setConsent(true);
+
+        assertThrows(IllegalArgumentException.class, () -> service.apply("software-engineer-10", command));
+
+        verifyNoInteractions(candidateRepository, runtimeService);
     }
 
     private WorkflowRequest request(){WorkflowRequest r=new WorkflowRequest();r.setId(10L);r.setRequestType(RequestType.STAFF_REQUISITION);r.setStatus(RequestStatus.APPROVED);r.setRequesterEmployeeId(5L);return r;}

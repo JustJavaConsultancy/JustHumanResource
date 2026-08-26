@@ -50,6 +50,15 @@ public class OfferService {
         if (offer.getStatus() != OfferStatus.APPROVED) throw new IllegalStateException("Only an approved offer can be sent.");
         offer.setStatus(OfferStatus.SENT); offer.setSentAt(LocalDateTime.now()); return offerRepository.save(offer);
     }
+    @Transactional(readOnly = true)
+    public boolean isRespondable(EmploymentOffer offer) {
+        if (offer == null || offer.getStatus() != OfferStatus.SENT) return false;
+        EmploymentOffer latestOffer = offerRepository.findFirstByApplicationIdOrderByOfferVersionDesc(offer.getApplicationId())
+                .orElse(null);
+        return latestOffer != null
+                && latestOffer.getId().equals(offer.getId())
+                && (offer.getExpiresOn() == null || !offer.getExpiresOn().isBefore(LocalDate.now()));
+    }
     @Transactional public EmploymentOffer respond(Long offerId, boolean accepted) {
         EmploymentOffer offer = requireOffer(offerId);
         if (offer.getStatus() != OfferStatus.SENT) throw new IllegalStateException("Only a sent offer can be answered.");

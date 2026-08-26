@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HexFormat;
 import java.util.Map;
@@ -141,11 +142,8 @@ public class RecruitmentService {
 
     @Transactional
     public ApplicationSubmissionResult apply(String slug, PublicApplicationCommand command) {
-        JobOpening opening = openingRepository.findByPublicSlugAndStatus(slug, JobOpeningStatus.PUBLISHED)
+        JobOpening opening = openingRepository.findPubliclyAvailableBySlug(slug, JobOpeningStatus.PUBLISHED, LocalDate.now())
                 .orElseThrow(() -> new IllegalArgumentException("This job opening is not available."));
-        if (opening.getApplicationCloseDate() != null && opening.getApplicationCloseDate().isBefore(java.time.LocalDate.now())) {
-            throw new IllegalStateException("Applications for this job opening are closed.");
-        }
         String email = command.getEmail().trim().toLowerCase();
         Candidate candidate = candidateRepository.findFirstByNormalizedEmailOrderByCreatedAtDesc(email)
                 .orElseGet(() -> {
@@ -223,6 +221,12 @@ public class RecruitmentService {
 
     @Transactional(readOnly = true) public JobOpening requireOpening(Long id) {
         return openingRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Job opening not found."));
+    }
+
+    @Transactional(readOnly = true)
+    public JobOpening requirePubliclyAvailableOpening(String slug) {
+        return openingRepository.findPubliclyAvailableBySlug(slug, JobOpeningStatus.PUBLISHED, LocalDate.now())
+                .orElseThrow(() -> new IllegalArgumentException("This job opening is not available."));
     }
 
     private void recordTransition(JobApplication application, RecruitmentStage previousStage,

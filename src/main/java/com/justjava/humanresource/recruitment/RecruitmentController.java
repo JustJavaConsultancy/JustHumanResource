@@ -56,12 +56,16 @@ public class RecruitmentController {
 
     @GetMapping("/job-openings/{id}")
     public String opening(@PathVariable Long id, Model model) {
-        requireRecruitmentAccess();
+        var opening = recruitmentService.requireOpening(id);
+        requireOpeningAccess(opening);
         model.addAttribute("title", "Job Opening");
         model.addAttribute("subTitle", "Prepare and manage publication content");
-        model.addAttribute("opening", recruitmentService.requireOpening(id));
+        model.addAttribute("opening", opening);
         model.addAttribute("applications", applicationRepository.findByJobOpeningIdOrderBySubmittedAtDesc(id));
-        model.addAttribute("activeTask", activeTask(recruitmentService.requireOpening(id).getWorkflowInstanceId()));
+        model.addAttribute("activeTask", activeTask(opening.getWorkflowInstanceId()));
+        model.addAttribute("canPrepareOpening", hasRecruitmentAccess());
+        model.addAttribute("canReviewOpening", hasRecruitmentAccess() || isCurrentEmployee(opening.getHiringManagerEmployeeId()));
+        model.addAttribute("canCloseOpening", hasRecruitmentAccess());
         return "recruitment/job-opening-detail";
     }
 
@@ -85,8 +89,9 @@ public class RecruitmentController {
 
     @PostMapping("/job-openings/{id}/review")
     public String reviewOpening(@PathVariable Long id, @RequestParam String publicationDecision) {
-        requireRecruitmentAccess();
-        var task = activeTask(recruitmentService.requireOpening(id).getWorkflowInstanceId());
+        var opening = recruitmentService.requireOpening(id);
+        requireOpeningReviewAccess(opening);
+        var task = activeTask(opening.getWorkflowInstanceId());
         if (task == null || !"reviewJobOpening".equals(task.getTaskDefinitionKey())) throw new IllegalStateException("The job opening is not awaiting review.");
         taskService.complete(task.getId(), java.util.Map.of("publicationDecision", publicationDecision));
         return "redirect:/recruitment/job-openings/" + id;
@@ -103,8 +108,8 @@ public class RecruitmentController {
 
     @GetMapping("/applications/{id}")
     public String application(@PathVariable Long id, Model model) {
-        requireRecruitmentAccess();
         var application = applicationRepository.findById(id).orElseThrow();
+        requireApplicationAccess(application);
         model.addAttribute("title", application.getApplicationNumber());
         model.addAttribute("subTitle", "Application workflow and activity");
         model.addAttribute("application", application);
@@ -120,6 +125,13 @@ public class RecruitmentController {
         model.addAttribute("offers", offerRepository.findByApplicationIdOrderByOfferVersionDesc(id));
         model.addAttribute("conversion", conversionRepository.findByApplicationId(id).orElse(null));
         model.addAttribute("activeTask", activeTask(application.getWorkflowInstanceId()));
+        model.addAttribute("canManageRecruitment", hasRecruitmentAccess());
+        model.addAttribute("canApproveOffers", hasRecruitmentAccess() || authenticationManager.isFinancialOfficer());
+        model.addAttribute("canScheduleInterview", hasRecruitmentAccess());
+        model.addAttribute("canSubmitScorecard", hasRecruitmentAccess());
+        model.addAttribute("canCreateOffer", hasRecruitmentAccess());
+        model.addAttribute("canSendOffer", hasRecruitmentAccess());
+        model.addAttribute("canStartOnboarding", hasRecruitmentAccess());
         return "recruitment/application-detail";
     }
 
@@ -164,7 +176,7 @@ public class RecruitmentController {
     @PostMapping("/offers/{offerId}/approve")
     public String approveOffer(@PathVariable Long offerId, @RequestParam Long applicationId,
                                @RequestParam Long approverEmployeeId) {
-        requireRecruitmentAccess();
+        requireOfferApprovalAccess();
         var offer = offerRepository.findById(offerId).orElseThrow();
         var task = activeTask(offer.getWorkflowInstanceId());
         if (task == null) throw new IllegalStateException("The offer is not awaiting approval.");
@@ -174,7 +186,7 @@ public class RecruitmentController {
 
     @PostMapping("/offers/{offerId}/reject")
     public String rejectOffer(@PathVariable Long offerId, @RequestParam Long applicationId) {
-        requireRecruitmentAccess();
+        requireOfferApprovalAccess();
         var offer = offerRepository.findById(offerId).orElseThrow();
         var task = activeTask(offer.getWorkflowInstanceId());
         if (task == null) throw new IllegalStateException("The offer is not awaiting approval.");
@@ -200,6 +212,11 @@ public class RecruitmentController {
         requireRecruitmentAccess();
         Object email = authenticationManager.get("email");
         candidateHireService.startOnboarding(id, command, email == null ? "RECRUITMENT" : email.toString());
+        var application = applicationRepository.findById(id).orElseThrow();
+        var task = activeTask(application.getWorkflowInstanceId());
+        if (task != null && "preEmploymentTask".equals(task.getTaskDefinitionKey())) {
+            taskService.complete(task.getId());
+        }
         return "redirect:/recruitment/applications/" + id;
     }
 
@@ -221,8 +238,45 @@ public class RecruitmentController {
     private org.flowable.task.api.Task activeTask(String processInstanceId) {
         return processInstanceId == null ? null : taskService.createTaskQuery().processInstanceId(processInstanceId).active().singleResult();
     }
+    private boolean hasRecruitmentAccess() {
+        return authenticationManager.isHumanResource() || authenticationManager.isAdmin()
+                || authenticationManager.isJobHR() || authenticationManager.isRestrictedHr();
+    }
     private void requireRecruitmentAccess() {
-        if (!authenticationManager.isHumanResource() && !authenticationManager.isAdmin()
-                && !authenticationManager.isJobHR() && !authenticationManager.isRestrictedHr()) throw new IllegalStateException("Recruitment access is required.");
+        if (!hasRecruitmentAccess()) throw new IllegalStateException("Recruitment access is required.");
+    }
+    private void requireOfferApprovalAccess() {
+        if (!hasRecruitmentAccess() && !authenticationManager.isFinancialOfficer()) {
+            throw new IllegalStateException("Offer approval access is required.");
+        }
+    }
+    private void requireOpeningAccess(com.justjava.humanresource.recruitment.entity.JobOpening opening) {
+        if (hasRecruitmentAccess() || isCurrentEmployee(opening.getHiringManagerEmployeeId())) return;
+        throw new IllegalStateException("Recruitment access is required.");
+    }
+    private void requireOpeningReviewAccess(com.justjava.humanresource.recruitment.entity.JobOpening opening) {
+        if (hasRecruitmentAccess() || isCurrentEmployee(opening.getHiringManagerEmployeeId())) return;
+        throw new IllegalStateException("Job opening review access is required.");
+    }
+    private void requireApplicationAccess(com.justjava.humanresource.recruitment.entity.JobApplication application) {
+        if (hasRecruitmentAccess()) return;
+        if (authenticationManager.isFinancialOfficer()
+                && offerRepository.findByApplicationIdOrderByOfferVersionDesc(application.getId()).stream()
+                .anyMatch(offer -> offer.getStatus() == OfferStatus.IN_APPROVAL)) return;
+        throw new IllegalStateException("Recruitment access is required.");
+    }
+    private boolean isCurrentEmployee(Long employeeId) {
+        Long current = currentEmployeeId();
+        return employeeId != null && current != null && employeeId.equals(current);
+    }
+    private Long currentEmployeeId() {
+        for (String claim : java.util.List.of("employeeId", "employee_id", "employeeNumber", "employee_number")) {
+            Object value = authenticationManager.get(claim);
+            if (value instanceof Number number) return number.longValue();
+            if (value instanceof String text && !text.isBlank()) {
+                try { return Long.valueOf(text); } catch (NumberFormatException ignored) { }
+            }
+        }
+        return null;
     }
 }

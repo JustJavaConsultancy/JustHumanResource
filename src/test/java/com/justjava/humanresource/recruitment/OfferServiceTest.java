@@ -62,6 +62,25 @@ class OfferServiceTest {
         verifyNoInteractions(applicationRepository);
     }
 
+    @Test
+    void onlyLatestUnexpiredSentOfferIsRespondable() {
+        EmploymentOffer oldOffer = offer(10L, 20L, 1, OfferStatus.SENT);
+        EmploymentOffer latestOffer = offer(11L, 20L, 2, OfferStatus.SENT);
+        when(offerRepository.findFirstByApplicationIdOrderByOfferVersionDesc(20L)).thenReturn(Optional.of(latestOffer));
+
+        assertFalse(service.isRespondable(oldOffer));
+        assertTrue(service.isRespondable(latestOffer));
+    }
+
+    @Test
+    void expiredSentOfferIsNotRespondable() {
+        EmploymentOffer offer = offer(10L, 20L, 1, OfferStatus.SENT);
+        offer.setExpiresOn(LocalDate.now().minusDays(1));
+        when(offerRepository.findFirstByApplicationIdOrderByOfferVersionDesc(20L)).thenReturn(Optional.of(offer));
+
+        assertFalse(service.isRespondable(offer));
+    }
+
     private EmploymentOffer offer(Long id, Long applicationId, int version, OfferStatus status) {
         EmploymentOffer offer = new EmploymentOffer();
         offer.setId(id);
