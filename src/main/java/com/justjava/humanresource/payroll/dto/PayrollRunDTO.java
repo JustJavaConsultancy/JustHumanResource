@@ -50,6 +50,7 @@ public class PayrollRunDTO {
 
     private BigDecimal paye = BigDecimal.ZERO;
     private BigDecimal pension = BigDecimal.ZERO;
+    private BigDecimal employerPension = BigDecimal.ZERO;   // ✅ NEW — display only, not part of any deduction/total
     private BigDecimal basicSalary = BigDecimal.ZERO;
     private String pensionScheme;
 

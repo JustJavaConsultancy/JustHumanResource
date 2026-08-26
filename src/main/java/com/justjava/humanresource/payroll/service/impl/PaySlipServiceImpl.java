@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -397,6 +398,7 @@ public class PaySlipServiceImpl implements PaySlipService {
                         .findByPayrollRunId(run.getId());
 
         BigDecimal basicSalary = BigDecimal.ZERO;
+        BigDecimal employeePensionAmount = BigDecimal.ZERO;
 
         List<PaySlipLineDTO> allowances = new ArrayList<>();
         List<PaySlipLineDTO> deductions = new ArrayList<>();
@@ -406,6 +408,21 @@ public class PaySlipServiceImpl implements PaySlipService {
             if ("BASIC".equals(line.getComponentCode())) {
                 basicSalary = line.getAmount();
                 continue;
+            }
+
+            // Capture employee pension for display purposes — it still flows into
+            // the deductions list below as usual, this is just so it can also be
+            // surfaced on its own (e.g. shown before the Allowances section).
+            // Match resiliently — same fallback the PAYE & Pension report already
+            // uses elsewhere in this codebase, since the exact component code can
+            // vary (PENSION, PENSION_EMP, or just a description containing "pension").
+            String pensionCode = line.getComponentCode() != null ? line.getComponentCode().trim() : "";
+            String pensionDesc = line.getDescription() != null ? line.getDescription().toLowerCase() : "";
+            if (line.getComponentType() == PayComponentType.DEDUCTION
+                    && ("PENSION".equalsIgnoreCase(pensionCode)
+                    || "PENSION_EMP".equalsIgnoreCase(pensionCode)
+                    || pensionDesc.contains("pension"))) {
+                employeePensionAmount = line.getAmount();
             }
 
             // Skip employer-side entries — EMPLOYER_COST and TAX_RELIEF are not employee deductions
@@ -446,6 +463,13 @@ public class PaySlipServiceImpl implements PaySlipService {
                 ? employee.getDepartment().getCompany()
                 : null;
 
+        // Display-only figure — not a calculation, just the employer-side pension
+        // contribution mirrored the same way the PAYE & Pension report derives it
+        // (employer pension = employee pension x 1.25).
+        BigDecimal employerPensionAmount = employeePensionAmount
+                .multiply(new BigDecimal("1.25"))
+                .setScale(2, RoundingMode.HALF_UP);
+
         return PaySlipDTO.builder()
                 .id(paySlip.getId())
                 .employeeId(paySlip.getEmployee().getId())
@@ -465,6 +489,8 @@ public class PaySlipServiceImpl implements PaySlipService {
 
                 .appliedTaxBandSummary(run.getAppliedTaxBandSummary())
                 .appliedPensionSchemeName(run.getAppliedPensionSchemeName())
+                .pensionAmount(employeePensionAmount)
+                .employerPensionAmount(employerPensionAmount)
 
                 .jobGradeName(jobGradeName)
                 .companyLogoData(company != null ? company.getLogoData() : null)

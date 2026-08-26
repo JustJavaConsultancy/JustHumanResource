@@ -43,6 +43,7 @@ public class PaySlipDTO {
     String appliedTaxBandSummary;
     String appliedPensionSchemeName;
     BigDecimal pensionAmount;
+    BigDecimal employerPensionAmount;   // ✅ NEW — display only, not part of any deduction/total
     PayrollRunStatus status;
     String bankName;
     String bankAccountNumber;

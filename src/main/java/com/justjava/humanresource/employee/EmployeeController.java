@@ -657,7 +657,7 @@ public class EmployeeController {
                 .distinct()
                 .collect(Collectors.toList());
 
-        // Use the existing employeeService.getByEmail(); treat not-found as absent.
+        // Use the existing employeeService.getByEmail();
         List<String> existing = normalised.stream()
                 .filter(email -> {
                     try {

@@ -443,6 +443,7 @@ public class PayrollController {
                                 .appliedTaxBandSummary(ps.getAppliedTaxBandSummary())
                                 .appliedPensionSchemeName(ps.getAppliedPensionSchemeName())
                                 .pensionAmount(ps.getPensionAmount())
+                                .employerPensionAmount(ps.getEmployerPensionAmount())
                                 .status(ps.getStatus())
                                 .bankName(ps.getBankName())
                                 .bankAccountNumber(ps.getBankAccountNumber())

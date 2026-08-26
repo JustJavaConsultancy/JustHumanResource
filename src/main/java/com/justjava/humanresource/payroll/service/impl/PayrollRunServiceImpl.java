@@ -134,11 +134,26 @@ public class PayrollRunServiceImpl implements PayrollRunService {
                         .mapToDouble(i -> i.getAmount().doubleValue())
                         .sum();
 
+        // Match resiliently — same fallback the PAYE & Pension report already
+        // uses elsewhere in this codebase, since the exact component code can
+        // vary (PENSION, PENSION_EMP, or just a description containing "pension").
         double pension =
                 items.stream()
-                        .filter(i -> "PENSION".equals(i.getComponentCode()))
+                        .filter(i -> i.getComponentType() == PayComponentType.DEDUCTION)
+                        .filter(i -> {
+                            String code = i.getComponentCode() != null ? i.getComponentCode().trim() : "";
+                            String desc = i.getDescription() != null ? i.getDescription().toLowerCase() : "";
+                            return "PENSION".equalsIgnoreCase(code)
+                                    || "PENSION_EMP".equalsIgnoreCase(code)
+                                    || desc.contains("pension");
+                        })
                         .mapToDouble(i -> i.getAmount().doubleValue())
                         .sum();
+
+        // Display-only figure — not a calculation, just the employer-side pension
+        // contribution mirrored the same way the PAYE & Pension report derives it
+        // (employer pension = employee pension x 1.25).
+        double employerPension = pension * 1.25;
 
         return PayrollRunDTO.builder()
                 .payrollRunId(run.getId())
@@ -153,6 +168,7 @@ public class PayrollRunServiceImpl implements PayrollRunService {
                 .netPay(run.getNetPay())
                 .paye(java.math.BigDecimal.valueOf(paye))
                 .pension(java.math.BigDecimal.valueOf(pension))
+                .employerPension(java.math.BigDecimal.valueOf(employerPension))
                 .ytdGross(run.getYtdGross())
                 .ytdNet(run.getYtdNet())
                 .ytdPaye(run.getYtdPaye())

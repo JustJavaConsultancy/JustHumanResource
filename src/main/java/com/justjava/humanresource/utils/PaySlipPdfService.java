@@ -42,6 +42,12 @@ public class PaySlipPdfService {
             renderer.text("Bank: " + bank(paySlip));
             renderer.gap(10);
 
+            renderer.section("Pension Contributions");
+            renderer.tableHeader("Description", "Amount");
+            renderer.tableRow("Employee Pension", money(paySlip.getPensionAmount()));
+            renderer.tableRow("Employer Pension", money(paySlip.getEmployerPensionAmount()));
+            renderer.gap(8);
+
             renderer.section("Allowances");
             renderer.tableHeader("Description", "Amount");
             List<PaySlipLineDTO> allowances = paySlip.getAllowances();
