@@ -206,6 +206,9 @@
         }
         function canEditAttachments() { return isOwner() && ['DRAFT','SUBMITTED','RETURNED_FOR_CORRECTION'].includes(detail.request.status); }
         function canRemoveAttachments() { return isOwner() && ['DRAFT','RETURNED_FOR_CORRECTION'].includes(detail.request.status); }
+        function requiresAttachment() { return ['EXPENSE_REIMBURSEMENT','FILE_REQUEST'].includes(detail.request.requestType); }
+        function hasAttachment() { return (detail.attachments || []).length > 0; }
+        function missingAttachmentMessage() { return `${fmt(detail.request.requestType)} requests must have at least one attachment before they can be submitted or sent.`; }
 
         function showToast(message, type = 'error') {
             const container = document.getElementById('toastContainer');
@@ -325,6 +328,11 @@
             const errorEl = document.getElementById('freeRouteError');
             if (!selectedId) {
                 errorEl.textContent = 'Select an employee.';
+                errorEl.classList.remove('hidden');
+                return;
+            }
+            if (requiresAttachment() && !hasAttachment()) {
+                errorEl.textContent = missingAttachmentMessage();
                 errorEl.classList.remove('hidden');
                 return;
             }
@@ -515,6 +523,10 @@
         }
 
         async function submitRequest() {
+            if (requiresAttachment() && !hasAttachment()) {
+                showToast(missingAttachmentMessage());
+                return;
+            }
             if (await showConfirmModal({
                 title: 'Submit Request',
                 message: 'Submit this request for the configured approval route?',
