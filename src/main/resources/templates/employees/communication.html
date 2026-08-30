@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:th="http://www.thymeleaf.org"
+      layout:decorate="layouts/employeeLayout">
+<head>
+    <meta charset="UTF-8">
+    <title>Communication</title>
+    <style>
+        .comm-page { --comm-border:#e5e7eb; --comm-muted:#64748b; --comm-surface:#fff; --comm-soft:#f8fafc; --comm-strong:#0f172a; }
+        .dark .comm-page { --comm-border:#374151; --comm-muted:#9ca3af; --comm-surface:#1f2937; --comm-soft:#111827; --comm-strong:#f8fafc; }
+        .comm-shell { height:calc(100vh - 150px); min-height:680px; display:grid; grid-template-columns:320px minmax(0,1fr) 360px; gap:16px; }
+        .comm-panel { border:1px solid var(--comm-border); background:var(--comm-surface); border-radius:8px; overflow:hidden; min-height:0; box-shadow:0 12px 30px -24px rgba(15,23,42,.55); }
+        .comm-panel-head { padding:14px 16px; border-bottom:1px solid var(--comm-border); background:var(--comm-soft); }
+        .comm-search { width:100%; border:1px solid var(--comm-border); background:var(--comm-surface); border-radius:8px; padding:10px 12px 10px 38px; font-size:14px; outline:none; }
+        .comm-search:focus, .comm-input:focus { border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,.12); }
+        .comm-input { width:100%; border:1px solid var(--comm-border); background:var(--comm-surface); border-radius:8px; padding:11px 12px; font-size:14px; outline:none; resize:none; }
+        .comm-icon-btn { width:42px; height:42px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; background:#2563eb; color:white; flex:0 0 auto; }
+        .comm-secondary-btn { display:inline-flex; align-items:center; gap:6px; border:1px solid var(--comm-border); border-radius:8px; padding:8px 11px; font-size:12px; font-weight:700; background:var(--comm-surface); }
+        .comm-person { display:flex; align-items:center; gap:12px; width:100%; padding:12px 14px; border-bottom:1px solid var(--comm-border); text-align:left; transition:background-color .15s ease; }
+        .comm-person:hover, .comm-person.active { background:#eff6ff; }
+        .dark .comm-person:hover, .dark .comm-person.active { background:#172554; }
+        .comm-avatar { width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-weight:800; color:white; background:#2563eb; flex:0 0 auto; }
+        .presence-dot { width:10px; height:10px; border-radius:999px; background:#94a3b8; border:2px solid var(--comm-surface); }
+        .presence-dot.online { background:#16a34a; }
+        .comm-badge { min-width:22px; height:22px; border-radius:999px; display:inline-flex; align-items:center; justify-content:center; padding:0 7px; background:#dc2626; color:white; font-size:11px; font-weight:800; }
+        .message-list { overflow-y:auto; padding:18px; background:linear-gradient(180deg,#f8fafc 0%,#fff 100%); }
+        .dark .message-list { background:linear-gradient(180deg,#111827 0%,#1f2937 100%); }
+        .message-row { display:flex; margin-bottom:12px; }
+        .message-row.mine { justify-content:flex-end; }
+        .message-bubble { max-width:min(70%,620px); border:1px solid var(--comm-border); background:var(--comm-surface); border-radius:8px; padding:10px 12px; font-size:14px; line-height:1.45; overflow-wrap:anywhere; }
+        .message-row.mine .message-bubble { background:#2563eb; color:white; border-color:#2563eb; }
+        .message-meta { margin-top:5px; font-size:11px; color:var(--comm-muted); }
+        .message-row.mine .message-meta { color:#dbeafe; }
+        .broadcast-item { width:100%; text-align:left; padding:13px 14px; border-bottom:1px solid var(--comm-border); transition:background-color .15s ease; }
+        .broadcast-item:hover, .broadcast-item.active { background:#f0fdf4; }
+        .dark .broadcast-item:hover, .dark .broadcast-item.active { background:#052e16; }
+        .broadcast-unread { width:8px; height:8px; border-radius:999px; background:#2563eb; display:inline-block; }
+        .comment-card { border:1px solid var(--comm-border); border-radius:8px; padding:10px 12px; background:var(--comm-soft); }
+        .mobile-tabs { display:none; }
+        @media (max-width: 1180px) {
+            .comm-shell { grid-template-columns:290px minmax(0,1fr); }
+            .broadcast-panel { display:none; }
+            .broadcast-panel.mobile-active { display:block; position:fixed; inset:88px 12px 12px 12px; z-index:45; }
+        }
+        @media (max-width: 860px) {
+            .comm-shell { height:calc(100vh - 185px); min-height:620px; display:block; }
+            .comm-panel { height:100%; display:none; }
+            .comm-panel.mobile-active { display:flex; flex-direction:column; }
+            .mobile-tabs { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:12px; }
+            .mobile-tab { border:1px solid var(--comm-border); border-radius:8px; padding:9px 8px; font-size:12px; font-weight:800; background:var(--comm-surface); }
+            .mobile-tab.active { background:#2563eb; border-color:#2563eb; color:#fff; }
+            .message-bubble { max-width:88%; }
+        }
+    </style>
+</head>
+<body>
+<main layout:fragment="content" class="comm-page">
+    <div class="mobile-tabs">
+        <button class="mobile-tab active" data-tab="people">People</button>
+        <button class="mobile-tab" data-tab="chat">Chat</button>
+        <button class="mobile-tab" data-tab="broadcasts">Broadcasts</button>
+    </div>
+
+    <section class="comm-shell">
+        <aside id="peoplePanel" class="comm-panel mobile-active">
+            <div class="comm-panel-head">
+                <div class="flex items-center justify-between gap-3">
+                    <div>
+                        <h2 class="text-base font-bold text-gray-900 dark:text-white">People</h2>
+                        <p class="text-xs text-gray-500 dark:text-gray-400"><span id="onlineCount">0</span> online now</p>
+                    </div>
+                    <button id="onlineFilter" type="button" class="comm-secondary-btn">
+                        <span class="material-icons-round text-sm">radio_button_checked</span>
+                        Online
+                    </button>
+                </div>
+                <div class="relative mt-3">
+                    <span class="material-icons-round absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
+                    <input id="peopleSearch" class="comm-search" placeholder="Search employees">
+                </div>
+            </div>
+            <div id="peopleList" class="overflow-y-auto h-full"></div>
+        </aside>
+
+        <section id="chatPanel" class="comm-panel flex flex-col">
+            <div id="chatHeader" class="comm-panel-head flex items-center justify-between">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div id="chatAvatar" class="comm-avatar bg-slate-400">--</div>
+                    <div class="min-w-0">
+                        <h2 id="chatName" class="text-base font-bold truncate">Select an employee</h2>
+                        <p id="chatStatus" class="text-xs text-gray-500 dark:text-gray-400">Choose a colleague to start chatting</p>
+                    </div>
+                </div>
+            </div>
+            <div id="messages" class="message-list flex-1"></div>
+            <form id="messageForm" class="border-t border-gray-200 dark:border-gray-700 p-3 flex items-end gap-2">
+                <textarea id="messageInput" class="comm-input min-h-[44px] max-h-32" rows="1" maxlength="2000" placeholder="Write a message" disabled></textarea>
+                <button id="sendMessageBtn" class="comm-icon-btn opacity-50" type="submit" disabled title="Send message">
+                    <span class="material-icons-round">send</span>
+                </button>
+            </form>
+        </section>
+
+        <aside id="broadcastPanel" class="comm-panel broadcast-panel flex flex-col">
+            <div class="comm-panel-head flex items-center justify-between">
+                <div>
+                    <h2 class="text-base font-bold">HR Broadcasts</h2>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Announcements and comments</p>
+                </div>
+                <button class="comm-secondary-btn lg:hidden" data-close-broadcasts>
+                    <span class="material-icons-round text-sm">close</span>
+                    Close
+                </button>
+            </div>
+            <div id="broadcastList" class="max-h-[42%] overflow-y-auto border-b border-gray-200 dark:border-gray-700"></div>
+            <div id="broadcastDetail" class="flex-1 min-h-0 flex flex-col">
+                <div class="p-4 text-sm text-gray-500 dark:text-gray-400">Select a broadcast to read details and comments.</div>
+            </div>
+        </aside>
+    </section>
+
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7/bundles/stomp.umd.min.js"></script>
+    <script th:inline="javascript">
+        const currentEmployeeId = /*[[${currentEmployeeId}]]*/ 0;
+        const currentEmployeeNumber = /*[[${currentEmployeeNumber}]]*/ '';
+        let stompClient;
+        let contacts = [];
+        let conversations = [];
+        let broadcasts = [];
+        let onlineOnly = false;
+        let selectedContact = null;
+        let selectedBroadcast = null;
+        let activeCommentSubscription = null;
+
+        const peopleList = document.getElementById('peopleList');
+        const messages = document.getElementById('messages');
+        const messageInput = document.getElementById('messageInput');
+        const sendMessageBtn = document.getElementById('sendMessageBtn');
+
+        function initials(name) {
+            return (name || '').split(' ').filter(Boolean).slice(0, 2).map(part => part[0].toUpperCase()).join('') || '--';
+        }
+
+        function formatTime(value) {
+            if (!value) return '';
+            return new Date(value).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'});
+        }
+
+        async function json(url, options) {
+            const response = await fetch(url, options);
+            if (!response.ok) throw new Error(await response.text());
+            return response.json();
+        }
+
+        async function loadInitialData() {
+            [contacts, conversations, broadcasts] = await Promise.all([
+                json('/employee/communication/employees'),
+                json('/employee/communication/conversations'),
+                json('/employee/communication/broadcasts')
+            ]);
+            mergeConversationUnread();
+            renderPeople();
+            renderBroadcasts();
+        }
+
+        function mergeConversationUnread() {
+            const byId = new Map(contacts.map(contact => [contact.id, contact]));
+            conversations.forEach(conversation => {
+                if (conversation.otherParticipant && byId.has(conversation.otherParticipant.id)) {
+                    byId.set(conversation.otherParticipant.id, {...byId.get(conversation.otherParticipant.id), unreadCount: conversation.otherParticipant.unreadCount});
+                }
+            });
+            contacts = [...byId.values()];
+        }
+
+        function renderPeople() {
+            const search = document.getElementById('peopleSearch').value.toLowerCase();
+            const filtered = contacts.filter(contact =>
+                (!onlineOnly || contact.online) &&
+                (!search || contact.fullName.toLowerCase().includes(search) || (contact.department || '').toLowerCase().includes(search))
+            );
+            document.getElementById('onlineCount').textContent = contacts.filter(contact => contact.online).length;
+            peopleList.innerHTML = filtered.length ? filtered.map(contact => `
+                <button type="button" class="comm-person ${selectedContact && selectedContact.id === contact.id ? 'active' : ''}" data-contact-id="${contact.id}">
+                    <div class="relative">
+                        <div class="comm-avatar">${initials(contact.fullName)}</div>
+                        <span class="presence-dot ${contact.online ? 'online' : ''} absolute -right-1 -bottom-1"></span>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <div class="flex items-center justify-between gap-2">
+                            <p class="text-sm font-bold text-gray-900 dark:text-white truncate">${escapeHtml(contact.fullName)}</p>
+                            ${contact.unreadCount > 0 ? `<span class="comm-badge">${contact.unreadCount}</span>` : ''}
+                        </div>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 truncate">${escapeHtml(contact.department || 'Unassigned')}</p>
+                    </div>
+                </button>
+            `).join('') : `<div class="p-8 text-center text-sm text-gray-500"><span class="material-icons-round block text-4xl mb-2 text-gray-300">person_search</span>No employees found.</div>`;
+            document.querySelectorAll('[data-contact-id]').forEach(button => {
+                button.addEventListener('click', () => selectContact(Number(button.dataset.contactId)));
+            });
+        }
+
+        async function selectContact(contactId) {
+            selectedContact = contacts.find(contact => contact.id === contactId);
+            if (!selectedContact) return;
+            selectedContact.unreadCount = 0;
+            document.getElementById('chatAvatar').textContent = initials(selectedContact.fullName);
+            document.getElementById('chatName').textContent = selectedContact.fullName;
+            document.getElementById('chatStatus').textContent = `${selectedContact.online ? 'Online' : 'Offline'} - ${selectedContact.department || 'Unassigned'}`;
+            messageInput.disabled = false;
+            sendMessageBtn.disabled = false;
+            sendMessageBtn.classList.remove('opacity-50');
+            renderPeople();
+            switchMobileTab('chat');
+
+            const conversation = conversations.find(item => item.otherParticipant && item.otherParticipant.id === contactId);
+            if (!conversation) {
+                messages.innerHTML = emptyChat();
+                return;
+            }
+            const history = await json(`/employee/communication/conversations/${conversation.id}/messages`);
+            renderMessages(history);
+        }
+
+        function renderMessages(history) {
+            messages.innerHTML = history.length ? history.map(messageTemplate).join('') : emptyChat();
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        function messageTemplate(message) {
+            const mine = message.senderId === currentEmployeeId;
+            return `
+                <div class="message-row ${mine ? 'mine' : ''}">
+                    <div class="message-bubble">
+                        <div>${escapeHtml(message.content)}</div>
+                        <div class="message-meta">${formatTime(message.createdAt)}${mine && message.deliveredAt ? ' - Delivered' : ''}</div>
+                    </div>
+                </div>`;
+        }
+
+        function emptyChat() {
+            return `<div class="h-full flex flex-col items-center justify-center text-center text-gray-500">
+                <span class="material-icons-round text-5xl text-gray-300 mb-3">chat_bubble</span>
+                <p class="text-sm font-semibold">No messages yet</p>
+                <p class="text-xs mt-1">Send the first message to start the conversation.</p>
+            </div>`;
+        }
+
+        document.getElementById('messageForm').addEventListener('submit', event => {
+            event.preventDefault();
+            const content = messageInput.value.trim();
+            if (!selectedContact || !content || !stompClient || !stompClient.connected) return;
+            stompClient.publish({
+                destination: '/app/chat.send',
+                body: JSON.stringify({recipientEmployeeId: selectedContact.id, content})
+            });
+            messageInput.value = '';
+        });
+
+        function handleIncomingMessage(message) {
+            const payload = JSON.parse(message.body);
+            const otherId = payload.senderId === currentEmployeeId ? payload.recipientId : payload.senderId;
+            const contact = contacts.find(item => item.id === otherId);
+            if (contact && (!selectedContact || selectedContact.id !== otherId)) {
+                contact.unreadCount = (contact.unreadCount || 0) + 1;
+            }
+            upsertConversation(payload, contact);
+            if (selectedContact && selectedContact.id === otherId) {
+                if (messages.querySelector('.text-center')) messages.innerHTML = '';
+                messages.insertAdjacentHTML('beforeend', messageTemplate(payload));
+                messages.scrollTop = messages.scrollHeight;
+            }
+            renderPeople();
+        }
+
+        function upsertConversation(message, contact) {
+            if (!contact) return;
+            const existing = conversations.find(item => item.id === message.conversationId);
+            if (existing) existing.lastMessage = message;
+            else conversations.unshift({id: message.conversationId, otherParticipant: contact, lastMessage: message, updatedAt: message.createdAt});
+        }
+
+        function renderBroadcasts() {
+            const list = document.getElementById('broadcastList');
+            list.innerHTML = broadcasts.length ? broadcasts.map(item => `
+                <button type="button" class="broadcast-item ${selectedBroadcast && selectedBroadcast.id === item.id ? 'active' : ''}" data-broadcast-id="${item.id}">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <p class="text-sm font-bold text-gray-900 dark:text-white truncate">${escapeHtml(item.title)}</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">${formatTime(item.createdAt)} - ${item.commentCount || 0} comments</p>
+                        </div>
+                        ${item.read ? '' : '<span class="broadcast-unread mt-1"></span>'}
+                    </div>
+                </button>
+            `).join('') : `<div class="p-8 text-center text-sm text-gray-500"><span class="material-icons-round block text-4xl mb-2 text-gray-300">campaign</span>No broadcasts yet.</div>`;
+            document.querySelectorAll('[data-broadcast-id]').forEach(button => {
+                button.addEventListener('click', () => selectBroadcast(Number(button.dataset.broadcastId)));
+            });
+        }
+
+        async function selectBroadcast(id) {
+            selectedBroadcast = broadcasts.find(item => item.id === id);
+            if (!selectedBroadcast) return;
+            await fetch(`/employee/communication/broadcasts/${id}/read`, {method:'POST'});
+            selectedBroadcast.read = true;
+            renderBroadcasts();
+            switchMobileTab('broadcasts');
+            if (activeCommentSubscription) activeCommentSubscription.unsubscribe();
+            if (stompClient && stompClient.connected) {
+                activeCommentSubscription = stompClient.subscribe(`/topic/hr-broadcasts/${id}/comments`, handleIncomingComment);
+            }
+            const comments = await json(`/employee/communication/broadcasts/${id}/comments`);
+            renderBroadcastDetail(comments);
+        }
+
+        function renderBroadcastDetail(comments) {
+            const detail = document.getElementById('broadcastDetail');
+            detail.innerHTML = `
+                <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white">${escapeHtml(selectedBroadcast.title)}</h3>
+                    <p class="text-xs text-gray-500 mt-1">${formatTime(selectedBroadcast.createdAt)} by ${escapeHtml(selectedBroadcast.createdByName || 'HR')}</p>
+                    <p class="mt-3 text-sm leading-6 text-gray-700 dark:text-gray-200 whitespace-pre-wrap">${escapeHtml(selectedBroadcast.content)}</p>
+                </div>
+                <div id="commentList" class="flex-1 overflow-y-auto p-4 space-y-3">${comments.length ? comments.map(commentTemplate).join('') : '<p class="text-sm text-gray-500">No comments yet.</p>'}</div>
+                <form id="commentForm" class="border-t border-gray-200 dark:border-gray-700 p-3 flex items-end gap-2">
+                    <textarea id="commentInput" class="comm-input min-h-[44px] max-h-28" rows="1" maxlength="2000" placeholder="Add a comment"></textarea>
+                    <button class="comm-icon-btn" type="submit" title="Send comment"><span class="material-icons-round">send</span></button>
+                </form>`;
+            document.getElementById('commentForm').addEventListener('submit', submitComment);
+        }
+
+        function commentTemplate(comment) {
+            return `<div class="comment-card">
+                <div class="flex items-center justify-between gap-2">
+                    <p class="text-sm font-bold">${escapeHtml(comment.employeeName)}</p>
+                    <span class="text-[11px] text-gray-500">${formatTime(comment.createdAt)}</span>
+                </div>
+                <p class="text-xs text-gray-500 mb-2">${escapeHtml(comment.department || 'Unassigned')}</p>
+                <p class="text-sm text-gray-700 dark:text-gray-200 whitespace-pre-wrap">${escapeHtml(comment.content)}</p>
+            </div>`;
+        }
+
+        function submitComment(event) {
+            event.preventDefault();
+            const input = document.getElementById('commentInput');
+            const content = input.value.trim();
+            if (!selectedBroadcast || !content || !stompClient || !stompClient.connected) return;
+            stompClient.publish({
+                destination: '/app/broadcast.comment',
+                body: JSON.stringify({broadcastId: selectedBroadcast.id, content})
+            });
+            input.value = '';
+        }
+
+        function handleIncomingComment(message) {
+            const comment = JSON.parse(message.body);
+            if (!selectedBroadcast || selectedBroadcast.id !== comment.broadcastId) return;
+            const list = document.getElementById('commentList');
+            if (!list) return;
+            if (list.textContent.includes('No comments yet.')) list.innerHTML = '';
+            list.insertAdjacentHTML('beforeend', commentTemplate(comment));
+            list.scrollTop = list.scrollHeight;
+        }
+
+        function handleBroadcast(message) {
+            const broadcast = JSON.parse(message.body);
+            broadcasts = [broadcast, ...broadcasts.filter(item => item.id !== broadcast.id)];
+            renderBroadcasts();
+        }
+
+        function handlePresence(message) {
+            const presence = JSON.parse(message.body);
+            contacts = contacts.map(contact => contact.id === presence.employeeId ? {...contact, online: presence.online} : contact);
+            if (selectedContact && selectedContact.id === presence.employeeId) {
+                selectedContact.online = presence.online;
+                document.getElementById('chatStatus').textContent = `${presence.online ? 'Online' : 'Offline'} - ${selectedContact.department || 'Unassigned'}`;
+            }
+            renderPeople();
+        }
+
+        function connectSocket() {
+            stompClient = new StompJs.Client({
+                webSocketFactory: () => new SockJS('/ws'),
+                reconnectDelay: 3000,
+                onConnect: () => {
+                    stompClient.subscribe('/user/queue/messages', handleIncomingMessage);
+                    stompClient.subscribe('/user/queue/broadcasts', handleBroadcast);
+                    stompClient.subscribe('/topic/hr-broadcasts', handleBroadcast);
+                    stompClient.subscribe('/topic/presence', handlePresence);
+                }
+            });
+            stompClient.activate();
+        }
+
+        function switchMobileTab(tab) {
+            document.querySelectorAll('.mobile-tab').forEach(button => button.classList.toggle('active', button.dataset.tab === tab));
+            document.getElementById('peoplePanel').classList.toggle('mobile-active', tab === 'people');
+            document.getElementById('chatPanel').classList.toggle('mobile-active', tab === 'chat');
+            document.getElementById('broadcastPanel').classList.toggle('mobile-active', tab === 'broadcasts');
+        }
+
+        function escapeHtml(value) {
+            const div = document.createElement('div');
+            div.textContent = value == null ? '' : String(value);
+            return div.innerHTML;
+        }
+
+        document.getElementById('peopleSearch').addEventListener('input', renderPeople);
+        document.getElementById('onlineFilter').addEventListener('click', () => {
+            onlineOnly = !onlineOnly;
+            document.getElementById('onlineFilter').classList.toggle('bg-blue-50', onlineOnly);
+            renderPeople();
+        });
+        document.querySelectorAll('.mobile-tab').forEach(button => button.addEventListener('click', () => switchMobileTab(button.dataset.tab)));
+        document.querySelectorAll('[data-close-broadcasts]').forEach(button => button.addEventListener('click', () => switchMobileTab('chat')));
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadInitialData();
+            connectSocket();
+        });
+    </script>
+</main>
+</body>
+</html>

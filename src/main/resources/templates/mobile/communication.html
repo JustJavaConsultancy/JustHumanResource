@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="layouts/mobileEmployeeLayout">
+<head>
+    <meta charset="UTF-8">
+    <title>Messages</title>
+    <style>
+        .mchat { height:100%; display:flex; flex-direction:column; gap:12px; padding:0 16px 14px; }
+        .mchat-tabs { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; padding-top:4px; }
+        .mchat-tab { min-height:38px; border:1px solid #e2e8f0; border-radius:14px; background:#fff; color:#64748b; font-size:12px; font-weight:800; }
+        .dark .mchat-tab { border-color:#334155; background:#1e293b; color:#94a3b8; }
+        .mchat-tab.active { background:#2463eb; border-color:#2463eb; color:#fff; }
+        .mchat-panel { display:none; min-height:0; flex:1; overflow:hidden; border:1px solid #e2e8f0; border-radius:18px; background:#fff; }
+        .dark .mchat-panel { border-color:#334155; background:#1e293b; }
+        .mchat-panel.active { display:flex; flex-direction:column; }
+        .mchat-head { padding:14px; border-bottom:1px solid #e2e8f0; background:#f8fafc; }
+        .dark .mchat-head { border-color:#334155; background:#0f172a; }
+        .mchat-search, .mchat-input { width:100%; border:1px solid #e2e8f0; border-radius:14px; background:#fff; padding:11px 12px; font-size:14px; outline:none; resize:none; }
+        .dark .mchat-search, .dark .mchat-input { border-color:#334155; background:#0f172a; color:#f8fafc; }
+        .mchat-search:focus, .mchat-input:focus { border-color:#2463eb; box-shadow:0 0 0 3px rgba(36,99,235,.12); }
+        .person-row, .broadcast-row { width:100%; display:flex; align-items:center; gap:12px; padding:13px 14px; border-bottom:1px solid #eef2f7; text-align:left; }
+        .dark .person-row, .dark .broadcast-row { border-color:#334155; }
+        .avatar { width:42px; height:42px; border-radius:15px; display:flex; align-items:center; justify-content:center; background:#2463eb; color:white; font-size:13px; font-weight:900; flex:0 0 auto; }
+        .dot { width:10px; height:10px; border-radius:999px; background:#94a3b8; border:2px solid #fff; }
+        .dark .dot { border-color:#1e293b; }
+        .dot.online { background:#16a34a; }
+        .badge { min-width:22px; height:22px; border-radius:999px; display:inline-flex; align-items:center; justify-content:center; padding:0 7px; background:#dc2626; color:white; font-size:11px; font-weight:900; }
+        .message-scroll { flex:1; overflow-y:auto; padding:14px; background:#f8fafc; }
+        .dark .message-scroll { background:#0f172a; }
+        .message-row { display:flex; margin-bottom:10px; }
+        .message-row.mine { justify-content:flex-end; }
+        .bubble { max-width:84%; border:1px solid #e2e8f0; border-radius:16px; padding:10px 12px; background:#fff; font-size:14px; line-height:1.45; overflow-wrap:anywhere; }
+        .dark .bubble { border-color:#334155; background:#1e293b; }
+        .message-row.mine .bubble { background:#2463eb; border-color:#2463eb; color:#fff; }
+        .meta { margin-top:5px; font-size:10px; color:#64748b; }
+        .message-row.mine .meta { color:#dbeafe; }
+        .send-btn { width:44px; height:44px; border-radius:14px; display:flex; align-items:center; justify-content:center; background:#2463eb; color:#fff; flex:0 0 auto; }
+        .comment-card { border:1px solid #e2e8f0; border-radius:14px; padding:10px 12px; background:#f8fafc; }
+        .dark .comment-card { border-color:#334155; background:#0f172a; }
+        .empty { height:100%; min-height:220px; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px; text-align:center; color:#64748b; }
+    </style>
+</head>
+<body>
+<main layout:fragment="content" class="mchat">
+    <div class="mchat-tabs">
+        <button class="mchat-tab active" data-mobile-tab="people">People</button>
+        <button class="mchat-tab" data-mobile-tab="chat">Chat</button>
+        <button class="mchat-tab" data-mobile-tab="broadcasts">HR Updates</button>
+    </div>
+
+    <section id="peoplePanel" class="mchat-panel active">
+        <div class="mchat-head">
+            <div class="flex items-center justify-between gap-3 mb-3">
+                <div>
+                    <h2 class="text-base font-bold">People</h2>
+                    <p class="text-xs text-slate-500"><span id="onlineCount">0</span> online now</p>
+                </div>
+                <button id="onlineFilter" class="px-3 py-2 rounded-xl bg-blue-50 text-primary text-xs font-bold" type="button">Online</button>
+            </div>
+            <input id="peopleSearch" class="mchat-search" placeholder="Search employees">
+        </div>
+        <div id="peopleList" class="flex-1 overflow-y-auto"></div>
+    </section>
+
+    <section id="chatPanel" class="mchat-panel">
+        <div class="mchat-head flex items-center gap-3">
+            <div id="chatAvatar" class="avatar bg-slate-400">--</div>
+            <div class="min-w-0">
+                <h2 id="chatName" class="text-base font-bold truncate">Select a colleague</h2>
+                <p id="chatStatus" class="text-xs text-slate-500 truncate">Start from People</p>
+            </div>
+        </div>
+        <div id="messages" class="message-scroll"></div>
+        <form id="messageForm" class="p-3 border-t border-slate-200 dark:border-slate-700 flex items-end gap-2">
+            <textarea id="messageInput" class="mchat-input min-h-[44px] max-h-28" rows="1" maxlength="2000" placeholder="Write a message" disabled></textarea>
+            <button id="sendMessageBtn" class="send-btn opacity-50" type="submit" disabled><span class="material-symbols-outlined">send</span></button>
+        </form>
+    </section>
+
+    <section id="broadcastPanel" class="mchat-panel">
+        <div class="mchat-head">
+            <h2 class="text-base font-bold">HR Updates</h2>
+            <p class="text-xs text-slate-500">Broadcasts are delivered when you come online.</p>
+        </div>
+        <div id="broadcastList" class="max-h-[38%] overflow-y-auto border-b border-slate-200 dark:border-slate-700"></div>
+        <div id="broadcastDetail" class="flex-1 min-h-0 flex flex-col">
+            <div class="empty"><span class="material-symbols-outlined text-4xl mb-2">campaign</span><p class="text-sm font-semibold">Select an update</p></div>
+        </div>
+    </section>
+
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7/bundles/stomp.umd.min.js"></script>
+    <script th:inline="javascript">
+        const currentEmployeeId = /*[[${currentEmployeeId}]]*/ 0;
+        let stompClient, selectedContact, selectedBroadcast, activeCommentSubscription;
+        let contacts = [], conversations = [], broadcasts = [], onlineOnly = false;
+
+        function initials(name) { return (name || '').split(' ').filter(Boolean).slice(0, 2).map(p => p[0].toUpperCase()).join('') || '--'; }
+        function fmt(value) { return value ? new Date(value).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'}) : ''; }
+        function html(value) { const div = document.createElement('div'); div.textContent = value == null ? '' : String(value); return div.innerHTML; }
+        async function json(url, options) { const r = await fetch(url, options); if (!r.ok) throw new Error(await r.text()); return r.json(); }
+
+        async function loadInitialData() {
+            [contacts, conversations, broadcasts] = await Promise.all([
+                json('/employee/communication/employees'),
+                json('/employee/communication/conversations'),
+                json('/employee/communication/broadcasts')
+            ]);
+            renderPeople();
+            renderBroadcasts();
+        }
+
+        function renderPeople() {
+            const search = document.getElementById('peopleSearch').value.toLowerCase();
+            const filtered = contacts.filter(c => (!onlineOnly || c.online) && (!search || c.fullName.toLowerCase().includes(search) || (c.department || '').toLowerCase().includes(search)));
+            document.getElementById('onlineCount').textContent = contacts.filter(c => c.online).length;
+            document.getElementById('peopleList').innerHTML = filtered.length ? filtered.map(c => `
+                <button class="person-row" data-contact-id="${c.id}" type="button">
+                    <div class="relative"><div class="avatar">${initials(c.fullName)}</div><span class="dot ${c.online ? 'online' : ''} absolute -right-1 -bottom-1"></span></div>
+                    <div class="min-w-0 flex-1"><div class="flex items-center justify-between gap-2"><p class="text-sm font-bold truncate">${html(c.fullName)}</p>${c.unreadCount > 0 ? `<span class="badge">${c.unreadCount}</span>` : ''}</div><p class="text-xs text-slate-500 truncate">${html(c.department || 'Unassigned')}</p></div>
+                </button>`).join('') : '<div class="empty"><span class="material-symbols-outlined text-4xl mb-2">person_search</span><p class="text-sm font-semibold">No employees found</p></div>';
+            document.querySelectorAll('[data-contact-id]').forEach(btn => btn.addEventListener('click', () => selectContact(Number(btn.dataset.contactId))));
+        }
+
+        async function selectContact(id) {
+            selectedContact = contacts.find(c => c.id === id);
+            if (!selectedContact) return;
+            selectedContact.unreadCount = 0;
+            document.getElementById('chatAvatar').textContent = initials(selectedContact.fullName);
+            document.getElementById('chatName').textContent = selectedContact.fullName;
+            document.getElementById('chatStatus').textContent = `${selectedContact.online ? 'Online' : 'Offline'} - ${selectedContact.department || 'Unassigned'}`;
+            document.getElementById('messageInput').disabled = false;
+            document.getElementById('sendMessageBtn').disabled = false;
+            document.getElementById('sendMessageBtn').classList.remove('opacity-50');
+            renderPeople();
+            showTab('chat');
+            const conversation = conversations.find(item => item.otherParticipant && item.otherParticipant.id === id);
+            if (!conversation) { document.getElementById('messages').innerHTML = emptyChat(); return; }
+            renderMessages(await json(`/employee/communication/conversations/${conversation.id}/messages`));
+        }
+
+        function renderMessages(items) {
+            const el = document.getElementById('messages');
+            el.innerHTML = items.length ? items.map(messageTpl).join('') : emptyChat();
+            el.scrollTop = el.scrollHeight;
+        }
+        function messageTpl(m) { const mine = m.senderId === currentEmployeeId; return `<div class="message-row ${mine ? 'mine' : ''}"><div class="bubble"><div>${html(m.content)}</div><div class="meta">${fmt(m.createdAt)}${mine && m.deliveredAt ? ' - Delivered' : ''}</div></div></div>`; }
+        function emptyChat() { return '<div class="empty"><span class="material-symbols-outlined text-4xl mb-2">chat_bubble</span><p class="text-sm font-semibold">No messages yet</p><p class="text-xs mt-1">Send the first message.</p></div>'; }
+
+        document.getElementById('messageForm').addEventListener('submit', e => {
+            e.preventDefault();
+            const input = document.getElementById('messageInput');
+            const content = input.value.trim();
+            if (!selectedContact || !content || !stompClient?.connected) return;
+            stompClient.publish({destination:'/app/chat.send', body:JSON.stringify({recipientEmployeeId:selectedContact.id, content})});
+            input.value = '';
+        });
+
+        function handleMessage(frame) {
+            const msg = JSON.parse(frame.body);
+            const otherId = msg.senderId === currentEmployeeId ? msg.recipientId : msg.senderId;
+            const contact = contacts.find(c => c.id === otherId);
+            if (contact && (!selectedContact || selectedContact.id !== otherId)) contact.unreadCount = (contact.unreadCount || 0) + 1;
+            if (!conversations.find(c => c.id === msg.conversationId) && contact) conversations.unshift({id:msg.conversationId, otherParticipant:contact, lastMessage:msg});
+            if (selectedContact && selectedContact.id === otherId) {
+                const el = document.getElementById('messages');
+                if (el.querySelector('.empty')) el.innerHTML = '';
+                el.insertAdjacentHTML('beforeend', messageTpl(msg));
+                el.scrollTop = el.scrollHeight;
+            }
+            renderPeople();
+        }
+
+        function renderBroadcasts() {
+            document.getElementById('broadcastList').innerHTML = broadcasts.length ? broadcasts.map(b => `
+                <button class="broadcast-row" data-broadcast-id="${b.id}" type="button">
+                    <div class="min-w-0 flex-1"><div class="flex items-center gap-2"><p class="text-sm font-bold truncate">${html(b.title)}</p>${b.read ? '' : '<span class="w-2 h-2 rounded-full bg-primary flex-none"></span>'}</div><p class="text-xs text-slate-500 mt-1">${fmt(b.createdAt)} - ${b.commentCount || 0} comments</p></div>
+                    <span class="material-symbols-outlined text-slate-400">chevron_right</span>
+                </button>`).join('') : '<div class="empty"><span class="material-symbols-outlined text-4xl mb-2">campaign</span><p class="text-sm font-semibold">No HR updates yet</p></div>';
+            document.querySelectorAll('[data-broadcast-id]').forEach(btn => btn.addEventListener('click', () => selectBroadcast(Number(btn.dataset.broadcastId))));
+        }
+
+        async function selectBroadcast(id) {
+            selectedBroadcast = broadcasts.find(b => b.id === id);
+            if (!selectedBroadcast) return;
+            await fetch(`/employee/communication/broadcasts/${id}/read`, {method:'POST'});
+            selectedBroadcast.read = true;
+            renderBroadcasts();
+            if (activeCommentSubscription) activeCommentSubscription.unsubscribe();
+            if (stompClient?.connected) activeCommentSubscription = stompClient.subscribe(`/topic/hr-broadcasts/${id}/comments`, addComment);
+            const comments = await json(`/employee/communication/broadcasts/${id}/comments`);
+            renderBroadcastDetail(comments);
+        }
+
+        function renderBroadcastDetail(comments) {
+            document.getElementById('broadcastDetail').innerHTML = `
+                <div class="p-4 border-b border-slate-200 dark:border-slate-700"><h3 class="text-base font-bold">${html(selectedBroadcast.title)}</h3><p class="text-xs text-slate-500 mt-1">${fmt(selectedBroadcast.createdAt)} by ${html(selectedBroadcast.createdByName || 'HR')}</p><p class="mt-3 text-sm leading-6 whitespace-pre-wrap">${html(selectedBroadcast.content)}</p></div>
+                <div id="commentList" class="flex-1 overflow-y-auto p-3 space-y-2">${comments.length ? comments.map(commentTpl).join('') : '<p class="text-sm text-slate-500 p-2">No comments yet.</p>'}</div>
+                <form id="commentForm" class="p-3 border-t border-slate-200 dark:border-slate-700 flex items-end gap-2"><textarea id="commentInput" class="mchat-input min-h-[44px] max-h-28" rows="1" maxlength="2000" placeholder="Add a comment"></textarea><button class="send-btn" type="submit"><span class="material-symbols-outlined">send</span></button></form>`;
+            document.getElementById('commentForm').addEventListener('submit', e => {
+                e.preventDefault();
+                const input = document.getElementById('commentInput');
+                const content = input.value.trim();
+                if (!content || !stompClient?.connected) return;
+                stompClient.publish({destination:'/app/broadcast.comment', body:JSON.stringify({broadcastId:selectedBroadcast.id, content})});
+                input.value = '';
+            });
+        }
+
+        function commentTpl(c) { return `<div class="comment-card"><div class="flex items-center justify-between gap-2"><p class="text-sm font-bold">${html(c.employeeName)}</p><span class="text-[10px] text-slate-500">${fmt(c.createdAt)}</span></div><p class="text-xs text-slate-500 mb-2">${html(c.department || 'Unassigned')}</p><p class="text-sm whitespace-pre-wrap">${html(c.content)}</p></div>`; }
+        function addComment(frame) { const c = JSON.parse(frame.body || '{}'); if (!selectedBroadcast || c.broadcastId !== selectedBroadcast.id) return; const list = document.getElementById('commentList'); if (list.textContent.includes('No comments yet.')) list.innerHTML = ''; list.insertAdjacentHTML('beforeend', commentTpl(c)); list.scrollTop = list.scrollHeight; }
+        function handleBroadcast(frame) { const b = JSON.parse(frame.body); broadcasts = [b, ...broadcasts.filter(item => item.id !== b.id)]; renderBroadcasts(); }
+        function handlePresence(frame) { const p = JSON.parse(frame.body); contacts = contacts.map(c => c.id === p.employeeId ? {...c, online:p.online} : c); if (selectedContact?.id === p.employeeId) document.getElementById('chatStatus').textContent = `${p.online ? 'Online' : 'Offline'} - ${selectedContact.department || 'Unassigned'}`; renderPeople(); }
+        function showTab(tab) { document.querySelectorAll('.mchat-tab').forEach(b => b.classList.toggle('active', b.dataset.mobileTab === tab)); document.querySelectorAll('.mchat-panel').forEach(p => p.classList.remove('active')); document.getElementById(tab + 'Panel').classList.add('active'); }
+        function connectSocket() { stompClient = new StompJs.Client({webSocketFactory:() => new SockJS('/ws'), reconnectDelay:3000, onConnect:() => { stompClient.subscribe('/user/queue/messages', handleMessage); stompClient.subscribe('/user/queue/broadcasts', handleBroadcast); stompClient.subscribe('/topic/hr-broadcasts', handleBroadcast); stompClient.subscribe('/topic/presence', handlePresence); }}); stompClient.activate(); }
+
+        document.querySelectorAll('.mchat-tab').forEach(btn => btn.addEventListener('click', () => showTab(btn.dataset.mobileTab)));
+        document.getElementById('peopleSearch').addEventListener('input', renderPeople);
+        document.getElementById('onlineFilter').addEventListener('click', () => { onlineOnly = !onlineOnly; renderPeople(); });
+        document.addEventListener('DOMContentLoaded', async () => { await loadInitialData(); connectSocket(); });
+    </script>
+</main>
+</body>
+</html>

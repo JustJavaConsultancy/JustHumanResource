@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+    <meta charset="UTF-8">
+    <title>Communication</title>
+    <style>
+        .hr-comm { --hc-border:#e5e7eb; --hc-muted:#64748b; --hc-surface:#fff; --hc-soft:#f8fafc; }
+        .dark .hr-comm { --hc-border:#374151; --hc-muted:#9ca3af; --hc-surface:#1f2937; --hc-soft:#111827; }
+        .hr-grid { display:grid; grid-template-columns:minmax(0,1fr) 340px; gap:18px; align-items:start; }
+        .hr-card { border:1px solid var(--hc-border); background:var(--hc-surface); border-radius:8px; box-shadow:0 12px 30px -24px rgba(15,23,42,.55); overflow:hidden; }
+        .hr-card-head { padding:16px 18px; border-bottom:1px solid var(--hc-border); background:var(--hc-soft); }
+        .hr-input { width:100%; border:1px solid var(--hc-border); background:var(--hc-surface); border-radius:8px; padding:11px 12px; font-size:14px; outline:none; resize:none; }
+        .hr-input:focus { border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,.12); }
+        .hr-primary { display:inline-flex; align-items:center; justify-content:center; gap:8px; border-radius:8px; background:#2563eb; color:white; padding:11px 16px; font-size:14px; font-weight:800; }
+        .hr-secondary { display:inline-flex; align-items:center; justify-content:center; gap:8px; border:1px solid var(--hc-border); border-radius:8px; background:var(--hc-surface); padding:9px 12px; font-size:13px; font-weight:800; }
+        .hr-broadcast-row { width:100%; text-align:left; padding:15px 18px; border-bottom:1px solid var(--hc-border); transition:background-color .15s ease; }
+        .hr-broadcast-row:hover, .hr-broadcast-row.active { background:#eff6ff; }
+        .dark .hr-broadcast-row:hover, .dark .hr-broadcast-row.active { background:#172554; }
+        .metric-pill { display:inline-flex; align-items:center; gap:5px; border-radius:999px; padding:4px 9px; font-size:11px; font-weight:800; background:#f1f5f9; color:#475569; }
+        .dark .metric-pill { background:#374151; color:#d1d5db; }
+        .online-row { display:flex; align-items:center; gap:10px; padding:11px 14px; border-bottom:1px solid var(--hc-border); }
+        .avatar { width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center; color:white; background:#2563eb; font-weight:900; font-size:13px; }
+        .dot { width:10px; height:10px; border-radius:999px; background:#16a34a; }
+        .comment { border:1px solid var(--hc-border); border-radius:8px; padding:11px 12px; background:var(--hc-soft); }
+        @media (max-width: 1080px) { .hr-grid { grid-template-columns:1fr; } }
+    </style>
+</head>
+<body>
+<main layout:fragment="content" class="hr-comm space-y-5">
+    <section class="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div class="hr-card p-5">
+            <div class="flex items-center justify-between">
+                <div><p class="text-xs font-bold uppercase text-gray-500">Broadcasts</p><p id="broadcastCount" class="mt-2 text-3xl font-bold">0</p></div>
+                <span class="material-icons-round text-blue-600 bg-blue-50 rounded-lg p-2">campaign</span>
+            </div>
+        </div>
+        <div class="hr-card p-5">
+            <div class="flex items-center justify-between">
+                <div><p class="text-xs font-bold uppercase text-gray-500">Employees Online</p><p id="onlineCount" class="mt-2 text-3xl font-bold">0</p></div>
+                <span class="material-icons-round text-green-600 bg-green-50 rounded-lg p-2">groups</span>
+            </div>
+        </div>
+        <div class="hr-card p-5">
+            <div class="flex items-center justify-between">
+                <div><p class="text-xs font-bold uppercase text-gray-500">Comments</p><p id="commentCount" class="mt-2 text-3xl font-bold">0</p></div>
+                <span class="material-icons-round text-violet-600 bg-violet-50 rounded-lg p-2">forum</span>
+            </div>
+        </div>
+    </section>
+
+    <section class="hr-grid">
+        <div class="space-y-5">
+            <section class="hr-card">
+                <div class="hr-card-head flex items-center justify-between gap-3">
+                    <div>
+                        <h2 class="text-lg font-bold">New HR Broadcast</h2>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Online employees receive it instantly. Offline employees receive it when they reconnect.</p>
+                    </div>
+                </div>
+                <form id="broadcastForm" class="p-5 space-y-3">
+                    <input id="broadcastTitle" class="hr-input" maxlength="160" placeholder="Broadcast title" required>
+                    <textarea id="broadcastContent" class="hr-input min-h-[120px]" maxlength="5000" placeholder="Write the announcement" required></textarea>
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <p id="sendStatus" class="text-sm text-gray-500 dark:text-gray-400">Ready to send.</p>
+                        <button class="hr-primary" type="submit">
+                            <span class="material-icons-round text-base">send</span>
+                            Send Broadcast
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <section class="hr-card">
+                <div class="hr-card-head flex items-center justify-between">
+                    <div>
+                        <h2 class="text-lg font-bold">Broadcast History</h2>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Track delivery, reads, and comments.</p>
+                    </div>
+                    <button id="refreshBtn" class="hr-secondary" type="button">
+                        <span class="material-icons-round text-sm">refresh</span>
+                        Refresh
+                    </button>
+                </div>
+                <div id="broadcastRows"></div>
+            </section>
+        </div>
+
+        <aside class="space-y-5">
+            <section class="hr-card">
+                <div class="hr-card-head">
+                    <h2 class="text-base font-bold">Online Employees</h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Updates live as users connect or leave.</p>
+                </div>
+                <div id="onlineRows" class="max-h-[320px] overflow-y-auto"></div>
+            </section>
+
+            <section class="hr-card">
+                <div class="hr-card-head">
+                    <h2 id="detailTitle" class="text-base font-bold">Broadcast Details</h2>
+                    <p id="detailMeta" class="text-sm text-gray-500 dark:text-gray-400">Select a broadcast to view comments.</p>
+                </div>
+                <div id="detailContent" class="p-4 text-sm text-gray-500">No broadcast selected.</div>
+                <div id="commentRows" class="max-h-[360px] overflow-y-auto p-4 pt-0 space-y-3"></div>
+            </section>
+        </aside>
+    </section>
+
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7/bundles/stomp.umd.min.js"></script>
+    <script>
+        let stompClient;
+        let broadcasts = [];
+        let onlineEmployees = [];
+        let selectedBroadcast = null;
+        let activeCommentSubscription = null;
+        let activeReceiptSubscription = null;
+
+        function initials(name) {
+            return (name || '').split(' ').filter(Boolean).slice(0, 2).map(part => part[0].toUpperCase()).join('') || '--';
+        }
+
+        function formatTime(value) {
+            if (!value) return '';
+            return new Date(value).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'});
+        }
+
+        async function json(url) {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(await response.text());
+            return response.json();
+        }
+
+        async function loadData() {
+            [broadcasts, onlineEmployees] = await Promise.all([
+                json('/communication/broadcasts'),
+                json('/communication/presence')
+            ]);
+            renderBroadcasts();
+            renderOnline();
+            renderMetrics();
+        }
+
+        function renderMetrics() {
+            document.getElementById('broadcastCount').textContent = broadcasts.length;
+            document.getElementById('onlineCount').textContent = onlineEmployees.length;
+            document.getElementById('commentCount').textContent = broadcasts.reduce((sum, item) => sum + (item.commentCount || 0), 0);
+        }
+
+        function renderOnline() {
+            const rows = document.getElementById('onlineRows');
+            rows.innerHTML = onlineEmployees.length ? onlineEmployees.map(employee => `
+                <div class="online-row">
+                    <div class="avatar">${initials(employee.fullName)}</div>
+                    <div class="min-w-0 flex-1">
+                        <p class="text-sm font-bold truncate">${escapeHtml(employee.fullName)}</p>
+                        <p class="text-xs text-gray-500 truncate">${escapeHtml(employee.department || 'Unassigned')}</p>
+                    </div>
+                    <span class="dot"></span>
+                </div>`).join('') : '<div class="p-8 text-center text-sm text-gray-500">No employees online right now.</div>';
+        }
+
+        function renderBroadcasts() {
+            const rows = document.getElementById('broadcastRows');
+            rows.innerHTML = broadcasts.length ? broadcasts.map(item => `
+                <button type="button" class="hr-broadcast-row ${selectedBroadcast && selectedBroadcast.id === item.id ? 'active' : ''}" data-broadcast-id="${item.id}">
+                    <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                        <div class="min-w-0">
+                            <h3 class="font-bold text-gray-900 dark:text-white">${escapeHtml(item.title)}</h3>
+                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">${escapeHtml(summary(item.content))}</p>
+                            <p class="mt-2 text-xs text-gray-500">Sent ${formatTime(item.createdAt)} by ${escapeHtml(item.createdByName || 'HR')}</p>
+                        </div>
+                        <div class="flex flex-wrap gap-2 lg:justify-end">
+                            <span class="metric-pill"><span class="material-icons-round text-sm">done</span>${item.deliveredCount || 0} delivered</span>
+                            <span class="metric-pill"><span class="material-icons-round text-sm">visibility</span>${item.readCount || 0} read</span>
+                            <span class="metric-pill"><span class="material-icons-round text-sm">forum</span>${item.commentCount || 0} comments</span>
+                        </div>
+                    </div>
+                </button>
+            `).join('') : '<div class="p-10 text-center text-sm text-gray-500"><span class="material-icons-round block text-5xl text-gray-300 mb-2">campaign</span>No broadcasts have been sent.</div>';
+            document.querySelectorAll('[data-broadcast-id]').forEach(button => {
+                button.addEventListener('click', () => selectBroadcast(Number(button.dataset.broadcastId)));
+            });
+        }
+
+        async function selectBroadcast(id) {
+            selectedBroadcast = broadcasts.find(item => item.id === id);
+            if (!selectedBroadcast) return;
+            renderBroadcasts();
+            document.getElementById('detailTitle').textContent = selectedBroadcast.title;
+            document.getElementById('detailMeta').textContent = `${formatTime(selectedBroadcast.createdAt)} - ${selectedBroadcast.deliveredCount || 0} delivered - ${selectedBroadcast.readCount || 0} read`;
+            document.getElementById('detailContent').textContent = selectedBroadcast.content;
+            if (activeCommentSubscription) activeCommentSubscription.unsubscribe();
+            if (activeReceiptSubscription) activeReceiptSubscription.unsubscribe();
+            if (stompClient && stompClient.connected) {
+                activeCommentSubscription = stompClient.subscribe(`/topic/hr-broadcasts/${id}/comments`, handleComment);
+                activeReceiptSubscription = stompClient.subscribe(`/topic/hr-broadcasts/${id}/receipts`, handleReceipt);
+            }
+            const comments = await json(`/communication/broadcasts/${id}/comments`);
+            renderComments(comments);
+        }
+
+        function renderComments(comments) {
+            const rows = document.getElementById('commentRows');
+            rows.innerHTML = comments.length ? comments.map(commentTemplate).join('') : '<p class="text-sm text-gray-500">No comments yet.</p>';
+        }
+
+        function commentTemplate(comment) {
+            return `<div class="comment">
+                <div class="flex items-center justify-between gap-2">
+                    <p class="text-sm font-bold">${escapeHtml(comment.employeeName)}</p>
+                    <span class="text-[11px] text-gray-500">${formatTime(comment.createdAt)}</span>
+                </div>
+                <p class="text-xs text-gray-500 mb-2">${escapeHtml(comment.department || 'Unassigned')}</p>
+                <p class="text-sm leading-5 whitespace-pre-wrap">${escapeHtml(comment.content)}</p>
+            </div>`;
+        }
+
+        function handleComment(message) {
+            const comment = JSON.parse(message.body);
+            const broadcast = broadcasts.find(item => item.id === comment.broadcastId);
+            if (broadcast) broadcast.commentCount = (broadcast.commentCount || 0) + 1;
+            if (selectedBroadcast && selectedBroadcast.id === comment.broadcastId) {
+                const rows = document.getElementById('commentRows');
+                if (rows.textContent.includes('No comments yet.')) rows.innerHTML = '';
+                rows.insertAdjacentHTML('beforeend', commentTemplate(comment));
+                rows.scrollTop = rows.scrollHeight;
+            }
+            renderBroadcasts();
+            renderMetrics();
+        }
+
+        function handleReceipt(message) {
+            const updated = JSON.parse(message.body);
+            broadcasts = broadcasts.map(item => item.id === updated.id ? updated : item);
+            if (selectedBroadcast && selectedBroadcast.id === updated.id) {
+                selectedBroadcast = updated;
+                document.getElementById('detailMeta').textContent = `${formatTime(updated.createdAt)} - ${updated.deliveredCount || 0} delivered - ${updated.readCount || 0} read`;
+            }
+            renderBroadcasts();
+            renderMetrics();
+        }
+
+        function handleBroadcast(message) {
+            const broadcast = JSON.parse(message.body);
+            broadcasts = [broadcast, ...broadcasts.filter(item => item.id !== broadcast.id)];
+            renderBroadcasts();
+            renderMetrics();
+        }
+
+        function handlePresence(message) {
+            const presence = JSON.parse(message.body);
+            onlineEmployees = onlineEmployees.filter(item => item.employeeId !== presence.employeeId);
+            if (presence.online) onlineEmployees.push(presence);
+            onlineEmployees.sort((a, b) => a.fullName.localeCompare(b.fullName));
+            renderOnline();
+            renderMetrics();
+        }
+
+        document.getElementById('broadcastForm').addEventListener('submit', async event => {
+            event.preventDefault();
+            const title = document.getElementById('broadcastTitle').value.trim();
+            const content = document.getElementById('broadcastContent').value.trim();
+            if (!title || !content) {
+                document.getElementById('sendStatus').textContent = 'Title and message are required.';
+                return;
+            }
+            try {
+                const response = await fetch('/communication/broadcasts', {
+                    method:'POST',
+                    headers:{'Content-Type':'application/json'},
+                    body:JSON.stringify({title, content})
+                });
+                if (!response.ok) throw new Error(await response.text());
+                const broadcast = await response.json();
+                broadcasts = [broadcast, ...broadcasts.filter(item => item.id !== broadcast.id)];
+                renderBroadcasts();
+                renderMetrics();
+                event.target.reset();
+                document.getElementById('sendStatus').textContent = 'Broadcast sent.';
+            } catch (error) {
+                document.getElementById('sendStatus').textContent = 'Broadcast failed. Please check your access and try again.';
+            }
+        });
+
+        function connectSocket() {
+            stompClient = new StompJs.Client({
+                webSocketFactory: () => new SockJS('/ws'),
+                reconnectDelay: 3000,
+                onConnect: () => {
+                    document.getElementById('sendStatus').textContent = 'Connected and ready.';
+                    stompClient.subscribe('/topic/hr-broadcasts', handleBroadcast);
+                    stompClient.subscribe('/topic/presence', handlePresence);
+                    if (selectedBroadcast) selectBroadcast(selectedBroadcast.id);
+                }
+            });
+            stompClient.activate();
+        }
+
+        function summary(value) {
+            const text = value || '';
+            return text.length > 160 ? text.substring(0, 157) + '...' : text;
+        }
+
+        function escapeHtml(value) {
+            const div = document.createElement('div');
+            div.textContent = value == null ? '' : String(value);
+            return div.innerHTML;
+        }
+
+        document.getElementById('refreshBtn').addEventListener('click', loadData);
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadData();
+            connectSocket();
+        });
+    </script>
+</main>
+</body>
+</html>
