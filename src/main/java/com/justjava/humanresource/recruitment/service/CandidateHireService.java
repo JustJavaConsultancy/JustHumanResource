@@ -7,6 +7,8 @@ import com.justjava.humanresource.recruitment.dto.HireCandidateCommand;
 import com.justjava.humanresource.recruitment.entity.*;
 import com.justjava.humanresource.recruitment.enums.*;
 import com.justjava.humanresource.recruitment.repository.*;
+import com.justjava.humanresource.utils.AfterCommitExecutor;
+import com.justjava.humanresource.utils.RecruitmentEmailService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +21,8 @@ public class CandidateHireService {
     private final EmploymentOfferRepository offerRepository;
     private final EmployeeOnboardingService onboardingService;
     private final RecruitmentService recruitmentService;
+    private final RecruitmentEmailService recruitmentEmailService;
+    private final AfterCommitExecutor afterCommitExecutor;
 
     @Transactional
     public CandidateEmployeeConversion startOnboarding(Long applicationId, HireCandidateCommand hire, String initiatedBy) {
@@ -45,6 +49,7 @@ public class CandidateHireService {
         application.setCurrentStage(RecruitmentStage.ONBOARDING); application.setStatus(ApplicationStatus.HIRED);
         applicationRepository.save(application);
         recruitmentService.recordHire(applicationId);
+        afterCommitExecutor.runAfterCommit(() -> recruitmentEmailService.notifyOnboardingStarted(applicationId));
         return saved;
     }
 

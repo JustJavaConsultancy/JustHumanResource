@@ -11,6 +11,8 @@ import com.justjava.humanresource.orgStructure.entity.Company;
 import com.justjava.humanresource.request.entity.*;
 import com.justjava.humanresource.request.enums.*;
 import com.justjava.humanresource.request.repository.StaffRequisitionDetailRepository;
+import com.justjava.humanresource.utils.AfterCommitExecutor;
+import com.justjava.humanresource.utils.RecruitmentEmailService;
 import org.flowable.engine.RuntimeService;
 import org.flowable.engine.runtime.ProcessInstance;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,11 +34,13 @@ class RecruitmentServiceTest {
     @Mock JobApplicationRepository applicationRepository; @Mock ApplicationStageHistoryRepository historyRepository;
     @Mock StaffRequisitionDetailRepository staffRepository; @Mock DepartmentRepository departmentRepository;
     @Mock RuntimeService runtimeService;
+    @Mock RecruitmentEmailService recruitmentEmailService; @Mock AfterCommitExecutor afterCommitExecutor;
     RecruitmentService service;
 
     @BeforeEach void setUp() {
         service = new RecruitmentService(openingRepository, candidateRepository, applicationRepository,
-                historyRepository, staffRepository, departmentRepository, new RecruitmentNumberService(), runtimeService);
+                historyRepository, staffRepository, departmentRepository, new RecruitmentNumberService(), runtimeService,
+                recruitmentEmailService, afterCommitExecutor);
     }
 
     @Test void approvedStaffRequisitionCreatesExactlyOneWorkflowBackedOpening() {
@@ -82,6 +86,7 @@ class RecruitmentServiceTest {
         assertEquals(40L,result.applicationId()); assertNotNull(result.accessToken());
         verify(historyRepository).save(any());
         verify(runtimeService).startProcessInstanceByKey(eq("candidateApplicationProcess"),eq("JOB_APPLICATION_40"),anyMap());
+        verify(afterCommitExecutor).runAfterCommit(any(Runnable.class));
     }
 
     @Test void unavailablePublicOpeningCannotReceiveApplications() {

@@ -13,6 +13,8 @@ import com.justjava.humanresource.recruitment.repository.InterviewScorecardRepos
 import com.justjava.humanresource.recruitment.repository.JobApplicationRepository;
 import com.justjava.humanresource.recruitment.service.InterviewService;
 import com.justjava.humanresource.recruitment.service.RecruitmentService;
+import com.justjava.humanresource.utils.AfterCommitExecutor;
+import com.justjava.humanresource.utils.RecruitmentEmailService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -34,12 +36,14 @@ class InterviewServiceTest {
     @Mock InterviewScorecardRepository scorecardRepository;
     @Mock JobApplicationRepository applicationRepository;
     @Mock RecruitmentService recruitmentService;
+    @Mock RecruitmentEmailService recruitmentEmailService;
+    @Mock AfterCommitExecutor afterCommitExecutor;
     InterviewService service;
 
     @BeforeEach
     void setUp() {
         service = new InterviewService(interviewRepository, panelRepository, scorecardRepository,
-                applicationRepository, recruitmentService);
+                applicationRepository, recruitmentService, recruitmentEmailService, afterCommitExecutor);
     }
 
     @Test
@@ -58,6 +62,7 @@ class InterviewServiceTest {
 
         verify(recruitmentService).moveApplication(40L, RecruitmentStage.INTERVIEW, ApplicationStatus.IN_PROCESS,
                 "Interview scheduled", null, 5L);
+        verify(afterCommitExecutor).runAfterCommit(any(Runnable.class));
     }
 
     @Test

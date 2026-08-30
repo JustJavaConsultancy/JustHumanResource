@@ -8,6 +8,8 @@ import com.justjava.humanresource.recruitment.enums.RecruitmentStage;
 import com.justjava.humanresource.recruitment.repository.EmploymentOfferRepository;
 import com.justjava.humanresource.recruitment.repository.JobApplicationRepository;
 import com.justjava.humanresource.recruitment.service.OfferService;
+import com.justjava.humanresource.utils.AfterCommitExecutor;
+import com.justjava.humanresource.utils.RecruitmentEmailService;
 import org.flowable.engine.RuntimeService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,11 +28,14 @@ class OfferServiceTest {
     @Mock EmploymentOfferRepository offerRepository;
     @Mock JobApplicationRepository applicationRepository;
     @Mock RuntimeService runtimeService;
+    @Mock RecruitmentEmailService recruitmentEmailService;
+    @Mock AfterCommitExecutor afterCommitExecutor;
     OfferService service;
 
     @BeforeEach
     void setUp() {
-        service = new OfferService(offerRepository, applicationRepository, runtimeService);
+        service = new OfferService(offerRepository, applicationRepository, runtimeService,
+                recruitmentEmailService, afterCommitExecutor);
     }
 
     @Test
@@ -49,6 +54,7 @@ class OfferServiceTest {
         assertEquals(ApplicationStatus.OFFER_ACCEPTED, application.getStatus());
         assertEquals(RecruitmentStage.PRE_EMPLOYMENT, application.getCurrentStage());
         verify(applicationRepository).save(application);
+        verify(afterCommitExecutor).runAfterCommit(any(Runnable.class));
     }
 
     @Test

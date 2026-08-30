@@ -10,6 +10,8 @@ import com.justjava.humanresource.request.enums.RequestStatus;
 import com.justjava.humanresource.request.enums.RequestType;
 import com.justjava.humanresource.hr.repository.DepartmentRepository;
 import com.justjava.humanresource.request.repository.StaffRequisitionDetailRepository;
+import com.justjava.humanresource.utils.AfterCommitExecutor;
+import com.justjava.humanresource.utils.RecruitmentEmailService;
 import lombok.RequiredArgsConstructor;
 import org.flowable.engine.RuntimeService;
 import org.springframework.stereotype.Service;
@@ -35,6 +37,8 @@ public class RecruitmentService {
     private final DepartmentRepository departmentRepository;
     private final RecruitmentNumberService numberService;
     private final RuntimeService runtimeService;
+    private final RecruitmentEmailService recruitmentEmailService;
+    private final AfterCommitExecutor afterCommitExecutor;
 
     @Transactional
     public JobOpening createOpeningFromApprovedRequisition(WorkflowRequest request) {
@@ -187,6 +191,8 @@ public class RecruitmentService {
                 Map.of("applicationId", saved.getId(), "jobOpeningId", opening.getId(), "companyId", opening.getCompanyId()));
         saved.setWorkflowInstanceId(process.getProcessInstanceId());
         applicationRepository.save(saved);
+        Long savedApplicationId = saved.getId();
+        afterCommitExecutor.runAfterCommit(() -> recruitmentEmailService.notifyApplicationSubmitted(savedApplicationId, rawToken));
         return new ApplicationSubmissionResult(saved.getId(), saved.getApplicationNumber(), rawToken);
     }
 
@@ -216,6 +222,11 @@ public class RecruitmentService {
         if (status == ApplicationStatus.REJECTED) application.setRejectionReason(reason);
         JobApplication saved = applicationRepository.save(application);
         recordTransition(saved, previousStage, previousStatus, reason, flowableTaskId, actorEmployeeId);
+        if (shouldNotifyCandidateOfDecision(saved, previousStage, previousStatus, reason)) {
+            Long savedApplicationId = saved.getId();
+            String savedReason = reason;
+            afterCommitExecutor.runAfterCommit(() -> recruitmentEmailService.notifyApplicationDecision(savedApplicationId, savedReason));
+        }
         return saved;
     }
 
@@ -271,6 +282,20 @@ public class RecruitmentService {
         if (execution != null) {
             runtimeService.messageEventReceived("JOB_OPENING_CLOSE", execution.getId());
         }
+    }
+    private boolean shouldNotifyCandidateOfDecision(JobApplication application, RecruitmentStage previousStage,
+                                                    ApplicationStatus previousStatus, String reason) {
+        if (application.getStatus() == previousStatus && application.getCurrentStage() == previousStage) {
+            return false;
+        }
+        if ("Interview scheduled".equalsIgnoreCase(reason == null ? "" : reason.trim())) {
+            return false;
+        }
+        return switch (application.getStatus()) {
+            case REJECTED, ON_HOLD, OFFER_ACCEPTED, OFFER_DECLINED, HIRED -> true;
+            case IN_PROCESS -> application.getCurrentStage() != previousStage;
+            default -> false;
+        };
     }
     private String hash(String value) {
         try { return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")

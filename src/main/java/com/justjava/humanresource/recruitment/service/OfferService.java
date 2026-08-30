@@ -3,6 +3,8 @@ package com.justjava.humanresource.recruitment.service;
 import com.justjava.humanresource.recruitment.entity.*;
 import com.justjava.humanresource.recruitment.enums.*;
 import com.justjava.humanresource.recruitment.repository.*;
+import com.justjava.humanresource.utils.AfterCommitExecutor;
+import com.justjava.humanresource.utils.RecruitmentEmailService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,6 +18,8 @@ public class OfferService {
     private final EmploymentOfferRepository offerRepository;
     private final JobApplicationRepository applicationRepository;
     private final RuntimeService runtimeService;
+    private final RecruitmentEmailService recruitmentEmailService;
+    private final AfterCommitExecutor afterCommitExecutor;
 
     @Transactional
     public EmploymentOffer createDraft(Long applicationId, BigDecimal annualGross, String currency,
@@ -48,7 +52,20 @@ public class OfferService {
     @Transactional public EmploymentOffer send(Long offerId) {
         EmploymentOffer offer = requireOffer(offerId);
         if (offer.getStatus() != OfferStatus.APPROVED) throw new IllegalStateException("Only an approved offer can be sent.");
-        offer.setStatus(OfferStatus.SENT); offer.setSentAt(LocalDateTime.now()); return offerRepository.save(offer);
+        offer.setStatus(OfferStatus.SENT); offer.setSentAt(LocalDateTime.now());
+        EmploymentOffer saved = offerRepository.save(offer);
+        Long savedOfferId = saved.getId();
+        afterCommitExecutor.runAfterCommit(() -> recruitmentEmailService.notifyOfferSent(savedOfferId));
+        return saved;
+    }
+
+    @Transactional public EmploymentOffer reject(Long offerId) {
+        EmploymentOffer offer = requireOffer(offerId);
+        offer.setStatus(OfferStatus.REJECTED);
+        EmploymentOffer saved = offerRepository.save(offer);
+        Long savedOfferId = saved.getId();
+        afterCommitExecutor.runAfterCommit(() -> recruitmentEmailService.notifyOfferApprovalRejected(savedOfferId));
+        return saved;
     }
     @Transactional(readOnly = true)
     public boolean isRespondable(EmploymentOffer offer) {
@@ -76,7 +93,11 @@ public class OfferService {
         JobApplication application = requireApplication(offer.getApplicationId());
         application.setStatus(accepted ? ApplicationStatus.OFFER_ACCEPTED : ApplicationStatus.OFFER_DECLINED);
         application.setCurrentStage(accepted ? RecruitmentStage.PRE_EMPLOYMENT : RecruitmentStage.COMPLETED);
-        applicationRepository.save(application); return offerRepository.save(offer);
+        applicationRepository.save(application);
+        EmploymentOffer saved = offerRepository.save(offer);
+        Long savedOfferId = saved.getId();
+        afterCommitExecutor.runAfterCommit(() -> recruitmentEmailService.notifyOfferResponse(savedOfferId));
+        return saved;
     }
     private JobApplication requireApplication(Long id) { return applicationRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Application not found.")); }
     private EmploymentOffer requireOffer(Long id) { return offerRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Offer not found.")); }

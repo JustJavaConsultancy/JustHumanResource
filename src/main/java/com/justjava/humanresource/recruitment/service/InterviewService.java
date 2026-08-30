@@ -3,6 +3,8 @@ package com.justjava.humanresource.recruitment.service;
 import com.justjava.humanresource.recruitment.entity.*;
 import com.justjava.humanresource.recruitment.enums.*;
 import com.justjava.humanresource.recruitment.repository.*;
+import com.justjava.humanresource.utils.AfterCommitExecutor;
+import com.justjava.humanresource.utils.RecruitmentEmailService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,6 +18,8 @@ public class InterviewService {
     private final InterviewScorecardRepository scorecardRepository;
     private final JobApplicationRepository applicationRepository;
     private final RecruitmentService recruitmentService;
+    private final RecruitmentEmailService recruitmentEmailService;
+    private final AfterCommitExecutor afterCommitExecutor;
 
     @Transactional
     public Interview schedule(Long applicationId, String title, LocalDateTime start, LocalDateTime end,
@@ -37,6 +41,8 @@ public class InterviewService {
         });
         recruitmentService.moveApplication(applicationId, RecruitmentStage.INTERVIEW, ApplicationStatus.IN_PROCESS,
                 "Interview scheduled", null, coordinatorId);
+        Long savedInterviewId = saved.getId();
+        afterCommitExecutor.runAfterCommit(() -> recruitmentEmailService.notifyInterviewScheduled(savedInterviewId));
         return saved;
     }
 
@@ -58,6 +64,8 @@ public class InterviewService {
         InterviewScorecard saved = scorecardRepository.save(card);
         if (scorecardRepository.findByInterviewId(interviewId).size() >= panelRepository.findByInterviewId(interviewId).size()) {
             interview.setStatus(InterviewStatus.COMPLETED); interviewRepository.save(interview);
+            Long completedInterviewId = interview.getId();
+            afterCommitExecutor.runAfterCommit(() -> recruitmentEmailService.notifyInterviewCompleted(completedInterviewId));
         }
         return saved;
     }
