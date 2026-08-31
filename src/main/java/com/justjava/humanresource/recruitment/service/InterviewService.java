@@ -42,6 +42,10 @@ public class InterviewService {
         recruitmentService.moveApplication(applicationId, RecruitmentStage.INTERVIEW, ApplicationStatus.IN_PROCESS,
                 "Interview scheduled", null, coordinatorId);
         Long savedInterviewId = saved.getId();
+        System.out.println("[RecruitmentMail][QUEUE] interview scheduled email interviewId=" + savedInterviewId
+                + " applicationId=" + applicationId
+                + " coordinatorEmployeeId=" + coordinatorId
+                + " panelEmployeeIds=" + panelEmployeeIds);
         afterCommitExecutor.runAfterCommit(() -> recruitmentEmailService.notifyInterviewScheduled(savedInterviewId));
         return saved;
     }
@@ -65,6 +69,8 @@ public class InterviewService {
         if (scorecardRepository.findByInterviewId(interviewId).size() >= panelRepository.findByInterviewId(interviewId).size()) {
             interview.setStatus(InterviewStatus.COMPLETED); interviewRepository.save(interview);
             Long completedInterviewId = interview.getId();
+            System.out.println("[RecruitmentMail][QUEUE] interview completed email interviewId=" + completedInterviewId
+                    + " reviewerEmployeeId=" + reviewerId);
             afterCommitExecutor.runAfterCommit(() -> recruitmentEmailService.notifyInterviewCompleted(completedInterviewId));
         }
         return saved;

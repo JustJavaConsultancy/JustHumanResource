@@ -55,6 +55,8 @@ public class OfferService {
         offer.setStatus(OfferStatus.SENT); offer.setSentAt(LocalDateTime.now());
         EmploymentOffer saved = offerRepository.save(offer);
         Long savedOfferId = saved.getId();
+        System.out.println("[RecruitmentMail][QUEUE] offer sent email offerId=" + savedOfferId
+                + " applicationId=" + saved.getApplicationId());
         afterCommitExecutor.runAfterCommit(() -> recruitmentEmailService.notifyOfferSent(savedOfferId));
         return saved;
     }
@@ -64,6 +66,8 @@ public class OfferService {
         offer.setStatus(OfferStatus.REJECTED);
         EmploymentOffer saved = offerRepository.save(offer);
         Long savedOfferId = saved.getId();
+        System.out.println("[RecruitmentMail][QUEUE] offer approval rejected email offerId=" + savedOfferId
+                + " applicationId=" + saved.getApplicationId());
         afterCommitExecutor.runAfterCommit(() -> recruitmentEmailService.notifyOfferApprovalRejected(savedOfferId));
         return saved;
     }
@@ -96,6 +100,10 @@ public class OfferService {
         applicationRepository.save(application);
         EmploymentOffer saved = offerRepository.save(offer);
         Long savedOfferId = saved.getId();
+        System.out.println("[RecruitmentMail][QUEUE] offer response email offerId=" + savedOfferId
+                + " applicationId=" + saved.getApplicationId()
+                + " accepted=" + accepted
+                + " status=" + saved.getStatus());
         afterCommitExecutor.runAfterCommit(() -> recruitmentEmailService.notifyOfferResponse(savedOfferId));
         return saved;
     }

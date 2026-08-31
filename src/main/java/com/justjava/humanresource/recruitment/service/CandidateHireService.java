@@ -49,6 +49,9 @@ public class CandidateHireService {
         application.setCurrentStage(RecruitmentStage.ONBOARDING); application.setStatus(ApplicationStatus.HIRED);
         applicationRepository.save(application);
         recruitmentService.recordHire(applicationId);
+        System.out.println("[RecruitmentMail][QUEUE] onboarding started email applicationId=" + applicationId
+                + " candidateId=" + candidate.getId()
+                + " employeeId=" + response.getEmployeeId());
         afterCommitExecutor.runAfterCommit(() -> recruitmentEmailService.notifyOnboardingStarted(applicationId));
         return saved;
     }

@@ -192,6 +192,7 @@ public class RecruitmentService {
         saved.setWorkflowInstanceId(process.getProcessInstanceId());
         applicationRepository.save(saved);
         Long savedApplicationId = saved.getId();
+        System.out.println("[RecruitmentMail][QUEUE] application submitted email applicationId=" + savedApplicationId);
         afterCommitExecutor.runAfterCommit(() -> recruitmentEmailService.notifyApplicationSubmitted(savedApplicationId, rawToken));
         return new ApplicationSubmissionResult(saved.getId(), saved.getApplicationNumber(), rawToken);
     }
@@ -225,6 +226,12 @@ public class RecruitmentService {
         if (shouldNotifyCandidateOfDecision(saved, previousStage, previousStatus, reason)) {
             Long savedApplicationId = saved.getId();
             String savedReason = reason;
+            System.out.println("[RecruitmentMail][QUEUE] application decision email applicationId=" + savedApplicationId
+                    + " previousStage=" + previousStage
+                    + " newStage=" + saved.getCurrentStage()
+                    + " previousStatus=" + previousStatus
+                    + " newStatus=" + saved.getStatus()
+                    + " reason=" + savedReason);
             afterCommitExecutor.runAfterCommit(() -> recruitmentEmailService.notifyApplicationDecision(savedApplicationId, savedReason));
         }
         return saved;
