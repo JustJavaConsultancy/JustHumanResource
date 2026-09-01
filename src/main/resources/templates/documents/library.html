@@ -28,6 +28,9 @@
                     <option value="">All sources</option>
                     <option value="EMPLOYEE_DOCUMENT">Employee documents</option>
                     <option value="REQUEST_ATTACHMENT">Request attachments</option>
+                    <option value="DIRECT_CHAT_ATTACHMENT">Direct chat files</option>
+                    <option value="GROUP_CHAT_ATTACHMENT">Group chat files</option>
+                    <option value="BROADCAST_ATTACHMENT">Broadcast files</option>
                 </select>
             </div>
             <div>
@@ -57,8 +60,8 @@
             <p id="employeeDocTotal" class="mt-2 text-3xl font-bold">0</p>
         </div>
         <div class="doc-panel p-4">
-            <p class="text-sm font-medium text-gray-500">Request Attachments</p>
-            <p id="requestDocTotal" class="mt-2 text-3xl font-bold">0</p>
+            <p class="text-sm font-medium text-gray-500">Communication Files</p>
+            <p id="communicationDocTotal" class="mt-2 text-3xl font-bold">0</p>
         </div>
     </section>
 
@@ -151,7 +154,7 @@
             totalPages = data.totalPages || 0;
             document.getElementById('docTotal').textContent = data.totalElements || 0;
             document.getElementById('employeeDocTotal').textContent = (data.documents || []).filter(d => d.sourceType === 'EMPLOYEE_DOCUMENT').length;
-            document.getElementById('requestDocTotal').textContent = (data.documents || []).filter(d => d.sourceType === 'REQUEST_ATTACHMENT').length;
+            document.getElementById('communicationDocTotal').textContent = (data.documents || []).filter(d => communicationSources().includes(d.sourceType)).length;
             document.getElementById('pageLabel').textContent = totalPages ? `Page ${currentPage + 1} of ${totalPages}` : 'Page 0';
             document.getElementById('prevPage').disabled = currentPage === 0;
             document.getElementById('nextPage').disabled = currentPage + 1 >= totalPages;
@@ -203,7 +206,18 @@
         }
 
         function labelSource(source) {
-            return source === 'REQUEST_ATTACHMENT' ? 'Request' : 'Employee';
+            const labels = {
+                EMPLOYEE_DOCUMENT: 'Employee',
+                REQUEST_ATTACHMENT: 'Request',
+                DIRECT_CHAT_ATTACHMENT: 'Direct Chat',
+                GROUP_CHAT_ATTACHMENT: 'Group Chat',
+                BROADCAST_ATTACHMENT: 'Broadcast'
+            };
+            return labels[source] || 'Document';
+        }
+
+        function communicationSources() {
+            return ['DIRECT_CHAT_ATTACHMENT', 'GROUP_CHAT_ATTACHMENT', 'BROADCAST_ATTACHMENT'];
         }
 
         function iconFor(doc) {

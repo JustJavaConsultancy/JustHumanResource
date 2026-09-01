@@ -14,6 +14,7 @@ import com.justjava.humanresource.communication.entity.ChatMessage;
 import com.justjava.humanresource.communication.entity.ChatMessageAttachment;
 import com.justjava.humanresource.communication.entity.Conversation;
 import com.justjava.humanresource.communication.entity.HrBroadcast;
+import com.justjava.humanresource.communication.entity.HrBroadcastAttachment;
 import com.justjava.humanresource.communication.entity.HrBroadcastReceipt;
 import com.justjava.humanresource.communication.entity.HrBroadcastStatus;
 import com.justjava.humanresource.communication.repository.BroadcastCommentRepository;
@@ -22,6 +23,7 @@ import com.justjava.humanresource.communication.repository.ChatMessageRepository
 import com.justjava.humanresource.communication.repository.ConversationRepository;
 import com.justjava.humanresource.communication.repository.HrBroadcastReceiptRepository;
 import com.justjava.humanresource.communication.repository.HrBroadcastRepository;
+import com.justjava.humanresource.communication.repository.HrBroadcastAttachmentRepository;
 import com.justjava.humanresource.core.config.AuthenticationManager;
 import com.justjava.humanresource.core.enums.EmploymentStatus;
 import com.justjava.humanresource.hr.entity.Employee;
@@ -54,6 +56,7 @@ public class CommunicationService {
     private final ChatMessageRepository chatMessageRepository;
     private final ChatMessageAttachmentRepository chatMessageAttachmentRepository;
     private final HrBroadcastRepository broadcastRepository;
+    private final HrBroadcastAttachmentRepository broadcastAttachmentRepository;
     private final HrBroadcastReceiptRepository receiptRepository;
     private final BroadcastCommentRepository commentRepository;
     private final PresenceService presenceService;
@@ -220,19 +223,45 @@ public class CommunicationService {
         return toBroadcastResponse(saved, null);
     }
 
+    @Transactional
+    public BroadcastResponse createBroadcastWithAttachments(String title, String content, List<MultipartFile> files) {
+        assertHrCanBroadcast();
+        HrBroadcast broadcast = new HrBroadcast();
+        broadcast.setTitle(normalizeContent(title, 160));
+        broadcast.setContent(normalizeContent(content, 5000));
+        broadcast.setCreatedByEmail(String.valueOf(authenticationManager.get("email")));
+        Object name = authenticationManager.get("name");
+        broadcast.setCreatedByName(name == null ? "HR" : String.valueOf(name));
+        HrBroadcast saved = broadcastRepository.save(broadcast);
+        List<HrBroadcastAttachment> attachments = attachmentService.storeBroadcastAttachments(
+                saved,
+                files,
+                saved.getCreatedByEmail()
+        );
+
+        for (Long employeeId : presenceService.onlineEmployeeIds()) {
+            employeeRepository.findById(employeeId).ifPresent(employee -> markBroadcastDelivered(saved, employee));
+        }
+        return toBroadcastResponse(saved, null, attachments);
+    }
+
     @Transactional(readOnly = true)
     public List<BroadcastResponse> listBroadcastsForEmployee() {
         Employee current = getCurrentEmployee();
-        return broadcastRepository.findByStatusOrderByCreatedAtDesc(HrBroadcastStatus.ACTIVE).stream()
-                .map(broadcast -> toBroadcastResponse(broadcast, current))
+        List<HrBroadcast> broadcasts = broadcastRepository.findByStatusOrderByCreatedAtDesc(HrBroadcastStatus.ACTIVE);
+        Map<Long, List<HrBroadcastAttachment>> attachmentsByBroadcastId = attachmentsByBroadcastId(broadcasts);
+        return broadcasts.stream()
+                .map(broadcast -> toBroadcastResponse(broadcast, current, attachmentsByBroadcastId.getOrDefault(broadcast.getId(), List.of())))
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public List<BroadcastResponse> listBroadcastsForHr() {
         assertHrCanBroadcast();
-        return broadcastRepository.findByStatusOrderByCreatedAtDesc(HrBroadcastStatus.ACTIVE).stream()
-                .map(broadcast -> toBroadcastResponse(broadcast, null))
+        List<HrBroadcast> broadcasts = broadcastRepository.findByStatusOrderByCreatedAtDesc(HrBroadcastStatus.ACTIVE);
+        Map<Long, List<HrBroadcastAttachment>> attachmentsByBroadcastId = attachmentsByBroadcastId(broadcasts);
+        return broadcasts.stream()
+                .map(broadcast -> toBroadcastResponse(broadcast, null, attachmentsByBroadcastId.getOrDefault(broadcast.getId(), List.of())))
                 .toList();
     }
 
@@ -240,7 +269,22 @@ public class CommunicationService {
     public BroadcastResponse getBroadcastSummary(Long broadcastId) {
         HrBroadcast broadcast = broadcastRepository.findById(broadcastId)
                 .orElseThrow(() -> new EntityNotFoundException("Broadcast not found"));
-        return toBroadcastResponse(broadcast, null);
+        return toBroadcastResponse(
+                broadcast,
+                null,
+                broadcastAttachmentRepository.findByBroadcast_IdOrderByUploadedAtAsc(broadcastId)
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public HrBroadcast getReadableBroadcast(Long broadcastId) {
+        HrBroadcast broadcast = broadcastRepository.findById(broadcastId)
+                .filter(item -> item.getStatus() == HrBroadcastStatus.ACTIVE)
+                .orElseThrow(() -> new EntityNotFoundException("Active broadcast not found"));
+        if (!isHrOrAdmin()) {
+            getCurrentEmployee();
+        }
+        return broadcast;
     }
 
     @Transactional
@@ -353,9 +397,13 @@ public class CommunicationService {
     }
 
     private void assertHrCanBroadcast() {
-        if (!(authenticationManager.isHumanResource() || authenticationManager.isAdmin())) {
+        if (!isHrOrAdmin()) {
             throw new AccessDeniedException("Only HR or admin users can send broadcasts");
         }
+    }
+
+    private boolean isHrOrAdmin() {
+        return authenticationManager.isHumanResource() || authenticationManager.isAdmin();
     }
 
     private EmployeeContactResponse toContact(Employee employee, long unreadCount, Conversation conversation, ChatMessage lastMessage) {
@@ -419,7 +467,24 @@ public class CommunicationService {
         return Optional.ofNullable(files).orElse(List.of()).stream().anyMatch(file -> file != null && !file.isEmpty());
     }
 
+    private Map<Long, List<HrBroadcastAttachment>> attachmentsByBroadcastId(List<HrBroadcast> broadcasts) {
+        List<Long> ids = broadcasts.stream().map(HrBroadcast::getId).toList();
+        if (ids.isEmpty()) {
+            return Map.of();
+        }
+        return broadcastAttachmentRepository.findByBroadcast_IdInOrderByUploadedAtAsc(ids).stream()
+                .collect(Collectors.groupingBy(attachment -> attachment.getBroadcast().getId()));
+    }
+
     private BroadcastResponse toBroadcastResponse(HrBroadcast broadcast, Employee employee) {
+        return toBroadcastResponse(
+                broadcast,
+                employee,
+                broadcastAttachmentRepository.findByBroadcast_IdOrderByUploadedAtAsc(broadcast.getId())
+        );
+    }
+
+    private BroadcastResponse toBroadcastResponse(HrBroadcast broadcast, Employee employee, List<HrBroadcastAttachment> attachments) {
         boolean read = employee != null && receiptRepository.isReadByEmployee(broadcast.getId(), employee.getId());
         return new BroadcastResponse(
                 broadcast.getId(),
@@ -432,7 +497,21 @@ public class CommunicationService {
                 receiptRepository.countByBroadcast_IdAndDeliveredAtIsNotNull(broadcast.getId()),
                 receiptRepository.countByBroadcast_IdAndReadAtIsNotNull(broadcast.getId()),
                 commentRepository.countByBroadcast_Id(broadcast.getId()),
-                read
+                read,
+                attachments.stream().map(this::toAttachmentResponse).toList()
+        );
+    }
+
+    private CommunicationAttachmentResponse toAttachmentResponse(HrBroadcastAttachment attachment) {
+        Long broadcastId = attachment.getBroadcast().getId();
+        return new CommunicationAttachmentResponse(
+                attachment.getId(),
+                attachment.getOriginalFilename(),
+                attachment.getContentType(),
+                attachment.getFileSize(),
+                attachment.getUploadedAt(),
+                "/employee/communication/broadcasts/" + broadcastId + "/attachments/" + attachment.getId() + "/view",
+                "/employee/communication/broadcasts/" + broadcastId + "/attachments/" + attachment.getId()
         );
     }
 

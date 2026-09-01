@@ -4,8 +4,11 @@ import com.justjava.humanresource.communication.entity.ChatMessage;
 import com.justjava.humanresource.communication.entity.ChatMessageAttachment;
 import com.justjava.humanresource.communication.entity.GroupChatMessage;
 import com.justjava.humanresource.communication.entity.GroupChatMessageAttachment;
+import com.justjava.humanresource.communication.entity.HrBroadcast;
+import com.justjava.humanresource.communication.entity.HrBroadcastAttachment;
 import com.justjava.humanresource.communication.repository.ChatMessageAttachmentRepository;
 import com.justjava.humanresource.communication.repository.GroupChatMessageAttachmentRepository;
+import com.justjava.humanresource.communication.repository.HrBroadcastAttachmentRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
@@ -42,14 +45,17 @@ public class CommunicationAttachmentService {
 
     private final ChatMessageAttachmentRepository directAttachmentRepository;
     private final GroupChatMessageAttachmentRepository groupAttachmentRepository;
+    private final HrBroadcastAttachmentRepository broadcastAttachmentRepository;
 
     @Value("${app.communication.storage-path:${user.home}/just-hr/communication-attachments}")
     private String storageRoot;
 
     public CommunicationAttachmentService(ChatMessageAttachmentRepository directAttachmentRepository,
-                                          GroupChatMessageAttachmentRepository groupAttachmentRepository) {
+                                          GroupChatMessageAttachmentRepository groupAttachmentRepository,
+                                          HrBroadcastAttachmentRepository broadcastAttachmentRepository) {
         this.directAttachmentRepository = directAttachmentRepository;
         this.groupAttachmentRepository = groupAttachmentRepository;
+        this.broadcastAttachmentRepository = broadcastAttachmentRepository;
     }
 
     @Transactional
@@ -63,6 +69,13 @@ public class CommunicationAttachmentService {
     public List<GroupChatMessageAttachment> storeGroupAttachments(GroupChatMessage message, List<MultipartFile> files, Long actorId) {
         return validFiles(files).stream()
                 .map(file -> storeGroupAttachment(message, file, actorId))
+                .toList();
+    }
+
+    @Transactional
+    public List<HrBroadcastAttachment> storeBroadcastAttachments(HrBroadcast broadcast, List<MultipartFile> files, String actorEmail) {
+        return validFiles(files).stream()
+                .map(file -> storeBroadcastAttachment(broadcast, file, actorEmail))
                 .toList();
     }
 
@@ -82,6 +95,16 @@ public class CommunicationAttachmentService {
                 .orElseThrow(() -> new IllegalArgumentException("Attachment not found"));
         if (!attachment.getMessage().getId().equals(messageId)) {
             throw new IllegalArgumentException("Attachment does not belong to this message");
+        }
+        return attachment;
+    }
+
+    @Transactional(readOnly = true)
+    public HrBroadcastAttachment getBroadcastAttachment(Long broadcastId, Long attachmentId) {
+        HrBroadcastAttachment attachment = broadcastAttachmentRepository.findById(attachmentId)
+                .orElseThrow(() -> new IllegalArgumentException("Attachment not found"));
+        if (!attachment.getBroadcast().getId().equals(broadcastId)) {
+            throw new IllegalArgumentException("Attachment does not belong to this broadcast");
         }
         return attachment;
     }
@@ -121,6 +144,20 @@ public class CommunicationAttachmentService {
         attachment.setUploadedByEmployeeId(actorId);
         attachment.setUploadedAt(LocalDateTime.now());
         return groupAttachmentRepository.save(attachment);
+    }
+
+    private HrBroadcastAttachment storeBroadcastAttachment(HrBroadcast broadcast, MultipartFile file, String actorEmail) {
+        StoredFile storedFile = storeFile("broadcasts", broadcast.getId(), file);
+        HrBroadcastAttachment attachment = new HrBroadcastAttachment();
+        attachment.setBroadcast(broadcast);
+        attachment.setOriginalFilename(storedFile.originalFilename());
+        attachment.setStoredFilename(storedFile.storedFilename());
+        attachment.setStoragePath(storedFile.storagePath());
+        attachment.setContentType(storedFile.contentType());
+        attachment.setFileSize(storedFile.fileSize());
+        attachment.setUploadedByEmail(actorEmail);
+        attachment.setUploadedAt(LocalDateTime.now());
+        return broadcastAttachmentRepository.save(attachment);
     }
 
     private List<MultipartFile> validFiles(List<MultipartFile> files) {

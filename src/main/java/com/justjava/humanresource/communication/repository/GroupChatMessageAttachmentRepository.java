@@ -7,6 +7,7 @@ import java.util.Collection;
 import java.util.List;
 
 public interface GroupChatMessageAttachmentRepository extends JpaRepository<GroupChatMessageAttachment, Long> {
+    List<GroupChatMessageAttachment> findAllByOrderByUploadedAtDesc();
     List<GroupChatMessageAttachment> findByMessage_IdInOrderByUploadedAtAsc(Collection<Long> messageIds);
     List<GroupChatMessageAttachment> findByMessage_IdOrderByUploadedAtAsc(Long messageId);
 }

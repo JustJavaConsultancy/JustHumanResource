@@ -26,6 +26,10 @@
         .dot { width:10px; height:10px; border-radius:999px; background:#16a34a; }
         .comment { border:1px solid var(--hc-border); border-radius:8px; padding:11px 12px; background:var(--hc-soft); }
         .member-option { display:flex; align-items:center; gap:10px; padding:10px 12px; border-bottom:1px solid var(--hc-border); }
+        .attachment-tray { display:flex; flex-wrap:wrap; gap:6px; }
+        .attachment-pill { display:inline-flex; align-items:center; gap:6px; max-width:240px; border:1px solid var(--hc-border); border-radius:999px; padding:5px 9px; font-size:12px; background:var(--hc-soft); }
+        .attachment-list { display:flex; flex-direction:column; gap:6px; margin-top:12px; }
+        .attachment-link { display:flex; align-items:center; gap:8px; border:1px solid var(--hc-border); border-radius:8px; padding:7px 9px; background:rgba(248,250,252,.75); font-size:12px; }
         @media (max-width: 1080px) { .hr-grid { grid-template-columns:1fr; } }
     </style>
 </head>
@@ -64,12 +68,20 @@
                 <form id="broadcastForm" class="p-5 space-y-3">
                     <input id="broadcastTitle" class="hr-input" maxlength="160" placeholder="Broadcast title" required>
                     <textarea id="broadcastContent" class="hr-input min-h-[120px]" maxlength="5000" placeholder="Write the announcement" required></textarea>
+                    <input id="broadcastFiles" type="file" multiple class="hidden" accept=".pdf,.png,.jpg,.jpeg,.txt,.doc,.docx,.xls,.xlsx">
+                    <div id="broadcastAttachmentTray" class="attachment-tray hidden"></div>
                     <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <p id="sendStatus" class="text-sm text-gray-500 dark:text-gray-400">Ready to send.</p>
-                        <button class="hr-primary" type="submit">
-                            <span class="material-icons-round text-base">send</span>
-                            Send Broadcast
-                        </button>
+                        <div class="flex flex-wrap justify-end gap-2">
+                            <button id="attachBroadcastFileBtn" class="hr-secondary" type="button">
+                                <span class="material-icons-round text-base">attach_file</span>
+                                Attach
+                            </button>
+                            <button class="hr-primary" type="submit">
+                                <span class="material-icons-round text-base">send</span>
+                                Send Broadcast
+                            </button>
+                        </div>
                     </div>
                 </form>
             </section>
@@ -172,6 +184,7 @@
         let onlineEmployees = [];
         let groups = [];
         let availableMembers = [];
+        let selectedBroadcastFiles = [];
         let selectedBroadcast = null;
         let activeCommentSubscription = null;
         let activeReceiptSubscription = null;
@@ -395,7 +408,7 @@
             renderBroadcasts();
             document.getElementById('detailTitle').textContent = selectedBroadcast.title;
             document.getElementById('detailMeta').textContent = `${formatTime(selectedBroadcast.createdAt)} - ${selectedBroadcast.deliveredCount || 0} delivered - ${selectedBroadcast.readCount || 0} read`;
-            document.getElementById('detailContent').textContent = selectedBroadcast.content;
+            document.getElementById('detailContent').innerHTML = `<p class="whitespace-pre-wrap">${escapeHtml(selectedBroadcast.content)}</p>${attachmentList(selectedBroadcast.attachments || [])}`;
             if (activeCommentSubscription) activeCommentSubscription.unsubscribe();
             if (activeReceiptSubscription) activeReceiptSubscription.unsubscribe();
             if (stompClient && stompClient.connected) {
@@ -420,6 +433,30 @@
                 <p class="text-xs text-gray-500 mb-2">${escapeHtml(comment.department || 'Unassigned')}</p>
                 <p class="text-sm leading-5 whitespace-pre-wrap">${escapeHtml(comment.content)}</p>
             </div>`;
+        }
+
+        function attachmentList(attachments) {
+            if (!attachments.length) return '';
+            return `<div class="attachment-list">${attachments.map(attachment => `
+                <a class="attachment-link" href="${attachment.downloadUrl}" target="_blank">
+                    <span class="material-icons-round text-sm">${attachmentIcon(attachment.contentType)}</span>
+                    <span class="truncate">${escapeHtml(attachment.originalFilename)}</span>
+                    <span class="ml-auto text-[11px]">${formatFileSize(attachment.fileSize)}</span>
+                </a>
+            `).join('')}</div>`;
+        }
+
+        function attachmentIcon(contentType) {
+            const type = (contentType || '').toLowerCase();
+            if (type.includes('image')) return 'image';
+            if (type.includes('pdf')) return 'picture_as_pdf';
+            return 'description';
+        }
+
+        function formatFileSize(size) {
+            if (!size) return '';
+            if (size < 1024 * 1024) return Math.round(size / 1024) + ' KB';
+            return (size / 1024 / 1024).toFixed(1) + ' MB';
         }
 
         function handleComment(message) {
@@ -478,22 +515,52 @@
                 return;
             }
             try {
-                const response = await fetch('/communication/broadcasts', {
-                    method:'POST',
-                    headers:{'Content-Type':'application/json'},
-                    body:JSON.stringify({title, content})
-                });
+                const response = await sendBroadcast(title, content);
                 if (!response.ok) throw new Error(await response.text());
                 const broadcast = await response.json();
                 broadcasts = [broadcast, ...broadcasts.filter(item => item.id !== broadcast.id)];
                 renderBroadcasts();
                 renderMetrics();
                 event.target.reset();
+                selectedBroadcastFiles = [];
+                renderSelectedBroadcastFiles();
                 document.getElementById('sendStatus').textContent = 'Broadcast sent.';
             } catch (error) {
                 document.getElementById('sendStatus').textContent = 'Broadcast failed. Please check your access and try again.';
             }
         });
+
+        async function sendBroadcast(title, content) {
+            if (selectedBroadcastFiles.length === 0) {
+                return fetch('/communication/broadcasts', {
+                    method:'POST',
+                    headers:{'Content-Type':'application/json'},
+                    body:JSON.stringify({title, content})
+                });
+            }
+            const form = new FormData();
+            form.append('title', title);
+            form.append('content', content);
+            selectedBroadcastFiles.forEach(file => form.append('files', file));
+            return fetch('/communication/broadcasts', {method:'POST', body:form});
+        }
+
+        function renderSelectedBroadcastFiles() {
+            const tray = document.getElementById('broadcastAttachmentTray');
+            tray.classList.toggle('hidden', selectedBroadcastFiles.length === 0);
+            tray.innerHTML = selectedBroadcastFiles.map((file, index) => `
+                <span class="attachment-pill">
+                    <span class="material-icons-round text-sm">attach_file</span>
+                    <span class="truncate">${escapeHtml(file.name)}</span>
+                    <button type="button" onclick="removeSelectedBroadcastFile(${index})" title="Remove"><span class="material-icons-round text-sm">close</span></button>
+                </span>
+            `).join('');
+        }
+
+        function removeSelectedBroadcastFile(index) {
+            selectedBroadcastFiles = selectedBroadcastFiles.filter((_, fileIndex) => fileIndex !== index);
+            renderSelectedBroadcastFiles();
+        }
 
         function connectSocket() {
             stompClient = new StompJs.Client({
@@ -522,6 +589,11 @@
         }
 
         document.getElementById('refreshBtn').addEventListener('click', loadData);
+        document.getElementById('attachBroadcastFileBtn').addEventListener('click', () => document.getElementById('broadcastFiles').click());
+        document.getElementById('broadcastFiles').addEventListener('change', () => {
+            selectedBroadcastFiles = Array.from(document.getElementById('broadcastFiles').files || []).slice(0, 5);
+            renderSelectedBroadcastFiles();
+        });
 
         // Dropdown toggle
         document.getElementById('memberDropdownToggle')?.addEventListener('click', toggleMemberDropdown);

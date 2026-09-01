@@ -13,6 +13,7 @@ import com.justjava.humanresource.communication.dto.GroupMessageResponse;
 import com.justjava.humanresource.communication.dto.PresenceResponse;
 import com.justjava.humanresource.communication.entity.ChatMessageAttachment;
 import com.justjava.humanresource.communication.entity.GroupChatMessageAttachment;
+import com.justjava.humanresource.communication.entity.HrBroadcastAttachment;
 import com.justjava.humanresource.communication.service.CommunicationAttachmentService;
 import com.justjava.humanresource.communication.service.CommunicationService;
 import com.justjava.humanresource.communication.service.GroupChatService;
@@ -140,10 +141,21 @@ public class CommunicationController {
         return communicationService.listBroadcastsForHr();
     }
 
-    @PostMapping("/communication/broadcasts")
+    @PostMapping(value = "/communication/broadcasts", consumes = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
     public ResponseEntity<BroadcastResponse> createBroadcast(@Valid @RequestBody BroadcastCommand command) {
         BroadcastResponse response = communicationService.createBroadcast(command);
+        messagingTemplate.convertAndSend("/topic/hr-broadcasts", response);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping(value = "/communication/broadcasts", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @ResponseBody
+    public ResponseEntity<BroadcastResponse> createBroadcastWithAttachments(
+            @RequestParam String title,
+            @RequestParam String content,
+            @RequestParam(required = false) List<MultipartFile> files) {
+        BroadcastResponse response = communicationService.createBroadcastWithAttachments(title, content, files);
         messagingTemplate.convertAndSend("/topic/hr-broadcasts", response);
         return ResponseEntity.ok(response);
     }
@@ -247,6 +259,22 @@ public class CommunicationController {
     public ResponseEntity<Resource> viewGroupAttachment(@PathVariable Long messageId, @PathVariable Long attachmentId) {
         groupChatService.getReadableMessage(messageId);
         GroupChatMessageAttachment attachment = attachmentService.getGroupAttachment(messageId, attachmentId);
+        return attachmentResponse(attachment.getContentType(), attachment.getFileSize(), attachment.getOriginalFilename(), true, attachment.getStoragePath());
+    }
+
+    @GetMapping({"/employee/communication/broadcasts/{broadcastId}/attachments/{attachmentId}",
+            "/communication/broadcasts/{broadcastId}/attachments/{attachmentId}"})
+    public ResponseEntity<Resource> downloadBroadcastAttachment(@PathVariable Long broadcastId, @PathVariable Long attachmentId) {
+        communicationService.getReadableBroadcast(broadcastId);
+        HrBroadcastAttachment attachment = attachmentService.getBroadcastAttachment(broadcastId, attachmentId);
+        return attachmentResponse(attachment.getContentType(), attachment.getFileSize(), attachment.getOriginalFilename(), false, attachment.getStoragePath());
+    }
+
+    @GetMapping({"/employee/communication/broadcasts/{broadcastId}/attachments/{attachmentId}/view",
+            "/communication/broadcasts/{broadcastId}/attachments/{attachmentId}/view"})
+    public ResponseEntity<Resource> viewBroadcastAttachment(@PathVariable Long broadcastId, @PathVariable Long attachmentId) {
+        communicationService.getReadableBroadcast(broadcastId);
+        HrBroadcastAttachment attachment = attachmentService.getBroadcastAttachment(broadcastId, attachmentId);
         return attachmentResponse(attachment.getContentType(), attachment.getFileSize(), attachment.getOriginalFilename(), true, attachment.getStoragePath());
     }
 

@@ -1,6 +1,7 @@
 package com.justjava.humanresource.communication.dto;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public record BroadcastResponse(
         Long id,
@@ -13,6 +14,7 @@ public record BroadcastResponse(
         long deliveredCount,
         long readCount,
         long commentCount,
-        boolean read
+        boolean read,
+        List<CommunicationAttachmentResponse> attachments
 ) {
 }

@@ -1,6 +1,12 @@
 package com.justjava.humanresource.documents;
 
 import com.justjava.humanresource.core.config.AuthenticationManager;
+import com.justjava.humanresource.communication.entity.ChatMessageAttachment;
+import com.justjava.humanresource.communication.entity.GroupChatMessageAttachment;
+import com.justjava.humanresource.communication.entity.HrBroadcastAttachment;
+import com.justjava.humanresource.communication.repository.ChatMessageAttachmentRepository;
+import com.justjava.humanresource.communication.repository.GroupChatMessageAttachmentRepository;
+import com.justjava.humanresource.communication.repository.HrBroadcastAttachmentRepository;
 import com.justjava.humanresource.hr.entity.Employee;
 import com.justjava.humanresource.hr.repository.EmployeeDocumentRepository;
 import com.justjava.humanresource.hr.repository.EmployeeRepository;
@@ -32,6 +38,9 @@ public class DocumentLibraryService {
 
     private static final String EMPLOYEE_DOCUMENT = "EMPLOYEE_DOCUMENT";
     private static final String REQUEST_ATTACHMENT = "REQUEST_ATTACHMENT";
+    private static final String DIRECT_CHAT_ATTACHMENT = "DIRECT_CHAT_ATTACHMENT";
+    private static final String GROUP_CHAT_ATTACHMENT = "GROUP_CHAT_ATTACHMENT";
+    private static final String BROADCAST_ATTACHMENT = "BROADCAST_ATTACHMENT";
 
     private final AuthenticationManager authenticationManager;
     private final EmployeeService employeeService;
@@ -39,6 +48,9 @@ public class DocumentLibraryService {
     private final EmployeeDocumentRepository employeeDocumentRepository;
     private final WorkflowRequestAttachmentRepository attachmentRepository;
     private final WorkflowRequestRepository requestRepository;
+    private final ChatMessageAttachmentRepository chatMessageAttachmentRepository;
+    private final GroupChatMessageAttachmentRepository groupChatMessageAttachmentRepository;
+    private final HrBroadcastAttachmentRepository broadcastAttachmentRepository;
 
     @Transactional(readOnly = true)
     public DocumentLibraryResponse search(String query,
@@ -92,7 +104,32 @@ public class DocumentLibraryService {
                 .filter(Objects::nonNull)
                 .toList();
 
-        List<DocumentLibraryItemDTO> filtered = Stream.concat(employeeDocuments.stream(), requestDocuments.stream())
+        List<DocumentLibraryItemDTO> directChatDocuments = shouldIncludeSource(normalizedSource, DIRECT_CHAT_ATTACHMENT)
+                ? chatMessageAttachmentRepository.findAllByOrderByUploadedAtDesc().stream()
+                .map(this::fromDirectChatAttachment)
+                .toList()
+                : List.of();
+
+        List<DocumentLibraryItemDTO> groupChatDocuments = shouldIncludeSource(normalizedSource, GROUP_CHAT_ATTACHMENT)
+                ? groupChatMessageAttachmentRepository.findAllByOrderByUploadedAtDesc().stream()
+                .map(this::fromGroupChatAttachment)
+                .toList()
+                : List.of();
+
+        List<DocumentLibraryItemDTO> broadcastDocuments = shouldIncludeSource(normalizedSource, BROADCAST_ATTACHMENT)
+                ? broadcastAttachmentRepository.findAllByOrderByUploadedAtDesc().stream()
+                .map(this::fromBroadcastAttachment)
+                .toList()
+                : List.of();
+
+        List<DocumentLibraryItemDTO> filtered = Stream.of(
+                        employeeDocuments.stream(),
+                        requestDocuments.stream(),
+                        directChatDocuments.stream(),
+                        groupChatDocuments.stream(),
+                        broadcastDocuments.stream()
+                )
+                .flatMap(Function.identity())
                 .filter(document -> employeeId == null || Objects.equals(document.ownerEmployeeId(), employeeId))
                 .filter(document -> from == null || !safeUploadedAt(document).isBefore(from))
                 .filter(document -> to == null || !safeUploadedAt(document).isAfter(to))
@@ -186,6 +223,86 @@ public class DocumentLibraryService {
                 attachment.getDescription(),
                 "/api/requests/" + request.getId() + "/attachments/" + attachment.getId() + "/view",
                 "/api/requests/" + request.getId() + "/attachments/" + attachment.getId()
+        );
+    }
+
+    private DocumentLibraryItemDTO fromDirectChatAttachment(ChatMessageAttachment attachment) {
+        Employee sender = attachment.getMessage().getSender();
+        Employee recipient = attachment.getMessage().getRecipient();
+        return new DocumentLibraryItemDTO(
+                attachment.getId(),
+                DIRECT_CHAT_ATTACHMENT,
+                attachment.getOriginalFilename(),
+                attachment.getOriginalFilename(),
+                attachment.getContentType(),
+                attachment.getFileSize(),
+                attachment.getUploadedAt(),
+                attachment.getUploadedByEmployeeId() == null ? null : String.valueOf(attachment.getUploadedByEmployeeId()),
+                sender == null ? attachment.getUploadedByEmployeeId() : sender.getId(),
+                sender == null ? null : sender.getFullName(),
+                sender == null ? null : sender.getEmployeeNumber(),
+                null,
+                null,
+                null,
+                null,
+                null,
+                "Direct chat",
+                recipient == null ? "Direct message attachment" : "Direct message to " + recipient.getFullName(),
+                "/api/documents/library/direct-chat/" + attachment.getId() + "/view",
+                "/api/documents/library/direct-chat/" + attachment.getId()
+        );
+    }
+
+    private DocumentLibraryItemDTO fromGroupChatAttachment(GroupChatMessageAttachment attachment) {
+        Employee sender = attachment.getMessage().getSender();
+        String groupName = attachment.getMessage().getChatGroup() == null ? null : attachment.getMessage().getChatGroup().getName();
+        return new DocumentLibraryItemDTO(
+                attachment.getId(),
+                GROUP_CHAT_ATTACHMENT,
+                attachment.getOriginalFilename(),
+                attachment.getOriginalFilename(),
+                attachment.getContentType(),
+                attachment.getFileSize(),
+                attachment.getUploadedAt(),
+                attachment.getUploadedByEmployeeId() == null ? null : String.valueOf(attachment.getUploadedByEmployeeId()),
+                sender == null ? attachment.getUploadedByEmployeeId() : sender.getId(),
+                sender == null ? null : sender.getFullName(),
+                sender == null ? null : sender.getEmployeeNumber(),
+                null,
+                null,
+                null,
+                null,
+                null,
+                "Group chat",
+                groupName == null ? "Group message attachment" : "Group message in " + groupName,
+                "/api/documents/library/group-chat/" + attachment.getId() + "/view",
+                "/api/documents/library/group-chat/" + attachment.getId()
+        );
+    }
+
+    private DocumentLibraryItemDTO fromBroadcastAttachment(HrBroadcastAttachment attachment) {
+        String title = attachment.getBroadcast() == null ? null : attachment.getBroadcast().getTitle();
+        return new DocumentLibraryItemDTO(
+                attachment.getId(),
+                BROADCAST_ATTACHMENT,
+                attachment.getOriginalFilename(),
+                attachment.getOriginalFilename(),
+                attachment.getContentType(),
+                attachment.getFileSize(),
+                attachment.getUploadedAt(),
+                attachment.getUploadedByEmail(),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                title,
+                "HR broadcast",
+                title,
+                "/api/documents/library/broadcast/" + attachment.getId() + "/view",
+                "/api/documents/library/broadcast/" + attachment.getId()
         );
     }
 
