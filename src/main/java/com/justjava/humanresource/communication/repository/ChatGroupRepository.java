@@ -11,7 +11,7 @@ import java.util.List;
 public interface ChatGroupRepository extends JpaRepository<ChatGroup, Long> {
 
     @Query("""
-            SELECT DISTINCT g
+            SELECT g
             FROM ChatGroup g
             JOIN ChatGroupMember m ON m.chatGroup = g
             WHERE m.employee.id = :employeeId
