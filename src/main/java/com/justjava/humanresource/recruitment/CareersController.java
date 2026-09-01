@@ -61,6 +61,74 @@ public class CareersController {
         return "careers/application-status";
     }
 
+    @GetMapping("/track")
+    public String trackForm(@RequestParam(required = false) String applicationNumber,
+                            @RequestParam(required = false) String email,
+                            Model model) {
+        model.addAttribute("applicationNumber", applicationNumber != null ? applicationNumber : "");
+        model.addAttribute("email", email != null ? email : "");
+        return "careers/track-application";
+    }
+
+    @PostMapping("/track")
+    public String trackApplication(@RequestParam String applicationNumber,
+                                   @RequestParam String email,
+                                   Model model) {
+        var applicationOpt = applicationRepository.findByApplicationNumber(applicationNumber.trim());
+        if (applicationOpt.isEmpty()) {
+            model.addAttribute("error", "Application not found. Please check your application number.");
+            model.addAttribute("applicationNumber", applicationNumber);
+            model.addAttribute("email", email);
+            return "careers/track-application";
+        }
+        var application = applicationOpt.get();
+        var candidate = candidateRepository.findById(application.getCandidateId()).orElse(null);
+        if (candidate == null || !email.trim().equalsIgnoreCase(candidate.getEmail())) {
+            model.addAttribute("error", "The email address does not match this application.");
+            model.addAttribute("applicationNumber", applicationNumber);
+            model.addAttribute("email", email);
+            return "careers/track-application";
+        }
+        model.addAttribute("application", application);
+        model.addAttribute("candidate", candidate);
+        model.addAttribute("job", openingRepository.findById(application.getJobOpeningId()).orElseThrow());
+        model.addAttribute("offers", offerRepository.findByApplicationIdOrderByOfferVersionDesc(application.getId()));
+        model.addAttribute("offerService", offerService);
+        model.addAttribute("applicationNumber", applicationNumber);
+        model.addAttribute("email", email);
+        return "careers/application-status";
+    }
+
+    @PostMapping("/track/offers/{offerId}/respond")
+    public String respondToOfferByTracking(@RequestParam String applicationNumber,
+                                           @RequestParam String email,
+                                           @PathVariable Long offerId,
+                                           @RequestParam boolean accepted) {
+        var application = applicationRepository.findByApplicationNumber(applicationNumber.trim())
+                .orElseThrow(() -> new IllegalArgumentException("Application not found."));
+        var candidate = candidateRepository.findById(application.getCandidateId())
+                .orElseThrow(() -> new IllegalArgumentException("Candidate not found."));
+        if (!email.trim().equalsIgnoreCase(candidate.getEmail())) {
+            throw new IllegalArgumentException("Email does not match this application.");
+        }
+        var offer = offerRepository.findById(offerId).orElseThrow();
+        if (!offer.getApplicationId().equals(application.getId())) {
+            throw new IllegalArgumentException("Offer does not belong to this application.");
+        }
+        offerService.respond(offerId, accepted);
+        if (application.getWorkflowInstanceId() != null) {
+            var task = taskService.createTaskQuery().processInstanceId(application.getWorkflowInstanceId()).active().singleResult();
+            if (task != null && "offerTask".equals(task.getTaskDefinitionKey())) {
+                taskService.complete(task.getId(), Map.of(
+                        "recruitmentDecision", accepted ? "ACCEPT_OFFER" : "DECLINE_OFFER",
+                        "recruitmentComment", accepted ? "Candidate accepted offer" : "Candidate declined offer",
+                        "flowableTaskId", task.getId()
+                ));
+            }
+        }
+        return "redirect:/careers/track?applicationNumber=" + applicationNumber + "&email=" + email;
+    }
+
     @PostMapping("/applications/{token}/offers/{offerId}/respond")
     public String respondToOffer(@PathVariable String token, @PathVariable Long offerId,
                                  @RequestParam boolean accepted) {

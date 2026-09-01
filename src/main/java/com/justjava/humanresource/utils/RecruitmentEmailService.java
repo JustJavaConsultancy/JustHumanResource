@@ -176,8 +176,11 @@ public class RecruitmentEmailService {
                 + " status=" + offer.getStatus()
                 + " compensation=" + offer.getCurrency() + " " + offer.getAnnualGrossCompensation());
 
-        // Build absolute tracking URL (adjust path as needed)
-        String trackingUrl = trackingBaseUrl + "/careers/application/" + offer.getApplicationId();
+        // Build tracking URL using application number and email
+        String applicationNumber = context.applicationContext().application().getApplicationNumber();
+        String candidateEmail = context.applicationContext().candidate().getEmail();
+        String encodedEmail = java.net.URLEncoder.encode(candidateEmail, java.nio.charset.StandardCharsets.UTF_8);
+        String trackingUrl = trackingBaseUrl + "/careers/track?applicationNumber=" + applicationNumber + "&email=" + encodedEmail;
 
         String text = "Dear " + context.applicationContext().candidateName() + ",\n\n"
                 + "An employment offer for " + context.applicationContext().jobTitle() + " has been sent to you.\n\n"
@@ -185,7 +188,7 @@ public class RecruitmentEmailService {
                 + "Proposed start date: " + value(offer.getProposedStartDate()) + "\n"
                 + "Expires on: " + value(offer.getExpiresOn()) + "\n\n"
                 + value(offer.getTerms()) + "\n\n"
-                + "You can view your application status here: " + trackingUrl + "\n\n"
+                + "You can view your application and respond to the offer here: " + trackingUrl + "\n\n"
                 + "Regards,\n" + context.applicationContext().companyName();
 
         String html = "<p>Dear " + html(context.applicationContext().candidateName()) + ",</p>"
@@ -194,7 +197,7 @@ public class RecruitmentEmailService {
                 + "<strong>Proposed start date:</strong> " + html(value(offer.getProposedStartDate())) + "<br>"
                 + "<strong>Expires on:</strong> " + html(value(offer.getExpiresOn())) + "</p>"
                 + (offer.getTerms() == null || offer.getTerms().isBlank() ? "" : "<p>" + html(offer.getTerms()).replace("\n", "<br>") + "</p>")
-                + "<p>View your application: <a href=\"" + html(trackingUrl) + "\">here</a></p>"
+                + "<p>View your application and respond to the offer: <a href=\"" + html(trackingUrl) + "\">here</a></p>"
                 + "<p>Regards,<br><strong>" + html(context.applicationContext().companyName()) + "</strong></p>";
 
         sendCandidate(context.applicationContext().candidate(), "Employment offer", html, text, "offer sent notice");

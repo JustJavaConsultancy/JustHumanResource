@@ -46,9 +46,19 @@
                     </div>
                     <span class="px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-sm" th:text="${offer.status}">SENT</span>
                 </div>
-                <form th:if="${offerService.isRespondable(offer)}" method="post"
+                <!-- Token-based access form -->
+                <form th:if="${offerService.isRespondable(offer) and token != null}" method="post"
                       th:action="@{/careers/applications/{token}/offers/{offerId}/respond(token=${token},offerId=${offer.id})}"
                       class="flex flex-wrap gap-2 mt-4">
+                    <button name="accepted" value="true" class="px-4 py-2 bg-emerald-600 text-white rounded-lg">Accept offer</button>
+                    <button name="accepted" value="false" class="px-4 py-2 bg-gray-100 rounded-lg">Decline offer</button>
+                </form>
+                <!-- Tracking-based access form (application number + email) -->
+                <form th:if="${offerService.isRespondable(offer) and token == null and applicationNumber != null and email != null}" method="post"
+                      th:action="@{/careers/track/offers/{offerId}/respond(offerId=${offer.id})}"
+                      class="flex flex-wrap gap-2 mt-4">
+                    <input type="hidden" name="applicationNumber" th:value="${applicationNumber}">
+                    <input type="hidden" name="email" th:value="${email}">
                     <button name="accepted" value="true" class="px-4 py-2 bg-emerald-600 text-white rounded-lg">Accept offer</button>
                     <button name="accepted" value="false" class="px-4 py-2 bg-gray-100 rounded-lg">Decline offer</button>
                 </form>
