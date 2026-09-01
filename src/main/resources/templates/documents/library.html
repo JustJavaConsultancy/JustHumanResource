@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+    <meta charset="UTF-8">
+    <title>Document Library</title>
+    <style>
+        .doc-panel { background: #fff; border: 1px solid #e5e7eb; border-radius: .5rem; }
+        .dark .doc-panel { background: #1f2937; border-color: #374151; }
+        .doc-control { border: 1px solid #d1d5db; border-radius: .5rem; padding: .65rem .75rem; background: #fff; width: 100%; }
+        .dark .doc-control { background: #111827; border-color: #4b5563; color: #f9fafb; }
+        .doc-btn { display: inline-flex; align-items: center; gap: .35rem; border-radius: .5rem; padding: .55rem .8rem; font-size: .875rem; font-weight: 600; }
+    </style>
+</head>
+<body>
+<main layout:fragment="content" class="space-y-5">
+    <section class="doc-panel p-4">
+        <div class="grid grid-cols-1 gap-3 md:grid-cols-6">
+            <div class="md:col-span-2">
+                <label for="docQuery" class="mb-1 block text-xs font-semibold uppercase text-gray-500">Search</label>
+                <input id="docQuery" class="doc-control" placeholder="Name, employee, request, type">
+            </div>
+            <div>
+                <label for="docSource" class="mb-1 block text-xs font-semibold uppercase text-gray-500">Source</label>
+                <select id="docSource" class="doc-control">
+                    <option value="">All sources</option>
+                    <option value="EMPLOYEE_DOCUMENT">Employee documents</option>
+                    <option value="REQUEST_ATTACHMENT">Request attachments</option>
+                </select>
+            </div>
+            <div>
+                <label for="docFrom" class="mb-1 block text-xs font-semibold uppercase text-gray-500">From</label>
+                <input id="docFrom" type="date" class="doc-control">
+            </div>
+            <div>
+                <label for="docTo" class="mb-1 block text-xs font-semibold uppercase text-gray-500">To</label>
+                <input id="docTo" type="date" class="doc-control">
+            </div>
+            <div class="flex items-end">
+                <button id="docSearchBtn" class="doc-btn w-full justify-center bg-primary-600 text-white hover:bg-primary-700">
+                    <span class="material-icons-round text-base">search</span>
+                    Search
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <section class="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div class="doc-panel p-4">
+            <p class="text-sm font-medium text-gray-500">Total Results</p>
+            <p id="docTotal" class="mt-2 text-3xl font-bold">0</p>
+        </div>
+        <div class="doc-panel p-4">
+            <p class="text-sm font-medium text-gray-500">Employee Documents</p>
+            <p id="employeeDocTotal" class="mt-2 text-3xl font-bold">0</p>
+        </div>
+        <div class="doc-panel p-4">
+            <p class="text-sm font-medium text-gray-500">Request Attachments</p>
+            <p id="requestDocTotal" class="mt-2 text-3xl font-bold">0</p>
+        </div>
+    </section>
+
+    <section class="doc-panel overflow-hidden">
+        <div class="flex items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-700">
+            <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">Documents</h3>
+            <div class="flex items-center gap-2">
+                <button id="prevPage" class="doc-btn border border-gray-300 text-gray-700 disabled:opacity-40 dark:border-gray-600 dark:text-gray-200">
+                    <span class="material-icons-round text-base">chevron_left</span>
+                </button>
+                <span id="pageLabel" class="text-sm text-gray-500">Page 1</span>
+                <button id="nextPage" class="doc-btn border border-gray-300 text-gray-700 disabled:opacity-40 dark:border-gray-600 dark:text-gray-200">
+                    <span class="material-icons-round text-base">chevron_right</span>
+                </button>
+            </div>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="bg-gray-50 text-xs uppercase text-gray-500 dark:bg-gray-900 dark:text-gray-400">
+                <tr>
+                    <th class="px-4 py-3 text-left">Document</th>
+                    <th class="px-4 py-3 text-left">Owner</th>
+                    <th class="px-4 py-3 text-left">Source</th>
+                    <th class="px-4 py-3 text-left">Uploaded</th>
+                    <th class="px-4 py-3 text-right">Actions</th>
+                </tr>
+                </thead>
+                <tbody id="docRows" class="divide-y divide-gray-100 dark:divide-gray-700">
+                <tr><td colspan="5" class="px-4 py-8 text-center text-gray-500">Loading documents...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <script>
+        let currentPage = 0;
+        let totalPages = 0;
+        const pageSize = 25;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('docSearchBtn').addEventListener('click', () => {
+                currentPage = 0;
+                loadDocuments();
+            });
+            document.getElementById('docQuery').addEventListener('keydown', event => {
+                if (event.key === 'Enter') {
+                    currentPage = 0;
+                    loadDocuments();
+                }
+            });
+            document.getElementById('prevPage').addEventListener('click', () => {
+                if (currentPage > 0) {
+                    currentPage--;
+                    loadDocuments();
+                }
+            });
+            document.getElementById('nextPage').addEventListener('click', () => {
+                if (currentPage + 1 < totalPages) {
+                    currentPage++;
+                    loadDocuments();
+                }
+            });
+            loadDocuments();
+        });
+
+        function loadDocuments() {
+            const params = new URLSearchParams();
+            params.set('page', currentPage);
+            params.set('size', pageSize);
+            addParam(params, 'query', document.getElementById('docQuery').value);
+            addParam(params, 'sourceType', document.getElementById('docSource').value);
+            addParam(params, 'uploadedFrom', document.getElementById('docFrom').value);
+            addParam(params, 'uploadedTo', document.getElementById('docTo').value);
+
+            const rows = document.getElementById('docRows');
+            rows.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-500">Loading documents...</td></tr>';
+
+            fetch('/api/documents/library?' + params.toString())
+                .then(response => {
+                    if (!response.ok) throw new Error('Unable to load document library');
+                    return response.json();
+                })
+                .then(renderDocuments)
+                .catch(error => {
+                    rows.innerHTML = `<tr><td colspan="5" class="px-4 py-8 text-center text-red-600">${escapeHtml(error.message)}</td></tr>`;
+                });
+        }
+
+        function renderDocuments(data) {
+            totalPages = data.totalPages || 0;
+            document.getElementById('docTotal').textContent = data.totalElements || 0;
+            document.getElementById('employeeDocTotal').textContent = (data.documents || []).filter(d => d.sourceType === 'EMPLOYEE_DOCUMENT').length;
+            document.getElementById('requestDocTotal').textContent = (data.documents || []).filter(d => d.sourceType === 'REQUEST_ATTACHMENT').length;
+            document.getElementById('pageLabel').textContent = totalPages ? `Page ${currentPage + 1} of ${totalPages}` : 'Page 0';
+            document.getElementById('prevPage').disabled = currentPage === 0;
+            document.getElementById('nextPage').disabled = currentPage + 1 >= totalPages;
+
+            const documents = data.documents || [];
+            if (!documents.length) {
+                document.getElementById('docRows').innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-500">No documents match the current filters.</td></tr>';
+                return;
+            }
+
+            document.getElementById('docRows').innerHTML = documents.map(doc => `
+                <tr class="hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <td class="px-4 py-3">
+                        <div class="flex items-center gap-3">
+                            <span class="material-icons-round text-primary-600">${iconFor(doc)}</span>
+                            <div class="min-w-0">
+                                <p class="truncate font-semibold">${escapeHtml(doc.displayName || doc.originalFileName || 'Document')}</p>
+                                <p class="truncate text-xs text-gray-500">${escapeHtml(doc.originalFileName || '')}</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-4 py-3">
+                        <p>${escapeHtml(doc.ownerEmployeeName || (doc.ownerEmployeeId ? 'Employee #' + doc.ownerEmployeeId : 'N/A'))}</p>
+                        <p class="text-xs text-gray-500">${escapeHtml(doc.employeeNumber || '')}</p>
+                    </td>
+                    <td class="px-4 py-3">
+                        <span class="badge badge-info">${escapeHtml(labelSource(doc.sourceType))}</span>
+                        <p class="mt-1 text-xs text-gray-500">${escapeHtml(doc.requestNumber || doc.attachmentType || doc.contentType || '')}</p>
+                    </td>
+                    <td class="px-4 py-3">${formatDate(doc.uploadedAt)}</td>
+                    <td class="px-4 py-3">
+                        <div class="flex justify-end gap-2">
+                            <a href="${doc.viewUrl}" target="_blank" class="doc-btn border border-gray-300 text-gray-700 dark:border-gray-600 dark:text-gray-200">
+                                <span class="material-icons-round text-base">visibility</span>
+                                View
+                            </a>
+                            <a href="${doc.downloadUrl}" class="doc-btn bg-primary-600 text-white hover:bg-primary-700">
+                                <span class="material-icons-round text-base">download</span>
+                                Download
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function addParam(params, name, value) {
+            if (value && value.trim()) params.set(name, value.trim());
+        }
+
+        function labelSource(source) {
+            return source === 'REQUEST_ATTACHMENT' ? 'Request' : 'Employee';
+        }
+
+        function iconFor(doc) {
+            const type = (doc.contentType || '').toLowerCase();
+            if (type.includes('image')) return 'image';
+            if (type.includes('pdf')) return 'picture_as_pdf';
+            return 'description';
+        }
+
+        function formatDate(value) {
+            if (!value) return 'N/A';
+            const date = new Date(value);
+            return isNaN(date) ? 'N/A' : date.toLocaleDateString();
+        }
+
+        function escapeHtml(value) {
+            return String(value == null ? '' : value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+    </script>
+</main>
+</body>
+</html>
