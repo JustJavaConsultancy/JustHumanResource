@@ -106,8 +106,38 @@
             <div class="flex-1 overflow-y-auto p-5 space-y-3">
                 <input id="mobileGroupName" class="mchat-input" maxlength="100" placeholder="Group name" required>
                 <textarea id="mobileGroupDescription" class="mchat-input" maxlength="500" rows="2" placeholder="Description"></textarea>
-                <input id="mobileMemberSearch" class="mchat-search" placeholder="Search members">
-                <div id="mobileMemberOptions" class="rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden"></div>
+
+                <!-- Searchable Multi-select Dropdown for Members -->
+                <div class="relative">
+                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Members</label>
+                    <div id="mobileMemberDropdown" class="relative">
+                        <!-- Dropdown Trigger -->
+                        <button type="button" id="mobileMemberDropdownToggle" class="mchat-search w-full text-left justify-between py-3 pr-10" aria-expanded="false" aria-haspopup="listbox">
+                            <span id="mobileMemberDropdownPlaceholder" class="text-slate-500 dark:text-slate-400">Select employees...</span>
+                            <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">expand_more</span>
+                        </button>
+
+                        <!-- Dropdown Panel -->
+                        <div id="mobileMemberDropdownPanel" class="absolute z-50 w-full max-h-80 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-lg hidden mt-1">
+                            <!-- Search Input -->
+                            <div class="p-2 border-b border-slate-200 dark:border-slate-700">
+                                <input type="text" id="mobileMemberDropdownSearch" class="mchat-search w-full" placeholder="Search employees..." autocomplete="off">
+                            </div>
+                            <!-- Employee List -->
+                            <div id="mobileMemberDropdownList" class="max-h-60 overflow-y-auto" role="listbox">
+                                <!-- Populated by JS -->
+                            </div>
+                            <!-- Selected Count -->
+                            <div id="mobileMemberDropdownFooter" class="p-2 border-t border-slate-200 dark:border-slate-700 text-xs text-slate-500 dark:text-slate-400 text-right hidden">
+                                <span id="mobileSelectedCount">0</span> selected
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Selected Members Tags -->
+                    <div id="mobileSelectedMembersTags" class="flex flex-wrap gap-1.5 mt-2 min-h-[28px]"></div>
+                    <input type="hidden" id="mobileMemberIds" name="memberEmployeeIds">
+                </div>
+
                 <p id="mobileGroupStatus" class="text-sm text-slate-500"></p>
             </div>
             <div class="p-5 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700">
@@ -362,15 +392,147 @@
             document.getElementById('mobileGroupModal').classList.remove('hidden');
             document.getElementById('mobileGroupStatus').textContent = 'Loading members...';
             availableMembers = await json('/mobile/employee/communication/groups/available-members');
-            renderMobileMemberOptions();
+            renderMobileMemberDropdown();
             document.getElementById('mobileGroupStatus').textContent = '';
         }
-        function closeMobileGroupModal() { document.getElementById('mobileGroupModal').classList.add('hidden'); document.getElementById('mobileGroupForm').reset(); }
-        function renderMobileMemberOptions() {
-            const search = document.getElementById('mobileMemberSearch').value.toLowerCase();
-            const filtered = availableMembers.filter(m => !search || m.fullName.toLowerCase().includes(search) || (m.department || '').toLowerCase().includes(search));
-            document.getElementById('mobileMemberOptions').innerHTML = filtered.map(m => `<label class="flex items-center gap-3 p-3 border-b border-slate-100 dark:border-slate-700"><input type="checkbox" class="mobile-member" value="${m.id}"><span class="avatar size-9 text-xs">${initials(m.fullName)}</span><span class="min-w-0"><span class="block text-sm font-bold truncate">${html(m.fullName)}</span><span class="block text-xs text-slate-500 truncate">${html(m.department || 'Unassigned')}</span></span></label>`).join('');
+        function closeMobileGroupModal() {
+            document.getElementById('mobileGroupModal').classList.add('hidden');
+            document.getElementById('mobileGroupForm').reset();
+            // Reset member selection
+            document.getElementById('mobileMemberIds').value = '';
+            document.getElementById('mobileSelectedMembersTags').innerHTML = '';
+            document.getElementById('mobileMemberDropdownPlaceholder').textContent = 'Select employees...';
+            document.getElementById('mobileMemberDropdownPlaceholder').classList.add('text-slate-500', 'dark:text-slate-400');
+            document.getElementById('mobileMemberDropdownPlaceholder').classList.remove('text-slate-900', 'dark:text-white');
+            document.getElementById('mobileSelectedCount').textContent = '0';
+            document.getElementById('mobileMemberDropdownFooter').classList.add('hidden');
+            document.querySelectorAll('.mobile-member-dropdown-checkbox').forEach(cb => cb.checked = false);
+            document.getElementById('mobileMemberDropdownPanel').classList.add('hidden');
+            document.getElementById('mobileMemberDropdownToggle').setAttribute('aria-expanded', 'false');
         }
+
+        function renderMobileMemberDropdown() {
+            const list = document.getElementById('mobileMemberDropdownList');
+            if (!list) return;
+            list.innerHTML = availableMembers.map(member => `
+                <label class="mobile-member-dropdown-item flex items-center gap-3 px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer" role="option" data-id="${member.id}">
+                    <input type="checkbox" class="mobile-member-dropdown-checkbox w-4 h-4 text-primary rounded border-slate-300" value="${member.id}">
+                    <span class="avatar size-9 text-xs">${initials(member.fullName)}</span>
+                    <span class="min-w-0 flex-1">
+                        <span class="block text-sm font-medium truncate">${html(member.fullName)}</span>
+                        <span class="block text-xs text-slate-500 truncate">${html(member.department || 'Unassigned')}</span>
+                    </span>
+                </label>
+            `).join('');
+
+            // Attach click handlers to checkboxes
+            list.querySelectorAll('.mobile-member-dropdown-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', handleMobileMemberSelect);
+            });
+
+            // Also handle label clicks for better UX
+            list.querySelectorAll('.mobile-member-dropdown-item').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    if (e.target.type !== 'checkbox') {
+                        const checkbox = item.querySelector('input[type="checkbox"]');
+                        checkbox.checked = !checkbox.checked;
+                        handleMobileMemberSelect({ target: checkbox });
+                    }
+                });
+            });
+        }
+
+        function handleMobileMemberSelect(e) {
+            const checkbox = e.target;
+            const memberId = Number(checkbox.value);
+            const member = availableMembers.find(m => m.id === memberId);
+            if (!member) return;
+
+            const tagsContainer = document.getElementById('mobileSelectedMembersTags');
+            const hiddenInput = document.getElementById('mobileMemberIds');
+            const footer = document.getElementById('mobileMemberDropdownFooter');
+            const countEl = document.getElementById('mobileSelectedCount');
+            const placeholder = document.getElementById('mobileMemberDropdownPlaceholder');
+
+            // Get current selected IDs from hidden input
+            let selectedIds = hiddenInput.value ? hiddenInput.value.split(',').map(Number) : [];
+
+            if (checkbox.checked) {
+                // Add member
+                if (!selectedIds.includes(memberId)) {
+                    selectedIds.push(memberId);
+                }
+            } else {
+                // Remove member
+                selectedIds = selectedIds.filter(id => id !== memberId);
+            }
+
+            // Update hidden input
+            hiddenInput.value = selectedIds.join(',');
+
+            // Update tags display
+            tagsContainer.innerHTML = selectedIds.map(id => {
+                const m = availableMembers.find(x => x.id === id);
+                if (!m) return '';
+                return `<span class="inline-flex items-center gap-1 px-2 py-1 bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-200 rounded-full text-xs">
+                    ${html(m.fullName)}
+                    <button type="button" class="mobile-member-tag-remove ml-1 hover:text-primary-600 dark:hover:text-primary-400" data-id="${id}">&times;</button>
+                </span>`;
+            }).join('');
+
+            // Attach remove handlers
+            tagsContainer.querySelectorAll('.mobile-member-tag-remove').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const id = Number(btn.dataset.id);
+                    const dropdownList = document.getElementById('mobileMemberDropdownList');
+                    const cb = dropdownList?.querySelector(`.mobile-member-dropdown-checkbox[value="${id}"]`);
+                    if (cb) {
+                        cb.checked = false;
+                        handleMobileMemberSelect({ target: cb });
+                    }
+                });
+            });
+
+            // Update count and placeholder
+            countEl.textContent = selectedIds.length;
+            footer.classList.toggle('hidden', selectedIds.length === 0);
+            placeholder.textContent = selectedIds.length > 0 ? `${selectedIds.length} employee${selectedIds.length > 1 ? 's' : ''} selected` : 'Select employees...';
+            placeholder.classList.toggle('text-slate-500', selectedIds.length === 0);
+            placeholder.classList.toggle('dark:text-slate-400', selectedIds.length === 0);
+            placeholder.classList.toggle('text-slate-900', selectedIds.length > 0);
+            placeholder.classList.toggle('dark:text-white', selectedIds.length > 0);
+        }
+
+        // Dropdown toggle and search logic for mobile
+        let mobileDropdownOpen = false;
+        function toggleMobileMemberDropdown() {
+            const panel = document.getElementById('mobileMemberDropdownPanel');
+            const toggle = document.getElementById('mobileMemberDropdownToggle');
+            mobileDropdownOpen = !mobileDropdownOpen;
+            panel.classList.toggle('hidden', !mobileDropdownOpen);
+            toggle.setAttribute('aria-expanded', mobileDropdownOpen);
+            if (mobileDropdownOpen) {
+                document.getElementById('mobileMemberDropdownSearch').focus();
+            }
+        }
+
+        function filterMobileMemberDropdown() {
+            const search = document.getElementById('mobileMemberDropdownSearch').value.toLowerCase();
+            const items = document.querySelectorAll('.mobile-member-dropdown-item');
+            items.forEach(item => {
+                const name = item.querySelector('.font-medium').textContent.toLowerCase();
+                const dept = item.querySelector('.text-xs').textContent.toLowerCase();
+                item.style.display = (!search || name.includes(search) || dept.includes(search)) ? 'flex' : 'none';
+            });
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (mobileDropdownOpen && !e.target.closest('#mobileMemberDropdown')) {
+                toggleMobileMemberDropdown();
+            }
+        });
 
         document.querySelectorAll('.mchat-tab').forEach(btn => btn.addEventListener('click', () => showTab(btn.dataset.mobileTab)));
         document.getElementById('peopleSearch').addEventListener('input', renderPeople);
@@ -378,10 +540,17 @@
         document.getElementById('onlineFilter').addEventListener('click', () => { onlineOnly = !onlineOnly; renderPeople(); });
         document.getElementById('createMobileGroupBtn')?.addEventListener('click', openMobileGroupModal);
         document.getElementById('closeMobileGroupModal')?.addEventListener('click', closeMobileGroupModal);
-        document.getElementById('mobileMemberSearch')?.addEventListener('input', renderMobileMemberOptions);
+
+        // Mobile dropdown toggle
+        document.getElementById('mobileMemberDropdownToggle')?.addEventListener('click', toggleMobileMemberDropdown);
+
+        // Mobile dropdown search filter
+        document.getElementById('mobileMemberDropdownSearch')?.addEventListener('input', filterMobileMemberDropdown);
+
         document.getElementById('mobileGroupForm')?.addEventListener('submit', async event => {
             event.preventDefault();
-            const memberEmployeeIds = [...document.querySelectorAll('.mobile-member:checked')].map(input => Number(input.value));
+            const hiddenInput = document.getElementById('mobileMemberIds');
+            const memberEmployeeIds = hiddenInput.value ? hiddenInput.value.split(',').map(Number).filter(n => !isNaN(n)) : [];
             try {
                 const group = await json('/mobile/employee/communication/groups', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name:document.getElementById('mobileGroupName').value, description:document.getElementById('mobileGroupDescription').value, memberEmployeeIds})});
                 groups = [group, ...groups.filter(g => g.id !== group.id)];

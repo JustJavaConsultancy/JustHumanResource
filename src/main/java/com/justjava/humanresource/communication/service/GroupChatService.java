@@ -53,7 +53,7 @@ public class GroupChatService {
 
     @Transactional(readOnly = true)
     public List<EmployeeContactResponse> availableMembers() {
-        Employee current = currentEmployeeOptional();
+        // Check HR/Admin FIRST - they don't need currentEmployeeOptional()
         if (isHrOrAdmin()) {
             return employeeRepository.findAllVisible().stream()
                     .filter(this::isActiveEmployee)
@@ -61,11 +61,16 @@ public class GroupChatService {
                     .sorted(Comparator.comparing(EmployeeContactResponse::fullName, Comparator.nullsLast(String::compareToIgnoreCase)))
                     .toList();
         }
+
+        // For non-HR/Admin, get current employee (might throw if no profile)
+        Employee current = currentEmployeeOptional();
         if (current == null || !isDepartmentHead(current)) {
-            throw new AccessDeniedException("Only HR or department heads can create groups");
+            // Return empty list instead of throwing exception - user can see the form but no members
+            return List.of();
         }
         if (current.getDepartment() == null) {
-            throw new IllegalArgumentException("No department is assigned to your employee profile");
+            // Return empty list instead of throwing exception
+            return List.of();
         }
         Long departmentId = current.getDepartment().getId();
         return employeeRepository.findAllVisible().stream()

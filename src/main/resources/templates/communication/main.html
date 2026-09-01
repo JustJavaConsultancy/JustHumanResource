@@ -82,8 +82,38 @@
                 <form id="hrGroupForm" class="p-5 space-y-3">
                     <input id="hrGroupName" class="hr-input" maxlength="100" placeholder="Group name" required>
                     <textarea id="hrGroupDescription" class="hr-input" maxlength="500" rows="2" placeholder="Description"></textarea>
-                    <input id="hrMemberSearch" class="hr-input" placeholder="Search employees">
-                    <div id="hrMemberOptions" class="max-h-60 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700"></div>
+
+                    <!-- Searchable Multi-select Dropdown for Members -->
+                    <div class="relative">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Members</label>
+                        <div id="memberDropdown" class="relative">
+                            <!-- Dropdown Trigger -->
+                            <button type="button" id="memberDropdownToggle" class="hr-input w-full text-left justify-between py-3 pr-10" aria-expanded="false" aria-haspopup="listbox">
+                                <span id="memberDropdownPlaceholder" class="text-gray-500 dark:text-gray-400">Select employees...</span>
+                                <span class="material-icons-round absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" style="font-size: 20px;">expand_more</span>
+                            </button>
+
+                            <!-- Dropdown Panel -->
+                            <div id="memberDropdownPanel" class="absolute z-50 w-full max-h-80 overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg hidden mt-1">
+                                <!-- Search Input -->
+                                <div class="p-2 border-b border-gray-200 dark:border-gray-700">
+                                    <input type="text" id="memberDropdownSearch" class="hr-input w-full" placeholder="Search employees..." autocomplete="off">
+                                </div>
+                                <!-- Employee List -->
+                                <div id="memberDropdownList" class="max-h-60 overflow-y-auto" role="listbox">
+                                    <!-- Populated by JS -->
+                                </div>
+                                <!-- Selected Count -->
+                                <div id="memberDropdownFooter" class="p-2 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 text-right hidden">
+                                    <span id="selectedCount">0</span> selected
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Selected Members Tags -->
+                        <div id="selectedMembersTags" class="flex flex-wrap gap-1.5 mt-2 min-h-[28px]"></div>
+                        <input type="hidden" id="hrMemberIds" name="memberEmployeeIds">
+                    </div>
+
                     <div class="flex items-center justify-between gap-3">
                         <p id="hrGroupStatus" class="text-sm text-gray-500 dark:text-gray-400">Select members and create the group.</p>
                         <button class="hr-primary" type="submit"><span class="material-icons-round text-base">group_add</span>Create Group</button>
@@ -205,27 +235,136 @@
         }
 
         async function loadAvailableMembers() {
-            const container = document.getElementById('hrMemberOptions');
-            if (!container) return;
             try {
                 availableMembers = await json('/communication/groups/available-members');
-                renderMemberOptions();
+                renderMemberDropdown();
             } catch (error) {
                 document.getElementById('hrGroupStatus').textContent = 'Could not load available members.';
             }
         }
 
-        function renderMemberOptions() {
-            const search = document.getElementById('hrMemberSearch').value.toLowerCase();
-            const filtered = availableMembers.filter(member => !search || member.fullName.toLowerCase().includes(search) || (member.department || '').toLowerCase().includes(search));
-            document.getElementById('hrMemberOptions').innerHTML = filtered.map(member => `
-                <label class="member-option">
-                    <input type="checkbox" class="hr-group-member" value="${member.id}">
-                    <span class="avatar">${initials(member.fullName)}</span>
-                    <span class="min-w-0"><span class="block text-sm font-bold truncate">${escapeHtml(member.fullName)}</span><span class="block text-xs text-gray-500 truncate">${escapeHtml(member.department || 'Unassigned')}</span></span>
+        function renderMemberDropdown() {
+            const list = document.getElementById('memberDropdownList');
+            if (!list) return;
+            list.innerHTML = availableMembers.map(member => `
+                <label class="member-dropdown-item flex items-center gap-3 px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer" role="option" data-id="${member.id}">
+                    <input type="checkbox" class="member-dropdown-checkbox w-4 h-4 text-blue-600 rounded border-gray-300" value="${member.id}">
+                    <span class="avatar text-xs">${initials(member.fullName)}</span>
+                    <span class="min-w-0 flex-1">
+                        <span class="block text-sm font-medium truncate">${escapeHtml(member.fullName)}</span>
+                        <span class="block text-xs text-gray-500 truncate">${escapeHtml(member.department || 'Unassigned')}</span>
+                    </span>
                 </label>
             `).join('');
+
+            // Attach click handlers to checkboxes
+            list.querySelectorAll('.member-dropdown-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', handleMemberSelect);
+            });
+
+            // Also handle label clicks for better UX
+            list.querySelectorAll('.member-dropdown-item').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    if (e.target.type !== 'checkbox') {
+                        const checkbox = item.querySelector('input[type="checkbox"]');
+                        checkbox.checked = !checkbox.checked;
+                        handleMemberSelect({ target: checkbox });
+                    }
+                });
+            });
         }
+
+        function handleMemberSelect(e) {
+            const checkbox = e.target;
+            const memberId = Number(checkbox.value);
+            const member = availableMembers.find(m => m.id === memberId);
+            if (!member) return;
+
+            const tagsContainer = document.getElementById('selectedMembersTags');
+            const hiddenInput = document.getElementById('hrMemberIds');
+            const footer = document.getElementById('memberDropdownFooter');
+            const countEl = document.getElementById('selectedCount');
+            const placeholder = document.getElementById('memberDropdownPlaceholder');
+
+            // Get current selected IDs from hidden input
+            let selectedIds = hiddenInput.value ? hiddenInput.value.split(',').map(Number) : [];
+
+            if (checkbox.checked) {
+                // Add member
+                if (!selectedIds.includes(memberId)) {
+                    selectedIds.push(memberId);
+                }
+            } else {
+                // Remove member
+                selectedIds = selectedIds.filter(id => id !== memberId);
+            }
+
+            // Update hidden input
+            hiddenInput.value = selectedIds.join(',');
+
+            // Update tags display
+            tagsContainer.innerHTML = selectedIds.map(id => {
+                const m = availableMembers.find(x => x.id === id);
+                if (!m) return '';
+                return `<span class="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-xs">
+                    ${escapeHtml(m.fullName)}
+                    <button type="button" class="member-tag-remove ml-1 hover:text-blue-600 dark:hover:text-blue-400" data-id="${id}">&times;</button>
+                </span>`;
+            }).join('');
+
+            // Attach remove handlers
+            tagsContainer.querySelectorAll('.member-tag-remove').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const id = Number(btn.dataset.id);
+                    const dropdownList = document.getElementById('memberDropdownList');
+                    const cb = dropdownList?.querySelector(`.member-dropdown-checkbox[value="${id}"]`);
+                    if (cb) {
+                        cb.checked = false;
+                        handleMemberSelect({ target: cb });
+                    }
+                });
+            });
+
+            // Update count and placeholder
+            countEl.textContent = selectedIds.length;
+            footer.classList.toggle('hidden', selectedIds.length === 0);
+            placeholder.textContent = selectedIds.length > 0 ? `${selectedIds.length} employee${selectedIds.length > 1 ? 's' : ''} selected` : 'Select employees...';
+            placeholder.classList.toggle('text-gray-500', selectedIds.length === 0);
+            placeholder.classList.toggle('dark:text-gray-400', selectedIds.length === 0);
+            placeholder.classList.toggle('text-gray-900', selectedIds.length > 0);
+            placeholder.classList.toggle('dark:text-white', selectedIds.length > 0);
+        }
+
+        // Dropdown toggle and search logic
+        let dropdownOpen = false;
+        function toggleMemberDropdown() {
+            const panel = document.getElementById('memberDropdownPanel');
+            const toggle = document.getElementById('memberDropdownToggle');
+            dropdownOpen = !dropdownOpen;
+            panel.classList.toggle('hidden', !dropdownOpen);
+            toggle.setAttribute('aria-expanded', dropdownOpen);
+            if (dropdownOpen) {
+                document.getElementById('memberDropdownSearch').focus();
+            }
+        }
+
+        function filterMemberDropdown() {
+            const search = document.getElementById('memberDropdownSearch').value.toLowerCase();
+            const items = document.querySelectorAll('.member-dropdown-item');
+            items.forEach(item => {
+                const name = item.querySelector('.font-medium').textContent.toLowerCase();
+                const dept = item.querySelector('.text-xs').textContent.toLowerCase();
+                item.style.display = (!search || name.includes(search) || dept.includes(search)) ? 'flex' : 'none';
+            });
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (dropdownOpen && !e.target.closest('#memberDropdown')) {
+                toggleMemberDropdown();
+            }
+        });
 
         function renderBroadcasts() {
             const rows = document.getElementById('broadcastRows');
@@ -383,10 +522,18 @@
         }
 
         document.getElementById('refreshBtn').addEventListener('click', loadData);
-        document.getElementById('hrMemberSearch')?.addEventListener('input', renderMemberOptions);
+
+        // Dropdown toggle
+        document.getElementById('memberDropdownToggle')?.addEventListener('click', toggleMemberDropdown);
+
+        // Dropdown search filter
+        document.getElementById('memberDropdownSearch')?.addEventListener('input', filterMemberDropdown);
+
+        // Group form submit
         document.getElementById('hrGroupForm')?.addEventListener('submit', async event => {
             event.preventDefault();
-            const memberEmployeeIds = [...document.querySelectorAll('.hr-group-member:checked')].map(input => Number(input.value));
+            const hiddenInput = document.getElementById('hrMemberIds');
+            const memberEmployeeIds = hiddenInput.value ? hiddenInput.value.split(',').map(Number).filter(n => !isNaN(n)) : [];
             try {
                 const response = await fetch('/communication/groups', {
                     method:'POST',
@@ -402,12 +549,23 @@
                 groups = [group, ...groups.filter(item => item.id !== group.id)];
                 renderGroups();
                 event.target.reset();
-                renderMemberOptions();
+                // Reset member selection
+                hiddenInput.value = '';
+                document.getElementById('selectedMembersTags').innerHTML = '';
+                document.getElementById('memberDropdownPlaceholder').textContent = 'Select employees...';
+                document.getElementById('memberDropdownPlaceholder').classList.add('text-gray-500', 'dark:text-gray-400');
+                document.getElementById('memberDropdownPlaceholder').classList.remove('text-gray-900', 'dark:text-white');
+                document.getElementById('selectedCount').textContent = '0';
+                document.getElementById('memberDropdownFooter').classList.add('hidden');
+                // Uncheck all checkboxes
+                document.querySelectorAll('.member-dropdown-checkbox').forEach(cb => cb.checked = false);
                 document.getElementById('hrGroupStatus').textContent = 'Group created.';
             } catch (error) {
                 document.getElementById('hrGroupStatus').textContent = 'Group could not be created. Please check members and try again.';
             }
         });
+
+        // Initialize on page load
         document.addEventListener('DOMContentLoaded', async () => {
             await loadData();
             await loadAvailableMembers();
