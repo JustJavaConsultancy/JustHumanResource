@@ -25,6 +25,7 @@
         .avatar { width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center; color:white; background:#2563eb; font-weight:900; font-size:13px; }
         .dot { width:10px; height:10px; border-radius:999px; background:#16a34a; }
         .comment { border:1px solid var(--hc-border); border-radius:8px; padding:11px 12px; background:var(--hc-soft); }
+        .member-option { display:flex; align-items:center; gap:10px; padding:10px 12px; border-bottom:1px solid var(--hc-border); }
         @media (max-width: 1080px) { .hr-grid { grid-template-columns:1fr; } }
     </style>
 </head>
@@ -73,6 +74,23 @@
                 </form>
             </section>
 
+            <section class="hr-card" th:if="${canCreateGroups}">
+                <div class="hr-card-head">
+                    <h2 class="text-lg font-bold">Create Chat Group</h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">HR can create cross-department employee groups.</p>
+                </div>
+                <form id="hrGroupForm" class="p-5 space-y-3">
+                    <input id="hrGroupName" class="hr-input" maxlength="100" placeholder="Group name" required>
+                    <textarea id="hrGroupDescription" class="hr-input" maxlength="500" rows="2" placeholder="Description"></textarea>
+                    <input id="hrMemberSearch" class="hr-input" placeholder="Search employees">
+                    <div id="hrMemberOptions" class="max-h-60 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700"></div>
+                    <div class="flex items-center justify-between gap-3">
+                        <p id="hrGroupStatus" class="text-sm text-gray-500 dark:text-gray-400">Select members and create the group.</p>
+                        <button class="hr-primary" type="submit"><span class="material-icons-round text-base">group_add</span>Create Group</button>
+                    </div>
+                </form>
+            </section>
+
             <section class="hr-card">
                 <div class="hr-card-head flex items-center justify-between">
                     <div>
@@ -99,6 +117,14 @@
 
             <section class="hr-card">
                 <div class="hr-card-head">
+                    <h2 class="text-base font-bold">Chat Groups</h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Groups created by HR and HOD users.</p>
+                </div>
+                <div id="hrGroupRows" class="max-h-[320px] overflow-y-auto"></div>
+            </section>
+
+            <section class="hr-card">
+                <div class="hr-card-head">
                     <h2 id="detailTitle" class="text-base font-bold">Broadcast Details</h2>
                     <p id="detailMeta" class="text-sm text-gray-500 dark:text-gray-400">Select a broadcast to view comments.</p>
                 </div>
@@ -114,6 +140,8 @@
         let stompClient;
         let broadcasts = [];
         let onlineEmployees = [];
+        let groups = [];
+        let availableMembers = [];
         let selectedBroadcast = null;
         let activeCommentSubscription = null;
         let activeReceiptSubscription = null;
@@ -134,12 +162,14 @@
         }
 
         async function loadData() {
-            [broadcasts, onlineEmployees] = await Promise.all([
+            [broadcasts, onlineEmployees, groups] = await Promise.all([
                 json('/communication/broadcasts'),
-                json('/communication/presence')
+                json('/communication/presence'),
+                json('/communication/groups')
             ]);
             renderBroadcasts();
             renderOnline();
+            renderGroups();
             renderMetrics();
         }
 
@@ -160,6 +190,41 @@
                     </div>
                     <span class="dot"></span>
                 </div>`).join('') : '<div class="p-8 text-center text-sm text-gray-500">No employees online right now.</div>';
+        }
+
+        function renderGroups() {
+            const rows = document.getElementById('hrGroupRows');
+            rows.innerHTML = groups.length ? groups.map(group => `
+                <div class="online-row">
+                    <div class="avatar bg-emerald-600">${initials(group.name)}</div>
+                    <div class="min-w-0 flex-1">
+                        <p class="text-sm font-bold truncate">${escapeHtml(group.name)}</p>
+                        <p class="text-xs text-gray-500 truncate">${escapeHtml(group.lastMessage || `${group.memberCount || 0} members - ${group.department || 'All departments'}`)}</p>
+                    </div>
+                </div>`).join('') : '<div class="p-8 text-center text-sm text-gray-500">No chat groups yet.</div>';
+        }
+
+        async function loadAvailableMembers() {
+            const container = document.getElementById('hrMemberOptions');
+            if (!container) return;
+            try {
+                availableMembers = await json('/communication/groups/available-members');
+                renderMemberOptions();
+            } catch (error) {
+                document.getElementById('hrGroupStatus').textContent = 'Could not load available members.';
+            }
+        }
+
+        function renderMemberOptions() {
+            const search = document.getElementById('hrMemberSearch').value.toLowerCase();
+            const filtered = availableMembers.filter(member => !search || member.fullName.toLowerCase().includes(search) || (member.department || '').toLowerCase().includes(search));
+            document.getElementById('hrMemberOptions').innerHTML = filtered.map(member => `
+                <label class="member-option">
+                    <input type="checkbox" class="hr-group-member" value="${member.id}">
+                    <span class="avatar">${initials(member.fullName)}</span>
+                    <span class="min-w-0"><span class="block text-sm font-bold truncate">${escapeHtml(member.fullName)}</span><span class="block text-xs text-gray-500 truncate">${escapeHtml(member.department || 'Unassigned')}</span></span>
+                </label>
+            `).join('');
         }
 
         function renderBroadcasts() {
@@ -220,16 +285,12 @@
 
         function handleComment(message) {
             const comment = JSON.parse(message.body);
-            const broadcast = broadcasts.find(item => item.id === comment.broadcastId);
-            if (broadcast) broadcast.commentCount = (broadcast.commentCount || 0) + 1;
             if (selectedBroadcast && selectedBroadcast.id === comment.broadcastId) {
                 const rows = document.getElementById('commentRows');
                 if (rows.textContent.includes('No comments yet.')) rows.innerHTML = '';
                 rows.insertAdjacentHTML('beforeend', commentTemplate(comment));
                 rows.scrollTop = rows.scrollHeight;
             }
-            renderBroadcasts();
-            renderMetrics();
         }
 
         function handleReceipt(message) {
@@ -246,8 +307,18 @@
         function handleBroadcast(message) {
             const broadcast = JSON.parse(message.body);
             broadcasts = [broadcast, ...broadcasts.filter(item => item.id !== broadcast.id)];
+            if (selectedBroadcast && selectedBroadcast.id === broadcast.id) {
+                selectedBroadcast = broadcast;
+                document.getElementById('detailMeta').textContent = `${formatTime(broadcast.createdAt)} - ${broadcast.deliveredCount || 0} delivered - ${broadcast.readCount || 0} read`;
+            }
             renderBroadcasts();
             renderMetrics();
+        }
+
+        function handleGroupSummary(message) {
+            const group = JSON.parse(message.body);
+            groups = [group, ...groups.filter(item => item.id !== group.id)];
+            renderGroups();
         }
 
         function handlePresence(message) {
@@ -293,6 +364,7 @@
                     document.getElementById('sendStatus').textContent = 'Connected and ready.';
                     stompClient.subscribe('/topic/hr-broadcasts', handleBroadcast);
                     stompClient.subscribe('/topic/presence', handlePresence);
+                    stompClient.subscribe('/topic/chat-groups', handleGroupSummary);
                     if (selectedBroadcast) selectBroadcast(selectedBroadcast.id);
                 }
             });
@@ -311,8 +383,34 @@
         }
 
         document.getElementById('refreshBtn').addEventListener('click', loadData);
+        document.getElementById('hrMemberSearch')?.addEventListener('input', renderMemberOptions);
+        document.getElementById('hrGroupForm')?.addEventListener('submit', async event => {
+            event.preventDefault();
+            const memberEmployeeIds = [...document.querySelectorAll('.hr-group-member:checked')].map(input => Number(input.value));
+            try {
+                const response = await fetch('/communication/groups', {
+                    method:'POST',
+                    headers:{'Content-Type':'application/json'},
+                    body:JSON.stringify({
+                        name:document.getElementById('hrGroupName').value,
+                        description:document.getElementById('hrGroupDescription').value,
+                        memberEmployeeIds
+                    })
+                });
+                if (!response.ok) throw new Error(await response.text());
+                const group = await response.json();
+                groups = [group, ...groups.filter(item => item.id !== group.id)];
+                renderGroups();
+                event.target.reset();
+                renderMemberOptions();
+                document.getElementById('hrGroupStatus').textContent = 'Group created.';
+            } catch (error) {
+                document.getElementById('hrGroupStatus').textContent = 'Group could not be created. Please check members and try again.';
+            }
+        });
         document.addEventListener('DOMContentLoaded', async () => {
             await loadData();
+            await loadAvailableMembers();
             connectSocket();
         });
     </script>

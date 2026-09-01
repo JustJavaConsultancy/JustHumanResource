@@ -16,7 +16,7 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
             SELECT c
             FROM Conversation c
             WHERE c.participantOne.id = :employeeId OR c.participantTwo.id = :employeeId
-            ORDER BY c.updatedAt DESC
+            ORDER BY COALESCE(c.lastMessageAt, c.updatedAt) DESC
             """)
     List<Conversation> findForEmployee(@Param("employeeId") Long employeeId);
 }

@@ -2,7 +2,10 @@ package com.justjava.humanresource.communication.entity;
 
 import com.justjava.humanresource.core.entity.BaseEntity;
 import com.justjava.humanresource.hr.entity.Employee;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
@@ -18,24 +21,25 @@ import java.time.LocalDateTime;
 @Setter
 @Entity
 @NoArgsConstructor
-@Table(name = "communication_conversations",
+@Table(name = "communication_chat_group_members",
         uniqueConstraints = @UniqueConstraint(
-                name = "uk_conversation_participants",
-                columnNames = {"participant_one_id", "participant_two_id"}))
-public class Conversation extends BaseEntity {
+                name = "uk_chat_group_member",
+                columnNames = {"chat_group_id", "employee_id"}))
+public class ChatGroupMember extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "participant_one_id", nullable = false)
-    private Employee participantOne;
+    @JoinColumn(name = "chat_group_id", nullable = false)
+    private ChatGroup chatGroup;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "participant_two_id", nullable = false)
-    private Employee participantTwo;
+    @JoinColumn(name = "employee_id", nullable = false)
+    private Employee employee;
 
-    private LocalDateTime lastMessageAt;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 30)
+    private ChatGroupMemberRole role = ChatGroupMemberRole.MEMBER;
 
-    public Conversation(Employee participantOne, Employee participantTwo) {
-        this.participantOne = participantOne;
-        this.participantTwo = participantTwo;
-    }
+    private LocalDateTime joinedAt;
+
+    private LocalDateTime removedAt;
 }

@@ -8,7 +8,7 @@
     <title>Messages</title>
     <style>
         .mchat { height:100%; display:flex; flex-direction:column; gap:12px; padding:0 16px 14px; }
-        .mchat-tabs { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; padding-top:4px; }
+        .mchat-tabs { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; padding-top:4px; }
         .mchat-tab { min-height:38px; border:1px solid #e2e8f0; border-radius:14px; background:#fff; color:#64748b; font-size:12px; font-weight:800; }
         .dark .mchat-tab { border-color:#334155; background:#1e293b; color:#94a3b8; }
         .mchat-tab.active { background:#2463eb; border-color:#2463eb; color:#fff; }
@@ -46,6 +46,7 @@
 <main layout:fragment="content" class="mchat">
     <div class="mchat-tabs">
         <button class="mchat-tab active" data-mobile-tab="people">People</button>
+        <button class="mchat-tab" data-mobile-tab="groups">Groups</button>
         <button class="mchat-tab" data-mobile-tab="chat">Chat</button>
         <button class="mchat-tab" data-mobile-tab="broadcasts">HR Updates</button>
     </div>
@@ -64,6 +65,20 @@
         <div id="peopleList" class="flex-1 overflow-y-auto"></div>
     </section>
 
+    <section id="groupsPanel" class="mchat-panel">
+        <div class="mchat-head">
+            <div class="flex items-center justify-between gap-3 mb-3">
+                <div>
+                    <h2 class="text-base font-bold">Groups</h2>
+                    <p class="text-xs text-slate-500">Department and HR chat groups</p>
+                </div>
+                <button id="createMobileGroupBtn" class="px-3 py-2 rounded-xl bg-blue-50 text-primary text-xs font-bold" th:if="${canCreateGroups}" type="button">Create</button>
+            </div>
+            <input id="groupSearch" class="mchat-search" placeholder="Search groups">
+        </div>
+        <div id="groupList" class="flex-1 overflow-y-auto"></div>
+    </section>
+
     <section id="chatPanel" class="mchat-panel">
         <div class="mchat-head flex items-center gap-3">
             <div id="chatAvatar" class="avatar bg-slate-400">--</div>
@@ -78,6 +93,28 @@
             <button id="sendMessageBtn" class="send-btn opacity-50" type="submit" disabled><span class="material-symbols-outlined">send</span></button>
         </form>
     </section>
+
+    <div id="mobileGroupModal" class="fixed inset-0 z-50 hidden bg-background-light dark:bg-background-dark">
+        <form id="mobileGroupForm" class="flex h-full flex-col">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+                <div>
+                    <h2 class="text-lg font-bold">Create Group</h2>
+                    <p class="text-xs text-slate-500">Select members you are allowed to add.</p>
+                </div>
+                <button type="button" id="closeMobileGroupModal" class="size-10 rounded-full bg-slate-100 dark:bg-slate-800"><span class="material-symbols-outlined">close</span></button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-5 space-y-3">
+                <input id="mobileGroupName" class="mchat-input" maxlength="100" placeholder="Group name" required>
+                <textarea id="mobileGroupDescription" class="mchat-input" maxlength="500" rows="2" placeholder="Description"></textarea>
+                <input id="mobileMemberSearch" class="mchat-search" placeholder="Search members">
+                <div id="mobileMemberOptions" class="rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden"></div>
+                <p id="mobileGroupStatus" class="text-sm text-slate-500"></p>
+            </div>
+            <div class="p-5 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700">
+                <button class="w-full h-12 rounded-2xl bg-primary text-white font-bold" type="submit">Create Group</button>
+            </div>
+        </form>
+    </div>
 
     <section id="broadcastPanel" class="mchat-panel">
         <div class="mchat-head">
@@ -94,8 +131,9 @@
     <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7/bundles/stomp.umd.min.js"></script>
     <script th:inline="javascript">
         const currentEmployeeId = /*[[${currentEmployeeId}]]*/ 0;
-        let stompClient, selectedContact, selectedBroadcast, activeCommentSubscription;
-        let contacts = [], conversations = [], broadcasts = [], onlineOnly = false;
+        const canCreateGroups = /*[[${canCreateGroups}]]*/ false;
+        let stompClient, selectedContact, selectedGroup, selectedBroadcast, activeCommentSubscription, activeGroupSubscription;
+        let contacts = [], conversations = [], broadcasts = [], groups = [], availableMembers = [], onlineOnly = false;
 
         function initials(name) { return (name || '').split(' ').filter(Boolean).slice(0, 2).map(p => p[0].toUpperCase()).join('') || '--'; }
         function fmt(value) { return value ? new Date(value).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'}) : ''; }
@@ -103,30 +141,82 @@
         async function json(url, options) { const r = await fetch(url, options); if (!r.ok) throw new Error(await r.text()); return r.json(); }
 
         async function loadInitialData() {
-            [contacts, conversations, broadcasts] = await Promise.all([
+            [contacts, conversations, broadcasts, groups] = await Promise.all([
                 json('/employee/communication/employees'),
                 json('/employee/communication/conversations'),
-                json('/employee/communication/broadcasts')
+                json('/employee/communication/broadcasts'),
+                json('/mobile/employee/communication/groups')
             ]);
+            mergeConversationData();
             renderPeople();
+            renderGroups();
             renderBroadcasts();
+        }
+
+        function mergeConversationData() {
+            const byId = new Map(contacts.map(contact => [contact.id, contact]));
+            conversations.forEach(conversation => {
+                if (conversation.otherParticipant && byId.has(conversation.otherParticipant.id)) {
+                    byId.set(conversation.otherParticipant.id, {
+                        ...byId.get(conversation.otherParticipant.id),
+                        unreadCount: conversation.otherParticipant.unreadCount,
+                        conversationId: conversation.id,
+                        lastMessage: conversation.lastMessage ? conversation.lastMessage.content : null,
+                        lastMessageAt: conversation.lastMessage ? conversation.lastMessage.createdAt : conversation.updatedAt,
+                        hasConversation: true
+                    });
+                }
+            });
+            contacts = [...byId.values()];
         }
 
         function renderPeople() {
             const search = document.getElementById('peopleSearch').value.toLowerCase();
-            const filtered = contacts.filter(c => (!onlineOnly || c.online) && (!search || c.fullName.toLowerCase().includes(search) || (c.department || '').toLowerCase().includes(search)));
+            const filtered = sortContactsForChat(contacts).filter(c => (!onlineOnly || c.online) && (!search || c.fullName.toLowerCase().includes(search) || (c.department || '').toLowerCase().includes(search)));
             document.getElementById('onlineCount').textContent = contacts.filter(c => c.online).length;
             document.getElementById('peopleList').innerHTML = filtered.length ? filtered.map(c => `
                 <button class="person-row" data-contact-id="${c.id}" type="button">
                     <div class="relative"><div class="avatar">${initials(c.fullName)}</div><span class="dot ${c.online ? 'online' : ''} absolute -right-1 -bottom-1"></span></div>
-                    <div class="min-w-0 flex-1"><div class="flex items-center justify-between gap-2"><p class="text-sm font-bold truncate">${html(c.fullName)}</p>${c.unreadCount > 0 ? `<span class="badge">${c.unreadCount}</span>` : ''}</div><p class="text-xs text-slate-500 truncate">${html(c.department || 'Unassigned')}</p></div>
+                    <div class="min-w-0 flex-1"><div class="flex items-center justify-between gap-2"><p class="text-sm font-bold truncate">${html(c.fullName)}</p>${c.unreadCount > 0 ? `<span class="badge">${c.unreadCount}</span>` : ''}</div><div class="mt-0.5 flex items-center justify-between gap-2"><p class="text-xs text-slate-500 truncate">${html(c.lastMessage || c.department || 'Unassigned')}</p>${c.lastMessageAt ? `<span class="text-[10px] text-slate-400 flex-none">${shortTime(c.lastMessageAt)}</span>` : ''}</div></div>
                 </button>`).join('') : '<div class="empty"><span class="material-symbols-outlined text-4xl mb-2">person_search</span><p class="text-sm font-semibold">No employees found</p></div>';
             document.querySelectorAll('[data-contact-id]').forEach(btn => btn.addEventListener('click', () => selectContact(Number(btn.dataset.contactId))));
+        }
+
+        function sortContactsForChat(list) {
+            return [...list].sort((a, b) => {
+                const aTime = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
+                const bTime = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0;
+                if (aTime !== bTime) return bTime - aTime;
+                if (a.online !== b.online) return a.online ? -1 : 1;
+                return (a.fullName || '').localeCompare(b.fullName || '');
+            });
+        }
+
+        function shortTime(value) {
+            if (!value) return '';
+            const date = new Date(value);
+            const today = new Date();
+            return date.toDateString() === today.toDateString()
+                ? date.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})
+                : date.toLocaleDateString([], {month:'short', day:'numeric'});
+        }
+
+        function renderGroups() {
+            const search = document.getElementById('groupSearch').value.toLowerCase();
+            const filtered = [...groups].sort((a, b) => new Date(b.lastMessageAt || 0) - new Date(a.lastMessageAt || 0))
+                .filter(g => !search || g.name.toLowerCase().includes(search) || (g.department || '').toLowerCase().includes(search));
+            document.getElementById('groupList').innerHTML = filtered.length ? filtered.map(g => `
+                <button class="person-row" data-group-id="${g.id}" type="button">
+                    <div class="avatar bg-emerald-600">${initials(g.name)}</div>
+                    <div class="min-w-0 flex-1"><div class="flex items-center justify-between gap-2"><p class="text-sm font-bold truncate">${html(g.name)}</p>${g.lastMessageAt ? `<span class="text-[10px] text-slate-400">${shortTime(g.lastMessageAt)}</span>` : ''}</div><p class="text-xs text-slate-500 truncate">${html(g.lastMessage || `${g.memberCount || 0} members - ${g.department || 'All departments'}`)}</p></div>
+                </button>`).join('') : '<div class="empty"><span class="material-symbols-outlined text-4xl mb-2">groups</span><p class="text-sm font-semibold">No groups yet</p></div>';
+            document.querySelectorAll('[data-group-id]').forEach(btn => btn.addEventListener('click', () => selectGroup(Number(btn.dataset.groupId))));
         }
 
         async function selectContact(id) {
             selectedContact = contacts.find(c => c.id === id);
             if (!selectedContact) return;
+            selectedGroup = null;
             selectedContact.unreadCount = 0;
             document.getElementById('chatAvatar').textContent = initials(selectedContact.fullName);
             document.getElementById('chatName').textContent = selectedContact.fullName;
@@ -136,9 +226,26 @@
             document.getElementById('sendMessageBtn').classList.remove('opacity-50');
             renderPeople();
             showTab('chat');
-            const conversation = conversations.find(item => item.otherParticipant && item.otherParticipant.id === id);
+            const conversation = conversations.find(item => item.otherParticipant && item.otherParticipant.id === id)
+                || (selectedContact.conversationId ? {id: selectedContact.conversationId} : null);
             if (!conversation) { document.getElementById('messages').innerHTML = emptyChat(); return; }
             renderMessages(await json(`/employee/communication/conversations/${conversation.id}/messages`));
+        }
+
+        async function selectGroup(id) {
+            selectedGroup = groups.find(g => g.id === id);
+            selectedContact = null;
+            if (!selectedGroup) return;
+            document.getElementById('chatAvatar').textContent = initials(selectedGroup.name);
+            document.getElementById('chatName').textContent = selectedGroup.name;
+            document.getElementById('chatStatus').textContent = `${selectedGroup.memberCount || 0} members - ${selectedGroup.department || 'All departments'}`;
+            document.getElementById('messageInput').disabled = false;
+            document.getElementById('sendMessageBtn').disabled = false;
+            document.getElementById('sendMessageBtn').classList.remove('opacity-50');
+            if (activeGroupSubscription) activeGroupSubscription.unsubscribe();
+            if (stompClient?.connected) activeGroupSubscription = stompClient.subscribe(`/topic/chat-groups/${id}/messages`, handleGroupMessage);
+            showTab('chat');
+            renderGroupMessages(await json(`/mobile/employee/communication/groups/${id}/messages`));
         }
 
         function renderMessages(items) {
@@ -146,15 +253,19 @@
             el.innerHTML = items.length ? items.map(messageTpl).join('') : emptyChat();
             el.scrollTop = el.scrollHeight;
         }
+        function renderGroupMessages(items) { const el = document.getElementById('messages'); el.innerHTML = items.length ? items.map(groupMessageTpl).join('') : emptyGroupChat(); el.scrollTop = el.scrollHeight; }
         function messageTpl(m) { const mine = m.senderId === currentEmployeeId; return `<div class="message-row ${mine ? 'mine' : ''}"><div class="bubble"><div>${html(m.content)}</div><div class="meta">${fmt(m.createdAt)}${mine && m.deliveredAt ? ' - Delivered' : ''}</div></div></div>`; }
+        function groupMessageTpl(m) { const mine = m.senderId === currentEmployeeId; return `<div class="message-row ${mine ? 'mine' : ''}"><div class="bubble">${mine ? '' : `<div class="text-[10px] font-bold mb-1 text-slate-500">${html(m.senderName)}</div>`}<div>${html(m.content)}</div><div class="meta">${fmt(m.createdAt)}</div></div></div>`; }
         function emptyChat() { return '<div class="empty"><span class="material-symbols-outlined text-4xl mb-2">chat_bubble</span><p class="text-sm font-semibold">No messages yet</p><p class="text-xs mt-1">Send the first message.</p></div>'; }
+        function emptyGroupChat() { return '<div class="empty"><span class="material-symbols-outlined text-4xl mb-2">groups</span><p class="text-sm font-semibold">No group messages yet</p><p class="text-xs mt-1">Start the discussion.</p></div>'; }
 
         document.getElementById('messageForm').addEventListener('submit', e => {
             e.preventDefault();
             const input = document.getElementById('messageInput');
             const content = input.value.trim();
-            if (!selectedContact || !content || !stompClient?.connected) return;
-            stompClient.publish({destination:'/app/chat.send', body:JSON.stringify({recipientEmployeeId:selectedContact.id, content})});
+            if (!content || !stompClient?.connected) return;
+            if (selectedGroup) stompClient.publish({destination:'/app/groups.message', body:JSON.stringify({groupId:selectedGroup.id, content})});
+            else if (selectedContact) stompClient.publish({destination:'/app/chat.send', body:JSON.stringify({recipientEmployeeId:selectedContact.id, content})});
             input.value = '';
         });
 
@@ -163,7 +274,20 @@
             const otherId = msg.senderId === currentEmployeeId ? msg.recipientId : msg.senderId;
             const contact = contacts.find(c => c.id === otherId);
             if (contact && (!selectedContact || selectedContact.id !== otherId)) contact.unreadCount = (contact.unreadCount || 0) + 1;
-            if (!conversations.find(c => c.id === msg.conversationId) && contact) conversations.unshift({id:msg.conversationId, otherParticipant:contact, lastMessage:msg});
+            if (contact) {
+                contact.conversationId = msg.conversationId;
+                contact.lastMessage = msg.content;
+                contact.lastMessageAt = msg.createdAt;
+                contact.hasConversation = true;
+            }
+            const existing = conversations.find(c => c.id === msg.conversationId);
+            if (existing) {
+                existing.lastMessage = msg;
+                existing.updatedAt = msg.createdAt;
+            } else if (contact) {
+                conversations.unshift({id:msg.conversationId, otherParticipant:contact, lastMessage:msg, updatedAt:msg.createdAt});
+            }
+            conversations.sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime());
             if (selectedContact && selectedContact.id === otherId) {
                 const el = document.getElementById('messages');
                 if (el.querySelector('.empty')) el.innerHTML = '';
@@ -171,6 +295,22 @@
                 el.scrollTop = el.scrollHeight;
             }
             renderPeople();
+        }
+
+        function handleGroupMessage(frame) {
+            const msg = JSON.parse(frame.body);
+            const group = groups.find(g => g.id === msg.groupId);
+            if (group) {
+                group.lastMessage = msg.content;
+                group.lastMessageAt = msg.createdAt;
+            }
+            if (selectedGroup && selectedGroup.id === msg.groupId) {
+                const el = document.getElementById('messages');
+                if (el.querySelector('.empty')) el.innerHTML = '';
+                el.insertAdjacentHTML('beforeend', groupMessageTpl(msg));
+                el.scrollTop = el.scrollHeight;
+            }
+            renderGroups();
         }
 
         function renderBroadcasts() {
@@ -211,14 +351,47 @@
 
         function commentTpl(c) { return `<div class="comment-card"><div class="flex items-center justify-between gap-2"><p class="text-sm font-bold">${html(c.employeeName)}</p><span class="text-[10px] text-slate-500">${fmt(c.createdAt)}</span></div><p class="text-xs text-slate-500 mb-2">${html(c.department || 'Unassigned')}</p><p class="text-sm whitespace-pre-wrap">${html(c.content)}</p></div>`; }
         function addComment(frame) { const c = JSON.parse(frame.body || '{}'); if (!selectedBroadcast || c.broadcastId !== selectedBroadcast.id) return; const list = document.getElementById('commentList'); if (list.textContent.includes('No comments yet.')) list.innerHTML = ''; list.insertAdjacentHTML('beforeend', commentTpl(c)); list.scrollTop = list.scrollHeight; }
-        function handleBroadcast(frame) { const b = JSON.parse(frame.body); broadcasts = [b, ...broadcasts.filter(item => item.id !== b.id)]; renderBroadcasts(); }
+        function handleBroadcast(frame) { const b = JSON.parse(frame.body); const existing = broadcasts.find(item => item.id === b.id); const merged = existing ? {...b, read: existing.read} : b; broadcasts = [merged, ...broadcasts.filter(item => item.id !== b.id)]; if (selectedBroadcast && selectedBroadcast.id === merged.id) selectedBroadcast = merged; renderBroadcasts(); }
+        function handleGroupSummary(frame) { const group = JSON.parse(frame.body); groups = [group, ...groups.filter(g => g.id !== group.id)]; if (selectedGroup && selectedGroup.id === group.id) selectedGroup = group; renderGroups(); }
         function handlePresence(frame) { const p = JSON.parse(frame.body); contacts = contacts.map(c => c.id === p.employeeId ? {...c, online:p.online} : c); if (selectedContact?.id === p.employeeId) document.getElementById('chatStatus').textContent = `${p.online ? 'Online' : 'Offline'} - ${selectedContact.department || 'Unassigned'}`; renderPeople(); }
         function showTab(tab) { document.querySelectorAll('.mchat-tab').forEach(b => b.classList.toggle('active', b.dataset.mobileTab === tab)); document.querySelectorAll('.mchat-panel').forEach(p => p.classList.remove('active')); document.getElementById(tab + 'Panel').classList.add('active'); }
-        function connectSocket() { stompClient = new StompJs.Client({webSocketFactory:() => new SockJS('/ws'), reconnectDelay:3000, onConnect:() => { stompClient.subscribe('/user/queue/messages', handleMessage); stompClient.subscribe('/user/queue/broadcasts', handleBroadcast); stompClient.subscribe('/topic/hr-broadcasts', handleBroadcast); stompClient.subscribe('/topic/presence', handlePresence); }}); stompClient.activate(); }
+        function connectSocket() { stompClient = new StompJs.Client({webSocketFactory:() => new SockJS('/ws'), reconnectDelay:3000, onConnect:() => { stompClient.subscribe('/user/queue/messages', handleMessage); stompClient.subscribe('/user/queue/broadcasts', handleBroadcast); stompClient.subscribe('/topic/hr-broadcasts', handleBroadcast); stompClient.subscribe('/topic/presence', handlePresence); stompClient.subscribe('/user/queue/group-notifications', handleGroupSummary); if (selectedGroup) activeGroupSubscription = stompClient.subscribe(`/topic/chat-groups/${selectedGroup.id}/messages`, handleGroupMessage); }}); stompClient.activate(); }
+
+        async function openMobileGroupModal() {
+            if (!canCreateGroups) return;
+            document.getElementById('mobileGroupModal').classList.remove('hidden');
+            document.getElementById('mobileGroupStatus').textContent = 'Loading members...';
+            availableMembers = await json('/mobile/employee/communication/groups/available-members');
+            renderMobileMemberOptions();
+            document.getElementById('mobileGroupStatus').textContent = '';
+        }
+        function closeMobileGroupModal() { document.getElementById('mobileGroupModal').classList.add('hidden'); document.getElementById('mobileGroupForm').reset(); }
+        function renderMobileMemberOptions() {
+            const search = document.getElementById('mobileMemberSearch').value.toLowerCase();
+            const filtered = availableMembers.filter(m => !search || m.fullName.toLowerCase().includes(search) || (m.department || '').toLowerCase().includes(search));
+            document.getElementById('mobileMemberOptions').innerHTML = filtered.map(m => `<label class="flex items-center gap-3 p-3 border-b border-slate-100 dark:border-slate-700"><input type="checkbox" class="mobile-member" value="${m.id}"><span class="avatar size-9 text-xs">${initials(m.fullName)}</span><span class="min-w-0"><span class="block text-sm font-bold truncate">${html(m.fullName)}</span><span class="block text-xs text-slate-500 truncate">${html(m.department || 'Unassigned')}</span></span></label>`).join('');
+        }
 
         document.querySelectorAll('.mchat-tab').forEach(btn => btn.addEventListener('click', () => showTab(btn.dataset.mobileTab)));
         document.getElementById('peopleSearch').addEventListener('input', renderPeople);
+        document.getElementById('groupSearch').addEventListener('input', renderGroups);
         document.getElementById('onlineFilter').addEventListener('click', () => { onlineOnly = !onlineOnly; renderPeople(); });
+        document.getElementById('createMobileGroupBtn')?.addEventListener('click', openMobileGroupModal);
+        document.getElementById('closeMobileGroupModal')?.addEventListener('click', closeMobileGroupModal);
+        document.getElementById('mobileMemberSearch')?.addEventListener('input', renderMobileMemberOptions);
+        document.getElementById('mobileGroupForm')?.addEventListener('submit', async event => {
+            event.preventDefault();
+            const memberEmployeeIds = [...document.querySelectorAll('.mobile-member:checked')].map(input => Number(input.value));
+            try {
+                const group = await json('/mobile/employee/communication/groups', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name:document.getElementById('mobileGroupName').value, description:document.getElementById('mobileGroupDescription').value, memberEmployeeIds})});
+                groups = [group, ...groups.filter(g => g.id !== group.id)];
+                closeMobileGroupModal();
+                showTab('groups');
+                selectGroup(group.id);
+            } catch (e) {
+                document.getElementById('mobileGroupStatus').textContent = 'Group could not be created. Check member scope and try again.';
+            }
+        });
         document.addEventListener('DOMContentLoaded', async () => { await loadInitialData(); connectSocket(); });
     </script>
 </main>

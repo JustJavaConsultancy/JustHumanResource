@@ -4,11 +4,15 @@ import com.justjava.humanresource.communication.dto.BroadcastCommentCommand;
 import com.justjava.humanresource.communication.dto.BroadcastCommentResponse;
 import com.justjava.humanresource.communication.dto.BroadcastCommand;
 import com.justjava.humanresource.communication.dto.BroadcastResponse;
+import com.justjava.humanresource.communication.dto.ChatGroupResponse;
 import com.justjava.humanresource.communication.dto.ChatMessageResponse;
 import com.justjava.humanresource.communication.dto.ConversationResponse;
+import com.justjava.humanresource.communication.dto.CreateChatGroupCommand;
 import com.justjava.humanresource.communication.dto.EmployeeContactResponse;
+import com.justjava.humanresource.communication.dto.GroupMessageResponse;
 import com.justjava.humanresource.communication.dto.PresenceResponse;
 import com.justjava.humanresource.communication.service.CommunicationService;
+import com.justjava.humanresource.communication.service.GroupChatService;
 import com.justjava.humanresource.communication.service.PresenceService;
 import com.justjava.humanresource.core.config.AuthenticationManager;
 import com.justjava.humanresource.hr.entity.Employee;
@@ -31,6 +35,7 @@ import java.util.List;
 public class CommunicationController {
 
     private final CommunicationService communicationService;
+    private final GroupChatService groupChatService;
     private final PresenceService presenceService;
     private final AuthenticationManager authenticationManager;
     private final SimpMessagingTemplate messagingTemplate;
@@ -41,6 +46,7 @@ public class CommunicationController {
         model.addAttribute("employee", employee);
         model.addAttribute("currentEmployeeId", employee.getId());
         model.addAttribute("currentEmployeeNumber", employee.getEmployeeNumber());
+        model.addAttribute("canCreateGroups", groupChatService.canCreateGroups());
         model.addAttribute("title", "Communication");
         model.addAttribute("subTitle", "Chat with colleagues and follow HR broadcasts");
         return "employees/communication";
@@ -52,6 +58,7 @@ public class CommunicationController {
         model.addAttribute("employee", employee);
         model.addAttribute("currentEmployeeId", employee.getId());
         model.addAttribute("currentEmployeeNumber", employee.getEmployeeNumber());
+        model.addAttribute("canCreateGroups", groupChatService.canCreateGroups());
         model.addAttribute("title", "Messages");
         model.addAttribute("subTitle", "Chats and HR updates");
         return "mobile/communication";
@@ -62,6 +69,7 @@ public class CommunicationController {
         model.addAttribute("title", "Communication");
         model.addAttribute("subTitle", "Send HR broadcasts and monitor employee feedback");
         model.addAttribute("isRestrictedHr", authenticationManager.isRestrictedHr());
+        model.addAttribute("canCreateGroups", groupChatService.canCreateGroups());
         return "communication/main";
     }
 
@@ -126,6 +134,7 @@ public class CommunicationController {
                 null
         );
         messagingTemplate.convertAndSend("/topic/hr-broadcasts/" + broadcastId + "/comments", response);
+        messagingTemplate.convertAndSend("/topic/hr-broadcasts", communicationService.getBroadcastSummary(broadcastId));
         return ResponseEntity.ok(response);
     }
 
@@ -139,5 +148,34 @@ public class CommunicationController {
     @ResponseBody
     public List<PresenceResponse> hrPresence() {
         return presenceService.getOnlineEmployees();
+    }
+
+    @GetMapping({"/employee/communication/groups", "/mobile/employee/communication/groups", "/communication/groups"})
+    @ResponseBody
+    public List<ChatGroupResponse> groups() {
+        return groupChatService.listMyGroups();
+    }
+
+    @PostMapping({"/employee/communication/groups", "/mobile/employee/communication/groups", "/communication/groups"})
+    @ResponseBody
+    public ResponseEntity<ChatGroupResponse> createGroup(@Valid @RequestBody CreateChatGroupCommand command) {
+        ChatGroupResponse response = groupChatService.createGroup(command);
+        messagingTemplate.convertAndSend("/topic/chat-groups", response);
+        for (String employeeNumber : groupChatService.activeMemberEmployeeNumbers(response.id())) {
+            messagingTemplate.convertAndSendToUser(employeeNumber, "/queue/group-notifications", response);
+        }
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping({"/employee/communication/groups/available-members", "/mobile/employee/communication/groups/available-members", "/communication/groups/available-members"})
+    @ResponseBody
+    public List<EmployeeContactResponse> availableGroupMembers() {
+        return groupChatService.availableMembers();
+    }
+
+    @GetMapping({"/employee/communication/groups/{groupId}/messages", "/mobile/employee/communication/groups/{groupId}/messages", "/communication/groups/{groupId}/messages"})
+    @ResponseBody
+    public List<GroupMessageResponse> groupMessages(@PathVariable Long groupId) {
+        return groupChatService.getGroupMessages(groupId);
     }
 }
