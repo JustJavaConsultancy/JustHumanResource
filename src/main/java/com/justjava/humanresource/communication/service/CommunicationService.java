@@ -32,9 +32,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.security.Principal;
 import java.time.LocalDateTime;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 @Service
@@ -74,13 +75,25 @@ public class CommunicationService {
     @Transactional(readOnly = true)
     public List<EmployeeContactResponse> listContacts() {
         Employee current = getCurrentEmployee();
+        Map<Long, Conversation> conversationsByEmployeeId = new HashMap<>();
+        Map<Long, ChatMessage> lastMessagesByEmployeeId = new HashMap<>();
+
+        for (Conversation conversation : conversationRepository.findForEmployee(current.getId())) {
+            Employee other = otherParticipant(conversation, current);
+            conversationsByEmployeeId.put(other.getId(), conversation);
+            chatMessageRepository.findFirstByConversation_IdOrderByCreatedAtDesc(conversation.getId())
+                    .ifPresent(message -> lastMessagesByEmployeeId.put(other.getId(), message));
+        }
+
         return employeeRepository.findAllVisible().stream()
                 .filter(employee -> !employee.getId().equals(current.getId()))
                 .filter(this::isActiveEmployee)
-                .sorted(Comparator.comparing(Employee::getLastName, Comparator.nullsLast(String::compareToIgnoreCase))
-                        .thenComparing(Employee::getFirstName, Comparator.nullsLast(String::compareToIgnoreCase)))
-                .map(employee -> toContact(employee,
-                        chatMessageRepository.countByRecipient_IdAndSender_IdAndReadAtIsNull(current.getId(), employee.getId())))
+                .map(employee -> toContact(
+                        employee,
+                        chatMessageRepository.countByRecipient_IdAndSender_IdAndReadAtIsNull(current.getId(), employee.getId()),
+                        conversationsByEmployeeId.get(employee.getId()),
+                        lastMessagesByEmployeeId.get(employee.getId())))
+                .sorted(contactComparator())
                 .toList();
     }
 
@@ -90,12 +103,15 @@ public class CommunicationService {
         return conversationRepository.findForEmployee(current.getId()).stream()
                 .map(conversation -> {
                     Employee other = otherParticipant(conversation, current);
-                    ChatMessageResponse lastMessage = chatMessageRepository
+                    ChatMessage lastMessage = chatMessageRepository
                             .findFirstByConversation_IdOrderByCreatedAtDesc(conversation.getId())
-                            .map(this::toMessageResponse)
                             .orElse(null);
                     long unread = chatMessageRepository.countByRecipient_IdAndSender_IdAndReadAtIsNull(current.getId(), other.getId());
-                    return new ConversationResponse(conversation.getId(), toContact(other, unread), lastMessage, conversation.getUpdatedAt());
+                    return new ConversationResponse(
+                            conversation.getId(),
+                            toContact(other, unread, conversation, lastMessage),
+                            lastMessage == null ? null : toMessageResponse(lastMessage),
+                            conversation.getLastMessageAt() == null ? conversation.getUpdatedAt() : conversation.getLastMessageAt());
                 })
                 .toList();
     }
@@ -120,7 +136,10 @@ public class CommunicationService {
         if (presenceService.isOnline(recipient.getId())) {
             message.setDeliveredAt(LocalDateTime.now());
         }
-        return toMessageResponse(chatMessageRepository.save(message));
+        ChatMessage saved = chatMessageRepository.save(message);
+        conversation.setLastMessageAt(saved.getCreatedAt() == null ? LocalDateTime.now() : saved.getCreatedAt());
+        conversationRepository.save(conversation);
+        return toMessageResponse(saved);
     }
 
     @Transactional(readOnly = true)
@@ -165,6 +184,13 @@ public class CommunicationService {
         return broadcastRepository.findByStatusOrderByCreatedAtDesc(HrBroadcastStatus.ACTIVE).stream()
                 .map(broadcast -> toBroadcastResponse(broadcast, null))
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public BroadcastResponse getBroadcastSummary(Long broadcastId) {
+        HrBroadcast broadcast = broadcastRepository.findById(broadcastId)
+                .orElseThrow(() -> new EntityNotFoundException("Broadcast not found"));
+        return toBroadcastResponse(broadcast, null);
     }
 
     @Transactional
@@ -278,7 +304,7 @@ public class CommunicationService {
         }
     }
 
-    private EmployeeContactResponse toContact(Employee employee, long unreadCount) {
+    private EmployeeContactResponse toContact(Employee employee, long unreadCount, Conversation conversation, ChatMessage lastMessage) {
         return new EmployeeContactResponse(
                 employee.getId(),
                 employee.getEmployeeNumber(),
@@ -286,8 +312,19 @@ public class CommunicationService {
                 employee.getEmail(),
                 employee.getDepartment() == null ? "Unassigned" : employee.getDepartment().getName(),
                 presenceService.isOnline(employee.getId()),
-                unreadCount
+                unreadCount,
+                conversation == null ? null : conversation.getId(),
+                lastMessage == null ? null : lastMessage.getContent(),
+                lastMessage == null ? null : lastMessage.getCreatedAt(),
+                conversation != null
         );
+    }
+
+    private Comparator<EmployeeContactResponse> contactComparator() {
+        return Comparator
+                .comparing(EmployeeContactResponse::lastMessageAt, Comparator.nullsLast(Comparator.reverseOrder()))
+                .thenComparing(EmployeeContactResponse::online, Comparator.reverseOrder())
+                .thenComparing(EmployeeContactResponse::fullName, Comparator.nullsLast(String::compareToIgnoreCase));
     }
 
     private ChatMessageResponse toMessageResponse(ChatMessage message) {
