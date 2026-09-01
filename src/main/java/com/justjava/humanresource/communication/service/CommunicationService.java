@@ -5,16 +5,19 @@ import com.justjava.humanresource.communication.dto.BroadcastCommentCommand;
 import com.justjava.humanresource.communication.dto.BroadcastCommentResponse;
 import com.justjava.humanresource.communication.dto.BroadcastResponse;
 import com.justjava.humanresource.communication.dto.ChatMessageResponse;
+import com.justjava.humanresource.communication.dto.CommunicationAttachmentResponse;
 import com.justjava.humanresource.communication.dto.ConversationResponse;
 import com.justjava.humanresource.communication.dto.DirectMessageCommand;
 import com.justjava.humanresource.communication.dto.EmployeeContactResponse;
 import com.justjava.humanresource.communication.entity.BroadcastComment;
 import com.justjava.humanresource.communication.entity.ChatMessage;
+import com.justjava.humanresource.communication.entity.ChatMessageAttachment;
 import com.justjava.humanresource.communication.entity.Conversation;
 import com.justjava.humanresource.communication.entity.HrBroadcast;
 import com.justjava.humanresource.communication.entity.HrBroadcastReceipt;
 import com.justjava.humanresource.communication.entity.HrBroadcastStatus;
 import com.justjava.humanresource.communication.repository.BroadcastCommentRepository;
+import com.justjava.humanresource.communication.repository.ChatMessageAttachmentRepository;
 import com.justjava.humanresource.communication.repository.ChatMessageRepository;
 import com.justjava.humanresource.communication.repository.ConversationRepository;
 import com.justjava.humanresource.communication.repository.HrBroadcastReceiptRepository;
@@ -28,6 +31,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.security.Principal;
 import java.time.LocalDateTime;
@@ -36,7 +40,9 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -46,10 +52,12 @@ public class CommunicationService {
     private final EmployeeRepository employeeRepository;
     private final ConversationRepository conversationRepository;
     private final ChatMessageRepository chatMessageRepository;
+    private final ChatMessageAttachmentRepository chatMessageAttachmentRepository;
     private final HrBroadcastRepository broadcastRepository;
     private final HrBroadcastReceiptRepository receiptRepository;
     private final BroadcastCommentRepository commentRepository;
     private final PresenceService presenceService;
+    private final CommunicationAttachmentService attachmentService;
 
     @Transactional(readOnly = true)
     public Employee getCurrentEmployee() {
@@ -142,15 +150,57 @@ public class CommunicationService {
         return toMessageResponse(saved);
     }
 
+    @Transactional
+    public ChatMessageResponse sendDirectMessageWithAttachments(Long recipientEmployeeId, String content, List<MultipartFile> files) {
+        Employee sender = getCurrentEmployee();
+        Employee recipient = employeeRepository.findById(recipientEmployeeId)
+                .filter(this::isActiveEmployee)
+                .filter(employee -> !employee.isRestrictedVisibility())
+                .orElseThrow(() -> new EntityNotFoundException("Recipient not found"));
+        if (sender.getId().equals(recipient.getId())) {
+            throw new IllegalArgumentException("You cannot send a message to yourself");
+        }
+
+        boolean hasFiles = hasFiles(files);
+        Conversation conversation = getOrCreateConversation(sender, recipient);
+        ChatMessage message = new ChatMessage();
+        message.setConversation(conversation);
+        message.setSender(sender);
+        message.setRecipient(recipient);
+        message.setContent(normalizeContent(content, 2000, hasFiles));
+        if (presenceService.isOnline(recipient.getId())) {
+            message.setDeliveredAt(LocalDateTime.now());
+        }
+        ChatMessage saved = chatMessageRepository.save(message);
+        List<ChatMessageAttachment> attachments = attachmentService.storeDirectAttachments(saved, files, sender.getId());
+        conversation.setLastMessageAt(saved.getCreatedAt() == null ? LocalDateTime.now() : saved.getCreatedAt());
+        conversationRepository.save(conversation);
+        return toMessageResponse(saved, attachments);
+    }
+
     @Transactional(readOnly = true)
     public List<ChatMessageResponse> getConversationMessages(Long conversationId) {
         Employee current = getCurrentEmployee();
         Conversation conversation = conversationRepository.findById(conversationId)
                 .orElseThrow(() -> new EntityNotFoundException("Conversation not found"));
         assertConversationParticipant(conversation, current);
-        return chatMessageRepository.findByConversation_IdOrderByCreatedAtAsc(conversationId).stream()
-                .map(this::toMessageResponse)
+        List<ChatMessage> messages = chatMessageRepository.findByConversation_IdOrderByCreatedAtAsc(conversationId);
+        Map<Long, List<ChatMessageAttachment>> attachmentsByMessageId = chatMessageAttachmentRepository
+                .findByMessage_IdInOrderByUploadedAtAsc(messages.stream().map(ChatMessage::getId).toList())
+                .stream()
+                .collect(Collectors.groupingBy(attachment -> attachment.getMessage().getId()));
+        return messages.stream()
+                .map(message -> toMessageResponse(message, attachmentsByMessageId.getOrDefault(message.getId(), List.of())))
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public ChatMessage getReadableMessage(Long messageId) {
+        Employee current = getCurrentEmployee();
+        ChatMessage message = chatMessageRepository.findById(messageId)
+                .orElseThrow(() -> new EntityNotFoundException("Message not found"));
+        assertConversationParticipant(message.getConversation(), current);
+        return message;
     }
 
     @Transactional
@@ -288,8 +338,12 @@ public class CommunicationService {
     }
 
     private String normalizeContent(String value, int maxLength) {
+        return normalizeContent(value, maxLength, false);
+    }
+
+    private String normalizeContent(String value, int maxLength, boolean allowBlank) {
         String normalized = value == null ? "" : value.trim();
-        if (normalized.isBlank()) {
+        if (normalized.isBlank() && !allowBlank) {
             throw new IllegalArgumentException("Message content is required");
         }
         if (normalized.length() > maxLength) {
@@ -328,6 +382,10 @@ public class CommunicationService {
     }
 
     private ChatMessageResponse toMessageResponse(ChatMessage message) {
+        return toMessageResponse(message, List.of());
+    }
+
+    private ChatMessageResponse toMessageResponse(ChatMessage message, List<ChatMessageAttachment> attachments) {
         return new ChatMessageResponse(
                 message.getId(),
                 message.getConversation().getId(),
@@ -339,8 +397,26 @@ public class CommunicationService {
                 message.getContent(),
                 message.getDeliveredAt(),
                 message.getReadAt(),
-                message.getCreatedAt()
+                message.getCreatedAt(),
+                attachments.stream().map(this::toAttachmentResponse).toList()
         );
+    }
+
+    private CommunicationAttachmentResponse toAttachmentResponse(ChatMessageAttachment attachment) {
+        Long messageId = attachment.getMessage().getId();
+        return new CommunicationAttachmentResponse(
+                attachment.getId(),
+                attachment.getOriginalFilename(),
+                attachment.getContentType(),
+                attachment.getFileSize(),
+                attachment.getUploadedAt(),
+                "/employee/communication/messages/" + messageId + "/attachments/" + attachment.getId() + "/view",
+                "/employee/communication/messages/" + messageId + "/attachments/" + attachment.getId()
+        );
+    }
+
+    private boolean hasFiles(List<MultipartFile> files) {
+        return Optional.ofNullable(files).orElse(List.of()).stream().anyMatch(file -> file != null && !file.isEmpty());
     }
 
     private BroadcastResponse toBroadcastResponse(HrBroadcast broadcast, Employee employee) {

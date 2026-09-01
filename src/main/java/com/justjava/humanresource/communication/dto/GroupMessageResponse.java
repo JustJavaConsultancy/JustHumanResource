@@ -1,6 +1,7 @@
 package com.justjava.humanresource.communication.dto;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public record GroupMessageResponse(
         Long id,
@@ -10,6 +11,7 @@ public record GroupMessageResponse(
         String senderEmployeeNumber,
         String senderName,
         String content,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        List<CommunicationAttachmentResponse> attachments
 ) {
 }

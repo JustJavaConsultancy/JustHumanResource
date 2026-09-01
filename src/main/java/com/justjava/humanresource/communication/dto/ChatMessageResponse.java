@@ -1,6 +1,7 @@
 package com.justjava.humanresource.communication.dto;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public record ChatMessageResponse(
         Long id,
@@ -13,6 +14,7 @@ public record ChatMessageResponse(
         String content,
         LocalDateTime deliveredAt,
         LocalDateTime readAt,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        List<CommunicationAttachmentResponse> attachments
 ) {
 }

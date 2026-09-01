@@ -1,6 +1,7 @@
 package com.justjava.humanresource.communication.service;
 
 import com.justjava.humanresource.communication.dto.ChatGroupResponse;
+import com.justjava.humanresource.communication.dto.CommunicationAttachmentResponse;
 import com.justjava.humanresource.communication.dto.CreateChatGroupCommand;
 import com.justjava.humanresource.communication.dto.EmployeeContactResponse;
 import com.justjava.humanresource.communication.dto.GroupMessageCommand;
@@ -10,8 +11,10 @@ import com.justjava.humanresource.communication.entity.ChatGroupMember;
 import com.justjava.humanresource.communication.entity.ChatGroupMemberRole;
 import com.justjava.humanresource.communication.entity.ChatGroupStatus;
 import com.justjava.humanresource.communication.entity.GroupChatMessage;
+import com.justjava.humanresource.communication.entity.GroupChatMessageAttachment;
 import com.justjava.humanresource.communication.repository.ChatGroupMemberRepository;
 import com.justjava.humanresource.communication.repository.ChatGroupRepository;
+import com.justjava.humanresource.communication.repository.GroupChatMessageAttachmentRepository;
 import com.justjava.humanresource.communication.repository.GroupChatMessageRepository;
 import com.justjava.humanresource.core.config.AuthenticationManager;
 import com.justjava.humanresource.core.enums.EmploymentStatus;
@@ -22,6 +25,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.security.Principal;
 import java.time.LocalDateTime;
@@ -29,7 +33,10 @@ import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -40,8 +47,10 @@ public class GroupChatService {
     private final ChatGroupRepository chatGroupRepository;
     private final ChatGroupMemberRepository memberRepository;
     private final GroupChatMessageRepository messageRepository;
+    private final GroupChatMessageAttachmentRepository attachmentRepository;
     private final PresenceService presenceService;
     private final CommunicationService communicationService;
+    private final CommunicationAttachmentService attachmentService;
 
     @Transactional(readOnly = true)
     public boolean canCreateGroups() {
@@ -147,8 +156,13 @@ public class GroupChatService {
     public List<GroupMessageResponse> getGroupMessages(Long groupId) {
         Employee current = communicationService.getCurrentEmployee();
         assertCanReadGroup(groupId, current);
-        return messageRepository.findByChatGroup_IdOrderByCreatedAtAsc(groupId).stream()
-                .map(this::toMessageResponse)
+        List<GroupChatMessage> messages = messageRepository.findByChatGroup_IdOrderByCreatedAtAsc(groupId);
+        Map<Long, List<GroupChatMessageAttachment>> attachmentsByMessageId = attachmentRepository
+                .findByMessage_IdInOrderByUploadedAtAsc(messages.stream().map(GroupChatMessage::getId).toList())
+                .stream()
+                .collect(Collectors.groupingBy(attachment -> attachment.getMessage().getId()));
+        return messages.stream()
+                .map(message -> toMessageResponse(message, attachmentsByMessageId.getOrDefault(message.getId(), List.of())))
                 .toList();
     }
 
@@ -168,6 +182,34 @@ public class GroupChatService {
         group.setLastMessageAt(saved.getCreatedAt() == null ? LocalDateTime.now() : saved.getCreatedAt());
         chatGroupRepository.save(group);
         return toMessageResponse(saved);
+    }
+
+    @Transactional
+    public GroupMessageResponse sendMessageWithAttachments(Long groupId, String content, List<MultipartFile> files) {
+        Employee sender = communicationService.getCurrentEmployee();
+        ChatGroup group = chatGroupRepository.findById(groupId)
+                .filter(item -> item.getStatus() == ChatGroupStatus.ACTIVE)
+                .orElseThrow(() -> new EntityNotFoundException("Group not found"));
+        assertCanReadGroup(group.getId(), sender);
+
+        GroupChatMessage message = new GroupChatMessage();
+        message.setChatGroup(group);
+        message.setSender(sender);
+        message.setContent(normalize(content, 2000, hasFiles(files)));
+        GroupChatMessage saved = messageRepository.save(message);
+        List<GroupChatMessageAttachment> attachments = attachmentService.storeGroupAttachments(saved, files, sender.getId());
+        group.setLastMessageAt(saved.getCreatedAt() == null ? LocalDateTime.now() : saved.getCreatedAt());
+        chatGroupRepository.save(group);
+        return toMessageResponse(saved, attachments);
+    }
+
+    @Transactional(readOnly = true)
+    public GroupChatMessage getReadableMessage(Long messageId) {
+        Employee current = communicationService.getCurrentEmployee();
+        GroupChatMessage message = messageRepository.findById(messageId)
+                .orElseThrow(() -> new EntityNotFoundException("Message not found"));
+        assertCanReadGroup(message.getChatGroup().getId(), current);
+        return message;
     }
 
     @Transactional(readOnly = true)
@@ -234,8 +276,12 @@ public class GroupChatService {
     }
 
     private String normalize(String value, int maxLength) {
+        return normalize(value, maxLength, false);
+    }
+
+    private String normalize(String value, int maxLength, boolean allowBlank) {
         String normalized = value == null ? "" : value.trim();
-        if (normalized.isBlank()) {
+        if (normalized.isBlank() && !allowBlank) {
             throw new IllegalArgumentException("Value is required");
         }
         if (normalized.length() > maxLength) {
@@ -284,6 +330,10 @@ public class GroupChatService {
     }
 
     private GroupMessageResponse toMessageResponse(GroupChatMessage message) {
+        return toMessageResponse(message, List.of());
+    }
+
+    private GroupMessageResponse toMessageResponse(GroupChatMessage message, List<GroupChatMessageAttachment> attachments) {
         return new GroupMessageResponse(
                 message.getId(),
                 message.getChatGroup().getId(),
@@ -292,7 +342,25 @@ public class GroupChatService {
                 message.getSender().getEmployeeNumber(),
                 message.getSender().getFullName(),
                 message.getContent(),
-                message.getCreatedAt()
+                message.getCreatedAt(),
+                attachments.stream().map(this::toAttachmentResponse).toList()
         );
+    }
+
+    private CommunicationAttachmentResponse toAttachmentResponse(GroupChatMessageAttachment attachment) {
+        Long messageId = attachment.getMessage().getId();
+        return new CommunicationAttachmentResponse(
+                attachment.getId(),
+                attachment.getOriginalFilename(),
+                attachment.getContentType(),
+                attachment.getFileSize(),
+                attachment.getUploadedAt(),
+                "/employee/communication/groups/messages/" + messageId + "/attachments/" + attachment.getId() + "/view",
+                "/employee/communication/groups/messages/" + messageId + "/attachments/" + attachment.getId()
+        );
+    }
+
+    private boolean hasFiles(List<MultipartFile> files) {
+        return Optional.ofNullable(files).orElse(List.of()).stream().anyMatch(file -> file != null && !file.isEmpty());
     }
 }

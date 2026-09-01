@@ -37,6 +37,11 @@
         .message-row.mine .message-bubble { background:#2563eb; color:white; border-color:#2563eb; }
         .message-meta { margin-top:5px; font-size:11px; color:var(--comm-muted); }
         .message-row.mine .message-meta { color:#dbeafe; }
+        .attachment-list { display:flex; flex-direction:column; gap:6px; margin-top:8px; }
+        .attachment-link { display:flex; align-items:center; gap:8px; border:1px solid var(--comm-border); border-radius:8px; padding:7px 9px; background:rgba(248,250,252,.75); font-size:12px; }
+        .message-row.mine .attachment-link { background:rgba(255,255,255,.14); border-color:rgba(255,255,255,.28); color:white; }
+        .attachment-tray { display:flex; flex-wrap:wrap; gap:6px; padding:0 12px 10px; border-top:1px solid var(--comm-border); background:var(--comm-surface); }
+        .attachment-pill { display:inline-flex; align-items:center; gap:6px; max-width:220px; border:1px solid var(--comm-border); border-radius:999px; padding:5px 9px; font-size:12px; background:var(--comm-soft); }
         .broadcast-item { width:100%; text-align:left; padding:13px 14px; border-bottom:1px solid var(--comm-border); transition:background-color .15s ease; }
         .broadcast-item:hover, .broadcast-item.active { background:#f0fdf4; }
         .dark .broadcast-item:hover, .dark .broadcast-item.active { background:#052e16; }
@@ -108,7 +113,12 @@
                 </div>
             </div>
             <div id="messages" class="message-list flex-1"></div>
+            <div id="attachmentTray" class="attachment-tray hidden"></div>
             <form id="messageForm" class="border-t border-gray-200 dark:border-gray-700 p-3 flex items-end gap-2">
+                <input id="messageFiles" type="file" multiple class="hidden" accept=".pdf,.png,.jpg,.jpeg,.txt,.doc,.docx,.xls,.xlsx">
+                <button id="attachFileBtn" type="button" class="comm-secondary-btn h-[42px]" disabled title="Attach files">
+                    <span class="material-icons-round text-base">attach_file</span>
+                </button>
                 <textarea id="messageInput" class="comm-input min-h-[44px] max-h-32" rows="1" maxlength="2000" placeholder="Write a message" disabled></textarea>
                 <button id="sendMessageBtn" class="comm-icon-btn opacity-50" type="submit" disabled title="Send message">
                     <span class="material-icons-round">send</span>
@@ -181,6 +191,10 @@
         const messages = document.getElementById('messages');
         const messageInput = document.getElementById('messageInput');
         const sendMessageBtn = document.getElementById('sendMessageBtn');
+        const attachFileBtn = document.getElementById('attachFileBtn');
+        const messageFiles = document.getElementById('messageFiles');
+        const attachmentTray = document.getElementById('attachmentTray');
+        let selectedFiles = [];
 
         function initials(name) {
             return (name || '').split(' ').filter(Boolean).slice(0, 2).map(part => part[0].toUpperCase()).join('') || '--';
@@ -306,6 +320,7 @@
             document.getElementById('chatStatus').textContent = `${selectedContact.online ? 'Online' : 'Offline'} - ${selectedContact.department || 'Unassigned'}`;
             messageInput.disabled = false;
             sendMessageBtn.disabled = false;
+            attachFileBtn.disabled = false;
             sendMessageBtn.classList.remove('opacity-50');
             renderPeople();
             switchMobileTab('chat');
@@ -329,6 +344,7 @@
             document.getElementById('chatStatus').textContent = `${selectedGroup.memberCount || 0} members - ${selectedGroup.department || 'All departments'}`;
             messageInput.disabled = false;
             sendMessageBtn.disabled = false;
+            attachFileBtn.disabled = false;
             sendMessageBtn.classList.remove('opacity-50');
             if (activeGroupSubscription) activeGroupSubscription.unsubscribe();
             if (stompClient && stompClient.connected) {
@@ -350,7 +366,8 @@
                 <div class="message-row ${mine ? 'mine' : ''}">
                     <div class="message-bubble">
                         ${mine ? '' : `<div class="text-[11px] font-bold mb-1 ${mine ? '' : 'text-gray-500'}">${escapeHtml(message.senderName)}</div>`}
-                        <div>${escapeHtml(message.content)}</div>
+                        ${message.content ? `<div>${escapeHtml(message.content)}</div>` : ''}
+                        ${attachmentList(message.attachments || [])}
                         <div class="message-meta">${formatTime(message.createdAt)}</div>
                     </div>
                 </div>`;
@@ -374,7 +391,8 @@
             return `
                 <div class="message-row ${mine ? 'mine' : ''}">
                     <div class="message-bubble">
-                        <div>${escapeHtml(message.content)}</div>
+                        ${message.content ? `<div>${escapeHtml(message.content)}</div>` : ''}
+                        ${attachmentList(message.attachments || [])}
                         <div class="message-meta">${formatTime(message.createdAt)}${mine && message.deliveredAt ? ' - Delivered' : ''}</div>
                     </div>
                 </div>`;
@@ -388,10 +406,21 @@
             </div>`;
         }
 
-        document.getElementById('messageForm').addEventListener('submit', event => {
+        attachFileBtn.addEventListener('click', () => messageFiles.click());
+        messageFiles.addEventListener('change', () => {
+            selectedFiles = Array.from(messageFiles.files || []).slice(0, 5);
+            renderSelectedFiles();
+        });
+
+        document.getElementById('messageForm').addEventListener('submit', async event => {
             event.preventDefault();
             const content = messageInput.value.trim();
-            if (!content || !stompClient || !stompClient.connected) return;
+            if (!content && selectedFiles.length === 0) return;
+            if (selectedFiles.length > 0) {
+                await sendMessageWithAttachments(content);
+                return;
+            }
+            if (!stompClient || !stompClient.connected) return;
             if (selectedGroup) {
                 stompClient.publish({destination: '/app/groups.message', body: JSON.stringify({groupId: selectedGroup.id, content})});
             } else if (selectedContact) {
@@ -399,6 +428,65 @@
             }
             messageInput.value = '';
         });
+
+        async function sendMessageWithAttachments(content) {
+            const form = new FormData();
+            form.append('content', content);
+            selectedFiles.forEach(file => form.append('files', file));
+            const url = selectedGroup
+                ? `/employee/communication/groups/${selectedGroup.id}/messages`
+                : '/employee/communication/messages';
+            if (!selectedGroup && selectedContact) form.append('recipientEmployeeId', selectedContact.id);
+            const response = await fetch(url, {method:'POST', body:form});
+            if (!response.ok) {
+                alert('Message could not be sent: ' + await response.text());
+                return;
+            }
+            messageInput.value = '';
+            selectedFiles = [];
+            messageFiles.value = '';
+            renderSelectedFiles();
+        }
+
+        function renderSelectedFiles() {
+            attachmentTray.classList.toggle('hidden', selectedFiles.length === 0);
+            attachmentTray.innerHTML = selectedFiles.map((file, index) => `
+                <span class="attachment-pill">
+                    <span class="material-icons-round text-sm">attach_file</span>
+                    <span class="truncate">${escapeHtml(file.name)}</span>
+                    <button type="button" onclick="removeSelectedFile(${index})" title="Remove"><span class="material-icons-round text-sm">close</span></button>
+                </span>
+            `).join('');
+        }
+
+        function removeSelectedFile(index) {
+            selectedFiles = selectedFiles.filter((_, fileIndex) => fileIndex !== index);
+            renderSelectedFiles();
+        }
+
+        function attachmentList(attachments) {
+            if (!attachments.length) return '';
+            return `<div class="attachment-list">${attachments.map(attachment => `
+                <a class="attachment-link" href="${attachment.downloadUrl}" target="_blank">
+                    <span class="material-icons-round text-sm">${attachmentIcon(attachment.contentType)}</span>
+                    <span class="truncate">${escapeHtml(attachment.originalFilename)}</span>
+                    <span class="ml-auto text-[11px]">${formatFileSize(attachment.fileSize)}</span>
+                </a>
+            `).join('')}</div>`;
+        }
+
+        function attachmentIcon(contentType) {
+            const type = (contentType || '').toLowerCase();
+            if (type.includes('image')) return 'image';
+            if (type.includes('pdf')) return 'picture_as_pdf';
+            return 'description';
+        }
+
+        function formatFileSize(size) {
+            if (!size) return '';
+            if (size < 1024 * 1024) return Math.round(size / 1024) + ' KB';
+            return (size / 1024 / 1024).toFixed(1) + ' MB';
+        }
 
         function handleIncomingMessage(message) {
             const payload = JSON.parse(message.body);

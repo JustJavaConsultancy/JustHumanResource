@@ -37,6 +37,16 @@
         .meta { margin-top:5px; font-size:10px; color:#64748b; }
         .message-row.mine .meta { color:#dbeafe; }
         .send-btn { width:44px; height:44px; border-radius:14px; display:flex; align-items:center; justify-content:center; background:#2463eb; color:#fff; flex:0 0 auto; }
+        .attach-btn { width:44px; height:44px; border-radius:14px; display:flex; align-items:center; justify-content:center; border:1px solid #e2e8f0; background:#fff; color:#64748b; flex:0 0 auto; }
+        .dark .attach-btn { border-color:#334155; background:#0f172a; color:#cbd5e1; }
+        .attachment-tray { display:flex; gap:6px; overflow-x:auto; padding:0 12px 10px; border-top:1px solid #e2e8f0; background:#fff; }
+        .dark .attachment-tray { border-color:#334155; background:#1e293b; }
+        .attachment-pill { display:inline-flex; align-items:center; gap:6px; max-width:190px; border:1px solid #e2e8f0; border-radius:999px; padding:5px 9px; font-size:12px; white-space:nowrap; }
+        .dark .attachment-pill { border-color:#334155; }
+        .attachment-list { display:flex; flex-direction:column; gap:6px; margin-top:8px; }
+        .attachment-link { display:flex; align-items:center; gap:6px; border:1px solid #e2e8f0; border-radius:12px; padding:7px 9px; font-size:12px; background:rgba(248,250,252,.75); }
+        .dark .attachment-link { border-color:#334155; background:rgba(15,23,42,.45); }
+        .message-row.mine .attachment-link { color:white; background:rgba(255,255,255,.14); border-color:rgba(255,255,255,.28); }
         .comment-card { border:1px solid #e2e8f0; border-radius:14px; padding:10px 12px; background:#f8fafc; }
         .dark .comment-card { border-color:#334155; background:#0f172a; }
         .empty { height:100%; min-height:220px; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px; text-align:center; color:#64748b; }
@@ -88,7 +98,10 @@
             </div>
         </div>
         <div id="messages" class="message-scroll"></div>
+        <div id="attachmentTray" class="attachment-tray hidden"></div>
         <form id="messageForm" class="p-3 border-t border-slate-200 dark:border-slate-700 flex items-end gap-2">
+            <input id="messageFiles" type="file" multiple class="hidden" accept=".pdf,.png,.jpg,.jpeg,.txt,.doc,.docx,.xls,.xlsx">
+            <button id="attachFileBtn" class="attach-btn opacity-50" type="button" disabled><span class="material-symbols-outlined">attach_file</span></button>
             <textarea id="messageInput" class="mchat-input min-h-[44px] max-h-28" rows="1" maxlength="2000" placeholder="Write a message" disabled></textarea>
             <button id="sendMessageBtn" class="send-btn opacity-50" type="submit" disabled><span class="material-symbols-outlined">send</span></button>
         </form>
@@ -134,6 +147,7 @@
         const canCreateGroups = /*[[${canCreateGroups}]]*/ false;
         let stompClient, selectedContact, selectedGroup, selectedBroadcast, activeCommentSubscription, activeGroupSubscription;
         let contacts = [], conversations = [], broadcasts = [], groups = [], availableMembers = [], onlineOnly = false;
+        let selectedFiles = [];
 
         function initials(name) { return (name || '').split(' ').filter(Boolean).slice(0, 2).map(p => p[0].toUpperCase()).join('') || '--'; }
         function fmt(value) { return value ? new Date(value).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'}) : ''; }
@@ -223,7 +237,9 @@
             document.getElementById('chatStatus').textContent = `${selectedContact.online ? 'Online' : 'Offline'} - ${selectedContact.department || 'Unassigned'}`;
             document.getElementById('messageInput').disabled = false;
             document.getElementById('sendMessageBtn').disabled = false;
+            document.getElementById('attachFileBtn').disabled = false;
             document.getElementById('sendMessageBtn').classList.remove('opacity-50');
+            document.getElementById('attachFileBtn').classList.remove('opacity-50');
             renderPeople();
             showTab('chat');
             const conversation = conversations.find(item => item.otherParticipant && item.otherParticipant.id === id)
@@ -241,7 +257,9 @@
             document.getElementById('chatStatus').textContent = `${selectedGroup.memberCount || 0} members - ${selectedGroup.department || 'All departments'}`;
             document.getElementById('messageInput').disabled = false;
             document.getElementById('sendMessageBtn').disabled = false;
+            document.getElementById('attachFileBtn').disabled = false;
             document.getElementById('sendMessageBtn').classList.remove('opacity-50');
+            document.getElementById('attachFileBtn').classList.remove('opacity-50');
             if (activeGroupSubscription) activeGroupSubscription.unsubscribe();
             if (stompClient?.connected) activeGroupSubscription = stompClient.subscribe(`/topic/chat-groups/${id}/messages`, handleGroupMessage);
             showTab('chat');
@@ -254,20 +272,91 @@
             el.scrollTop = el.scrollHeight;
         }
         function renderGroupMessages(items) { const el = document.getElementById('messages'); el.innerHTML = items.length ? items.map(groupMessageTpl).join('') : emptyGroupChat(); el.scrollTop = el.scrollHeight; }
-        function messageTpl(m) { const mine = m.senderId === currentEmployeeId; return `<div class="message-row ${mine ? 'mine' : ''}"><div class="bubble"><div>${html(m.content)}</div><div class="meta">${fmt(m.createdAt)}${mine && m.deliveredAt ? ' - Delivered' : ''}</div></div></div>`; }
-        function groupMessageTpl(m) { const mine = m.senderId === currentEmployeeId; return `<div class="message-row ${mine ? 'mine' : ''}"><div class="bubble">${mine ? '' : `<div class="text-[10px] font-bold mb-1 text-slate-500">${html(m.senderName)}</div>`}<div>${html(m.content)}</div><div class="meta">${fmt(m.createdAt)}</div></div></div>`; }
+        function messageTpl(m) { const mine = m.senderId === currentEmployeeId; return `<div class="message-row ${mine ? 'mine' : ''}"><div class="bubble">${m.content ? `<div>${html(m.content)}</div>` : ''}${attachmentList(m.attachments || [])}<div class="meta">${fmt(m.createdAt)}${mine && m.deliveredAt ? ' - Delivered' : ''}</div></div></div>`; }
+        function groupMessageTpl(m) { const mine = m.senderId === currentEmployeeId; return `<div class="message-row ${mine ? 'mine' : ''}"><div class="bubble">${mine ? '' : `<div class="text-[10px] font-bold mb-1 text-slate-500">${html(m.senderName)}</div>`}${m.content ? `<div>${html(m.content)}</div>` : ''}${attachmentList(m.attachments || [])}<div class="meta">${fmt(m.createdAt)}</div></div></div>`; }
         function emptyChat() { return '<div class="empty"><span class="material-symbols-outlined text-4xl mb-2">chat_bubble</span><p class="text-sm font-semibold">No messages yet</p><p class="text-xs mt-1">Send the first message.</p></div>'; }
         function emptyGroupChat() { return '<div class="empty"><span class="material-symbols-outlined text-4xl mb-2">groups</span><p class="text-sm font-semibold">No group messages yet</p><p class="text-xs mt-1">Start the discussion.</p></div>'; }
 
-        document.getElementById('messageForm').addEventListener('submit', e => {
+        document.getElementById('attachFileBtn').addEventListener('click', () => document.getElementById('messageFiles').click());
+        document.getElementById('messageFiles').addEventListener('change', () => {
+            selectedFiles = Array.from(document.getElementById('messageFiles').files || []).slice(0, 5);
+            renderSelectedFiles();
+        });
+
+        document.getElementById('messageForm').addEventListener('submit', async e => {
             e.preventDefault();
             const input = document.getElementById('messageInput');
             const content = input.value.trim();
-            if (!content || !stompClient?.connected) return;
+            if (!content && selectedFiles.length === 0) return;
+            if (selectedFiles.length > 0) {
+                await sendMessageWithAttachments(content);
+                return;
+            }
+            if (!stompClient?.connected) return;
             if (selectedGroup) stompClient.publish({destination:'/app/groups.message', body:JSON.stringify({groupId:selectedGroup.id, content})});
             else if (selectedContact) stompClient.publish({destination:'/app/chat.send', body:JSON.stringify({recipientEmployeeId:selectedContact.id, content})});
             input.value = '';
         });
+
+        async function sendMessageWithAttachments(content) {
+            const form = new FormData();
+            form.append('content', content);
+            selectedFiles.forEach(file => form.append('files', file));
+            const url = selectedGroup
+                ? `/mobile/employee/communication/groups/${selectedGroup.id}/messages`
+                : '/mobile/employee/communication/messages';
+            if (!selectedGroup && selectedContact) form.append('recipientEmployeeId', selectedContact.id);
+            const response = await fetch(url, {method:'POST', body:form});
+            if (!response.ok) {
+                alert('Message could not be sent: ' + await response.text());
+                return;
+            }
+            document.getElementById('messageInput').value = '';
+            selectedFiles = [];
+            document.getElementById('messageFiles').value = '';
+            renderSelectedFiles();
+        }
+
+        function renderSelectedFiles() {
+            const tray = document.getElementById('attachmentTray');
+            tray.classList.toggle('hidden', selectedFiles.length === 0);
+            tray.innerHTML = selectedFiles.map((file, index) => `
+                <span class="attachment-pill">
+                    <span class="material-symbols-outlined text-sm">attach_file</span>
+                    <span class="truncate">${html(file.name)}</span>
+                    <button type="button" onclick="removeSelectedFile(${index})"><span class="material-symbols-outlined text-sm">close</span></button>
+                </span>
+            `).join('');
+        }
+
+        function removeSelectedFile(index) {
+            selectedFiles = selectedFiles.filter((_, fileIndex) => fileIndex !== index);
+            renderSelectedFiles();
+        }
+
+        function attachmentList(attachments) {
+            if (!attachments.length) return '';
+            return `<div class="attachment-list">${attachments.map(a => `
+                <a class="attachment-link" href="${a.downloadUrl}" target="_blank">
+                    <span class="material-symbols-outlined text-sm">${attachmentIcon(a.contentType)}</span>
+                    <span class="truncate">${html(a.originalFilename)}</span>
+                    <span class="ml-auto text-[10px]">${fileSize(a.fileSize)}</span>
+                </a>
+            `).join('')}</div>`;
+        }
+
+        function attachmentIcon(contentType) {
+            const type = (contentType || '').toLowerCase();
+            if (type.includes('image')) return 'image';
+            if (type.includes('pdf')) return 'picture_as_pdf';
+            return 'description';
+        }
+
+        function fileSize(size) {
+            if (!size) return '';
+            if (size < 1024 * 1024) return Math.round(size / 1024) + ' KB';
+            return (size / 1024 / 1024).toFixed(1) + ' MB';
+        }
 
         function handleMessage(frame) {
             const msg = JSON.parse(frame.body);

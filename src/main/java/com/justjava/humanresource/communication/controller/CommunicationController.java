@@ -11,6 +11,9 @@ import com.justjava.humanresource.communication.dto.CreateChatGroupCommand;
 import com.justjava.humanresource.communication.dto.EmployeeContactResponse;
 import com.justjava.humanresource.communication.dto.GroupMessageResponse;
 import com.justjava.humanresource.communication.dto.PresenceResponse;
+import com.justjava.humanresource.communication.entity.ChatMessageAttachment;
+import com.justjava.humanresource.communication.entity.GroupChatMessageAttachment;
+import com.justjava.humanresource.communication.service.CommunicationAttachmentService;
 import com.justjava.humanresource.communication.service.CommunicationService;
 import com.justjava.humanresource.communication.service.GroupChatService;
 import com.justjava.humanresource.communication.service.PresenceService;
@@ -18,6 +21,10 @@ import com.justjava.humanresource.core.config.AuthenticationManager;
 import com.justjava.humanresource.hr.entity.Employee;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
@@ -26,7 +33,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -37,6 +46,7 @@ public class CommunicationController {
     private final CommunicationService communicationService;
     private final GroupChatService groupChatService;
     private final PresenceService presenceService;
+    private final CommunicationAttachmentService attachmentService;
     private final AuthenticationManager authenticationManager;
     private final SimpMessagingTemplate messagingTemplate;
 
@@ -89,6 +99,33 @@ public class CommunicationController {
     @ResponseBody
     public List<ChatMessageResponse> conversationMessages(@PathVariable Long conversationId) {
         return communicationService.getConversationMessages(conversationId);
+    }
+
+    @PostMapping(value = {"/employee/communication/messages", "/mobile/employee/communication/messages"},
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @ResponseBody
+    public ResponseEntity<ChatMessageResponse> sendDirectMessageWithAttachments(
+            @RequestParam Long recipientEmployeeId,
+            @RequestParam(required = false) String content,
+            @RequestParam(required = false) List<MultipartFile> files) {
+        ChatMessageResponse response = communicationService.sendDirectMessageWithAttachments(recipientEmployeeId, content, files);
+        messagingTemplate.convertAndSendToUser(response.recipientEmployeeNumber(), "/queue/messages", response);
+        messagingTemplate.convertAndSendToUser(response.senderEmployeeNumber(), "/queue/messages", response);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/employee/communication/messages/{messageId}/attachments/{attachmentId}")
+    public ResponseEntity<Resource> downloadDirectAttachment(@PathVariable Long messageId, @PathVariable Long attachmentId) {
+        communicationService.getReadableMessage(messageId);
+        ChatMessageAttachment attachment = attachmentService.getDirectAttachment(messageId, attachmentId);
+        return attachmentResponse(attachment.getContentType(), attachment.getFileSize(), attachment.getOriginalFilename(), false, attachment.getStoragePath());
+    }
+
+    @GetMapping("/employee/communication/messages/{messageId}/attachments/{attachmentId}/view")
+    public ResponseEntity<Resource> viewDirectAttachment(@PathVariable Long messageId, @PathVariable Long attachmentId) {
+        communicationService.getReadableMessage(messageId);
+        ChatMessageAttachment attachment = attachmentService.getDirectAttachment(messageId, attachmentId);
+        return attachmentResponse(attachment.getContentType(), attachment.getFileSize(), attachment.getOriginalFilename(), true, attachment.getStoragePath());
     }
 
     @GetMapping("/employee/communication/broadcasts")
@@ -177,5 +214,54 @@ public class CommunicationController {
     @ResponseBody
     public List<GroupMessageResponse> groupMessages(@PathVariable Long groupId) {
         return groupChatService.getGroupMessages(groupId);
+    }
+
+    @PostMapping(value = {"/employee/communication/groups/{groupId}/messages", "/mobile/employee/communication/groups/{groupId}/messages"},
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @ResponseBody
+    public ResponseEntity<GroupMessageResponse> sendGroupMessageWithAttachments(
+            @PathVariable Long groupId,
+            @RequestParam(required = false) String content,
+            @RequestParam(required = false) List<MultipartFile> files) {
+        GroupMessageResponse response = groupChatService.sendMessageWithAttachments(groupId, content, files);
+        messagingTemplate.convertAndSend("/topic/chat-groups/" + response.groupId() + "/messages", response);
+        for (String employeeNumber : groupChatService.activeMemberEmployeeNumbers(response.groupId())) {
+            messagingTemplate.convertAndSendToUser(
+                    employeeNumber,
+                    "/queue/group-notifications",
+                    groupChatService.getGroupSummary(response.groupId())
+            );
+        }
+        messagingTemplate.convertAndSend("/topic/chat-groups", groupChatService.getGroupSummary(response.groupId()));
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/employee/communication/groups/messages/{messageId}/attachments/{attachmentId}")
+    public ResponseEntity<Resource> downloadGroupAttachment(@PathVariable Long messageId, @PathVariable Long attachmentId) {
+        groupChatService.getReadableMessage(messageId);
+        GroupChatMessageAttachment attachment = attachmentService.getGroupAttachment(messageId, attachmentId);
+        return attachmentResponse(attachment.getContentType(), attachment.getFileSize(), attachment.getOriginalFilename(), false, attachment.getStoragePath());
+    }
+
+    @GetMapping("/employee/communication/groups/messages/{messageId}/attachments/{attachmentId}/view")
+    public ResponseEntity<Resource> viewGroupAttachment(@PathVariable Long messageId, @PathVariable Long attachmentId) {
+        groupChatService.getReadableMessage(messageId);
+        GroupChatMessageAttachment attachment = attachmentService.getGroupAttachment(messageId, attachmentId);
+        return attachmentResponse(attachment.getContentType(), attachment.getFileSize(), attachment.getOriginalFilename(), true, attachment.getStoragePath());
+    }
+
+    private ResponseEntity<Resource> attachmentResponse(String contentType,
+                                                       Long fileSize,
+                                                       String filename,
+                                                       boolean inline,
+                                                       String storagePath) {
+        ContentDisposition disposition = inline
+                ? ContentDisposition.inline().filename(filename).build()
+                : ContentDisposition.attachment().filename(filename).build();
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(contentType))
+                .contentLength(fileSize)
+                .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
+                .body(attachmentService.load(storagePath));
     }
 }
