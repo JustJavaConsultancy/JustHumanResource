@@ -16,6 +16,7 @@ import com.justjava.humanresource.recruitment.repository.JobApplicationRepositor
 import com.justjava.humanresource.recruitment.repository.JobOpeningRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +31,8 @@ import java.util.Set;
 @Service
 @RequiredArgsConstructor
 public class RecruitmentEmailService {
+    @Value("${app.tracking.base-url}")
+    private String trackingBaseUrl;
     private static final String DEFAULT_COMPANY_NAME = "Human Resources";
     private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern("dd MMM uuuu, HH:mm");
 
@@ -172,19 +175,28 @@ public class RecruitmentEmailService {
                 + " applicationId=" + offer.getApplicationId()
                 + " status=" + offer.getStatus()
                 + " compensation=" + offer.getCurrency() + " " + offer.getAnnualGrossCompensation());
+
+        // Build absolute tracking URL (adjust path as needed)
+        String trackingUrl = trackingBaseUrl + "/careers/application/" + offer.getApplicationId();
+
         String text = "Dear " + context.applicationContext().candidateName() + ",\n\n"
                 + "An employment offer for " + context.applicationContext().jobTitle() + " has been sent to you.\n\n"
                 + "Compensation: " + offer.getCurrency() + " " + offer.getAnnualGrossCompensation() + "\n"
                 + "Proposed start date: " + value(offer.getProposedStartDate()) + "\n"
                 + "Expires on: " + value(offer.getExpiresOn()) + "\n\n"
-                + value(offer.getTerms()) + "\n\nRegards,\n" + context.applicationContext().companyName();
+                + value(offer.getTerms()) + "\n\n"
+                + "You can view your application status here: " + trackingUrl + "\n\n"
+                + "Regards,\n" + context.applicationContext().companyName();
+
         String html = "<p>Dear " + html(context.applicationContext().candidateName()) + ",</p>"
                 + "<p>An employment offer for <strong>" + html(context.applicationContext().jobTitle()) + "</strong> has been sent to you.</p>"
                 + "<p><strong>Compensation:</strong> " + html(offer.getCurrency() + " " + offer.getAnnualGrossCompensation()) + "<br>"
                 + "<strong>Proposed start date:</strong> " + html(value(offer.getProposedStartDate())) + "<br>"
                 + "<strong>Expires on:</strong> " + html(value(offer.getExpiresOn())) + "</p>"
                 + (offer.getTerms() == null || offer.getTerms().isBlank() ? "" : "<p>" + html(offer.getTerms()).replace("\n", "<br>") + "</p>")
+                + "<p>View your application: <a href=\"" + html(trackingUrl) + "\">here</a></p>"
                 + "<p>Regards,<br><strong>" + html(context.applicationContext().companyName()) + "</strong></p>";
+
         sendCandidate(context.applicationContext().candidate(), "Employment offer", html, text, "offer sent notice");
     }
 
