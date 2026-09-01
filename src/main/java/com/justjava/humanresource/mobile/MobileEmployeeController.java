@@ -272,6 +272,10 @@ public class MobileEmployeeController {
 
     @GetMapping("/employee/documents")
     public String getMobileDocuments(Model model) {
+        String email = (String) authenticationManager.get("email");
+        Employee loginEmployee = employeeService.getByEmail(email);
+        Employee employee = employeeService.getEmployeeWithBankDetails(loginEmployee.getId());
+        model.addAttribute("employee", employee);
         model.addAttribute("title", "Documents");
         model.addAttribute("subTitle", "Manage your documents");
         return "mobile/documents";
