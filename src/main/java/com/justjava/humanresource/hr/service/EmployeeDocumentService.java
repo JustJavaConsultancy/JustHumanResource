@@ -23,7 +23,7 @@ public class EmployeeDocumentService {
     private final EmployeeRepository employeeRepository;
 
     @Transactional
-    public void uploadDocument(Long employeeId, String documentName, MultipartFile file) throws IOException {
+    public EmployeeDocument uploadDocument(Long employeeId, String documentName, MultipartFile file) throws IOException {
         Employee employee = employeeRepository.findById(employeeId)
                 .orElseThrow(() -> new RuntimeException("Employee not found"));
 
@@ -37,7 +37,7 @@ public class EmployeeDocumentService {
                 .uploadedBy("humanResource")
                 .build();
 
-        documentRepository.save(doc);
+        return documentRepository.save(doc);
     }
 
 

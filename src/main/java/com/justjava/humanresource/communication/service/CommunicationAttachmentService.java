@@ -20,7 +20,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -63,6 +62,26 @@ public class CommunicationAttachmentService {
         return validFiles(files).stream()
                 .map(file -> storeDirectAttachment(message, file, actorId))
                 .toList();
+    }
+
+    @Transactional
+    public ChatMessageAttachment storeDirectAttachmentCopy(ChatMessage message,
+                                                           String originalFilename,
+                                                           String contentType,
+                                                           Long fileSize,
+                                                           Long actorId,
+                                                           byte[] bytes) {
+        StoredFile storedFile = storeFile("direct", message.getId(), originalFilename, contentType, fileSize, bytes);
+        ChatMessageAttachment attachment = new ChatMessageAttachment();
+        attachment.setMessage(message);
+        attachment.setOriginalFilename(storedFile.originalFilename());
+        attachment.setStoredFilename(storedFile.storedFilename());
+        attachment.setStoragePath(storedFile.storagePath());
+        attachment.setContentType(storedFile.contentType());
+        attachment.setFileSize(storedFile.fileSize());
+        attachment.setUploadedByEmployeeId(actorId);
+        attachment.setUploadedAt(LocalDateTime.now());
+        return directAttachmentRepository.save(attachment);
     }
 
     @Transactional
@@ -186,7 +205,26 @@ public class CommunicationAttachmentService {
         String originalFilename = Paths.get(Optional.ofNullable(file.getOriginalFilename()).orElse("file"))
                 .getFileName()
                 .toString();
+        try {
+            return storeFile(scope, messageId, originalFilename, contentType, file.getSize(), file.getBytes());
+        } catch (IOException ex) {
+            throw new IllegalStateException("Could not store attachment", ex);
+        }
+    }
+
+    private StoredFile storeFile(String scope,
+                                 Long messageId,
+                                 String filename,
+                                 String contentType,
+                                 Long fileSize,
+                                 byte[] bytes) {
+        byte[] content = bytes == null ? new byte[0] : bytes;
+        String originalFilename = Paths.get(Optional.ofNullable(filename).orElse("file"))
+                .getFileName()
+                .toString();
         String storedFilename = UUID.randomUUID() + extension(originalFilename);
+        String resolvedContentType = Optional.ofNullable(contentType).orElse("application/octet-stream");
+        long resolvedFileSize = fileSize == null ? content.length : fileSize;
 
         try {
             Path root = Paths.get(storageRoot).toAbsolutePath().normalize();
@@ -199,10 +237,8 @@ public class CommunicationAttachmentService {
             if (!target.startsWith(directory)) {
                 throw new IllegalStateException("Invalid attachment filename");
             }
-            try (var inputStream = file.getInputStream()) {
-                Files.copy(inputStream, target, StandardCopyOption.REPLACE_EXISTING);
-            }
-            return new StoredFile(originalFilename, storedFilename, target.toString(), contentType, file.getSize());
+            Files.write(target, content);
+            return new StoredFile(originalFilename, storedFilename, target.toString(), resolvedContentType, resolvedFileSize);
         } catch (IOException ex) {
             throw new IllegalStateException("Could not store attachment", ex);
         }

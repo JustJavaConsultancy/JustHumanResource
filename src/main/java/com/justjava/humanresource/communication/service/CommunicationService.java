@@ -239,6 +239,33 @@ public class CommunicationService {
         return toMessageResponse(saved);
     }
 
+    @Transactional
+    public ChatMessage createHrDirectMessageForForward(Long recipientEmployeeId, String content) {
+        assertHrCanMessageEmployees();
+        Employee sender = getCurrentEmployee();
+        Employee recipient = employeeRepository.findById(recipientEmployeeId)
+                .filter(this::isActiveEmployee)
+                .filter(employee -> !employee.isRestrictedVisibility())
+                .orElseThrow(() -> new EntityNotFoundException("Recipient not found"));
+        if (sender.getId().equals(recipient.getId())) {
+            throw new IllegalArgumentException("You cannot forward a document to yourself");
+        }
+
+        Conversation conversation = getOrCreateConversation(sender, recipient);
+        ChatMessage message = new ChatMessage();
+        message.setConversation(conversation);
+        message.setSender(sender);
+        message.setRecipient(recipient);
+        message.setContent(normalizeContent(content, 2000));
+        if (presenceService.isOnline(recipient.getId())) {
+            message.setDeliveredAt(LocalDateTime.now());
+        }
+        ChatMessage saved = chatMessageRepository.save(message);
+        conversation.setLastMessageAt(saved.getCreatedAt() == null ? LocalDateTime.now() : saved.getCreatedAt());
+        conversationRepository.save(conversation);
+        return saved;
+    }
+
     @Transactional(readOnly = true)
     public List<ChatMessageResponse> getConversationMessages(Long conversationId) {
         Employee current = getCurrentEmployee();
@@ -532,6 +559,10 @@ public class CommunicationService {
                 message.getCreatedAt(),
                 attachments.stream().map(this::toAttachmentResponse).toList()
         );
+    }
+
+    public ChatMessageResponse toDirectMessageResponse(ChatMessage message, List<ChatMessageAttachment> attachments) {
+        return toMessageResponse(message, attachments);
     }
 
     private CommunicationAttachmentResponse toAttachmentResponse(ChatMessageAttachment attachment) {
