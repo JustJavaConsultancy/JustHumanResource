@@ -30,6 +30,7 @@
         .attachment-pill { display:inline-flex; align-items:center; gap:6px; max-width:240px; border:1px solid var(--hc-border); border-radius:999px; padding:5px 9px; font-size:12px; background:var(--hc-soft); }
         .attachment-list { display:flex; flex-direction:column; gap:6px; margin-top:12px; }
         .attachment-link { display:flex; align-items:center; gap:8px; border:1px solid var(--hc-border); border-radius:8px; padding:7px 9px; background:rgba(248,250,252,.75); font-size:12px; }
+        .meeting-row { padding:13px 16px; border-bottom:1px solid var(--hc-border); }
         @media (max-width: 1080px) { .hr-grid { grid-template-columns:1fr; } }
     </style>
 </head>
@@ -82,6 +83,47 @@
                                 Send Broadcast
                             </button>
                         </div>
+                    </div>
+                </form>
+            </section>
+
+            <section class="hr-card">
+                <div class="hr-card-head">
+                    <h2 class="text-lg font-bold">Start or Schedule Meeting</h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Create a Zoom, Microsoft Teams, or Google Meet session.</p>
+                </div>
+                <form id="meetingForm" class="p-5 space-y-3">
+                    <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                        <select id="meetingProvider" class="hr-input">
+                            <option value="MICROSOFT_TEAMS">Microsoft Teams</option>
+                            <option value="ZOOM">Zoom</option>
+                            <option value="GOOGLE_MEET">Google Meet</option>
+                        </select>
+                        <input id="meetingSubject" class="hr-input" maxlength="200" placeholder="Meeting subject" required>
+                    </div>
+                    <textarea id="meetingAgenda" class="hr-input" maxlength="2000" rows="2" placeholder="Agenda"></textarea>
+                    <label class="inline-flex items-center gap-2 text-sm font-semibold">
+                        <input id="meetingInstant" type="checkbox" class="rounded border-gray-300" checked>
+                        Start now
+                    </label>
+                    <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                        <input id="meetingStart" type="datetime-local" class="hr-input" disabled>
+                        <input id="meetingEnd" type="datetime-local" class="hr-input" disabled>
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Participants</label>
+                        <select id="meetingParticipants" class="hr-input min-h-[120px]" multiple></select>
+                    </div>
+                    <label class="inline-flex items-center gap-2 text-sm font-semibold">
+                        <input id="meetingNotify" type="checkbox" class="rounded border-gray-300" checked>
+                        Notify selected participants
+                    </label>
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <p id="meetingStatus" class="text-sm text-gray-500 dark:text-gray-400">Select a configured provider.</p>
+                        <button class="hr-primary" type="submit">
+                            <span class="material-icons-round text-base">video_call</span>
+                            Create Meeting
+                        </button>
                     </div>
                 </form>
             </section>
@@ -167,6 +209,14 @@
 
             <section class="hr-card">
                 <div class="hr-card-head">
+                    <h2 class="text-base font-bold">Meetings</h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Recently created sessions.</p>
+                </div>
+                <div id="meetingRows" class="max-h-[320px] overflow-y-auto"></div>
+            </section>
+
+            <section class="hr-card">
+                <div class="hr-card-head">
                     <h2 id="detailTitle" class="text-base font-bold">Broadcast Details</h2>
                     <p id="detailMeta" class="text-sm text-gray-500 dark:text-gray-400">Select a broadcast to view comments.</p>
                 </div>
@@ -183,6 +233,7 @@
         let broadcasts = [];
         let onlineEmployees = [];
         let groups = [];
+        let meetings = [];
         let availableMembers = [];
         let selectedBroadcastFiles = [];
         let selectedBroadcast = null;
@@ -205,14 +256,16 @@
         }
 
         async function loadData() {
-            [broadcasts, onlineEmployees, groups] = await Promise.all([
+            [broadcasts, onlineEmployees, groups, meetings] = await Promise.all([
                 json('/communication/broadcasts'),
                 json('/communication/presence'),
-                json('/communication/groups')
+                json('/communication/groups'),
+                json('/communication/meetings')
             ]);
             renderBroadcasts();
             renderOnline();
             renderGroups();
+            renderMeetings();
             renderMetrics();
         }
 
@@ -247,10 +300,44 @@
                 </div>`).join('') : '<div class="p-8 text-center text-sm text-gray-500">No chat groups yet.</div>';
         }
 
+        function renderMeetings() {
+            const rows = document.getElementById('meetingRows');
+            rows.innerHTML = meetings.length ? meetings.map(meeting => `
+                <div class="meeting-row">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <p class="text-sm font-bold truncate">${escapeHtml(meeting.subject)}</p>
+                            <p class="mt-1 text-xs text-gray-500">${escapeHtml(providerLabel(meeting.provider))} - ${formatTime(meeting.startTime)}</p>
+                            <p class="mt-1 text-xs text-gray-500">${meeting.participants ? meeting.participants.length : 0} participants - ${notificationSummary(meeting)}</p>
+                        </div>
+                        <a class="hr-secondary py-1 px-2 text-xs" href="${meeting.joinUrl}" target="_blank">Join</a>
+                    </div>
+                </div>
+            `).join('') : '<div class="p-8 text-center text-sm text-gray-500">No meetings yet.</div>';
+        }
+
+        function renderMeetingParticipants() {
+            const select = document.getElementById('meetingParticipants');
+            select.innerHTML = availableMembers.map(member => `<option value="${member.id}">${escapeHtml(member.fullName)} - ${escapeHtml(member.department || 'Unassigned')}</option>`).join('');
+        }
+
+        function providerLabel(provider) {
+            const labels = {MICROSOFT_TEAMS:'Microsoft Teams', GOOGLE_MEET:'Google Meet', ZOOM:'Zoom'};
+            return labels[provider] || provider || '';
+        }
+
+        function notificationSummary(meeting) {
+            const participants = meeting.participants || [];
+            const chat = participants.filter(participant => participant.chatNotified).length;
+            const email = participants.filter(participant => participant.emailNotified).length;
+            return `${chat} chat, ${email} email`;
+        }
+
         async function loadAvailableMembers() {
             try {
                 availableMembers = await json('/communication/groups/available-members');
                 renderMemberDropdown();
+                renderMeetingParticipants();
             } catch (error) {
                 document.getElementById('hrGroupStatus').textContent = 'Could not load available members.';
             }
@@ -561,6 +648,52 @@
             selectedBroadcastFiles = selectedBroadcastFiles.filter((_, fileIndex) => fileIndex !== index);
             renderSelectedBroadcastFiles();
         }
+
+        document.getElementById('meetingInstant').addEventListener('change', event => {
+            const disabled = event.target.checked;
+            document.getElementById('meetingStart').disabled = disabled;
+            document.getElementById('meetingEnd').disabled = disabled;
+        });
+
+        document.getElementById('meetingForm').addEventListener('submit', async event => {
+            event.preventDefault();
+            const instant = document.getElementById('meetingInstant').checked;
+            const participantEmployeeIds = [...document.getElementById('meetingParticipants').selectedOptions]
+                .map(option => Number(option.value));
+            const payload = {
+                provider: document.getElementById('meetingProvider').value,
+                subject: document.getElementById('meetingSubject').value.trim(),
+                agenda: document.getElementById('meetingAgenda').value.trim(),
+                instantMeeting: instant,
+                startTime: instant ? null : document.getElementById('meetingStart').value,
+                endTime: document.getElementById('meetingEnd').value || null,
+                participantEmployeeIds,
+                notifyParticipants: document.getElementById('meetingNotify').checked
+            };
+            if (!payload.subject) {
+                document.getElementById('meetingStatus').textContent = 'Meeting subject is required.';
+                return;
+            }
+            try {
+                document.getElementById('meetingStatus').textContent = 'Creating meeting...';
+                const response = await fetch('/communication/meetings', {
+                    method:'POST',
+                    headers:{'Content-Type':'application/json'},
+                    body:JSON.stringify(payload)
+                });
+                if (!response.ok) throw new Error(await response.text());
+                const meeting = await response.json();
+                meetings = [meeting, ...meetings.filter(item => item.id !== meeting.id)];
+                renderMeetings();
+                event.target.reset();
+                document.getElementById('meetingInstant').checked = true;
+                document.getElementById('meetingStart').disabled = true;
+                document.getElementById('meetingEnd').disabled = true;
+                document.getElementById('meetingStatus').innerHTML = `Created. <a class="text-primary-600 font-bold" href="${meeting.joinUrl}" target="_blank">Open join link</a>`;
+            } catch (error) {
+                document.getElementById('meetingStatus').textContent = 'Meeting could not be created. Check provider configuration and permissions.';
+            }
+        });
 
         function connectSocket() {
             stompClient = new StompJs.Client({

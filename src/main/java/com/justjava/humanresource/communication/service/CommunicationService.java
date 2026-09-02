@@ -181,6 +181,34 @@ public class CommunicationService {
         return toMessageResponse(saved, attachments);
     }
 
+    @Transactional
+    public ChatMessageResponse sendSystemDirectMessageToEmployee(Long senderEmployeeId, Long recipientEmployeeId, String content) {
+        Employee sender = employeeRepository.findById(senderEmployeeId)
+                .filter(this::isActiveEmployee)
+                .orElseThrow(() -> new EntityNotFoundException("Meeting notification sender not found"));
+        Employee recipient = employeeRepository.findById(recipientEmployeeId)
+                .filter(this::isActiveEmployee)
+                .filter(employee -> !employee.isRestrictedVisibility())
+                .orElseThrow(() -> new EntityNotFoundException("Recipient not found"));
+        if (sender.getId().equals(recipient.getId())) {
+            throw new IllegalArgumentException("Meeting notification sender cannot receive its own direct message");
+        }
+
+        Conversation conversation = getOrCreateConversation(sender, recipient);
+        ChatMessage message = new ChatMessage();
+        message.setConversation(conversation);
+        message.setSender(sender);
+        message.setRecipient(recipient);
+        message.setContent(normalizeContent(content, 2000));
+        if (presenceService.isOnline(recipient.getId())) {
+            message.setDeliveredAt(LocalDateTime.now());
+        }
+        ChatMessage saved = chatMessageRepository.save(message);
+        conversation.setLastMessageAt(saved.getCreatedAt() == null ? LocalDateTime.now() : saved.getCreatedAt());
+        conversationRepository.save(conversation);
+        return toMessageResponse(saved);
+    }
+
     @Transactional(readOnly = true)
     public List<ChatMessageResponse> getConversationMessages(Long conversationId) {
         Employee current = getCurrentEmployee();
