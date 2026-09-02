@@ -27,6 +27,19 @@ The application must have:
 - File-system write access for communication attachments.
 - Email configuration if meeting invite emails should be sent.
 - Meeting provider credentials if HR/Admin users should create external meetings.
+- Meeting SDK dependencies on the classpath for enabled external meeting providers:
+  - Zoom uses Spring `RestClient` and the module's cached token service.
+  - Microsoft Teams uses the Microsoft Graph SDK with Azure Identity.
+  - Google Meet uses the Google Meet SDK with Google OAuth user credentials.
+
+The meeting SDK versions are managed in `pom.xml` through:
+
+```text
+microsoft-graph.version
+azure-identity.version
+google-cloud-meet.version
+google-auth-library-oauth2-http.version
+```
 
 ## Database
 
@@ -167,6 +180,8 @@ The implementation uses Zoom Server-to-Server OAuth and creates meetings through
 POST /users/{userId}/meetings
 ```
 
+Zoom is the only provider that still uses the shared `MeetingTokenService`. The token flow is implemented by `ZoomMeetingTokenClient`, cached by `DefaultMeetingTokenService`, and consumed by `ZoomMeetingProviderClient`.
+
 ### Microsoft Teams
 
 ```text
@@ -178,13 +193,28 @@ MS_DEFAULT_ORGANIZER_USER_ID=
 MS_GRAPH_BASE_URL=https://graph.microsoft.com/v1.0
 ```
 
-The implementation uses Microsoft Graph client credentials and creates meetings through:
+The implementation uses `MicrosoftGraphClientFactory` to build a Microsoft Graph SDK `GraphServiceClient` with Azure `ClientSecretCredential` and the `.default` Graph scope:
 
 ```text
-POST /users/{userId}/onlineMeetings
+https://graph.microsoft.com/.default
 ```
 
-The Microsoft app must have the required Graph permissions and an application access policy for the organizer user.
+`MicrosoftTeamsMeetingProviderClient` creates an SDK `OnlineMeeting` and posts it through:
+
+```text
+graphClient.users()
+    .byUserId(defaultOrganizerUserId)
+    .onlineMeetings()
+    .post(meeting)
+```
+
+The Microsoft app must have the required Graph application permissions and an application access policy for the organizer user.
+
+Notes for developers:
+
+- `MS_TENANT_ID`, `MS_CLIENT_ID`, `MS_CLIENT_SECRET`, and `MS_DEFAULT_ORGANIZER_USER_ID` are required when the provider is enabled.
+- `MS_GRAPH_BASE_URL` remains bound in configuration for compatibility, but the current SDK factory uses the SDK default Graph host.
+- Microsoft no longer has a module-specific `MeetingTokenClient`; token acquisition is delegated to Azure Identity through the Graph SDK.
 
 ### Google Meet
 
@@ -199,11 +229,41 @@ GOOGLE_TOKEN_URL=https://oauth2.googleapis.com/token
 GOOGLE_MEET_BASE_URL=https://meet.googleapis.com/v2
 ```
 
-The implementation uses a configured OAuth refresh token and creates Meet spaces through:
+The implementation uses `GoogleMeetClientFactory` to build a Google Meet SDK `SpacesServiceClient` from `UserCredentials`:
 
 ```text
-POST /spaces
+client-id + client-secret + refresh-token
 ```
+
+`GoogleMeetMeetingProviderClient` creates Meet spaces through the SDK:
+
+```text
+spacesClient.createSpace(Space.newBuilder().build())
+```
+
+Notes for developers:
+
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `GOOGLE_MEET_REFRESH_TOKEN` are required when the provider is enabled.
+- `GOOGLE_DEFAULT_ORGANIZER_EMAIL`, `GOOGLE_MEET_REDIRECT_URI`, `GOOGLE_TOKEN_URL`, and `GOOGLE_MEET_BASE_URL` remain bound in configuration for compatibility, but the current SDK factory only needs client ID, client secret, and refresh token.
+- Google Meet no longer has a module-specific `MeetingTokenClient`; token refresh is delegated to the Google auth library through the Meet SDK client.
+
+## Meeting Provider Architecture
+
+Meeting creation is routed through `MeetingProviderClient` implementations:
+
+- `ZoomMeetingProviderClient`
+- `MicrosoftTeamsMeetingProviderClient`
+- `GoogleMeetMeetingProviderClient`
+
+`MeetingProviderRegistry` selects the implementation for the requested provider. `MeetingIntegrationService` reports configured provider status from the registered clients and `MeetingIntegrationProperties`.
+
+Provider readiness is intentionally checked before external calls:
+
+- Zoom requires `enabled`, `accountId`, `clientId`, and `clientSecret`.
+- Microsoft Teams requires `enabled`, `tenantId`, `clientId`, `clientSecret`, and `defaultOrganizerUserId`.
+- Google Meet requires `enabled`, `clientId`, `clientSecret`, and `refreshToken`.
+
+When adding or changing a provider, keep provider-specific SDK construction isolated behind a small factory. That keeps `MeetingProviderClient` focused on request mapping, response mapping, and provider error translation.
 
 ## Meeting Invite Notifications
 
@@ -333,6 +393,12 @@ Focused Document Library test:
 .\mvnw.cmd -q -Dtest=DocumentLibraryServiceTest test
 ```
 
+Focused meeting provider tests:
+
+```powershell
+.\mvnw.cmd -q -Dtest=GoogleMeetMeetingProviderClientTest,MicrosoftTeamsMeetingProviderClientTest test
+```
+
 Manual smoke checks:
 
 - Sign in as HR/Admin.
@@ -369,6 +435,9 @@ If meeting creation fails:
 - Confirm all provider credentials are set.
 - Confirm provider API permissions are granted.
 - For Microsoft Teams, confirm the application access policy allows the organizer account.
+- For Microsoft Teams, check Graph SDK or Azure Identity errors from `MicrosoftGraphClientFactory`.
+- For Google Meet, check Google auth or Meet SDK errors from `GoogleMeetClientFactory`.
+- For Zoom, check token retrieval errors from `ZoomMeetingTokenClient` and meeting API errors from `ZoomMeetingProviderClient`.
 
 If meeting chat invites fail:
 
