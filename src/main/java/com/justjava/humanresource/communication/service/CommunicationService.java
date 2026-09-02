@@ -86,6 +86,16 @@ public class CommunicationService {
     @Transactional(readOnly = true)
     public List<EmployeeContactResponse> listContacts() {
         Employee current = getCurrentEmployee();
+        return listContactsFor(current);
+    }
+
+    @Transactional(readOnly = true)
+    public List<EmployeeContactResponse> listContactsForHr() {
+        assertHrCanMessageEmployees();
+        return listContactsFor(getCurrentEmployee());
+    }
+
+    private List<EmployeeContactResponse> listContactsFor(Employee current) {
         Map<Long, Conversation> conversationsByEmployeeId = new HashMap<>();
         Map<Long, ChatMessage> lastMessagesByEmployeeId = new HashMap<>();
 
@@ -111,6 +121,16 @@ public class CommunicationService {
     @Transactional(readOnly = true)
     public List<ConversationResponse> listConversations() {
         Employee current = getCurrentEmployee();
+        return listConversationsFor(current);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ConversationResponse> listConversationsForHr() {
+        assertHrCanMessageEmployees();
+        return listConversationsFor(getCurrentEmployee());
+    }
+
+    private List<ConversationResponse> listConversationsFor(Employee current) {
         return conversationRepository.findForEmployee(current.getId()).stream()
                 .map(conversation -> {
                     Employee other = otherParticipant(conversation, current);
@@ -156,6 +176,16 @@ public class CommunicationService {
     @Transactional
     public ChatMessageResponse sendDirectMessageWithAttachments(Long recipientEmployeeId, String content, List<MultipartFile> files) {
         Employee sender = getCurrentEmployee();
+        return sendDirectMessageWithAttachments(sender, recipientEmployeeId, content, files);
+    }
+
+    @Transactional
+    public ChatMessageResponse sendHrDirectMessageWithAttachments(Long recipientEmployeeId, String content, List<MultipartFile> files) {
+        assertHrCanMessageEmployees();
+        return sendDirectMessageWithAttachments(getCurrentEmployee(), recipientEmployeeId, content, files);
+    }
+
+    private ChatMessageResponse sendDirectMessageWithAttachments(Employee sender, Long recipientEmployeeId, String content, List<MultipartFile> files) {
         Employee recipient = employeeRepository.findById(recipientEmployeeId)
                 .filter(this::isActiveEmployee)
                 .filter(employee -> !employee.isRestrictedVisibility())
@@ -212,6 +242,16 @@ public class CommunicationService {
     @Transactional(readOnly = true)
     public List<ChatMessageResponse> getConversationMessages(Long conversationId) {
         Employee current = getCurrentEmployee();
+        return getConversationMessagesFor(conversationId, current);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ChatMessageResponse> getHrConversationMessages(Long conversationId) {
+        assertHrCanMessageEmployees();
+        return getConversationMessagesFor(conversationId, getCurrentEmployee());
+    }
+
+    private List<ChatMessageResponse> getConversationMessagesFor(Long conversationId, Employee current) {
         Conversation conversation = conversationRepository.findById(conversationId)
                 .orElseThrow(() -> new EntityNotFoundException("Conversation not found"));
         assertConversationParticipant(conversation, current);
@@ -228,6 +268,16 @@ public class CommunicationService {
     @Transactional(readOnly = true)
     public ChatMessage getReadableMessage(Long messageId) {
         Employee current = getCurrentEmployee();
+        return getReadableMessageFor(messageId, current);
+    }
+
+    @Transactional(readOnly = true)
+    public ChatMessage getHrReadableMessage(Long messageId) {
+        assertHrCanMessageEmployees();
+        return getReadableMessageFor(messageId, getCurrentEmployee());
+    }
+
+    private ChatMessage getReadableMessageFor(Long messageId, Employee current) {
         ChatMessage message = chatMessageRepository.findById(messageId)
                 .orElseThrow(() -> new EntityNotFoundException("Message not found"));
         assertConversationParticipant(message.getConversation(), current);
@@ -427,6 +477,12 @@ public class CommunicationService {
     private void assertHrCanBroadcast() {
         if (!isHrOrAdmin()) {
             throw new AccessDeniedException("Only HR or admin users can send broadcasts");
+        }
+    }
+
+    private void assertHrCanMessageEmployees() {
+        if (!isHrOrAdmin()) {
+            throw new AccessDeniedException("Only HR or admin users can message employees from the HR console");
         }
     }
 

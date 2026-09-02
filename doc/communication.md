@@ -1,24 +1,29 @@
 # Communication User Guide
 
-This guide explains how to use the Communication module in JustHR for direct chats, group chats, HR broadcasts, broadcast comments, online presence, and mobile messaging.
+This guide explains how to use the Communication module in JustHR for direct chats, group chats, file attachments, HR broadcasts, broadcast comments, online presence, mobile messaging, and HR/Admin meeting creation.
 
 ## Who Can Use Communication
 
 Employees can:
 
 - Chat directly with another employee.
+- Send and receive supported file attachments in direct and group chats.
 - View who is online in real time.
 - Receive HR broadcasts while online.
 - Receive missed HR broadcasts immediately after coming back online.
 - Comment on HR broadcasts.
 - Join and participate in chat groups they belong to.
+- Receive targeted meeting invites in chat when selected as a participant.
 
 HR and admin users can:
 
 - Send HR broadcasts to employees.
+- Attach supported files to HR broadcasts.
 - View broadcast delivery, read, and comment counts.
 - See live employee comments on broadcasts.
 - Create chat groups across departments.
+- Start or schedule Zoom, Microsoft Teams, or Google Meet meetings when the provider is configured.
+- Notify selected meeting participants by direct chat and email.
 
 Heads of Department can:
 
@@ -59,10 +64,12 @@ The mobile page contains:
 The HR console contains:
 
 - Broadcast composer.
+- Meeting creator.
 - Broadcast history.
 - Online employee list.
 - Chat group creation.
 - Group list.
+- Meeting list.
 - Broadcast comment activity.
 
 ## Direct Employee Chat
@@ -101,6 +108,18 @@ The online count updates live as employees connect or disconnect.
 When a new message arrives from an employee whose chat is not currently open, an unread badge appears beside their name.
 
 Opening that chat clears the badge on your screen.
+
+### Send File Attachments
+
+1. Open a direct chat.
+2. Click the attach button.
+3. Select one or more supported files.
+4. Optionally type a message.
+5. Press send.
+
+Supported attachment types include PDF, PNG, JPEG, text files, Word documents, and Excel files.
+
+Each message can include up to 5 attachments. Each file can be up to 20 MB.
 
 ## Group Chat
 
@@ -142,6 +161,8 @@ After creation, the group appears in the Groups list.
 
 Messages appear in real time for group members who are connected.
 
+Group messages also support the same file attachment rules as direct chats.
+
 ### Group List Updates
 
 When a group message is sent, the group moves up in the list and shows the latest message preview.
@@ -158,11 +179,14 @@ HR broadcasts are announcements sent by HR/admin users to all employees.
 2. Go to **New HR Broadcast**.
 3. Enter a broadcast title.
 4. Enter the announcement message.
-5. Click **Send Broadcast**.
+5. Optionally click **Attach** and select supported files.
+6. Click **Send Broadcast**.
 
 Online employees receive the broadcast immediately.
 
 Offline employees receive the broadcast when they next come online.
+
+Broadcast attachments use the same supported file types and limits as chat attachments.
 
 ### View Broadcast History
 
@@ -205,6 +229,99 @@ Your comment appears immediately in the broadcast comment thread.
 
 The comment count updates live for employees and HR users.
 
+## HR/Admin Meetings
+
+HR and admin users can create meetings from the HR Communication page when at least one meeting provider is configured.
+
+Supported providers are:
+
+- Zoom
+- Microsoft Teams
+- Google Meet
+
+### Start Or Schedule A Meeting
+
+1. Open **Communication** from the HR sidebar.
+2. Go to **Start or Schedule Meeting**.
+3. Select the meeting provider.
+4. Enter the meeting subject.
+5. Optionally enter an agenda.
+6. Leave **Start now** checked for an instant meeting, or uncheck it and enter a start time.
+7. Optionally enter an end time. If no end time is supplied, the default duration is used.
+8. Select the employee participants.
+9. Leave **Notify selected participants** checked if invites should be sent.
+10. Click **Create Meeting**.
+
+After the provider creates the meeting, JustHR saves the meeting and shows it in the HR meeting list with a join link.
+
+### Meeting Invite Delivery
+
+Meeting invites are targeted to selected participants only.
+
+When **Notify selected participants** is checked:
+
+- Each selected participant receives a direct chat message with the meeting details and join link.
+- Each selected participant with an email address receives an email invite.
+- The invite is not sent as a general HR broadcast.
+- Employees who were not selected as participants do not receive the meeting invite.
+
+The HR meeting list shows how many selected participants received chat and email notifications.
+
+### Meeting Notification Requirements
+
+Chat invites require a configured system sender employee:
+
+```text
+MEETING_SYSTEM_SENDER_EMPLOYEE_ID
+```
+
+This must point to an active employee account that should appear as the sender of meeting invite chat messages.
+
+Email invites require Resend email configuration:
+
+```text
+RESEND_API_KEY
+RESEND_FROM
+```
+
+If email is not configured, the meeting can still be created, but email notification status is recorded as failed or skipped for affected participants.
+
+### Meeting Provider Configuration
+
+Provider credentials are supplied through environment variables.
+
+Zoom:
+
+```text
+ZOOM_MEETING_ENABLED
+ZOOM_ACCOUNT_ID
+ZOOM_CLIENT_ID
+ZOOM_CLIENT_SECRET
+ZOOM_DEFAULT_HOST_USER_ID
+```
+
+Microsoft Teams:
+
+```text
+MS_TEAMS_MEETING_ENABLED
+MS_TENANT_ID
+MS_CLIENT_ID
+MS_CLIENT_SECRET
+MS_DEFAULT_ORGANIZER_USER_ID
+```
+
+Google Meet:
+
+```text
+GOOGLE_MEET_ENABLED
+GOOGLE_CLIENT_ID
+GOOGLE_CLIENT_SECRET
+GOOGLE_MEET_REFRESH_TOKEN
+GOOGLE_DEFAULT_ORGANIZER_EMAIL
+```
+
+If a provider is not enabled or is missing required credentials, meeting creation for that provider fails with a provider configuration error.
+
 ## Offline Broadcast Delivery
 
 If HR sends a broadcast while you are offline:
@@ -231,6 +348,7 @@ The message box stays at the bottom of the chat view so it is easy to continue a
 - Use direct chat for one-to-one conversations.
 - Use groups for department or project discussions.
 - Use HR broadcasts for official announcements.
+- Use meeting invites for time-sensitive conversations that require selected employees to join a live call.
 - Keep comments on broadcasts relevant to the announcement.
 - Avoid sharing sensitive payroll, disciplinary, or personal data in group chats unless the group is intended for that purpose.
 
@@ -259,3 +377,17 @@ If a broadcast does not show immediately:
 - Confirm you are online.
 - Reopen the Communication page.
 - If the broadcast was sent while you were offline, it should appear after reconnecting.
+
+If a meeting cannot be created:
+
+- Confirm the selected provider is enabled and fully configured.
+- Confirm the provider credentials have the required API permissions.
+- For Microsoft Teams, confirm the app has the required Microsoft Graph permissions and application access policy.
+- Confirm the selected participants are active and visible employees.
+
+If a participant does not receive a meeting invite:
+
+- Confirm the employee was selected as a participant.
+- Confirm `MEETING_SYSTEM_SENDER_EMPLOYEE_ID` is configured for chat invites.
+- Confirm the employee has a valid email address for email invites.
+- Confirm `RESEND_API_KEY` and `RESEND_FROM` are configured for email delivery.

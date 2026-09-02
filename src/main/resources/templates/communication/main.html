@@ -31,6 +31,23 @@
         .attachment-list { display:flex; flex-direction:column; gap:6px; margin-top:12px; }
         .attachment-link { display:flex; align-items:center; gap:8px; border:1px solid var(--hc-border); border-radius:8px; padding:7px 9px; background:rgba(248,250,252,.75); font-size:12px; }
         .meeting-row { padding:13px 16px; border-bottom:1px solid var(--hc-border); }
+        .direct-chat { display:grid; grid-template-columns:300px minmax(0,1fr); min-height:520px; }
+        .direct-list { border-right:1px solid var(--hc-border); min-height:0; }
+        .direct-person { display:flex; align-items:center; gap:10px; width:100%; padding:12px 14px; border-bottom:1px solid var(--hc-border); text-align:left; }
+        .direct-person:hover, .direct-person.active { background:#eff6ff; }
+        .dark .direct-person:hover, .dark .direct-person.active { background:#172554; }
+        .direct-messages { overflow-y:auto; min-height:0; padding:16px; background:linear-gradient(180deg,#f8fafc 0%,#fff 100%); }
+        .dark .direct-messages { background:linear-gradient(180deg,#111827 0%,#1f2937 100%); }
+        .message-row { display:flex; margin-bottom:12px; }
+        .message-row.mine { justify-content:flex-end; }
+        .message-bubble { max-width:min(72%,620px); border:1px solid var(--hc-border); background:var(--hc-surface); border-radius:8px; padding:10px 12px; font-size:14px; line-height:1.45; overflow-wrap:anywhere; }
+        .message-row.mine .message-bubble { background:#2563eb; color:white; border-color:#2563eb; }
+        .message-meta { margin-top:5px; font-size:11px; color:var(--hc-muted); }
+        .message-row.mine .message-meta { color:#dbeafe; }
+        .presence-dot { width:10px; height:10px; border-radius:999px; background:#94a3b8; border:2px solid var(--hc-surface); }
+        .presence-dot.online { background:#16a34a; }
+        .unread-badge { min-width:22px; height:22px; border-radius:999px; display:inline-flex; align-items:center; justify-content:center; padding:0 7px; background:#dc2626; color:white; font-size:11px; font-weight:800; }
+        @media (max-width: 860px) { .direct-chat { grid-template-columns:1fr; } .direct-list { border-right:0; border-bottom:1px solid var(--hc-border); max-height:300px; } }
         @media (max-width: 1080px) { .hr-grid { grid-template-columns:1fr; } }
     </style>
 </head>
@@ -85,6 +102,51 @@
                         </div>
                     </div>
                 </form>
+            </section>
+
+            <section class="hr-card">
+                <div class="hr-card-head flex items-center justify-between gap-3">
+                    <div>
+                        <h2 class="text-lg font-bold">Direct Employee Messages</h2>
+                        <p id="directChatStatus" class="text-sm text-gray-500 dark:text-gray-400"
+                           th:text="${directChatAvailable} ? 'Select an employee and send a private chat message.' : 'Direct chat requires this HR/Admin user to have an employee profile.'">
+                            Select an employee and send a private chat message.
+                        </p>
+                    </div>
+                    <button id="refreshDirectBtn" class="hr-secondary" type="button" th:if="${directChatAvailable}">
+                        <span class="material-icons-round text-sm">refresh</span>
+                        Refresh
+                    </button>
+                </div>
+                <div class="direct-chat" th:if="${directChatAvailable}">
+                    <aside class="direct-list flex flex-col">
+                        <div class="p-3 border-b border-gray-200 dark:border-gray-700">
+                            <input id="directSearch" class="hr-input" placeholder="Search employees">
+                        </div>
+                        <div id="directPeopleRows" class="overflow-y-auto"></div>
+                    </aside>
+                    <div class="flex min-h-0 flex-col">
+                        <div class="hr-card-head flex items-center gap-3">
+                            <div id="directChatAvatar" class="avatar bg-slate-400">--</div>
+                            <div class="min-w-0">
+                                <h3 id="directChatName" class="text-base font-bold truncate">Select an employee</h3>
+                                <p id="directChatMeta" class="text-xs text-gray-500 dark:text-gray-400">No conversation selected.</p>
+                            </div>
+                        </div>
+                        <div id="directMessages" class="direct-messages flex-1"></div>
+                        <div id="directAttachmentTray" class="attachment-tray hidden p-3"></div>
+                        <form id="directMessageForm" class="border-t border-gray-200 dark:border-gray-700 p-3 flex items-end gap-2">
+                            <input id="directMessageFiles" type="file" multiple class="hidden" accept=".pdf,.png,.jpg,.jpeg,.txt,.doc,.docx,.xls,.xlsx">
+                            <button id="attachDirectFileBtn" class="hr-secondary h-[42px]" type="button" disabled title="Attach files">
+                                <span class="material-icons-round text-base">attach_file</span>
+                            </button>
+                            <textarea id="directMessageInput" class="hr-input min-h-[44px] max-h-32" rows="1" maxlength="2000" placeholder="Write a message" disabled></textarea>
+                            <button id="sendDirectMessageBtn" class="hr-primary h-[42px] px-3 opacity-50" type="submit" disabled title="Send message">
+                                <span class="material-icons-round text-base">send</span>
+                            </button>
+                        </form>
+                    </div>
+                </div>
             </section>
 
             <section class="hr-card">
@@ -228,14 +290,20 @@
 
     <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7/bundles/stomp.umd.min.js"></script>
-    <script>
+    <script th:inline="javascript">
+        const currentEmployeeId = /*[[${currentEmployeeId}]]*/ null;
+        const directChatAvailable = /*[[${directChatAvailable}]]*/ false;
         let stompClient;
         let broadcasts = [];
         let onlineEmployees = [];
         let groups = [];
         let meetings = [];
+        let directContacts = [];
+        let directConversations = [];
         let availableMembers = [];
         let selectedBroadcastFiles = [];
+        let selectedDirectFiles = [];
+        let selectedDirectContact = null;
         let selectedBroadcast = null;
         let activeCommentSubscription = null;
         let activeReceiptSubscription = null;
@@ -249,8 +317,8 @@
             return new Date(value).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'});
         }
 
-        async function json(url) {
-            const response = await fetch(url);
+        async function json(url, options) {
+            const response = await fetch(url, options);
             if (!response.ok) throw new Error(await response.text());
             return response.json();
         }
@@ -267,6 +335,133 @@
             renderGroups();
             renderMeetings();
             renderMetrics();
+            if (directChatAvailable) {
+                await loadDirectData();
+            }
+        }
+
+        async function loadDirectData() {
+            [directContacts, directConversations] = await Promise.all([
+                json('/communication/employees'),
+                json('/communication/conversations')
+            ]);
+            mergeDirectConversations();
+            renderDirectContacts();
+        }
+
+        function mergeDirectConversations() {
+            const byId = new Map(directContacts.map(contact => [contact.id, contact]));
+            directConversations.forEach(conversation => {
+                if (conversation.otherParticipant && byId.has(conversation.otherParticipant.id)) {
+                    byId.set(conversation.otherParticipant.id, {
+                        ...byId.get(conversation.otherParticipant.id),
+                        unreadCount: conversation.otherParticipant.unreadCount,
+                        conversationId: conversation.id,
+                        lastMessage: conversation.lastMessage ? conversation.lastMessage.content : null,
+                        lastMessageAt: conversation.lastMessage ? conversation.lastMessage.createdAt : conversation.updatedAt,
+                        hasConversation: true
+                    });
+                }
+            });
+            directContacts = [...byId.values()];
+        }
+
+        function renderDirectContacts() {
+            const rows = document.getElementById('directPeopleRows');
+            if (!rows) return;
+            const search = document.getElementById('directSearch').value.toLowerCase();
+            const filtered = sortDirectContacts(directContacts).filter(contact =>
+                !search || contact.fullName.toLowerCase().includes(search) || (contact.department || '').toLowerCase().includes(search)
+            );
+            rows.innerHTML = filtered.length ? filtered.map(contact => `
+                <button type="button" class="direct-person ${selectedDirectContact && selectedDirectContact.id === contact.id ? 'active' : ''}" data-direct-contact-id="${contact.id}">
+                    <div class="relative">
+                        <div class="avatar">${initials(contact.fullName)}</div>
+                        <span class="presence-dot ${contact.online ? 'online' : ''} absolute -right-1 -bottom-1"></span>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <div class="flex items-center justify-between gap-2">
+                            <p class="text-sm font-bold truncate">${escapeHtml(contact.fullName)}</p>
+                            ${contact.unreadCount > 0 ? `<span class="unread-badge">${contact.unreadCount}</span>` : ''}
+                        </div>
+                        <div class="mt-0.5 flex items-center justify-between gap-2">
+                            <p class="text-xs text-gray-500 truncate">${escapeHtml(contact.lastMessage || contact.department || 'Unassigned')}</p>
+                            ${contact.lastMessageAt ? `<span class="text-[11px] text-gray-400 flex-none">${formatShortTime(contact.lastMessageAt)}</span>` : ''}
+                        </div>
+                    </div>
+                </button>
+            `).join('') : '<div class="p-8 text-center text-sm text-gray-500">No employees found.</div>';
+            document.querySelectorAll('[data-direct-contact-id]').forEach(button => {
+                button.addEventListener('click', () => selectDirectContact(Number(button.dataset.directContactId)));
+            });
+        }
+
+        function sortDirectContacts(list) {
+            return [...list].sort((a, b) => {
+                const aTime = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
+                const bTime = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0;
+                if (aTime !== bTime) return bTime - aTime;
+                if (a.online !== b.online) return a.online ? -1 : 1;
+                return (a.fullName || '').localeCompare(b.fullName || '');
+            });
+        }
+
+        function formatShortTime(value) {
+            if (!value) return '';
+            const date = new Date(value);
+            const today = new Date();
+            if (date.toDateString() === today.toDateString()) {
+                return date.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+            }
+            return date.toLocaleDateString([], {month:'short', day:'numeric'});
+        }
+
+        async function selectDirectContact(contactId) {
+            selectedDirectContact = directContacts.find(contact => contact.id === contactId);
+            if (!selectedDirectContact) return;
+            selectedDirectContact.unreadCount = 0;
+            document.getElementById('directChatAvatar').textContent = initials(selectedDirectContact.fullName);
+            document.getElementById('directChatName').textContent = selectedDirectContact.fullName;
+            document.getElementById('directChatMeta').textContent = `${selectedDirectContact.online ? 'Online' : 'Offline'} - ${selectedDirectContact.department || 'Unassigned'}`;
+            document.getElementById('directMessageInput').disabled = false;
+            document.getElementById('sendDirectMessageBtn').disabled = false;
+            document.getElementById('attachDirectFileBtn').disabled = false;
+            document.getElementById('sendDirectMessageBtn').classList.remove('opacity-50');
+            renderDirectContacts();
+
+            const conversation = directConversations.find(item => item.otherParticipant && item.otherParticipant.id === contactId)
+                || (selectedDirectContact.conversationId ? {id: selectedDirectContact.conversationId} : null);
+            if (!conversation) {
+                document.getElementById('directMessages').innerHTML = emptyDirectChat();
+                return;
+            }
+            renderDirectMessages(await json(`/communication/conversations/${conversation.id}/messages`));
+        }
+
+        function renderDirectMessages(history) {
+            const rows = document.getElementById('directMessages');
+            rows.innerHTML = history.length ? history.map(directMessageTemplate).join('') : emptyDirectChat();
+            rows.scrollTop = rows.scrollHeight;
+        }
+
+        function directMessageTemplate(message) {
+            const mine = message.senderId === currentEmployeeId;
+            return `
+                <div class="message-row ${mine ? 'mine' : ''}">
+                    <div class="message-bubble">
+                        ${message.content ? `<div>${escapeHtml(message.content)}</div>` : ''}
+                        ${attachmentList(message.attachments || [])}
+                        <div class="message-meta">${formatTime(message.createdAt)}${mine && message.deliveredAt ? ' - Delivered' : ''}</div>
+                    </div>
+                </div>`;
+        }
+
+        function emptyDirectChat() {
+            return `<div class="h-full flex flex-col items-center justify-center text-center text-gray-500">
+                <span class="material-icons-round text-5xl text-gray-300 mb-3">chat_bubble</span>
+                <p class="text-sm font-semibold">No messages yet</p>
+                <p class="text-xs mt-1">Send the first message to start the conversation.</p>
+            </div>`;
         }
 
         function renderMetrics() {
@@ -578,6 +773,40 @@
             renderMetrics();
         }
 
+        function handleIncomingDirectMessage(message) {
+            if (!directChatAvailable) return;
+            const payload = JSON.parse(message.body);
+            const otherId = payload.senderId === currentEmployeeId ? payload.recipientId : payload.senderId;
+            const contact = directContacts.find(item => item.id === otherId);
+            if (contact && (!selectedDirectContact || selectedDirectContact.id !== otherId)) {
+                contact.unreadCount = (contact.unreadCount || 0) + 1;
+            }
+            upsertDirectConversation(payload, contact);
+            if (selectedDirectContact && selectedDirectContact.id === otherId) {
+                const rows = document.getElementById('directMessages');
+                if (rows.querySelector('.text-center')) rows.innerHTML = '';
+                rows.insertAdjacentHTML('beforeend', directMessageTemplate(payload));
+                rows.scrollTop = rows.scrollHeight;
+            }
+            renderDirectContacts();
+        }
+
+        function upsertDirectConversation(message, contact) {
+            if (!contact) return;
+            contact.conversationId = message.conversationId;
+            contact.lastMessage = message.content;
+            contact.lastMessageAt = message.createdAt;
+            contact.hasConversation = true;
+            const existing = directConversations.find(item => item.id === message.conversationId);
+            if (existing) {
+                existing.lastMessage = message;
+                existing.updatedAt = message.createdAt;
+            } else {
+                directConversations.unshift({id: message.conversationId, otherParticipant: contact, lastMessage: message, updatedAt: message.createdAt});
+            }
+            directConversations.sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime());
+        }
+
         function handleGroupSummary(message) {
             const group = JSON.parse(message.body);
             groups = [group, ...groups.filter(item => item.id !== group.id)];
@@ -589,7 +818,13 @@
             onlineEmployees = onlineEmployees.filter(item => item.employeeId !== presence.employeeId);
             if (presence.online) onlineEmployees.push(presence);
             onlineEmployees.sort((a, b) => a.fullName.localeCompare(b.fullName));
+            directContacts = directContacts.map(contact => contact.id === presence.employeeId ? {...contact, online: presence.online} : contact);
+            if (selectedDirectContact && selectedDirectContact.id === presence.employeeId) {
+                selectedDirectContact.online = presence.online;
+                document.getElementById('directChatMeta').textContent = `${presence.online ? 'Online' : 'Offline'} - ${selectedDirectContact.department || 'Unassigned'}`;
+            }
             renderOnline();
+            renderDirectContacts();
             renderMetrics();
         }
 
@@ -649,6 +884,63 @@
             renderSelectedBroadcastFiles();
         }
 
+        document.getElementById('attachDirectFileBtn')?.addEventListener('click', () => document.getElementById('directMessageFiles').click());
+        document.getElementById('directMessageFiles')?.addEventListener('change', () => {
+            selectedDirectFiles = Array.from(document.getElementById('directMessageFiles').files || []).slice(0, 5);
+            renderSelectedDirectFiles();
+        });
+
+        document.getElementById('directMessageForm')?.addEventListener('submit', async event => {
+            event.preventDefault();
+            const input = document.getElementById('directMessageInput');
+            const content = input.value.trim();
+            if (!selectedDirectContact || (!content && selectedDirectFiles.length === 0)) return;
+            if (selectedDirectFiles.length > 0) {
+                await sendDirectMessageWithAttachments(content);
+                return;
+            }
+            if (!stompClient || !stompClient.connected) return;
+            stompClient.publish({
+                destination: '/app/chat.send',
+                body: JSON.stringify({recipientEmployeeId: selectedDirectContact.id, content})
+            });
+            input.value = '';
+        });
+
+        async function sendDirectMessageWithAttachments(content) {
+            const form = new FormData();
+            form.append('recipientEmployeeId', selectedDirectContact.id);
+            form.append('content', content);
+            selectedDirectFiles.forEach(file => form.append('files', file));
+            const response = await fetch('/communication/messages', {method:'POST', body:form});
+            if (!response.ok) {
+                document.getElementById('directChatStatus').textContent = 'Message could not be sent. Please check your access and try again.';
+                return;
+            }
+            document.getElementById('directMessageInput').value = '';
+            selectedDirectFiles = [];
+            document.getElementById('directMessageFiles').value = '';
+            renderSelectedDirectFiles();
+        }
+
+        function renderSelectedDirectFiles() {
+            const tray = document.getElementById('directAttachmentTray');
+            if (!tray) return;
+            tray.classList.toggle('hidden', selectedDirectFiles.length === 0);
+            tray.innerHTML = selectedDirectFiles.map((file, index) => `
+                <span class="attachment-pill">
+                    <span class="material-icons-round text-sm">attach_file</span>
+                    <span class="truncate">${escapeHtml(file.name)}</span>
+                    <button type="button" onclick="removeSelectedDirectFile(${index})" title="Remove"><span class="material-icons-round text-sm">close</span></button>
+                </span>
+            `).join('');
+        }
+
+        function removeSelectedDirectFile(index) {
+            selectedDirectFiles = selectedDirectFiles.filter((_, fileIndex) => fileIndex !== index);
+            renderSelectedDirectFiles();
+        }
+
         document.getElementById('meetingInstant').addEventListener('change', event => {
             const disabled = event.target.checked;
             document.getElementById('meetingStart').disabled = disabled;
@@ -701,6 +993,9 @@
                 reconnectDelay: 3000,
                 onConnect: () => {
                     document.getElementById('sendStatus').textContent = 'Connected and ready.';
+                    if (directChatAvailable) {
+                        stompClient.subscribe('/user/queue/messages', handleIncomingDirectMessage);
+                    }
                     stompClient.subscribe('/topic/hr-broadcasts', handleBroadcast);
                     stompClient.subscribe('/topic/presence', handlePresence);
                     stompClient.subscribe('/topic/chat-groups', handleGroupSummary);
@@ -722,6 +1017,8 @@
         }
 
         document.getElementById('refreshBtn').addEventListener('click', loadData);
+        document.getElementById('refreshDirectBtn')?.addEventListener('click', loadDirectData);
+        document.getElementById('directSearch')?.addEventListener('input', renderDirectContacts);
         document.getElementById('attachBroadcastFileBtn').addEventListener('click', () => document.getElementById('broadcastFiles').click());
         document.getElementById('broadcastFiles').addEventListener('change', () => {
             selectedBroadcastFiles = Array.from(document.getElementById('broadcastFiles').files || []).slice(0, 5);

@@ -20,6 +20,7 @@ import com.justjava.humanresource.communication.service.GroupChatService;
 import com.justjava.humanresource.communication.service.PresenceService;
 import com.justjava.humanresource.core.config.AuthenticationManager;
 import com.justjava.humanresource.hr.entity.Employee;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
@@ -27,6 +28,7 @@ import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -77,6 +79,16 @@ public class CommunicationController {
 
     @GetMapping("/communication")
     public String hrCommunication(Model model) {
+        try {
+            Employee employee = communicationService.getCurrentEmployee();
+            model.addAttribute("currentEmployeeId", employee.getId());
+            model.addAttribute("currentEmployeeNumber", employee.getEmployeeNumber());
+            model.addAttribute("directChatAvailable", true);
+        } catch (EntityNotFoundException | AccessDeniedException exception) {
+            model.addAttribute("currentEmployeeId", null);
+            model.addAttribute("currentEmployeeNumber", "");
+            model.addAttribute("directChatAvailable", false);
+        }
         model.addAttribute("title", "Communication");
         model.addAttribute("subTitle", "Send HR broadcasts and monitor employee feedback");
         model.addAttribute("isRestrictedHr", authenticationManager.isRestrictedHr());
@@ -90,16 +102,34 @@ public class CommunicationController {
         return communicationService.listContacts();
     }
 
+    @GetMapping("/communication/employees")
+    @ResponseBody
+    public List<EmployeeContactResponse> hrEmployeeContacts() {
+        return communicationService.listContactsForHr();
+    }
+
     @GetMapping("/employee/communication/conversations")
     @ResponseBody
     public List<ConversationResponse> employeeConversations() {
         return communicationService.listConversations();
     }
 
+    @GetMapping("/communication/conversations")
+    @ResponseBody
+    public List<ConversationResponse> hrConversations() {
+        return communicationService.listConversationsForHr();
+    }
+
     @GetMapping("/employee/communication/conversations/{conversationId}/messages")
     @ResponseBody
     public List<ChatMessageResponse> conversationMessages(@PathVariable Long conversationId) {
         return communicationService.getConversationMessages(conversationId);
+    }
+
+    @GetMapping("/communication/conversations/{conversationId}/messages")
+    @ResponseBody
+    public List<ChatMessageResponse> hrConversationMessages(@PathVariable Long conversationId) {
+        return communicationService.getHrConversationMessages(conversationId);
     }
 
     @PostMapping(value = {"/employee/communication/messages", "/mobile/employee/communication/messages"},
@@ -115,6 +145,18 @@ public class CommunicationController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping(value = "/communication/messages", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @ResponseBody
+    public ResponseEntity<ChatMessageResponse> sendHrDirectMessageWithAttachments(
+            @RequestParam Long recipientEmployeeId,
+            @RequestParam(required = false) String content,
+            @RequestParam(required = false) List<MultipartFile> files) {
+        ChatMessageResponse response = communicationService.sendHrDirectMessageWithAttachments(recipientEmployeeId, content, files);
+        messagingTemplate.convertAndSendToUser(response.recipientEmployeeNumber(), "/queue/messages", response);
+        messagingTemplate.convertAndSendToUser(response.senderEmployeeNumber(), "/queue/messages", response);
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping("/employee/communication/messages/{messageId}/attachments/{attachmentId}")
     public ResponseEntity<Resource> downloadDirectAttachment(@PathVariable Long messageId, @PathVariable Long attachmentId) {
         communicationService.getReadableMessage(messageId);
@@ -122,9 +164,23 @@ public class CommunicationController {
         return attachmentResponse(attachment.getContentType(), attachment.getFileSize(), attachment.getOriginalFilename(), false, attachment.getStoragePath());
     }
 
+    @GetMapping("/communication/messages/{messageId}/attachments/{attachmentId}")
+    public ResponseEntity<Resource> downloadHrDirectAttachment(@PathVariable Long messageId, @PathVariable Long attachmentId) {
+        communicationService.getHrReadableMessage(messageId);
+        ChatMessageAttachment attachment = attachmentService.getDirectAttachment(messageId, attachmentId);
+        return attachmentResponse(attachment.getContentType(), attachment.getFileSize(), attachment.getOriginalFilename(), false, attachment.getStoragePath());
+    }
+
     @GetMapping("/employee/communication/messages/{messageId}/attachments/{attachmentId}/view")
     public ResponseEntity<Resource> viewDirectAttachment(@PathVariable Long messageId, @PathVariable Long attachmentId) {
         communicationService.getReadableMessage(messageId);
+        ChatMessageAttachment attachment = attachmentService.getDirectAttachment(messageId, attachmentId);
+        return attachmentResponse(attachment.getContentType(), attachment.getFileSize(), attachment.getOriginalFilename(), true, attachment.getStoragePath());
+    }
+
+    @GetMapping("/communication/messages/{messageId}/attachments/{attachmentId}/view")
+    public ResponseEntity<Resource> viewHrDirectAttachment(@PathVariable Long messageId, @PathVariable Long attachmentId) {
+        communicationService.getHrReadableMessage(messageId);
         ChatMessageAttachment attachment = attachmentService.getDirectAttachment(messageId, attachmentId);
         return attachmentResponse(attachment.getContentType(), attachment.getFileSize(), attachment.getOriginalFilename(), true, attachment.getStoragePath());
     }
