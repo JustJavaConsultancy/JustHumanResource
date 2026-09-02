@@ -6,173 +6,947 @@
     <meta charset="UTF-8">
     <title>Communication</title>
     <style>
-        .comm-page { --comm-border:#e5e7eb; --comm-muted:#64748b; --comm-surface:#fff; --comm-soft:#f8fafc; --comm-strong:#0f172a; }
-        .dark .comm-page { --comm-border:#374151; --comm-muted:#9ca3af; --comm-surface:#1f2937; --comm-soft:#111827; --comm-strong:#f8fafc; }
-        .comm-shell { height:calc(100vh - 150px); min-height:680px; display:grid; grid-template-columns:320px minmax(0,1fr) 360px; gap:16px; }
-        .comm-panel { border:1px solid var(--comm-border); background:var(--comm-surface); border-radius:8px; overflow:hidden; min-height:0; box-shadow:0 12px 30px -24px rgba(15,23,42,.55); }
-        .comm-panel-head { padding:14px 16px; border-bottom:1px solid var(--comm-border); background:var(--comm-soft); }
-        .comm-search { width:100%; border:1px solid var(--comm-border); background:var(--comm-surface); border-radius:8px; padding:10px 12px 10px 38px; font-size:14px; outline:none; }
-        .comm-search:focus, .comm-input:focus { border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,.12); }
-        .comm-input { width:100%; border:1px solid var(--comm-border); background:var(--comm-surface); border-radius:8px; padding:11px 12px; font-size:14px; outline:none; resize:none; }
-        .comm-icon-btn { width:42px; height:42px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; background:#2563eb; color:white; flex:0 0 auto; }
-        .comm-secondary-btn { display:inline-flex; align-items:center; gap:6px; border:1px solid var(--comm-border); border-radius:8px; padding:8px 11px; font-size:12px; font-weight:700; background:var(--comm-surface); }
-        .comm-person { display:flex; align-items:center; gap:12px; width:100%; padding:12px 14px; border-bottom:1px solid var(--comm-border); text-align:left; transition:background-color .15s ease; }
-        .comm-person:hover, .comm-person.active { background:#eff6ff; }
-        .dark .comm-person:hover, .dark .comm-person.active { background:#172554; }
-        .comm-avatar { width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-weight:800; color:white; background:#2563eb; flex:0 0 auto; }
-        .presence-dot { width:10px; height:10px; border-radius:999px; background:#94a3b8; border:2px solid var(--comm-surface); }
-        .presence-dot.online { background:#16a34a; }
-        .comm-badge { min-width:22px; height:22px; border-radius:999px; display:inline-flex; align-items:center; justify-content:center; padding:0 7px; background:#dc2626; color:white; font-size:11px; font-weight:800; }
-        .comm-segments { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:12px; }
-        .comm-segment { border:1px solid var(--comm-border); border-radius:8px; padding:8px; font-size:12px; font-weight:800; color:var(--comm-muted); background:var(--comm-surface); }
-        .comm-segment.active { background:#2563eb; border-color:#2563eb; color:white; }
-        .comm-group { display:flex; align-items:center; gap:12px; width:100%; padding:12px 14px; border-bottom:1px solid var(--comm-border); text-align:left; transition:background-color .15s ease; }
-        .comm-group:hover, .comm-group.active { background:#f0fdf4; }
-        .dark .comm-group:hover, .dark .comm-group.active { background:#052e16; }
-        .message-list { overflow-y:auto; padding:18px; background:linear-gradient(180deg,#f8fafc 0%,#fff 100%); }
-        .dark .message-list { background:linear-gradient(180deg,#111827 0%,#1f2937 100%); }
-        .message-row { display:flex; margin-bottom:12px; }
-        .message-row.mine { justify-content:flex-end; }
-        .message-bubble { max-width:min(70%,620px); border:1px solid var(--comm-border); background:var(--comm-surface); border-radius:8px; padding:10px 12px; font-size:14px; line-height:1.45; overflow-wrap:anywhere; }
-        .message-row.mine .message-bubble { background:#2563eb; color:white; border-color:#2563eb; }
-        .message-meta { margin-top:5px; font-size:11px; color:var(--comm-muted); }
-        .message-row.mine .message-meta { color:#dbeafe; }
-        .attachment-list { display:flex; flex-direction:column; gap:6px; margin-top:8px; }
-        .attachment-link { display:flex; align-items:center; gap:8px; border:1px solid var(--comm-border); border-radius:8px; padding:7px 9px; background:rgba(248,250,252,.75); font-size:12px; }
-        .message-row.mine .attachment-link { background:rgba(255,255,255,.14); border-color:rgba(255,255,255,.28); color:white; }
-        .attachment-tray { display:flex; flex-wrap:wrap; gap:6px; padding:0 12px 10px; border-top:1px solid var(--comm-border); background:var(--comm-surface); }
-        .attachment-pill { display:inline-flex; align-items:center; gap:6px; max-width:220px; border:1px solid var(--comm-border); border-radius:999px; padding:5px 9px; font-size:12px; background:var(--comm-soft); }
-        .broadcast-item { width:100%; text-align:left; padding:13px 14px; border-bottom:1px solid var(--comm-border); transition:background-color .15s ease; }
-        .broadcast-item:hover, .broadcast-item.active { background:#f0fdf4; }
-        .dark .broadcast-item:hover, .dark .broadcast-item.active { background:#052e16; }
-        .broadcast-unread { width:8px; height:8px; border-radius:999px; background:#2563eb; display:inline-block; }
-        .comment-card { border:1px solid var(--comm-border); border-radius:8px; padding:10px 12px; background:var(--comm-soft); }
-        .mobile-tabs { display:none; }
-        @media (max-width: 1180px) {
-            .comm-shell { grid-template-columns:290px minmax(0,1fr); }
-            .broadcast-panel { display:none; }
-            .broadcast-panel.mobile-active { display:block; position:fixed; inset:88px 12px 12px 12px; z-index:45; }
+        /* ── root & body: fill full viewport ── */
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
         }
-        @media (max-width: 860px) {
-            .comm-shell { height:calc(100vh - 185px); min-height:620px; display:block; }
-            .comm-panel { height:100%; display:none; }
-            .comm-panel.mobile-active { display:flex; flex-direction:column; }
-            .mobile-tabs { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:12px; }
-            .mobile-tab { border:1px solid var(--comm-border); border-radius:8px; padding:9px 8px; font-size:12px; font-weight:800; background:var(--comm-surface); }
-            .mobile-tab.active { background:#2563eb; border-color:#2563eb; color:#fff; }
-            .message-bubble { max-width:88%; }
+
+        /* ── variables ── */
+        .comm-page {
+            --hc-border: #e7e9ee;
+            --hc-muted: #737b8c;
+            --hc-text: #182033;
+            --hc-surface: #ffffff;
+            --hc-soft: #f7f8fa;
+            --hc-hover: #f3f6fb;
+            --hc-blue: #2563eb;
+            --hc-blue-soft: #eff6ff;
+            --hc-green: #16a34a;
+            --hc-red: #dc2626;
+            color: var(--hc-text);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: var(--hc-surface);
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
         }
+        .dark .comm-page {
+            --hc-border: #303746;
+            --hc-muted: #9ca3af;
+            --hc-text: #f3f4f6;
+            --hc-surface: #1f2937;
+            --hc-soft: #111827;
+            --hc-hover: #273449;
+            --hc-blue-soft: #172554;
+        }
+
+        /* ── force flush layout (no padding, margin, gap, or rounding) ── */
+        .comm-page,
+        .comm-page main,
+        .comm-page .main-content,
+        .comm-page .flex-1,
+        .comm-page .container,
+        .comm-page .content {
+            padding: 0 !important;
+            margin: 0 !important;
+            max-width: 100% !important;
+            width: 100% !important;
+            border-radius: 0 !important;
+            background: var(--hc-surface);
+        }
+
+        main {
+            padding: 0 !important;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .comm-shell {
+            display: grid !important;
+            grid-template-columns: 280px minmax(0, 1fr) 320px !important;
+            gap: 0 !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            border-radius: 0 !important;
+            border: none !important;
+            flex: 1 !important;
+            width: 100% !important;
+            overflow: hidden !important;
+            background: var(--hc-surface);
+        }
+
+        .comm-panel {
+            border-radius: 0 !important;
+            border: 1px solid var(--hc-border) !important;
+            border-top: none !important;
+            border-bottom: none !important;
+            box-shadow: none !important;
+            background: var(--hc-surface) !important;
+            display: flex !important;
+            flex-direction: column !important;
+            min-height: 0 !important;
+            height: 100% !important;
+            width: 100% !important;
+            overflow: hidden !important;
+        }
+
+        .comm-panel:first-child {
+            border-left: none !important;
+        }
+
+        .comm-panel:last-child {
+            border-right: none !important;
+        }
+
+        .comm-panel-head {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--hc-border);
+            background: var(--hc-soft);
+            flex-shrink: 0;
+        }
+
+        /* ── left panel ── */
+        .directory-toggle {
+            display: flex;
+            gap: 4px;
+            background: var(--hc-soft);
+            border-radius: 8px;
+            padding: 4px;
+            margin: 10px 0 12px;
+        }
+        .directory-toggle button {
+            flex: 1;
+            border: 0;
+            border-radius: 6px;
+            padding: 6px 8px;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--hc-muted);
+            background: transparent;
+            cursor: pointer;
+            transition: background .15s, color .15s;
+        }
+        .directory-toggle button.active {
+            background: var(--hc-surface);
+            color: var(--hc-text);
+            box-shadow: 0 2px 6px rgba(0,0,0,.04);
+        }
+        .directory-toggle button:hover:not(.active) {
+            background: var(--hc-hover);
+        }
+
+        .comm-search {
+            width: 100%;
+            border: 1px solid var(--hc-border);
+            background: var(--hc-surface);
+            color: var(--hc-text);
+            border-radius: 8px;
+            padding: 9px 12px 9px 36px;
+            font-size: 12px;
+            outline: none;
+            transition: border-color .2s, box-shadow .2s;
+        }
+        .comm-search:focus {
+            border-color: #93c5fd;
+            box-shadow: 0 0 0 3px rgba(37,99,235,.08);
+        }
+        .search-wrap {
+            position: relative;
+        }
+        .search-wrap .material-icons-round {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--hc-muted);
+            font-size: 18px;
+        }
+
+        .list-scroll {
+            flex: 1;
+            overflow-y: auto;
+            min-height: 0;
+        }
+        .list-scroll > *:last-child {
+            border-bottom: 0;
+        }
+
+        /* ── people / group items ── */
+        .comm-person, .comm-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--hc-border);
+            background: var(--hc-surface);
+            text-align: left;
+            transition: background .12s;
+            cursor: pointer;
+        }
+        .comm-person:hover, .comm-group:hover {
+            background: var(--hc-hover);
+        }
+        .comm-person.active, .comm-group.active {
+            background: var(--hc-blue-soft);
+            border-left: 3px solid var(--hc-blue);
+        }
+        .comm-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            color: #fff;
+            background: var(--hc-blue);
+            flex: 0 0 auto;
+            font-size: 14px;
+        }
+        .presence-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #aeb6c3;
+            border: 2px solid var(--hc-surface);
+            position: absolute;
+            right: -2px;
+            bottom: -2px;
+        }
+        .presence-dot.online {
+            background: var(--hc-green);
+        }
+        .unread-badge {
+            min-width: 20px;
+            height: 20px;
+            border-radius: 999px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 6px;
+            background: var(--hc-red);
+            color: #fff;
+            font-size: 10px;
+            font-weight: 800;
+        }
+        .item-meta {
+            font-size: 10px;
+            color: var(--hc-muted);
+            margin-top: 1px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+        }
+        .item-meta .time {
+            flex: 0 0 auto;
+        }
+
+        /* ── chat panel ── */
+        .chat-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
+        }
+        .chat-header .comm-avatar {
+            width: 38px;
+            height: 38px;
+            font-size: 13px;
+        }
+        .chat-header h2 {
+            font-size: 15px;
+            font-weight: 700;
+            margin: 0;
+            line-height: 1.2;
+        }
+        .chat-header p {
+            font-size: 11px;
+            color: var(--hc-muted);
+            margin: 0;
+        }
+
+        .message-list {
+            flex: 1;
+            overflow-y: auto;
+            min-height: 0;
+            padding: 20px 24px;
+            background: radial-gradient(circle at 50% 0%, rgba(37,99,235,.035), transparent 45%),
+            var(--hc-soft);
+        }
+        .message-row {
+            display: flex;
+            margin-bottom: 14px;
+        }
+        .message-row.mine {
+            justify-content: flex-end;
+        }
+        .message-bubble {
+            max-width: min(74%, 620px);
+            border: 1px solid var(--hc-border);
+            background: var(--hc-surface);
+            color: var(--hc-text);
+            border-radius: 12px 12px 12px 4px;
+            padding: 10px 14px;
+            font-size: 13px;
+            line-height: 1.5;
+            overflow-wrap: anywhere;
+            box-shadow: 0 1px 4px rgba(15,23,42,.04);
+        }
+        .message-row.mine .message-bubble {
+            border-color: var(--hc-blue);
+            background: var(--hc-blue);
+            color: #fff;
+            border-radius: 12px 12px 4px 12px;
+        }
+        .message-meta {
+            margin-top: 4px;
+            font-size: 10px;
+            color: var(--hc-muted);
+        }
+        .message-row.mine .message-meta {
+            color: rgba(255,255,255,.6);
+            text-align: right;
+        }
+        .message-author {
+            font-weight: 700;
+            font-size: 11px;
+            margin-bottom: 2px;
+            color: var(--hc-muted);
+        }
+
+        .attachment-list {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-top: 6px;
+        }
+        .attachment-link {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            border: 1px solid var(--hc-border);
+            border-radius: 6px;
+            padding: 6px 8px;
+            background: var(--hc-soft);
+            color: inherit;
+            font-size: 10px;
+            text-decoration: none;
+            transition: background .15s;
+        }
+        .attachment-link:hover {
+            background: var(--hc-hover);
+        }
+        .message-row.mine .attachment-link {
+            background: rgba(255,255,255,.12);
+            border-color: rgba(255,255,255,.2);
+            color: #fff;
+        }
+
+        .composer {
+            padding: 10px 16px 14px;
+            border-top: 1px solid var(--hc-border);
+            background: var(--hc-surface);
+            flex-shrink: 0;
+        }
+        .composer .input-wrap {
+            display: flex;
+            align-items: flex-end;
+            gap: 6px;
+            border: 1px solid var(--hc-border);
+            border-radius: 10px;
+            background: var(--hc-soft);
+            padding: 4px 4px 4px 14px;
+            transition: border-color .2s, box-shadow .2s;
+        }
+        .composer .input-wrap:focus-within {
+            border-color: #93c5fd;
+            box-shadow: 0 0 0 3px rgba(37,99,235,.08);
+        }
+        .composer textarea {
+            flex: 1;
+            border: 0;
+            outline: none;
+            resize: none;
+            background: transparent;
+            color: var(--hc-text);
+            padding: 8px 2px;
+            font-size: 13px;
+            line-height: 1.4;
+            min-height: 38px;
+            max-height: 100px;
+        }
+        .composer button {
+            width: 34px;
+            height: 34px;
+            flex: 0 0 auto;
+            display: grid;
+            place-items: center;
+            border: 0;
+            border-radius: 8px;
+            background: transparent;
+            color: var(--hc-muted);
+            cursor: pointer;
+            transition: background .15s, color .15s;
+        }
+        .composer button:hover {
+            background: var(--hc-surface);
+            color: var(--hc-blue);
+        }
+        .composer .send-btn {
+            background: var(--hc-blue);
+            color: #fff;
+            border-radius: 8px;
+        }
+        .composer .send-btn:hover {
+            background: #1d4ed8;
+            color: #fff;
+        }
+        .composer .send-btn:disabled {
+            opacity: .4;
+            pointer-events: none;
+        }
+        .attachment-tray {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            padding: 4px 16px 8px;
+            background: var(--hc-surface);
+            border-top: 1px solid var(--hc-border);
+            flex-shrink: 0;
+        }
+        .attachment-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            max-width: 200px;
+            border: 1px solid var(--hc-border);
+            border-radius: 999px;
+            padding: 3px 8px 3px 6px;
+            font-size: 10px;
+            background: var(--hc-soft);
+        }
+        .attachment-pill .material-icons-round {
+            font-size: 14px;
+        }
+
+        /* ── broadcasts panel ── */
+        .broadcast-item {
+            width: 100%;
+            text-align: left;
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--hc-border);
+            background: var(--hc-surface);
+            transition: background .12s;
+            cursor: pointer;
+        }
+        .broadcast-item:hover {
+            background: var(--hc-hover);
+        }
+        .broadcast-item.active {
+            background: var(--hc-blue-soft);
+            border-left: 3px solid var(--hc-blue);
+        }
+        .broadcast-item .title {
+            font-weight: 700;
+            font-size: 13px;
+        }
+        .broadcast-item .meta {
+            font-size: 10px;
+            color: var(--hc-muted);
+            margin-top: 2px;
+        }
+        .broadcast-unread {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--hc-blue);
+            flex: 0 0 auto;
+        }
+
+        .broadcast-detail {
+            flex: 1;
+            overflow-y: auto;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            background: var(--hc-soft);
+        }
+        .broadcast-detail .detail-header {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--hc-border);
+            background: var(--hc-surface);
+            flex-shrink: 0;
+        }
+        .broadcast-detail .detail-body {
+            flex: 1;
+            overflow-y: auto;
+            min-height: 0;
+            padding: 16px 18px;
+        }
+        .broadcast-detail .detail-body .content {
+            white-space: pre-wrap;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        .comment-card {
+            border: 1px solid var(--hc-border);
+            border-radius: 8px;
+            padding: 10px 12px;
+            background: var(--hc-surface);
+            margin-bottom: 10px;
+        }
+        .comment-card:last-child {
+            margin-bottom: 0;
+        }
+        .comment-card .comment-author {
+            font-weight: 700;
+            font-size: 12px;
+        }
+        .comment-card .comment-time {
+            font-size: 10px;
+            color: var(--hc-muted);
+        }
+        .comment-card .comment-text {
+            font-size: 12px;
+            margin-top: 2px;
+        }
+
+        .broadcast-composer {
+            padding: 10px 16px 14px;
+            border-top: 1px solid var(--hc-border);
+            background: var(--hc-surface);
+            flex-shrink: 0;
+        }
+        .broadcast-composer .input-wrap {
+            display: flex;
+            align-items: flex-end;
+            gap: 6px;
+            border: 1px solid var(--hc-border);
+            border-radius: 10px;
+            background: var(--hc-soft);
+            padding: 4px 4px 4px 14px;
+        }
+        .broadcast-composer textarea {
+            flex: 1;
+            border: 0;
+            outline: none;
+            resize: none;
+            background: transparent;
+            color: var(--hc-text);
+            padding: 8px 2px;
+            font-size: 13px;
+            line-height: 1.4;
+            min-height: 38px;
+            max-height: 80px;
+        }
+        .broadcast-composer button {
+            width: 34px;
+            height: 34px;
+            flex: 0 0 auto;
+            display: grid;
+            place-items: center;
+            border: 0;
+            border-radius: 8px;
+            background: var(--hc-blue);
+            color: #fff;
+            cursor: pointer;
+            transition: background .15s;
+        }
+        .broadcast-composer button:hover {
+            background: #1d4ed8;
+        }
+
+        /* ── mobile tabs ── */
+        .mobile-tabs {
+            display: none;
+            gap: 8px;
+            padding: 12px 16px 0;
+            background: var(--hc-surface);
+            border-bottom: 1px solid var(--hc-border);
+            flex-shrink: 0;
+        }
+        .mobile-tab {
+            flex: 1;
+            border: 0;
+            border-radius: 8px 8px 0 0;
+            padding: 10px 8px;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--hc-muted);
+            background: transparent;
+            cursor: pointer;
+            transition: background .15s, color .15s;
+        }
+        .mobile-tab.active {
+            background: var(--hc-blue-soft);
+            color: var(--hc-blue);
+        }
+        .mobile-tab:hover:not(.active) {
+            background: var(--hc-hover);
+        }
+
+        /* ── empty states ── */
+        .empty-state {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--hc-muted);
+        }
+        .empty-state .material-icons-round {
+            font-size: 48px;
+            opacity: .2;
+            margin-bottom: 12px;
+        }
+        .empty-state p {
+            margin: 4px 0;
+        }
+        .empty-state p:first-of-type {
+            font-weight: 700;
+            font-size: 15px;
+            color: var(--hc-text);
+        }
+        .empty-state p:last-of-type {
+            font-size: 12px;
+        }
+
+        /* ── group modal ── */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 50;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(15,23,42,.5);
+            backdrop-filter: blur(3px);
+            padding: 20px;
+        }
+        .modal-overlay.open {
+            display: flex;
+        }
+        .modal-card {
+            width: min(560px, 100%);
+            max-height: 90vh;
+            border: 1px solid var(--hc-border);
+            border-radius: 14px;
+            background: var(--hc-surface);
+            box-shadow: 0 30px 70px -30px rgba(15,23,42,.5);
+            overflow-y: auto;
+        }
+        .modal-card .modal-head {
+            padding: 14px 18px;
+            border-bottom: 1px solid var(--hc-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .modal-card .modal-head h3 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 800;
+        }
+        .modal-card .modal-body {
+            padding: 18px;
+        }
+        .modal-card .modal-footer {
+            padding: 14px 18px;
+            border-top: 1px solid var(--hc-border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+        .comm-input {
+            width: 100%;
+            border: 1px solid var(--hc-border);
+            background: var(--hc-surface);
+            color: var(--hc-text);
+            border-radius: 8px;
+            padding: 9px 12px;
+            font-size: 13px;
+            outline: none;
+            transition: border-color .2s, box-shadow .2s;
+        }
+        .comm-input:focus {
+            border-color: #93c5fd;
+            box-shadow: 0 0 0 3px rgba(37,99,235,.08);
+        }
+        .btn-secondary {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border: 1px solid var(--hc-border);
+            border-radius: 8px;
+            background: var(--hc-surface);
+            color: var(--hc-text);
+            padding: 8px 14px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background .15s, border-color .15s;
+        }
+        .btn-secondary:hover {
+            background: var(--hc-hover);
+            border-color: var(--hc-blue);
+        }
+        .btn-primary {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border: 0;
+            border-radius: 8px;
+            background: var(--hc-blue);
+            color: #fff;
+            padding: 8px 16px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background .15s;
+        }
+        .btn-primary:hover {
+            background: #1d4ed8;
+        }
+
+        /* ── responsive ── */
+        @media (max-width: 1080px) {
+            .comm-shell {
+                grid-template-columns: 260px minmax(0, 1fr) !important;
+            }
+            .broadcast-panel {
+                display: none !important;
+            }
+            .broadcast-panel.mobile-active {
+                display: flex !important;
+                position: fixed !important;
+                inset: 80px 0 0 0 !important;
+                z-index: 40 !important;
+                border-radius: 0 !important;
+                border: 1px solid var(--hc-border) !important;
+                border-top: none !important;
+            }
+        }
+        @media (max-width: 760px) {
+            .comm-shell {
+                display: block !important;
+                height: 100% !important;
+                padding: 0 !important;
+                min-height: 0 !important;
+                flex: 1;
+            }
+            .comm-panel {
+                height: 100% !important;
+                display: none !important;
+                border: 1px solid var(--hc-border) !important;
+                border-top: none !important;
+                border-bottom: none !important;
+                border-radius: 0 !important;
+            }
+            .comm-panel.mobile-active {
+                display: flex !important;
+            }
+            .mobile-tabs {
+                display: flex !important;
+                background: var(--hc-surface) !important;
+                border-bottom: 1px solid var(--hc-border) !important;
+                padding: 8px 12px 0 !important;
+            }
+            .comm-panel-head {
+                padding: 10px 12px;
+            }
+            .message-list {
+                padding: 14px 16px;
+            }
+            .message-bubble {
+                max-width: 88%;
+            }
+        }
+
+        /* ── utilities ── */
+        .flex { display: flex; }
+        .items-center { align-items: center; }
+        .justify-between { justify-content: space-between; }
+        .gap-2 { gap: 8px; }
+        .gap-3 { gap: 12px; }
+        .mt-2 { margin-top: 8px; }
+        .mt-3 { margin-top: 12px; }
+        .mb-2 { margin-bottom: 8px; }
+        .hidden { display: none !important; }
+        .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .min-w-0 { min-width: 0; }
+        .flex-1 { flex: 1; }
+        .relative { position: relative; }
+        .absolute { position: absolute; }
+        .text-sm { font-size: 13px; }
+        .text-xs { font-size: 11px; }
+        .font-bold { font-weight: 700; }
+        .text-muted { color: var(--hc-muted); }
+        .text-blue { color: var(--hc-blue); }
     </style>
 </head>
 <body>
+
 <main layout:fragment="content" class="comm-page">
+
+    <!-- Mobile Tabs -->
     <div class="mobile-tabs">
         <button class="mobile-tab active" data-tab="people">People</button>
         <button class="mobile-tab" data-tab="chat">Chat</button>
         <button class="mobile-tab" data-tab="broadcasts">Broadcasts</button>
     </div>
 
+    <!-- Main Shell -->
     <section class="comm-shell">
+
+        <!-- LEFT: People / Groups -->
         <aside id="peoplePanel" class="comm-panel mobile-active">
             <div class="comm-panel-head">
-                <div class="flex items-center justify-between gap-3">
+                <div class="flex items-center justify-between gap-2">
                     <div>
-                        <h2 id="directoryTitle" class="text-base font-bold text-gray-900 dark:text-white">People</h2>
-                        <p class="text-xs text-gray-500 dark:text-gray-400"><span id="onlineCount">0</span> online now</p>
+                        <h2 id="directoryTitle" class="text-sm font-bold">People</h2>
+                        <p class="text-xs text-muted"><span id="onlineCount">0</span> online now</p>
                     </div>
-                    <button id="createGroupBtn" type="button" class="comm-secondary-btn" th:if="${canCreateGroups}">
+                    <button id="createGroupBtn" type="button" class="btn-secondary" th:if="${canCreateGroups}">
                         <span class="material-icons-round text-sm">group_add</span>
                         Group
                     </button>
-                    <button id="onlineFilter" type="button" class="comm-secondary-btn" th:unless="${canCreateGroups}">
+                    <button id="onlineFilter" type="button" class="btn-secondary" th:unless="${canCreateGroups}">
                         <span class="material-icons-round text-sm">radio_button_checked</span>
                         Online
                     </button>
                 </div>
-                <div class="comm-segments">
-                    <button class="comm-segment active" data-directory-mode="direct" type="button">Direct</button>
-                    <button class="comm-segment" data-directory-mode="groups" type="button">Groups</button>
+
+                <div class="directory-toggle">
+                    <button class="active" data-directory-mode="direct">Direct</button>
+                    <button data-directory-mode="groups">Groups</button>
                 </div>
-                <div class="relative mt-3">
-                    <span class="material-icons-round absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
+
+                <div class="search-wrap mt-2">
+                    <span class="material-icons-round">search</span>
                     <input id="peopleSearch" class="comm-search" placeholder="Search people or groups">
                 </div>
             </div>
-            <div id="groupList" class="overflow-y-auto h-full hidden"></div>
-            <div id="peopleList" class="overflow-y-auto h-full"></div>
+            <div id="groupList" class="list-scroll hidden"></div>
+            <div id="peopleList" class="list-scroll"></div>
         </aside>
 
+        <!-- CENTER: Chat -->
         <section id="chatPanel" class="comm-panel flex flex-col">
-            <div id="chatHeader" class="comm-panel-head flex items-center justify-between">
-                <div class="flex items-center gap-3 min-w-0">
+            <div class="comm-panel-head">
+                <div class="chat-header">
                     <div id="chatAvatar" class="comm-avatar bg-slate-400">--</div>
                     <div class="min-w-0">
-                        <h2 id="chatName" class="text-base font-bold truncate">Select an employee</h2>
-                        <p id="chatStatus" class="text-xs text-gray-500 dark:text-gray-400">Choose a colleague to start chatting</p>
+                        <h2 id="chatName">Select an employee</h2>
+                        <p id="chatStatus">Choose a colleague to start chatting</p>
                     </div>
                 </div>
             </div>
-            <div id="messages" class="message-list flex-1"></div>
+
+            <div id="messages" class="message-list flex-1">
+                <div class="empty-state">
+                    <span class="material-icons-round">chat_bubble</span>
+                    <p>Your conversations</p>
+                    <p>Select a contact from the left panel to start messaging.</p>
+                </div>
+            </div>
+
             <div id="attachmentTray" class="attachment-tray hidden"></div>
-            <form id="messageForm" class="border-t border-gray-200 dark:border-gray-700 p-3 flex items-end gap-2">
-                <input id="messageFiles" type="file" multiple class="hidden" accept=".pdf,.png,.jpg,.jpeg,.txt,.doc,.docx,.xls,.xlsx">
-                <button id="attachFileBtn" type="button" class="comm-secondary-btn h-[42px]" disabled title="Attach files">
-                    <span class="material-icons-round text-base">attach_file</span>
-                </button>
-                <textarea id="messageInput" class="comm-input min-h-[44px] max-h-32" rows="1" maxlength="2000" placeholder="Write a message" disabled></textarea>
-                <button id="sendMessageBtn" class="comm-icon-btn opacity-50" type="submit" disabled title="Send message">
-                    <span class="material-icons-round">send</span>
-                </button>
-            </form>
+
+            <div class="composer">
+                <form id="messageForm">
+                    <input id="messageFiles" type="file" multiple class="hidden"
+                           accept=".pdf,.png,.jpg,.jpeg,.txt,.doc,.docx,.xls,.xlsx">
+                    <div class="input-wrap">
+                        <button id="attachFileBtn" type="button" disabled title="Attach files">
+                            <span class="material-icons-round" style="font-size:18px;">attach_file</span>
+                        </button>
+                        <textarea id="messageInput" rows="1" maxlength="2000" placeholder="Type your message..." disabled></textarea>
+                        <button id="sendMessageBtn" class="send-btn" type="submit" disabled title="Send message">
+                            <span class="material-icons-round" style="font-size:18px;">send</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
         </section>
 
+        <!-- RIGHT: Broadcasts -->
         <aside id="broadcastPanel" class="comm-panel broadcast-panel flex flex-col">
             <div class="comm-panel-head flex items-center justify-between">
                 <div>
-                    <h2 class="text-base font-bold">HR Broadcasts</h2>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">Announcements and comments</p>
+                    <h2 class="text-sm font-bold">HR Broadcasts</h2>
+                    <p class="text-xs text-muted">Announcements and comments</p>
                 </div>
-                <button class="comm-secondary-btn lg:hidden" data-close-broadcasts>
+                <button class="btn-secondary lg:hidden" data-close-broadcasts>
                     <span class="material-icons-round text-sm">close</span>
-                    Close
                 </button>
             </div>
-            <div id="broadcastList" class="max-h-[42%] overflow-y-auto border-b border-gray-200 dark:border-gray-700"></div>
-            <div id="broadcastDetail" class="flex-1 min-h-0 flex flex-col">
-                <div class="p-4 text-sm text-gray-500 dark:text-gray-400">Select a broadcast to read details and comments.</div>
+
+            <div id="broadcastList" class="list-scroll" style="max-height:45%;border-bottom:1px solid var(--hc-border);"></div>
+
+            <div id="broadcastDetail" class="broadcast-detail flex-1">
+                <div class="empty-state">
+                    <span class="material-icons-round">campaign</span>
+                    <p>Select a broadcast</p>
+                    <p>Choose from the list to read details and add comments.</p>
+                </div>
             </div>
         </aside>
+
     </section>
 
-    <div id="groupModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-gray-900/50 p-4">
-        <form id="groupForm" class="w-full max-w-xl rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-xl">
-            <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-                <div>
-                    <h2 class="text-lg font-bold">Create Chat Group</h2>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">HOD groups are limited to their department.</p>
-                </div>
-                <button type="button" id="closeGroupModal" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"><span class="material-icons-round">close</span></button>
+    <!-- Group Modal -->
+    <div id="groupModal" class="modal-overlay">
+        <form id="groupForm" class="modal-card">
+            <div class="modal-head">
+                <h3>Create Chat Group</h3>
+                <button type="button" id="closeGroupModal" class="btn-secondary" style="border:0;padding:4px;">
+                    <span class="material-icons-round">close</span>
+                </button>
             </div>
-            <div class="p-4 space-y-3">
+            <div class="modal-body space-y-3">
                 <input id="groupName" class="comm-input" maxlength="100" placeholder="Group name" required>
-                <textarea id="groupDescription" class="comm-input" maxlength="500" rows="2" placeholder="Description"></textarea>
-                <input id="memberSearch" class="comm-search pl-3" placeholder="Search members">
-                <div id="memberOptions" class="max-h-64 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700"></div>
-                <p id="groupStatus" class="text-sm text-gray-500 dark:text-gray-400"></p>
+                <textarea id="groupDescription" class="comm-input" maxlength="500" rows="2" placeholder="Description (optional)"></textarea>
+                <input id="memberSearch" class="comm-input" placeholder="Search members...">
+                <div id="memberOptions" class="max-h-64 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg"></div>
+                <p id="groupStatus" class="text-xs text-muted"></p>
             </div>
-            <div class="p-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2">
-                <button type="button" id="cancelGroup" class="comm-secondary-btn">Cancel</button>
-                <button type="submit" class="comm-icon-btn w-auto px-4 gap-2"><span class="material-icons-round text-base">group_add</span>Create</button>
+            <div class="modal-footer">
+                <button type="button" id="cancelGroup" class="btn-secondary">Cancel</button>
+                <button type="submit" class="btn-primary">
+                    <span class="material-icons-round text-sm">group_add</span>
+                    Create
+                </button>
             </div>
         </form>
     </div>
 
+    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7/bundles/stomp.umd.min.js"></script>
     <script th:inline="javascript">
+        // ── injected variables ──
         const currentEmployeeId = /*[[${currentEmployeeId}]]*/ 0;
         const currentEmployeeNumber = /*[[${currentEmployeeNumber}]]*/ '';
         const canCreateGroups = /*[[${canCreateGroups}]]*/ false;
+
+        // ── state ──
         let stompClient;
         let contacts = [];
         let conversations = [];
@@ -186,111 +960,106 @@
         let activeCommentSubscription = null;
         let activeGroupSubscription = null;
         let directoryMode = 'direct';
+        let selectedFiles = [];
+        let currentTab = 'people';
 
+        // ── DOM refs ──
         const peopleList = document.getElementById('peopleList');
+        const groupList = document.getElementById('groupList');
         const messages = document.getElementById('messages');
         const messageInput = document.getElementById('messageInput');
         const sendMessageBtn = document.getElementById('sendMessageBtn');
         const attachFileBtn = document.getElementById('attachFileBtn');
         const messageFiles = document.getElementById('messageFiles');
         const attachmentTray = document.getElementById('attachmentTray');
-        let selectedFiles = [];
+        const peopleSearch = document.getElementById('peopleSearch');
+        const directoryTitle = document.getElementById('directoryTitle');
+        const onlineCount = document.getElementById('onlineCount');
+        const chatName = document.getElementById('chatName');
+        const chatStatus = document.getElementById('chatStatus');
+        const chatAvatar = document.getElementById('chatAvatar');
 
+        // ── helpers ──
         function initials(name) {
-            return (name || '').split(' ').filter(Boolean).slice(0, 2).map(part => part[0].toUpperCase()).join('') || '--';
+            return (name || '').split(' ').filter(Boolean).slice(0, 2).map(p => p[0].toUpperCase()).join('') || '--';
         }
-
         function formatTime(value) {
             if (!value) return '';
             return new Date(value).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'});
         }
-
-        async function json(url, options) {
-            const response = await fetch(url, options);
-            if (!response.ok) throw new Error(await response.text());
-            return response.json();
+        function formatShortTime(value) {
+            if (!value) return '';
+            const d = new Date(value);
+            const today = new Date();
+            return d.toDateString() === today.toDateString()
+                ? d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})
+                : d.toLocaleDateString([], {month:'short', day:'numeric'});
+        }
+        function escapeHtml(value) {
+            const div = document.createElement('div');
+            div.textContent = value == null ? '' : String(value);
+            return div.innerHTML;
+        }
+        function formatFileSize(size) {
+            if (!size) return '';
+            return size < 1024 * 1024 ? Math.round(size / 1024) + ' KB' : (size / 1024 / 1024).toFixed(1) + ' MB';
+        }
+        function attachmentIcon(type) {
+            const t = (type || '').toLowerCase();
+            if (t.includes('image')) return 'image';
+            if (t.includes('pdf')) return 'picture_as_pdf';
+            return 'description';
+        }
+        function attachmentList(attachments) {
+            if (!attachments || !attachments.length) return '';
+            return `<div class="attachment-list">${attachments.map(a => `
+                <a class="attachment-link" href="${a.downloadUrl}" target="_blank">
+                    <span class="material-icons-round" style="font-size:14px;">${attachmentIcon(a.contentType)}</span>
+                    <span class="truncate">${escapeHtml(a.originalFilename)}</span>
+                    <span style="margin-left:auto;font-size:9px;">${formatFileSize(a.fileSize)}</span>
+                </a>
+            `).join('')}</div>`;
         }
 
+        async function json(url, options) {
+            const res = await fetch(url, options);
+            if (!res.ok) throw new Error(await res.text());
+            return res.json();
+        }
+
+        // ── load data ──
         async function loadInitialData() {
-            [contacts, conversations, broadcasts, groups] = await Promise.all([
-                json('/employee/communication/employees'),
-                json('/employee/communication/conversations'),
-                json('/employee/communication/broadcasts'),
-                json('/employee/communication/groups')
-            ]);
+            try {
+                [contacts, conversations, broadcasts, groups] = await Promise.all([
+                    json('/employee/communication/employees'),
+                    json('/employee/communication/conversations'),
+                    json('/employee/communication/broadcasts'),
+                    json('/employee/communication/groups')
+                ]);
+            } catch (e) { console.warn('Load data error:', e); }
             mergeConversationUnread();
             renderPeople();
             renderGroups();
             renderBroadcasts();
+            updateOnlineCount();
         }
 
         function mergeConversationUnread() {
-            const byId = new Map(contacts.map(contact => [contact.id, contact]));
-            conversations.forEach(conversation => {
-                if (conversation.otherParticipant && byId.has(conversation.otherParticipant.id)) {
-                    byId.set(conversation.otherParticipant.id, {
-                        ...byId.get(conversation.otherParticipant.id),
-                        unreadCount: conversation.otherParticipant.unreadCount,
-                        conversationId: conversation.id,
-                        lastMessage: conversation.lastMessage ? conversation.lastMessage.content : null,
-                        lastMessageAt: conversation.lastMessage ? conversation.lastMessage.createdAt : conversation.updatedAt,
-                        hasConversation: true
-                    });
+            const byId = new Map(contacts.map(c => [c.id, c]));
+            conversations.forEach(conv => {
+                if (conv.otherParticipant && byId.has(conv.otherParticipant.id)) {
+                    const contact = byId.get(conv.otherParticipant.id);
+                    contact.unreadCount = conv.otherParticipant.unreadCount || 0;
+                    contact.conversationId = conv.id;
+                    contact.lastMessage = conv.lastMessage ? conv.lastMessage.content : null;
+                    contact.lastMessageAt = conv.lastMessage ? conv.lastMessage.createdAt : conv.updatedAt;
+                    contact.hasConversation = true;
                 }
             });
             contacts = [...byId.values()];
         }
 
-        function renderPeople() {
-            const search = document.getElementById('peopleSearch').value.toLowerCase();
-            const filtered = sortContactsForChat(contacts).filter(contact =>
-                (!onlineOnly || contact.online) &&
-                (!search || contact.fullName.toLowerCase().includes(search) || (contact.department || '').toLowerCase().includes(search))
-            );
-            document.getElementById('onlineCount').textContent = contacts.filter(contact => contact.online).length;
-            peopleList.innerHTML = filtered.length ? filtered.map(contact => `
-                <button type="button" class="comm-person ${selectedContact && selectedContact.id === contact.id ? 'active' : ''}" data-contact-id="${contact.id}">
-                    <div class="relative">
-                        <div class="comm-avatar">${initials(contact.fullName)}</div>
-                        <span class="presence-dot ${contact.online ? 'online' : ''} absolute -right-1 -bottom-1"></span>
-                    </div>
-                    <div class="min-w-0 flex-1">
-                        <div class="flex items-center justify-between gap-2">
-                            <p class="text-sm font-bold text-gray-900 dark:text-white truncate">${escapeHtml(contact.fullName)}</p>
-                            ${contact.unreadCount > 0 ? `<span class="comm-badge">${contact.unreadCount}</span>` : ''}
-                        </div>
-                        <div class="mt-0.5 flex items-center justify-between gap-2">
-                            <p class="text-xs text-gray-500 dark:text-gray-400 truncate">${escapeHtml(contact.lastMessage || contact.department || 'Unassigned')}</p>
-                            ${contact.lastMessageAt ? `<span class="text-[11px] text-gray-400 flex-none">${formatShortTime(contact.lastMessageAt)}</span>` : ''}
-                        </div>
-                    </div>
-                </button>
-            `).join('') : `<div class="p-8 text-center text-sm text-gray-500"><span class="material-icons-round block text-4xl mb-2 text-gray-300">person_search</span>No employees found.</div>`;
-            document.querySelectorAll('[data-contact-id]').forEach(button => {
-                button.addEventListener('click', () => selectContact(Number(button.dataset.contactId)));
-            });
-        }
-
-        function renderGroups() {
-            const search = document.getElementById('peopleSearch').value.toLowerCase();
-            const filtered = [...groups].sort((a, b) => new Date(b.lastMessageAt || 0) - new Date(a.lastMessageAt || 0))
-                .filter(group => !search || group.name.toLowerCase().includes(search) || (group.department || '').toLowerCase().includes(search));
-            document.getElementById('groupList').innerHTML = filtered.length ? filtered.map(group => `
-                <button type="button" class="comm-group ${selectedGroup && selectedGroup.id === group.id ? 'active' : ''}" data-group-id="${group.id}">
-                    <div class="comm-avatar bg-emerald-600">${initials(group.name)}</div>
-                    <div class="min-w-0 flex-1">
-                        <div class="flex items-center justify-between gap-2">
-                            <p class="text-sm font-bold text-gray-900 dark:text-white truncate">${escapeHtml(group.name)}</p>
-                            ${group.lastMessageAt ? `<span class="text-[11px] text-gray-400 flex-none">${formatShortTime(group.lastMessageAt)}</span>` : ''}
-                        </div>
-                        <p class="text-xs text-gray-500 dark:text-gray-400 truncate">${escapeHtml(group.lastMessage || `${group.memberCount || 0} members - ${group.department || 'All departments'}`)}</p>
-                    </div>
-                </button>
-            `).join('') : `<div class="p-8 text-center text-sm text-gray-500"><span class="material-icons-round block text-4xl mb-2 text-gray-300">groups</span>No groups yet.</div>`;
-            document.querySelectorAll('[data-group-id]').forEach(button => button.addEventListener('click', () => selectGroup(Number(button.dataset.groupId))));
-        }
-
-        function sortContactsForChat(list) {
+        function sortContacts(list) {
             return [...list].sort((a, b) => {
                 const aTime = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
                 const bTime = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0;
@@ -300,48 +1069,102 @@
             });
         }
 
-        function formatShortTime(value) {
-            if (!value) return '';
-            const date = new Date(value);
-            const today = new Date();
-            if (date.toDateString() === today.toDateString()) {
-                return date.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-            }
-            return date.toLocaleDateString([], {month:'short', day:'numeric'});
+        // ── render people ──
+        function renderPeople() {
+            const search = peopleSearch.value.toLowerCase();
+            let filtered = sortContacts(contacts).filter(c =>
+                (!onlineOnly || c.online) &&
+                (!search || c.fullName.toLowerCase().includes(search) || (c.department || '').toLowerCase().includes(search))
+            );
+            if (directoryMode !== 'direct') return;
+            peopleList.innerHTML = filtered.length ? filtered.map(c => `
+                <button class="comm-person ${selectedContact && selectedContact.id === c.id ? 'active' : ''}" data-contact-id="${c.id}">
+                    <div class="relative">
+                        <div class="comm-avatar">${initials(c.fullName)}</div>
+                        <span class="presence-dot ${c.online ? 'online' : ''}"></span>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="text-sm font-bold truncate">${escapeHtml(c.fullName)}</span>
+                            ${c.unreadCount > 0 ? `<span class="unread-badge">${c.unreadCount}</span>` : ''}
+                        </div>
+                        <div class="item-meta">
+                            <span class="truncate">${escapeHtml(c.lastMessage || c.department || 'Unassigned')}</span>
+                            ${c.lastMessageAt ? `<span class="time">${formatShortTime(c.lastMessageAt)}</span>` : ''}
+                        </div>
+                    </div>
+                </button>
+            `).join('') : `<div class="empty-state"><span class="material-icons-round">person_search</span><p>No employees found</p></div>`;
+            document.querySelectorAll('[data-contact-id]').forEach(btn => {
+                btn.addEventListener('click', () => selectContact(Number(btn.dataset.contactId)));
+            });
         }
 
+        // ── render groups ──
+        function renderGroups() {
+            const search = peopleSearch.value.toLowerCase();
+            let filtered = [...groups].sort((a, b) => new Date(b.lastMessageAt || 0) - new Date(a.lastMessageAt || 0))
+                .filter(g => !search || g.name.toLowerCase().includes(search) || (g.department || '').toLowerCase().includes(search));
+            if (directoryMode !== 'groups') return;
+            groupList.innerHTML = filtered.length ? filtered.map(g => `
+                <button class="comm-group ${selectedGroup && selectedGroup.id === g.id ? 'active' : ''}" data-group-id="${g.id}">
+                    <div class="comm-avatar bg-emerald-600">${initials(g.name)}</div>
+                    <div class="min-w-0 flex-1">
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="text-sm font-bold truncate">${escapeHtml(g.name)}</span>
+                            ${g.lastMessageAt ? `<span class="time text-xs text-muted">${formatShortTime(g.lastMessageAt)}</span>` : ''}
+                        </div>
+                        <div class="item-meta">
+                            <span class="truncate">${escapeHtml(g.lastMessage || (g.memberCount || 0) + ' members')}</span>
+                        </div>
+                    </div>
+                </button>
+            `).join('') : `<div class="empty-state"><span class="material-icons-round">groups</span><p>No groups yet</p></div>`;
+            document.querySelectorAll('[data-group-id]').forEach(btn => {
+                btn.addEventListener('click', () => selectGroup(Number(btn.dataset.groupId)));
+            });
+        }
+
+        function updateOnlineCount() {
+            onlineCount.textContent = contacts.filter(c => c.online).length;
+        }
+
+        // ── select contact ──
         async function selectContact(contactId) {
-            selectedContact = contacts.find(contact => contact.id === contactId);
+            selectedContact = contacts.find(c => c.id === contactId);
             if (!selectedContact) return;
             selectedGroup = null;
             selectedContact.unreadCount = 0;
-            document.getElementById('chatAvatar').textContent = initials(selectedContact.fullName);
-            document.getElementById('chatName').textContent = selectedContact.fullName;
-            document.getElementById('chatStatus').textContent = `${selectedContact.online ? 'Online' : 'Offline'} - ${selectedContact.department || 'Unassigned'}`;
+            chatAvatar.textContent = initials(selectedContact.fullName);
+            chatName.textContent = selectedContact.fullName;
+            chatStatus.textContent = (selectedContact.online ? 'Online' : 'Offline') + ' · ' + (selectedContact.department || 'Unassigned');
             messageInput.disabled = false;
             sendMessageBtn.disabled = false;
             attachFileBtn.disabled = false;
             sendMessageBtn.classList.remove('opacity-50');
             renderPeople();
-            switchMobileTab('chat');
+            switchTab('chat');
 
-            const conversation = conversations.find(item => item.otherParticipant && item.otherParticipant.id === contactId)
+            const conv = conversations.find(c => c.otherParticipant && c.otherParticipant.id === contactId)
                 || (selectedContact.conversationId ? {id: selectedContact.conversationId} : null);
-            if (!conversation) {
-                messages.innerHTML = emptyChat();
+            if (!conv) {
+                messages.innerHTML = emptyState('chat_bubble', 'No messages yet', 'Send the first message to start the conversation.');
                 return;
             }
-            const history = await json(`/employee/communication/conversations/${conversation.id}/messages`);
-            renderMessages(history);
+            try {
+                const history = await json(`/employee/communication/conversations/${conv.id}/messages`);
+                renderMessages(history, false);
+            } catch { messages.innerHTML = emptyState('error', 'Could not load messages', 'Please try again later.'); }
         }
 
+        // ── select group ──
         async function selectGroup(groupId) {
-            selectedGroup = groups.find(group => group.id === groupId);
-            selectedContact = null;
+            selectedGroup = groups.find(g => g.id === groupId);
             if (!selectedGroup) return;
-            document.getElementById('chatAvatar').textContent = initials(selectedGroup.name);
-            document.getElementById('chatName').textContent = selectedGroup.name;
-            document.getElementById('chatStatus').textContent = `${selectedGroup.memberCount || 0} members - ${selectedGroup.department || 'All departments'}`;
+            selectedContact = null;
+            chatAvatar.textContent = initials(selectedGroup.name);
+            chatName.textContent = selectedGroup.name;
+            chatStatus.textContent = (selectedGroup.memberCount || 0) + ' members · ' + (selectedGroup.department || 'All departments');
             messageInput.disabled = false;
             sendMessageBtn.disabled = false;
             attachFileBtn.disabled = false;
@@ -351,69 +1174,41 @@
                 activeGroupSubscription = stompClient.subscribe(`/topic/chat-groups/${groupId}/messages`, handleIncomingGroupMessage);
             }
             renderGroups();
-            switchMobileTab('chat');
-            renderGroupMessages(await json(`/employee/communication/groups/${groupId}/messages`));
+            switchTab('chat');
+            try {
+                const history = await json(`/employee/communication/groups/${groupId}/messages`);
+                renderMessages(history, true);
+            } catch { messages.innerHTML = emptyState('error', 'Could not load group messages', 'Please try again later.'); }
         }
 
-        function renderGroupMessages(history) {
-            messages.innerHTML = history.length ? history.map(groupMessageTemplate).join('') : emptyGroupChat();
+        function renderMessages(history, isGroup) {
+            if (!history || !history.length) {
+                messages.innerHTML = emptyState('chat_bubble', 'No messages yet', 'Start the conversation.');
+                return;
+            }
+            messages.innerHTML = history.map(msg => {
+                const mine = msg.senderId === currentEmployeeId;
+                return `
+                    <div class="message-row ${mine ? 'mine' : ''}">
+                        <div class="message-bubble">
+                            ${!mine && isGroup ? `<div class="message-author">${escapeHtml(msg.senderName)}</div>` : ''}
+                            ${msg.content ? `<div>${escapeHtml(msg.content)}</div>` : ''}
+                            ${attachmentList(msg.attachments || [])}
+                            <div class="message-meta">${formatTime(msg.createdAt)}${mine && msg.deliveredAt ? ' · Delivered' : ''}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
             messages.scrollTop = messages.scrollHeight;
         }
 
-        function groupMessageTemplate(message) {
-            const mine = message.senderId === currentEmployeeId;
-            return `
-                <div class="message-row ${mine ? 'mine' : ''}">
-                    <div class="message-bubble">
-                        ${mine ? '' : `<div class="text-[11px] font-bold mb-1 ${mine ? '' : 'text-gray-500'}">${escapeHtml(message.senderName)}</div>`}
-                        ${message.content ? `<div>${escapeHtml(message.content)}</div>` : ''}
-                        ${attachmentList(message.attachments || [])}
-                        <div class="message-meta">${formatTime(message.createdAt)}</div>
-                    </div>
-                </div>`;
+        function emptyState(icon, title, desc) {
+            return `<div class="empty-state"><span class="material-icons-round">${icon}</span><p>${title}</p><p>${desc}</p></div>`;
         }
 
-        function emptyGroupChat() {
-            return `<div class="h-full flex flex-col items-center justify-center text-center text-gray-500">
-                <span class="material-icons-round text-5xl text-gray-300 mb-3">groups</span>
-                <p class="text-sm font-semibold">No group messages yet</p>
-                <p class="text-xs mt-1">Start the discussion with a short update.</p>
-            </div>`;
-        }
-
-        function renderMessages(history) {
-            messages.innerHTML = history.length ? history.map(messageTemplate).join('') : emptyChat();
-            messages.scrollTop = messages.scrollHeight;
-        }
-
-        function messageTemplate(message) {
-            const mine = message.senderId === currentEmployeeId;
-            return `
-                <div class="message-row ${mine ? 'mine' : ''}">
-                    <div class="message-bubble">
-                        ${message.content ? `<div>${escapeHtml(message.content)}</div>` : ''}
-                        ${attachmentList(message.attachments || [])}
-                        <div class="message-meta">${formatTime(message.createdAt)}${mine && message.deliveredAt ? ' - Delivered' : ''}</div>
-                    </div>
-                </div>`;
-        }
-
-        function emptyChat() {
-            return `<div class="h-full flex flex-col items-center justify-center text-center text-gray-500">
-                <span class="material-icons-round text-5xl text-gray-300 mb-3">chat_bubble</span>
-                <p class="text-sm font-semibold">No messages yet</p>
-                <p class="text-xs mt-1">Send the first message to start the conversation.</p>
-            </div>`;
-        }
-
-        attachFileBtn.addEventListener('click', () => messageFiles.click());
-        messageFiles.addEventListener('change', () => {
-            selectedFiles = Array.from(messageFiles.files || []).slice(0, 5);
-            renderSelectedFiles();
-        });
-
-        document.getElementById('messageForm').addEventListener('submit', async event => {
-            event.preventDefault();
+        // ── send message ──
+        document.getElementById('messageForm').addEventListener('submit', async e => {
+            e.preventDefault();
             const content = messageInput.value.trim();
             if (!content && selectedFiles.length === 0) return;
             if (selectedFiles.length > 0) {
@@ -432,182 +1227,119 @@
         async function sendMessageWithAttachments(content) {
             const form = new FormData();
             form.append('content', content);
-            selectedFiles.forEach(file => form.append('files', file));
-            const url = selectedGroup
+            selectedFiles.forEach(f => form.append('files', f));
+            let url = selectedGroup
                 ? `/employee/communication/groups/${selectedGroup.id}/messages`
                 : '/employee/communication/messages';
             if (!selectedGroup && selectedContact) form.append('recipientEmployeeId', selectedContact.id);
-            const response = await fetch(url, {method:'POST', body:form});
-            if (!response.ok) {
-                alert('Message could not be sent: ' + await response.text());
-                return;
+            try {
+                const res = await fetch(url, {method:'POST', body:form});
+                if (!res.ok) throw new Error(await res.text());
+                messageInput.value = '';
+                selectedFiles = [];
+                messageFiles.value = '';
+                renderSelectedFiles();
+            } catch (err) {
+                alert('Failed to send: ' + err.message);
             }
-            messageInput.value = '';
-            selectedFiles = [];
-            messageFiles.value = '';
-            renderSelectedFiles();
         }
+
+        // ── file attachments ──
+        attachFileBtn.addEventListener('click', () => messageFiles.click());
+        messageFiles.addEventListener('change', () => {
+            selectedFiles = Array.from(messageFiles.files || []).slice(0, 5);
+            renderSelectedFiles();
+        });
 
         function renderSelectedFiles() {
             attachmentTray.classList.toggle('hidden', selectedFiles.length === 0);
-            attachmentTray.innerHTML = selectedFiles.map((file, index) => `
+            attachmentTray.innerHTML = selectedFiles.map((f, i) => `
                 <span class="attachment-pill">
                     <span class="material-icons-round text-sm">attach_file</span>
-                    <span class="truncate">${escapeHtml(file.name)}</span>
-                    <button type="button" onclick="removeSelectedFile(${index})" title="Remove"><span class="material-icons-round text-sm">close</span></button>
+                    <span class="truncate">${escapeHtml(f.name)}</span>
+                    <button type="button" onclick="removeSelectedFile(${i})"><span class="material-icons-round text-sm">close</span></button>
                 </span>
             `).join('');
         }
 
         function removeSelectedFile(index) {
-            selectedFiles = selectedFiles.filter((_, fileIndex) => fileIndex !== index);
+            selectedFiles = selectedFiles.filter((_, i) => i !== index);
             renderSelectedFiles();
         }
 
-        function attachmentList(attachments) {
-            if (!attachments.length) return '';
-            return `<div class="attachment-list">${attachments.map(attachment => `
-                <a class="attachment-link" href="${attachment.downloadUrl}" target="_blank">
-                    <span class="material-icons-round text-sm">${attachmentIcon(attachment.contentType)}</span>
-                    <span class="truncate">${escapeHtml(attachment.originalFilename)}</span>
-                    <span class="ml-auto text-[11px]">${formatFileSize(attachment.fileSize)}</span>
-                </a>
-            `).join('')}</div>`;
-        }
-
-        function attachmentIcon(contentType) {
-            const type = (contentType || '').toLowerCase();
-            if (type.includes('image')) return 'image';
-            if (type.includes('pdf')) return 'picture_as_pdf';
-            return 'description';
-        }
-
-        function formatFileSize(size) {
-            if (!size) return '';
-            if (size < 1024 * 1024) return Math.round(size / 1024) + ' KB';
-            return (size / 1024 / 1024).toFixed(1) + ' MB';
-        }
-
-        function handleIncomingMessage(message) {
-            const payload = JSON.parse(message.body);
-            const otherId = payload.senderId === currentEmployeeId ? payload.recipientId : payload.senderId;
-            const contact = contacts.find(item => item.id === otherId);
-            if (contact && (!selectedContact || selectedContact.id !== otherId)) {
-                contact.unreadCount = (contact.unreadCount || 0) + 1;
-            }
-            upsertConversation(payload, contact);
-            if (selectedContact && selectedContact.id === otherId) {
-                if (messages.querySelector('.text-center')) messages.innerHTML = '';
-                messages.insertAdjacentHTML('beforeend', messageTemplate(payload));
-                messages.scrollTop = messages.scrollHeight;
-            }
-            renderPeople();
-        }
-
-        function handleIncomingGroupMessage(message) {
-            const payload = JSON.parse(message.body);
-            updateGroupFromMessage(payload);
-            if (selectedGroup && selectedGroup.id === payload.groupId) {
-                if (messages.querySelector('.text-center')) messages.innerHTML = '';
-                messages.insertAdjacentHTML('beforeend', groupMessageTemplate(payload));
-                messages.scrollTop = messages.scrollHeight;
-            }
-            renderGroups();
-        }
-
-        function updateGroupFromMessage(message) {
-            const group = groups.find(item => item.id === message.groupId);
-            if (!group) return;
-            group.lastMessage = message.content;
-            group.lastMessageAt = message.createdAt;
-        }
-
-        function handleGroupSummary(message) {
-            const group = JSON.parse(message.body);
-            groups = [group, ...groups.filter(item => item.id !== group.id)];
-            if (selectedGroup && selectedGroup.id === group.id) selectedGroup = group;
-            renderGroups();
-        }
-
-        function upsertConversation(message, contact) {
-            if (!contact) return;
-            contact.conversationId = message.conversationId;
-            contact.lastMessage = message.content;
-            contact.lastMessageAt = message.createdAt;
-            contact.hasConversation = true;
-            const existing = conversations.find(item => item.id === message.conversationId);
-            if (existing) {
-                existing.lastMessage = message;
-                existing.updatedAt = message.createdAt;
-            } else {
-                conversations.unshift({id: message.conversationId, otherParticipant: contact, lastMessage: message, updatedAt: message.createdAt});
-            }
-            conversations.sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime());
-        }
-
+        // ── broadcasts ──
         function renderBroadcasts() {
             const list = document.getElementById('broadcastList');
-            list.innerHTML = broadcasts.length ? broadcasts.map(item => `
-                <button type="button" class="broadcast-item ${selectedBroadcast && selectedBroadcast.id === item.id ? 'active' : ''}" data-broadcast-id="${item.id}">
+            list.innerHTML = broadcasts.length ? broadcasts.map(b => `
+                <button class="broadcast-item ${selectedBroadcast && selectedBroadcast.id === b.id ? 'active' : ''}" data-broadcast-id="${b.id}">
                     <div class="flex items-start justify-between gap-3">
                         <div class="min-w-0">
-                            <p class="text-sm font-bold text-gray-900 dark:text-white truncate">${escapeHtml(item.title)}</p>
-                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">${formatTime(item.createdAt)} - ${item.commentCount || 0} comments</p>
+                            <div class="title truncate">${escapeHtml(b.title)}</div>
+                            <div class="meta">${formatTime(b.createdAt)} · ${b.commentCount || 0} comments</div>
                         </div>
-                        ${item.read ? '' : '<span class="broadcast-unread mt-1"></span>'}
+                        ${b.read ? '' : '<span class="broadcast-unread mt-1"></span>'}
                     </div>
                 </button>
-            `).join('') : `<div class="p-8 text-center text-sm text-gray-500"><span class="material-icons-round block text-4xl mb-2 text-gray-300">campaign</span>No broadcasts yet.</div>`;
-            document.querySelectorAll('[data-broadcast-id]').forEach(button => {
-                button.addEventListener('click', () => selectBroadcast(Number(button.dataset.broadcastId)));
+            `).join('') : `<div class="empty-state"><span class="material-icons-round">campaign</span><p>No broadcasts yet</p></div>`;
+            document.querySelectorAll('[data-broadcast-id]').forEach(btn => {
+                btn.addEventListener('click', () => selectBroadcast(Number(btn.dataset.broadcastId)));
             });
         }
 
         async function selectBroadcast(id) {
-            selectedBroadcast = broadcasts.find(item => item.id === id);
+            selectedBroadcast = broadcasts.find(b => b.id === id);
             if (!selectedBroadcast) return;
             await fetch(`/employee/communication/broadcasts/${id}/read`, {method:'POST'});
             selectedBroadcast.read = true;
             renderBroadcasts();
-            switchMobileTab('broadcasts');
+            switchTab('broadcasts');
             if (activeCommentSubscription) activeCommentSubscription.unsubscribe();
             if (stompClient && stompClient.connected) {
                 activeCommentSubscription = stompClient.subscribe(`/topic/hr-broadcasts/${id}/comments`, handleIncomingComment);
             }
-            const comments = await json(`/employee/communication/broadcasts/${id}/comments`);
-            renderBroadcastDetail(comments);
+            try {
+                const comments = await json(`/employee/communication/broadcasts/${id}/comments`);
+                renderBroadcastDetail(comments);
+            } catch { renderBroadcastDetail([]); }
         }
 
         function renderBroadcastDetail(comments) {
             const detail = document.getElementById('broadcastDetail');
             detail.innerHTML = `
-                <div class="p-4 border-b border-gray-200 dark:border-gray-700">
-                    <h3 class="text-lg font-bold text-gray-900 dark:text-white">${escapeHtml(selectedBroadcast.title)}</h3>
-                    <p class="text-xs text-gray-500 mt-1">${formatTime(selectedBroadcast.createdAt)} by ${escapeHtml(selectedBroadcast.createdByName || 'HR')}</p>
-                    <p class="mt-3 text-sm leading-6 text-gray-700 dark:text-gray-200 whitespace-pre-wrap">${escapeHtml(selectedBroadcast.content)}</p>
+                <div class="detail-header">
+                    <h3 class="text-sm font-bold">${escapeHtml(selectedBroadcast.title)}</h3>
+                    <p class="text-xs text-muted">${formatTime(selectedBroadcast.createdAt)} by ${escapeHtml(selectedBroadcast.createdByName || 'HR')}</p>
+                    <div class="content mt-3">${escapeHtml(selectedBroadcast.content)}</div>
                     ${attachmentList(selectedBroadcast.attachments || [])}
                 </div>
-                <div id="commentList" class="flex-1 overflow-y-auto p-4 space-y-3">${comments.length ? comments.map(commentTemplate).join('') : '<p class="text-sm text-gray-500">No comments yet.</p>'}</div>
-                <form id="commentForm" class="border-t border-gray-200 dark:border-gray-700 p-3 flex items-end gap-2">
-                    <textarea id="commentInput" class="comm-input min-h-[44px] max-h-28" rows="1" maxlength="2000" placeholder="Add a comment"></textarea>
-                    <button class="comm-icon-btn" type="submit" title="Send comment"><span class="material-icons-round">send</span></button>
-                </form>`;
-            document.getElementById('commentForm').addEventListener('submit', submitComment);
-        }
-
-        function commentTemplate(comment) {
-            return `<div class="comment-card">
-                <div class="flex items-center justify-between gap-2">
-                    <p class="text-sm font-bold">${escapeHtml(comment.employeeName)}</p>
-                    <span class="text-[11px] text-gray-500">${formatTime(comment.createdAt)}</span>
+                <div id="commentList" class="detail-body">
+                    ${comments && comments.length ? comments.map(c => `
+                        <div class="comment-card">
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="comment-author">${escapeHtml(c.employeeName)}</span>
+                                <span class="comment-time">${formatTime(c.createdAt)}</span>
+                            </div>
+                            <div class="comment-text">${escapeHtml(c.content)}</div>
+                        </div>
+                    `).join('') : '<p class="text-xs text-muted">No comments yet.</p>'}
                 </div>
-                <p class="text-xs text-gray-500 mb-2">${escapeHtml(comment.department || 'Unassigned')}</p>
-                <p class="text-sm text-gray-700 dark:text-gray-200 whitespace-pre-wrap">${escapeHtml(comment.content)}</p>
-            </div>`;
+                <div class="broadcast-composer">
+                    <form id="commentForm">
+                        <div class="input-wrap">
+                            <textarea id="commentInput" rows="1" maxlength="2000" placeholder="Add a comment..."></textarea>
+                            <button type="submit"><span class="material-icons-round" style="font-size:18px;">send</span></button>
+                        </div>
+                    </form>
+                </div>
+            `;
+            document.getElementById('commentForm').addEventListener('submit', submitComment);
+            // scroll to bottom
+            const list = document.getElementById('commentList');
+            if (list) list.scrollTop = list.scrollHeight;
         }
 
-        function submitComment(event) {
-            event.preventDefault();
+        function submitComment(e) {
+            e.preventDefault();
             const input = document.getElementById('commentInput');
             const content = input.value.trim();
             if (!selectedBroadcast || !content || !stompClient || !stompClient.connected) return;
@@ -624,31 +1356,19 @@
             const list = document.getElementById('commentList');
             if (!list) return;
             if (list.textContent.includes('No comments yet.')) list.innerHTML = '';
-            list.insertAdjacentHTML('beforeend', commentTemplate(comment));
+            list.insertAdjacentHTML('beforeend', `
+                <div class="comment-card">
+                    <div class="flex items-center justify-between gap-2">
+                        <span class="comment-author">${escapeHtml(comment.employeeName)}</span>
+                        <span class="comment-time">${formatTime(comment.createdAt)}</span>
+                    </div>
+                    <div class="comment-text">${escapeHtml(comment.content)}</div>
+                </div>
+            `);
             list.scrollTop = list.scrollHeight;
         }
 
-        function handleBroadcast(message) {
-            const broadcast = JSON.parse(message.body);
-            const existing = broadcasts.find(item => item.id === broadcast.id);
-            const merged = existing ? {...broadcast, read: existing.read} : broadcast;
-            broadcasts = [merged, ...broadcasts.filter(item => item.id !== broadcast.id)];
-            if (selectedBroadcast && selectedBroadcast.id === merged.id) {
-                selectedBroadcast = merged;
-            }
-            renderBroadcasts();
-        }
-
-        function handlePresence(message) {
-            const presence = JSON.parse(message.body);
-            contacts = contacts.map(contact => contact.id === presence.employeeId ? {...contact, online: presence.online} : contact);
-            if (selectedContact && selectedContact.id === presence.employeeId) {
-                selectedContact.online = presence.online;
-                document.getElementById('chatStatus').textContent = `${presence.online ? 'Online' : 'Offline'} - ${selectedContact.department || 'Unassigned'}`;
-            }
-            renderPeople();
-        }
-
+        // ── WebSocket ──
         function connectSocket() {
             stompClient = new StompJs.Client({
                 webSocketFactory: () => new SockJS('/ws'),
@@ -667,98 +1387,224 @@
             stompClient.activate();
         }
 
-        function switchDirectoryMode(mode) {
-            directoryMode = mode;
-            document.querySelectorAll('[data-directory-mode]').forEach(button => button.classList.toggle('active', button.dataset.directoryMode === mode));
-            document.getElementById('directoryTitle').textContent = mode === 'groups' ? 'Groups' : 'People';
-            document.getElementById('peopleList').classList.toggle('hidden', mode !== 'direct');
-            document.getElementById('groupList').classList.toggle('hidden', mode !== 'groups');
+        function handleIncomingMessage(message) {
+            const payload = JSON.parse(message.body);
+            const otherId = payload.senderId === currentEmployeeId ? payload.recipientId : payload.senderId;
+            const contact = contacts.find(c => c.id === otherId);
+            if (contact && (!selectedContact || selectedContact.id !== otherId)) {
+                contact.unreadCount = (contact.unreadCount || 0) + 1;
+            }
+            upsertConversation(payload, contact);
+            if (selectedContact && selectedContact.id === otherId) {
+                if (messages.querySelector('.empty-state')) messages.innerHTML = '';
+                messages.insertAdjacentHTML('beforeend', `
+                    <div class="message-row mine">
+                        <div class="message-bubble">
+                            ${payload.content ? `<div>${escapeHtml(payload.content)}</div>` : ''}
+                            ${attachmentList(payload.attachments || [])}
+                            <div class="message-meta">${formatTime(payload.createdAt)} · Delivered</div>
+                        </div>
+                    </div>
+                `);
+                messages.scrollTop = messages.scrollHeight;
+            }
             renderPeople();
+            updateOnlineCount();
+        }
+
+        function handleIncomingGroupMessage(message) {
+            const payload = JSON.parse(message.body);
+            updateGroupFromMessage(payload);
+            if (selectedGroup && selectedGroup.id === payload.groupId) {
+                if (messages.querySelector('.empty-state')) messages.innerHTML = '';
+                const mine = payload.senderId === currentEmployeeId;
+                messages.insertAdjacentHTML('beforeend', `
+                    <div class="message-row ${mine ? 'mine' : ''}">
+                        <div class="message-bubble">
+                            ${!mine ? `<div class="message-author">${escapeHtml(payload.senderName)}</div>` : ''}
+                            ${payload.content ? `<div>${escapeHtml(payload.content)}</div>` : ''}
+                            ${attachmentList(payload.attachments || [])}
+                            <div class="message-meta">${formatTime(payload.createdAt)}</div>
+                        </div>
+                    </div>
+                `);
+                messages.scrollTop = messages.scrollHeight;
+            }
             renderGroups();
         }
 
+        function updateGroupFromMessage(message) {
+            const group = groups.find(g => g.id === message.groupId);
+            if (!group) return;
+            group.lastMessage = message.content;
+            group.lastMessageAt = message.createdAt;
+        }
+
+        function handleGroupSummary(message) {
+            const group = JSON.parse(message.body);
+            groups = [group, ...groups.filter(g => g.id !== group.id)];
+            if (selectedGroup && selectedGroup.id === group.id) selectedGroup = group;
+            renderGroups();
+        }
+
+        function handlePresence(message) {
+            const presence = JSON.parse(message.body);
+            contacts = contacts.map(c => c.id === presence.employeeId ? {...c, online: presence.online} : c);
+            if (selectedContact && selectedContact.id === presence.employeeId) {
+                selectedContact.online = presence.online;
+                chatStatus.textContent = (presence.online ? 'Online' : 'Offline') + ' · ' + (selectedContact.department || 'Unassigned');
+            }
+            renderPeople();
+            updateOnlineCount();
+        }
+
+        function handleBroadcast(message) {
+            const broadcast = JSON.parse(message.body);
+            const existing = broadcasts.find(b => b.id === broadcast.id);
+            const merged = existing ? {...broadcast, read: existing.read} : broadcast;
+            broadcasts = [merged, ...broadcasts.filter(b => b.id !== broadcast.id)];
+            if (selectedBroadcast && selectedBroadcast.id === merged.id) {
+                selectedBroadcast = merged;
+            }
+            renderBroadcasts();
+        }
+
+        function upsertConversation(message, contact) {
+            if (!contact) return;
+            contact.conversationId = message.conversationId;
+            contact.lastMessage = message.content;
+            contact.lastMessageAt = message.createdAt;
+            contact.hasConversation = true;
+            const existing = conversations.find(c => c.id === message.conversationId);
+            if (existing) {
+                existing.lastMessage = message;
+                existing.updatedAt = message.createdAt;
+            } else {
+                conversations.unshift({id: message.conversationId, otherParticipant: contact, lastMessage: message, updatedAt: message.createdAt});
+            }
+            conversations.sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
+        }
+
+        // ── directory toggle ──
+        document.querySelectorAll('[data-directory-mode]').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('[data-directory-mode]').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                directoryMode = this.dataset.directoryMode;
+                directoryTitle.textContent = directoryMode === 'groups' ? 'Groups' : 'People';
+                peopleList.classList.toggle('hidden', directoryMode !== 'direct');
+                groupList.classList.toggle('hidden', directoryMode !== 'groups');
+                if (directoryMode === 'direct') renderPeople();
+                else renderGroups();
+            });
+        });
+
+        // ── group modal ──
         async function openGroupModal() {
             if (!canCreateGroups) return;
-            document.getElementById('groupModal').classList.remove('hidden');
-            document.getElementById('groupModal').classList.add('flex');
-            document.getElementById('groupStatus').textContent = 'Loading available members...';
-            availableMembers = await json('/employee/communication/groups/available-members');
-            renderMemberOptions();
-            document.getElementById('groupStatus').textContent = '';
+            document.getElementById('groupModal').classList.add('open');
+            document.getElementById('groupStatus').textContent = 'Loading members...';
+            try {
+                availableMembers = await json('/employee/communication/groups/available-members');
+                renderMemberOptions();
+                document.getElementById('groupStatus').textContent = '';
+            } catch { document.getElementById('groupStatus').textContent = 'Could not load members.'; }
         }
 
         function closeGroupModal() {
-            document.getElementById('groupModal').classList.add('hidden');
-            document.getElementById('groupModal').classList.remove('flex');
+            document.getElementById('groupModal').classList.remove('open');
             document.getElementById('groupForm').reset();
+            document.getElementById('memberOptions').innerHTML = '';
         }
 
         function renderMemberOptions() {
             const search = document.getElementById('memberSearch').value.toLowerCase();
-            const filtered = availableMembers.filter(member => !search || member.fullName.toLowerCase().includes(search) || (member.department || '').toLowerCase().includes(search));
-            document.getElementById('memberOptions').innerHTML = filtered.map(member => `
+            const filtered = availableMembers.filter(m => !search || m.fullName.toLowerCase().includes(search) || (m.department || '').toLowerCase().includes(search));
+            document.getElementById('memberOptions').innerHTML = filtered.map(m => `
                 <label class="flex items-center gap-3 p-3 border-b border-gray-100 dark:border-gray-700">
-                    <input type="checkbox" value="${member.id}" class="group-member-checkbox rounded border-gray-300">
-                    <span class="comm-avatar w-9 h-9 text-xs">${initials(member.fullName)}</span>
-                    <span class="min-w-0"><span class="block text-sm font-bold truncate">${escapeHtml(member.fullName)}</span><span class="block text-xs text-gray-500 truncate">${escapeHtml(member.department || 'Unassigned')}</span></span>
+                    <input type="checkbox" value="${m.id}" class="group-member-checkbox rounded border-gray-300">
+                    <span class="comm-avatar w-9 h-9 text-xs">${initials(m.fullName)}</span>
+                    <span class="min-w-0"><span class="block text-sm font-bold truncate">${escapeHtml(m.fullName)}</span><span class="block text-xs text-gray-500 truncate">${escapeHtml(m.department || 'Unassigned')}</span></span>
                 </label>
             `).join('');
         }
 
-        function switchMobileTab(tab) {
-            document.querySelectorAll('.mobile-tab').forEach(button => button.classList.toggle('active', button.dataset.tab === tab));
-            document.getElementById('peoplePanel').classList.toggle('mobile-active', tab === 'people');
-            document.getElementById('chatPanel').classList.toggle('mobile-active', tab === 'chat');
-            document.getElementById('broadcastPanel').classList.toggle('mobile-active', tab === 'broadcasts');
-        }
-
-        function escapeHtml(value) {
-            const div = document.createElement('div');
-            div.textContent = value == null ? '' : String(value);
-            return div.innerHTML;
-        }
-
-        document.getElementById('peopleSearch').addEventListener('input', renderPeople);
-        document.getElementById('peopleSearch').addEventListener('input', renderGroups);
-        document.querySelectorAll('[data-directory-mode]').forEach(button => button.addEventListener('click', () => switchDirectoryMode(button.dataset.directoryMode)));
         document.getElementById('createGroupBtn')?.addEventListener('click', openGroupModal);
         document.getElementById('closeGroupModal')?.addEventListener('click', closeGroupModal);
         document.getElementById('cancelGroup')?.addEventListener('click', closeGroupModal);
         document.getElementById('memberSearch')?.addEventListener('input', renderMemberOptions);
-        document.getElementById('groupForm')?.addEventListener('submit', async event => {
-            event.preventDefault();
-            const memberEmployeeIds = [...document.querySelectorAll('.group-member-checkbox:checked')].map(input => Number(input.value));
+
+        document.getElementById('groupForm')?.addEventListener('submit', async e => {
+            e.preventDefault();
+            const memberIds = [...document.querySelectorAll('.group-member-checkbox:checked')].map(cb => Number(cb.value));
             try {
                 const group = await json('/employee/communication/groups', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
+                    method:'POST',
+                    headers:{'Content-Type':'application/json'},
+                    body:JSON.stringify({
                         name: document.getElementById('groupName').value,
                         description: document.getElementById('groupDescription').value,
-                        memberEmployeeIds
+                        memberEmployeeIds: memberIds
                     })
                 });
-                groups = [group, ...groups.filter(item => item.id !== group.id)];
+                groups = [group, ...groups.filter(g => g.id !== group.id)];
                 closeGroupModal();
-                switchDirectoryMode('groups');
+                // switch to groups view and select the new group
+                document.querySelector('[data-directory-mode="groups"]').click();
                 selectGroup(group.id);
-            } catch (error) {
-                document.getElementById('groupStatus').textContent = 'Group could not be created. Check member scope and try again.';
+            } catch (err) {
+                document.getElementById('groupStatus').textContent = 'Failed to create group: ' + err.message;
             }
         });
-        document.getElementById('onlineFilter')?.addEventListener('click', () => {
+
+        // ── online filter ──
+        document.getElementById('onlineFilter')?.addEventListener('click', function() {
             onlineOnly = !onlineOnly;
-            document.getElementById('onlineFilter').classList.toggle('bg-blue-50', onlineOnly);
+            this.classList.toggle('bg-blue-50', onlineOnly);
             renderPeople();
         });
-        document.querySelectorAll('.mobile-tab').forEach(button => button.addEventListener('click', () => switchMobileTab(button.dataset.tab)));
-        document.querySelectorAll('[data-close-broadcasts]').forEach(button => button.addEventListener('click', () => switchMobileTab('chat')));
 
+        // ── mobile tab switching ──
+        function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.mobile-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+            document.getElementById('peoplePanel').classList.toggle('mobile-active', tab === 'people');
+            document.getElementById('chatPanel').classList.toggle('mobile-active', tab === 'chat');
+            const bp = document.getElementById('broadcastPanel');
+            if (tab === 'broadcasts') {
+                bp.classList.add('mobile-active');
+            } else {
+                bp.classList.remove('mobile-active');
+            }
+        }
+
+        document.querySelectorAll('.mobile-tab').forEach(btn => {
+            btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+        });
+
+        document.querySelectorAll('[data-close-broadcasts]').forEach(btn => {
+            btn.addEventListener('click', () => switchTab('chat'));
+        });
+
+        // ── search input: trigger both renders ──
+        peopleSearch.addEventListener('input', () => {
+            if (directoryMode === 'direct') renderPeople();
+            else renderGroups();
+        });
+
+        // ── attach file button enable/disable ──
+        // The inputs are enabled/disabled based on selectedContact/selectedGroup
+
+        // ── remove selected file (global) ──
+        window.removeSelectedFile = removeSelectedFile;
+
+        // ── init ──
         document.addEventListener('DOMContentLoaded', async () => {
             await loadInitialData();
             connectSocket();
         });
     </script>
+
 </main>
 </body>
 </html>
