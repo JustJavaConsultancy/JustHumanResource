@@ -1,0 +1,2 @@
+package com.justjava.humanresource.employeeexit.repository; import com.justjava.humanresource.employeeexit.entity.EmployeeExitDocument; import com.justjava.humanresource.employeeexit.enums.ExitDocumentType; import org.springframework.data.jpa.repository.JpaRepository; import java.util.List;
+public interface EmployeeExitDocumentRepository extends JpaRepository<EmployeeExitDocument,Long>{List<EmployeeExitDocument> findByExitCaseIdOrderByUploadedAtDesc(Long id);boolean existsByExitCaseIdAndDocumentType(Long id,ExitDocumentType type);}

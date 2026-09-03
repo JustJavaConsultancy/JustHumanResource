@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout}">
+<head><title>Employee Exit</title></head>
+<body>
+<main layout:fragment="content" class="space-y-6">
+    <div class="flex justify-between items-start">
+        <div>
+            <a href="/employee-exits" class="text-sm text-primary-600">Back to employee exits</a>
+            <h2 class="text-2xl font-bold mt-2" th:text="${exit.exitNumber}">EXIT</h2>
+            <p class="text-gray-500" th:text="${employee.fullName + ' - ' + exit.exitType}">Employee</p>
+        </div>
+        <span class="badge badge-info" th:text="${exit.status}">STATUS</span>
+    </div>
+
+    <div class="grid lg:grid-cols-3 gap-6">
+        <section class="lg:col-span-2 space-y-6">
+            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+                <h3 class="font-bold mb-4">Exit summary</h3>
+                <div class="grid sm:grid-cols-3 gap-4 text-sm">
+                    <div><p class="text-gray-400">Reason</p><p th:text="${exit.reasonCode}">Reason</p></div>
+                    <div><p class="text-gray-400">Notice date</p><p th:text="${exit.noticeDate}">Date</p></div>
+                    <div><p class="text-gray-400">Last working date</p><p th:text="${exit.effectiveExitDate ?: exit.proposedLastWorkingDate}">Date</p></div>
+                </div>
+                <form th:if="${exit.status.name() == 'DRAFT'}" method="post" th:action="@{/employee-exits/{id}/submit(id=${exit.id})}" class="mt-5">
+                    <button class="btn-primary">Submit for approval</button>
+                </form>
+            </div>
+
+            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold">Readiness</h3>
+                    <span class="badge" th:classappend="${readiness.ready()} ? ' badge-success' : ' badge-warning'" th:text="${readiness.ready()} ? 'Ready' : 'Blocked'">Status</span>
+                </div>
+                <ul th:if="${!#lists.isEmpty(readiness.blockers())}" class="space-y-2 text-sm">
+                    <li th:each="b:${readiness.blockers()}" class="p-3 rounded-lg bg-amber-50 text-amber-900">
+                        <strong th:text="${b.category()}">CATEGORY</strong>
+                        <span th:text="${b.message()}">Blocker</span>
+                    </li>
+                </ul>
+                <p th:if="${#lists.isEmpty(readiness.blockers())}" class="text-sm text-gray-500">No readiness blockers.</p>
+            </div>
+
+            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+                <h3 class="font-bold mb-4">Clearance</h3>
+                <div th:each="c:${clearances}" class="flex justify-between py-3 border-b border-gray-100 dark:border-gray-700">
+                    <span th:text="${c.clearanceType}">Type</span>
+                    <span class="badge badge-info" th:text="${c.status}">Status</span>
+                </div>
+                <p th:if="${#lists.isEmpty(clearances)}" class="text-sm text-gray-500">Clearance starts after approval.</p>
+            </div>
+
+            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold">Company assets</h3>
+                    <form method="post" th:action="@{/employee-exits/{id}/assets/sync(id=${exit.id})}">
+                        <button class="btn-secondary">Sync assigned assets</button>
+                    </form>
+                </div>
+                <div th:each="a:${assets}" class="py-3 border-b border-gray-100 dark:border-gray-700">
+                    <div class="flex justify-between"><span th:text="${a.assetName}">Asset</span><span th:text="${a.disposition}">Pending</span></div>
+                </div>
+                <form method="post" th:action="@{/employee-exits/{id}/assets(id=${exit.id})}" class="grid sm:grid-cols-2 gap-3 mt-4">
+                    <input name="externalAssetId" class="form-input" placeholder="External asset ID" required>
+                    <input name="assetName" class="form-input" placeholder="Asset name" required>
+                    <input name="externalAssetCode" class="form-input" placeholder="Asset code">
+                    <input name="category" class="form-input" placeholder="Category">
+                    <button class="btn-primary sm:col-span-2">Add assigned asset</button>
+                </form>
+            </div>
+
+            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+                <h3 class="font-bold mb-4">Final settlement</h3>
+                <div th:each="s:${settlements}" class="flex flex-wrap justify-between gap-3 py-3 border-b">
+                    <span th:text="${'Version '+s.settlementVersion+' - '+s.status}">Version</span>
+                    <strong th:text="${s.currency+' '+s.netSettlement}">NGN 0</strong>
+                    <div class="flex gap-2">
+                        <a th:href="@{/employee-exits/{id}/settlements/{settlementId}/payroll-preview(id=${exit.id},settlementId=${s.id})}" class="btn-secondary">Payroll preview</a>
+                        <form th:if="${s.status.name() == 'IN_APPROVAL'}" method="post" th:action="@{/employee-exits/{id}/settlements/{settlementId}/approve(id=${exit.id},settlementId=${s.id})}">
+                            <button class="btn-primary">Approve</button>
+                        </form>
+                    </div>
+                </div>
+                <form method="post" th:action="@{/employee-exits/{id}/settlements/package(id=${exit.id})}" class="grid sm:grid-cols-3 gap-3 mt-4">
+                    <input type="number" step="0.01" min="0" name="monthlyBasic" class="form-input" placeholder="Monthly basic" required>
+                    <input type="number" step="0.01" min="0" name="leaveDays" class="form-input" placeholder="Leave days">
+                    <button class="btn-primary">Calculate from package rules</button>
+                </form>
+                <form method="post" th:action="@{/employee-exits/{id}/settlements(id=${exit.id})}" class="grid sm:grid-cols-2 gap-3 mt-4">
+                    <select name="lineType" class="form-input"><option value="SALARY">Salary</option><option value="LEAVE_ENCASHMENT">Leave encashment</option><option value="SEVERANCE">Severance</option><option value="NOTICE_PAY">Notice pay</option><option value="ASSET_RECOVERY">Asset recovery</option><option value="OTHER_DEDUCTION">Other deduction</option></select>
+                    <input name="description" class="form-input" placeholder="Description" required>
+                    <input type="number" step="0.01" min="0" name="amount" class="form-input" placeholder="Amount" required>
+                    <label class="flex items-center gap-2"><input type="checkbox" name="earning" value="true"> Earning</label>
+                    <button class="btn-primary sm:col-span-2">Calculate manual settlement</button>
+                </form>
+            </div>
+
+            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+                <h3 class="font-bold mb-4">Documents</h3>
+                <div th:each="d:${documents}" class="flex justify-between items-center py-3 border-b">
+                    <div><p class="font-medium" th:text="${d.documentType}">Document</p><p class="text-sm text-gray-500" th:text="${d.fileName}">file.pdf</p></div>
+                    <div class="flex gap-2">
+                        <a th:href="@{/employee-exits/{id}/documents/{docId}(id=${exit.id},docId=${d.id})}" class="btn-secondary">Download</a>
+                        <form method="post" th:action="@{/employee-exits/{id}/documents/{docId}/delete(id=${exit.id},docId=${d.id})}"><button class="btn-danger">Delete</button></form>
+                    </div>
+                </div>
+                <form method="post" enctype="multipart/form-data" th:action="@{/employee-exits/{id}/documents(id=${exit.id})}" class="grid sm:grid-cols-3 gap-3 mt-4">
+                    <select name="documentType" class="form-input" required><option th:each="t:${documentTypes}" th:value="${t}" th:text="${t}"></option></select>
+                    <select name="visibility" class="form-input"><option th:each="v:${documentVisibilities}" th:value="${v}" th:text="${v}"></option></select>
+                    <input type="file" name="file" class="form-input" required>
+                    <button class="btn-primary sm:col-span-3">Upload document</button>
+                </form>
+            </div>
+
+            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+                <h3 class="font-bold mb-4">Activity</h3>
+                <div th:each="a:${activities}" class="border-l-2 border-primary-200 pl-4 py-2"><p class="font-medium" th:text="${a.activityType}">Activity</p><p class="text-sm text-gray-500" th:text="${a.description}">Description</p></div>
+            </div>
+        </section>
+
+        <aside class="space-y-4">
+            <div th:each="t:${tasks}" class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5">
+                <h3 class="font-bold" th:text="${t.name}">Task</h3>
+                <form th:if="${t.taskDefinitionKey == 'exitApproval'}" method="post" th:action="@{/employee-exits/{id}/tasks/{task}/decision(id=${exit.id},task=${t.id})}" class="space-y-3 mt-4">
+                    <textarea name="comment" class="form-input" placeholder="Comments"></textarea>
+                    <div class="grid grid-cols-3 gap-2"><button name="decision" value="RETURN" class="p-2 bg-amber-100 rounded">Return</button><button name="decision" value="REJECT" class="p-2 bg-red-100 rounded">Reject</button><button name="decision" value="APPROVE" class="p-2 bg-emerald-600 text-white rounded">Approve</button></div>
+                </form>
+                <form th:if="${t.taskDefinitionKey == 'reviseExit'}" method="post" th:action="@{/employee-exits/{id}/tasks/{task}/revise(id=${exit.id},task=${t.id})}" class="grid gap-3 mt-4">
+                    <input name="reasonCode" th:value="${exit.reasonCode}" class="form-input" required>
+                    <input type="date" name="noticeDate" th:value="${exit.noticeDate}" class="form-input" required>
+                    <input type="date" name="proposedLastWorkingDate" th:value="${exit.proposedLastWorkingDate}" class="form-input" required>
+                    <input type="number" min="0" name="contractualNoticeDays" th:value="${exit.contractualNoticeDays}" class="form-input">
+                    <input type="number" min="0" name="noticeWaivedDays" th:value="${exit.noticeWaivedDays}" class="form-input">
+                    <textarea name="reasonDetails" th:text="${exit.reasonDetails}" class="form-input"></textarea>
+                    <button class="btn-primary">Save and return to approval</button>
+                </form>
+                <form th:if="${#strings.endsWith(t.taskDefinitionKey,'Clearance')}" method="post" th:action="@{/employee-exits/{id}/tasks/{task}/clearance(id=${exit.id},task=${t.id})}" class="space-y-3 mt-4">
+                    <textarea name="comments" class="form-input" placeholder="Clearance notes"></textarea>
+                    <select name="status" class="form-input"><option value="CLEARED">Cleared</option><option value="CLEARED_WITH_EXCEPTION">Cleared with exception</option><option value="WAIVED">Waived</option></select>
+                    <button class="btn-primary w-full">Complete clearance</button>
+                </form>
+            </div>
+        </aside>
+    </div>
+</main>
+</body>
+</html>

@@ -1,0 +1,3 @@
+package com.justjava.humanresource.employeeexit.dto;
+import com.justjava.humanresource.employeeexit.enums.ExitType; import com.justjava.humanresource.approval.enums.ApprovalRouteType; import jakarta.validation.constraints.*; import lombok.Data; import java.time.LocalDate;
+@Data public class CreateEmployeeExitCommand { @NotNull private Long employeeId; @NotNull private ExitType exitType; @NotBlank private String reasonCode; private String reasonDetails; @NotNull private LocalDate noticeDate; @NotNull private LocalDate proposedLastWorkingDate; @Min(0) private Integer contractualNoticeDays=0; @Min(0) private Integer noticeWaivedDays=0; private ApprovalRouteType approvalRouteType=ApprovalRouteType.LINE_MANAGER; private Long customApprovalPathId; }

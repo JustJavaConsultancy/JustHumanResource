@@ -1,0 +1,3 @@
+package com.justjava.humanresource.employeeexit.service;
+import com.justjava.humanresource.employeeexit.entity.ExitActivity; import com.justjava.humanresource.employeeexit.repository.ExitActivityRepository; import lombok.RequiredArgsConstructor; import org.springframework.stereotype.Service;
+@Service @RequiredArgsConstructor public class EmployeeExitActivityService { private final ExitActivityRepository repository; public void record(Long exitId,String type,String description,Long actorId,String taskId){ExitActivity a=new ExitActivity();a.setExitCaseId(exitId);a.setActivityType(type);a.setDescription(description);a.setActorEmployeeId(actorId);a.setFlowableTaskId(taskId);repository.save(a);} }

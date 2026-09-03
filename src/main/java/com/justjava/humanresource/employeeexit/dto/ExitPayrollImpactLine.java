@@ -1,0 +1,1 @@
+package com.justjava.humanresource.employeeexit.dto; import com.justjava.humanresource.payroll.enums.PayComponentType; import java.math.BigDecimal; public record ExitPayrollImpactLine(Long settlementLineId,String componentCode,String description,PayComponentType componentType,BigDecimal amount,boolean taxable){}

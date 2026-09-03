@@ -1,0 +1,4 @@
+package com.justjava.humanresource.employeeexit.entity;
+import com.justjava.humanresource.core.entity.BaseEntity; import jakarta.persistence.*; import lombok.Getter; import lombok.Setter; import java.time.*;
+@Getter @Setter @Entity @Table(name="employee_exit_access_actions",uniqueConstraints=@UniqueConstraint(name="uk_exit_access_system",columnNames={"exitCaseId","systemName"}))
+public class ExitAccessAction extends BaseEntity { @Column(nullable=false) private Long exitCaseId; @Column(nullable=false,length=80) private String systemName; @Column(length=120) private String externalIdentity; @Column(nullable=false,length=30) private String status="PENDING"; private LocalDateTime scheduledAt, completedAt; @Column(nullable=false) private Integer attemptCount=0; @Column(length=2000) private String lastError; }

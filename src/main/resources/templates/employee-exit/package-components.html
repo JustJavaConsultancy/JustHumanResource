@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout}">
+<head><title>Exit Package Settings</title></head>
+<body>
+<main layout:fragment="content" class="space-y-6">
+    <div class="flex justify-between items-center">
+        <div><h2 class="text-2xl font-bold">Exit Package Settings</h2><p class="text-gray-500">Settlement components and calculation rules</p></div>
+        <a href="/employee-exits" class="btn-secondary">Back to exits</a>
+    </div>
+    <div class="grid lg:grid-cols-2 gap-6">
+        <section class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+            <h3 class="font-bold mb-4">Components</h3>
+            <div th:each="c:${components}" class="flex justify-between py-2 border-b"><span th:text="${c.componentCode + ' - ' + c.name}">Component</span><span th:text="${c.lineType}">Type</span></div>
+            <form method="post" action="/employee-exits/settings/package-components" class="grid md:grid-cols-2 gap-3 mt-5">
+                <input name="componentCode" class="form-input" placeholder="Component code" required>
+                <input name="name" class="form-input" placeholder="Name" required>
+                <select name="lineType" class="form-input"><option th:each="t:${lineTypes}" th:value="${t}" th:text="${t}"></option></select>
+                <label class="flex items-center gap-2"><input type="checkbox" name="earning" value="true"> Earning</label>
+                <label class="flex items-center gap-2"><input type="checkbox" name="taxable" value="true"> Taxable</label>
+                <label class="flex items-center gap-2"><input type="checkbox" name="pensionable" value="true"> Pensionable</label>
+                <input type="hidden" name="active" value="true">
+                <button class="btn-primary md:col-span-2">Save component</button>
+            </form>
+        </section>
+        <section class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+            <h3 class="font-bold mb-4">Rules</h3>
+            <div th:each="r:${rules}" class="flex justify-between py-2 border-b"><span th:text="${'Component '+r.componentId}">Rule</span><span th:text="${r.calculationMethod}">Method</span></div>
+            <form method="post" action="/employee-exits/settings/package-rules" class="grid md:grid-cols-2 gap-3 mt-5">
+                <select name="componentId" class="form-input"><option th:each="c:${components}" th:value="${c.id}" th:text="${c.componentCode + ' - ' + c.name}"></option></select>
+                <select name="calculationMethod" class="form-input"><option th:each="m:${calculationMethods}" th:value="${m}" th:text="${m}"></option></select>
+                <input type="number" step="0.01" min="0" name="fixedAmount" class="form-input" placeholder="Fixed amount">
+                <input type="number" step="0.0001" min="0" name="percentage" class="form-input" placeholder="Percentage">
+                <input name="appliesToExitTypes" class="form-input" placeholder="Exit types, comma separated">
+                <input type="number" min="0" name="minimumYearsOfService" class="form-input" placeholder="Minimum years">
+                <input type="number" min="0" name="maximumYearsOfService" class="form-input" placeholder="Maximum years">
+                <label class="flex items-center gap-2"><input type="checkbox" name="requiresManualApproval" value="true"> Manual approval</label>
+                <input type="hidden" name="active" value="true">
+                <button class="btn-primary md:col-span-2">Save rule</button>
+            </form>
+        </section>
+    </div>
+</main>
+</body>
+</html>

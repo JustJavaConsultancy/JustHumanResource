@@ -1,0 +1,1 @@
+package com.justjava.humanresource.employeeexit.dto; import java.math.BigDecimal; import java.util.Map; public record ExitDashboardSummary(long total,long active,long pendingClearance,BigDecimal approvedSettlementLiability,BigDecimal assetRecovery,Map<String,Long> byStatus,Map<String,Long> byType){}

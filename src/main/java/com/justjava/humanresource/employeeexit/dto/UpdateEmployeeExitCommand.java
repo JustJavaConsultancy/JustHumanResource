@@ -1,0 +1,2 @@
+package com.justjava.humanresource.employeeexit.dto; import jakarta.validation.constraints.*; import lombok.Data; import java.time.LocalDate;
+@Data public class UpdateEmployeeExitCommand { @NotBlank private String reasonCode; private String reasonDetails; @NotNull private LocalDate noticeDate; @Min(0) private Integer contractualNoticeDays=0; @Min(0) private Integer noticeWaivedDays=0; @NotNull private LocalDate proposedLastWorkingDate; }

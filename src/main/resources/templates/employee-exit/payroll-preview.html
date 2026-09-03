@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout}">
+<head><title>Exit Payroll Preview</title></head>
+<body>
+<main layout:fragment="content" class="space-y-6">
+    <div>
+        <a th:href="@{/employee-exits/{id}(id=${exit.id})}" class="text-sm text-primary-600">Back to exit</a>
+        <h2 class="text-2xl font-bold mt-2">Exit Payroll Preview</h2>
+    </div>
+    <div class="grid md:grid-cols-3 gap-4">
+        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5"><p class="text-sm text-gray-500">Gross earnings</p><strong th:text="${preview.grossEarnings()}">0</strong></div>
+        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5"><p class="text-sm text-gray-500">Deductions</p><strong th:text="${preview.totalDeductions()}">0</strong></div>
+        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5"><p class="text-sm text-gray-500">Net settlement</p><strong th:text="${preview.netSettlement()}">0</strong></div>
+    </div>
+    <section class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+        <h3 class="font-bold mb-4">Payroll lines</h3>
+        <div th:each="line:${preview.lines()}" class="grid md:grid-cols-4 gap-3 py-3 border-b">
+            <span th:text="${line.componentCode()}">CODE</span>
+            <span th:text="${line.description()}">Description</span>
+            <span th:text="${line.componentType()}">Type</span>
+            <strong th:text="${line.amount()}">0</strong>
+        </div>
+        <form method="post" th:action="@{/employee-exits/{id}/settlements/{settlementId}/post(id=${exit.id},settlementId=${preview.settlementId()})}" class="grid md:grid-cols-2 gap-3 mt-5">
+            <select name="payrollPeriodId" class="form-input" required><option th:each="p:${payrollPeriods}" th:value="${p.id}" th:text="${p.periodStart + ' - ' + p.periodEnd}"></option></select>
+            <button class="btn-primary">Post to payroll</button>
+        </form>
+    </section>
+</main>
+</body>
+</html>

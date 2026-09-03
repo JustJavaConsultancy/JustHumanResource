@@ -30,7 +30,7 @@ public class LineManagerApprovalRouteResolver implements ApprovalRouteResolver {
         ApprovalRouteType routeType = context.getRouteType() == null
                 ? ApprovalRouteType.LINE_MANAGER
                 : context.getRouteType();
-        return context.getModuleType() == ApprovalModuleType.REQUEST
+        return (context.getModuleType() == ApprovalModuleType.REQUEST || context.getModuleType() == ApprovalModuleType.EXIT)
                 && routeType == ApprovalRouteType.LINE_MANAGER;
     }
 

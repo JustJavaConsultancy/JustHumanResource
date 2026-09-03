@@ -1,0 +1,2 @@
+package com.justjava.humanresource.employeeexit.enums;
+public enum SettlementLineType { SALARY, ALLOWANCE, LEAVE_ENCASHMENT, NOTICE_PAY, SEVERANCE, BONUS, REIMBURSEMENT, TAX, PENSION, LOAN, ADVANCE, ASSET_RECOVERY, OTHER_EARNING, OTHER_DEDUCTION }

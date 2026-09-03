@@ -1,0 +1,2 @@
+package com.justjava.humanresource.employeeexit.repository; import com.justjava.humanresource.employeeexit.entity.ExitSettlementPayrollLineMapping; import org.springframework.data.jpa.repository.JpaRepository;
+public interface ExitSettlementPayrollLineMappingRepository extends JpaRepository<ExitSettlementPayrollLineMapping,Long>{}
