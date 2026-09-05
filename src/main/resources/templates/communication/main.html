@@ -420,8 +420,8 @@
             background: #aeb6c3;
             border: 2px solid var(--hc-surface);
             position: absolute;
-            left: 37px;
-            bottom: 9px;
+            right: -2px;
+            bottom: -2px;
         }
         .presence-dot.online {
             background: var(--hc-green);
@@ -1165,6 +1165,233 @@
             padding: 4px 0 0;
         }
 
+        /* ═══════════════════════════════════════════════
+           GROUPS VIEW — similar to broadcast view
+           ═══════════════════════════════════════════════ */
+        .groups-view {
+            display: none;
+            grid-column: 2 / 4;
+            grid-template-columns: minmax(280px, 360px) 1fr;
+            overflow: hidden;
+            background: var(--hc-surface);
+            border-left: none;
+        }
+        .groups-view.active {
+            display: grid;
+        }
+
+        /* ── groups list ── */
+        .groups-list {
+            border-right: 1px solid var(--hc-border);
+            overflow-y: auto;
+            background: var(--hc-surface);
+        }
+        .groups-list-header {
+            padding: 14px 16px 10px;
+            border-bottom: 1px solid var(--hc-border);
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .groups-list-header h2 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 800;
+            letter-spacing: -.01em;
+        }
+
+        .group-item {
+            position: relative;
+            padding: 14px 16px;
+            margin: 6px 10px;
+            border-radius: var(--hc-radius);
+            border: 1px solid var(--hc-border);
+            background: var(--hc-surface);
+            cursor: pointer;
+            transition: all .18s ease;
+        }
+        .group-item:hover {
+            background: var(--hc-hover);
+            transform: translateY(-1px);
+            box-shadow: var(--hc-shadow);
+            border-color: var(--hc-green);
+        }
+        .group-item.active {
+            background: var(--hc-blue-soft);
+            border-color: var(--hc-blue);
+            border-left: 4px solid var(--hc-blue);
+            box-shadow: 0 2px 12px rgba(37, 99, 235, .12);
+        }
+        .group-item-title {
+            font-weight: 700;
+            font-size: 13px;
+            line-height: 1.3;
+        }
+        .group-item-meta {
+            font-size: 11px;
+            color: var(--hc-muted);
+            margin-top: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .group-item-meta .member-count {
+            font-weight: 600;
+            color: var(--hc-text);
+        }
+
+        /* ── group detail ── */
+        .group-detail {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: var(--hc-soft);
+        }
+
+        .group-detail-header {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--hc-border);
+            background: var(--hc-surface);
+            flex-shrink: 0;
+        }
+        .group-detail-header h3 {
+            margin: 0;
+            font-size: 17px;
+            font-weight: 800;
+            letter-spacing: -.01em;
+            line-height: 1.3;
+        }
+        .group-detail-header p {
+            margin: 4px 0 0;
+            font-size: 11px;
+            color: var(--hc-muted);
+        }
+
+        .group-detail-body {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 24px;
+        }
+
+        #groupEmptyState {
+            flex: 1;
+            display: grid;
+            place-items: center;
+            text-align: center;
+            padding: 24px;
+            margin: 0;
+            border: 1px dashed var(--hc-border);
+            border-radius: 12px;
+            background: var(--hc-soft);
+            min-height: 0;
+        }
+        #groupEmptyState .material-icons-round {
+            font-size: 48px;
+            opacity: .25;
+            margin-bottom: 8px;
+        }
+        #groupEmptyState p {
+            margin: 4px 0;
+        }
+        #groupEmptyState p:first-of-type {
+            font-weight: 700;
+            font-size: 15px;
+            color: var(--hc-text);
+        }
+        #groupEmptyState p:last-of-type {
+            font-size: 12px;
+            color: var(--hc-muted);
+        }
+
+        #groupContentContainer {
+            flex: 1;
+            display: none;
+        }
+        #groupContentContainer[style*="display:block"] {
+            display: block !important;
+        }
+
+        .group-detail-body .group-description {
+            white-space: pre-wrap;
+            font-size: 14px;
+            line-height: 1.6;
+            color: var(--hc-text);
+            background: var(--hc-surface);
+            padding: 16px 20px;
+            border-radius: var(--hc-radius);
+            border: 1px solid var(--hc-border);
+            margin-bottom: 20px;
+        }
+
+        .group-detail-body .members-section {
+            margin-top: 20px;
+            border-top: 1px solid var(--hc-border);
+            padding-top: 16px;
+        }
+        .group-detail-body .members-section .section-label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+            color: var(--hc-muted);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .group-detail-body .members-section .section-label .material-icons-round {
+            font-size: 16px;
+        }
+        .group-detail-body .members-section .count-badge {
+            background: var(--hc-border);
+            color: var(--hc-muted);
+            border-radius: 999px;
+            padding: 0 8px;
+            font-size: 9px;
+            font-weight: 700;
+        }
+
+        .group-detail-body .group-member {
+            display: flex;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--hc-border);
+        }
+        .group-detail-body .group-member:last-child {
+            border-bottom: 0;
+        }
+        .group-detail-body .member-avatar {
+            width: 32px;
+            height: 32px;
+            flex: none;
+            display: grid;
+            place-items: center;
+            border-radius: 50%;
+            font-weight: 700;
+            font-size: 10px;
+            background: var(--hc-blue-soft);
+            color: var(--hc-blue);
+            border: 1px solid var(--hc-border);
+        }
+        .group-detail-body .member-info {
+            min-width: 0;
+            flex: 1;
+        }
+        .group-detail-body .member-name {
+            font-weight: 700;
+            font-size: 12px;
+            color: var(--hc-text);
+        }
+        .group-detail-body .member-department {
+            font-size: 10px;
+            color: var(--hc-muted);
+            margin-top: 2px;
+        }
+
         /* ── modals (for meetings & groups) ── */
         .comm-modal {
             position: fixed;
@@ -1346,6 +1573,10 @@
                 grid-column: 2 / 3;
                 grid-template-columns: 1fr;
             }
+            .groups-view {
+                grid-column: 2 / 3;
+                grid-template-columns: 1fr;
+            }
             .comm-list {
                 display: none;
             }
@@ -1354,6 +1585,9 @@
                 grid-template-columns: 1fr;
             }
             .broadcast-list {
+                display: none;
+            }
+            .groups-list {
                 display: none;
             }
         }
@@ -1382,7 +1616,14 @@
                 grid-column: 1 / 2;
                 grid-template-columns: 1fr;
             }
+            .groups-view {
+                grid-column: 1 / 2;
+                grid-template-columns: 1fr;
+            }
             .broadcast-list {
+                display: none;
+            }
+            .groups-list {
                 display: none;
             }
             .broadcast-create .form-row {
@@ -1636,6 +1877,49 @@
             </div>
         </div>
 
+        <!-- ===== GROUPS VIEW ===== -->
+        <div class="groups-view" id="groupsView">
+            <!-- Groups List -->
+            <div class="groups-list">
+                <div class="groups-list-header">
+                    <h2>Groups</h2>
+                    <button class="icon-btn" id="createGroupBtn" title="Create group">
+                        <span class="material-icons-round text-base">add</span>
+                    </button>
+                </div>
+                <div id="groupListRows" class="overflow-y-auto flex-1"></div>
+            </div>
+
+            <!-- Group Detail -->
+            <div class="group-detail" id="groupDetail">
+                <div class="group-detail-header">
+                    <h3 id="groupDetailTitle">Select a group</h3>
+                    <p id="groupDetailMeta">View group details and members.</p>
+                </div>
+                <div class="group-detail-body" id="groupDetailBody">
+                    <!-- Empty state -->
+                    <div id="groupEmptyState">
+                        <div>
+                            <span class="material-icons-round">groups</span>
+                            <p>No group selected</p>
+                            <p>Click a group from the list or create a new one.</p>
+                        </div>
+                    </div>
+                    <div id="groupContentContainer">
+                        <div class="group-description" id="groupDescriptionText"></div>
+                        <div class="members-section" id="groupMembersSection">
+                            <div class="section-label">
+                                <span class="material-icons-round">person</span>
+                                Members
+                                <span class="count-badge" id="groupMemberCountBadge">0</span>
+                            </div>
+                            <div id="groupMembers"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div> <!-- end comm-shell -->
 
     <!-- ===== MODALS for Groups & Meetings ===== -->
@@ -1770,8 +2054,8 @@
     </script>
     <script th:inline="javascript">
         /* ===========================================================
-           Full communication logic — direct messages + broadcast view
-           with refined broadcast & comment styling.
+           Full communication logic — direct messages + broadcast view + groups view
+           with refined styling.
            =========================================================== */
 
         // ── server-side injected variables ──
@@ -1792,10 +2076,12 @@
         let selectedDirectFiles = [];
         let selectedDirectContact = null;
         let selectedBroadcast = null;
+        let selectedGroup = null;
         let activeCommentSubscription = null;
         let activeReceiptSubscription = null;
         let currentFilter = 'all';
         let isBroadcastView = false;
+        let isGroupsView = false;
         let currentView = 'inbox';
 
         // server-side injected identifiers
@@ -1882,6 +2168,7 @@
             renderBroadcastList();
             renderOnline();
             renderGroups();
+            renderGroupList();
             renderMeetings();
             renderMetrics();
             await loadDirectData();
@@ -1969,6 +2256,9 @@
             if (isBroadcastView) {
                 document.getElementById('navBroadcastsSwitch').click();
             }
+            if (isGroupsView) {
+                document.getElementById('navGroups').click();
+            }
             const activeNav = document.querySelector('.nav-link.active');
             if (!activeNav || activeNav.dataset.view !== 'inbox') {
                 document.getElementById('navInbox').click();
@@ -2002,41 +2292,103 @@
         }
         window.selectOnlineEmployee = selectOnlineEmployee;
 
-        // ── Groups, Meetings, Broadcasts ──
+        // ── Groups ──
         function renderGroups() {
-            const rows = document.getElementById('hrGroupRows');
-            if (rows) {
-                rows.innerHTML = groups.length ? groups.map(g => `
-                    <div class="online-row">
-                        <div class="person-avatar" style="background:var(--hc-green);color:#fff;">${initials(g.name)}</div>
-                        <div class="min-w-0 flex-1">
-                            <p style="font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(g.name)}</p>
-                            <p style="font-size:10px;color:var(--hc-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(g.lastMessage || (g.memberCount || 0) + ' members')}</p>
-                        </div>
-                    </div>`).join('') : '<div style="padding:30px;text-align:center;font-size:12px;color:var(--hc-muted);">No chat groups yet.</div>';
-            }
             document.getElementById('groupCount').textContent = groups.length;
-        }
-
-        function renderMeetings() {
-            const rows = document.getElementById('meetingRows');
-            if (rows) {
-                rows.innerHTML = meetings.length ? meetings.map(m => `
-                    <div class="online-row">
-                        <div class="flex items-start justify-between gap-3 w-full">
-                            <div class="min-w-0">
-                                <p style="font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(m.subject)}</p>
-                                <p style="margin-top:4px;font-size:10px;color:var(--hc-muted);">${escapeHtml(providerLabel(m.provider))} · ${formatTime(m.startTime)}</p>
-                                <p style="margin-top:2px;font-size:10px;color:var(--hc-muted);">${m.participants ? m.participants.length : 0} participants</p>
-                            </div>
-                            <a class="hr-secondary" href="${m.joinUrl}" target="_blank" style="padding:4px 10px;font-size:9px;">Join</a>
-                        </div>
-                    </div>`).join('') : '<div style="padding:30px;text-align:center;font-size:12px;color:var(--hc-muted);">No meetings yet.</div>';
+            if (selectedGroup) {
+                const updated = groups.find(g => g.id === selectedGroup.id);
+                if (updated) {
+                    selectedGroup = updated;
+                    renderGroupDetail(updated);
+                } else {
+                    selectedGroup = null;
+                    clearGroupDetail();
+                }
             }
-            document.getElementById('meetingCount').textContent = meetings.length;
         }
 
-        // ── Broadcast list ──
+        function renderGroupList() {
+            const rows = document.getElementById('groupListRows');
+            if (!rows) return;
+            rows.innerHTML = groups.length ? groups.map(item => `
+                <div class="group-item ${selectedGroup && selectedGroup.id === item.id ? 'active' : ''}" data-group-id="${item.id}">
+                    <div class="group-item-title">${escapeHtml(item.name)}</div>
+                    <div class="group-item-meta">
+                        <span>${formatTime(item.createdAt)}</span>
+                        <span>·</span>
+                        <span class="member-count">${item.memberCount || 0} members</span>
+                    </div>
+                </div>
+            `).join('') : '<div style="padding:40px;text-align:center;font-size:12px;color:var(--hc-muted);">No groups created yet.</div>';
+
+            document.querySelectorAll('.group-item[data-group-id]').forEach(el => {
+                el.addEventListener('click', () => selectGroup(Number(el.dataset.groupId)));
+            });
+        }
+
+        function renderGroupDetail(group) {
+            const emptyState = document.getElementById('groupEmptyState');
+            const container = document.getElementById('groupContentContainer');
+            if (emptyState) emptyState.style.display = 'none';
+            container.style.display = 'block';
+
+            document.getElementById('groupDetailTitle').textContent = group.name;
+            document.getElementById('groupDetailMeta').textContent =
+                `${formatTime(group.createdAt)} · ${group.memberCount || 0} members`;
+
+            document.getElementById('groupDescriptionText').textContent = group.description || '(No description)';
+
+            // Members
+            const membersDiv = document.getElementById('groupMembers');
+            const countBadge = document.getElementById('groupMemberCountBadge');
+            const members = group.members || [];
+            countBadge.textContent = members.length;
+            membersDiv.innerHTML = members && members.length ?
+                members.map(m => `
+                    <div class="group-member">
+                        <div class="member-avatar">${initials(m.fullName)}</div>
+                        <div class="member-info">
+                            <div class="member-name">${escapeHtml(m.fullName)}</div>
+                            <div class="member-department">${escapeHtml(m.department || 'Unassigned')}</div>
+                        </div>
+                    </div>
+                `).join('') :
+                `<p style="color:var(--hc-muted);font-size:12px;padding:8px 0;">No members yet.</p>`;
+        }
+
+        function clearGroupDetail() {
+            const emptyState = document.getElementById('groupEmptyState');
+            const container = document.getElementById('groupContentContainer');
+            if (emptyState) emptyState.style.display = 'grid';
+            container.style.display = 'none';
+            document.getElementById('groupDetailTitle').textContent = 'Select a group';
+            document.getElementById('groupDetailMeta').textContent = 'View group details and members.';
+        }
+
+        async function selectGroup(id) {
+            const group = groups.find(g => g.id === id);
+            if (!group) return;
+            selectedGroup = group;
+            renderGroupList();
+            renderGroupDetail(group);
+        }
+
+        // ── Broadcasts ──
+        function renderBroadcasts() {
+            document.getElementById('broadcastCount').textContent = broadcasts.length;
+            if (selectedBroadcast) {
+                const updated = broadcasts.find(b => b.id === selectedBroadcast.id);
+                if (updated) {
+                    selectedBroadcast = updated;
+                    renderBroadcastDetail(updated);
+                } else {
+                    selectedBroadcast = null;
+                    clearBroadcastDetail();
+                }
+            }
+            renderBroadcastList();
+        }
+
         function renderBroadcastList() {
             const rows = document.getElementById('broadcastListRows');
             if (!rows) return;
@@ -2061,22 +2413,6 @@
             });
         }
 
-        function renderBroadcasts() {
-            document.getElementById('broadcastCount').textContent = broadcasts.length;
-            if (selectedBroadcast) {
-                const updated = broadcasts.find(b => b.id === selectedBroadcast.id);
-                if (updated) {
-                    selectedBroadcast = updated;
-                    renderBroadcastDetail(updated);
-                } else {
-                    selectedBroadcast = null;
-                    clearBroadcastDetail();
-                }
-            }
-            renderBroadcastList();
-        }
-
-        // ── Broadcast detail — improved ──
         function renderBroadcastDetail(broadcast) {
             const emptyState = document.getElementById('broadcastEmptyState');
             const container = document.getElementById('broadcastContentContainer');
@@ -2093,7 +2429,7 @@
             const attachDiv = document.getElementById('broadcastAttachments');
             attachDiv.innerHTML = attachmentList(broadcast.attachments || []);
 
-            // Comments with improved styling
+            // Comments
             const commentsDiv = document.getElementById('broadcastComments');
             const countBadge = document.getElementById('commentCountBadge');
             fetchComments(broadcast.id).then(comments => {
@@ -2188,7 +2524,7 @@
             renderMetrics();
         }
 
-        // ── Create broadcast from broadcast view ──
+        // ── Create broadcast ──
         document.getElementById('broadcastCreateForm').addEventListener('submit', async event => {
             event.preventDefault();
             const title = document.getElementById('broadcastCreateTitle').value.trim();
@@ -2404,12 +2740,10 @@
             }
         }
 
-        /* ── FIXED: directMessageTemplate with proper bubble styling ── */
         function directMessageTemplate(message) {
             const mine = message.senderId === currentEmployeeId ||
                 (message.senderEmployeeNumber && message.senderEmployeeNumber === currentEmployeeNumber);
 
-            // Get sender name for non-mine messages
             let senderName = message.senderName || message.employeeName;
             if (!senderName && message.senderId) {
                 const contact = directContacts.find(c => c.id === message.senderId);
@@ -2421,29 +2755,24 @@
 
             let html = '<div class="message-row ' + (mine ? 'mine' : '') + '">';
 
-            // Avatar for non-mine messages
             if (!mine) {
                 html += '<div class="message-mini-avatar">' + senderInitials + '</div>';
             }
 
             html += '<div class="message-stack">';
 
-            // Author name for non-mine messages
             if (!mine) {
                 html += '<div class="message-author">' + escapeHtml(senderName) + '</div>';
             }
 
-            // ── THE FIX: wrap content in .message-bubble for background colour ──
             if (message.content && message.content.trim()) {
                 html += '<div class="message-bubble">' + escapeHtml(message.content) + '</div>';
             }
 
-            // Attachments
             if (message.attachments && message.attachments.length > 0) {
                 html += attachmentList(message.attachments);
             }
 
-            // Meta info
             html += '<div class="message-meta">' + formatTime(message.createdAt);
             if (mine && message.deliveredAt) {
                 html += ' · Delivered';
@@ -2713,6 +3042,24 @@
             }
         });
 
+        function renderMeetings() {
+            const rows = document.getElementById('meetingRows');
+            if (rows) {
+                rows.innerHTML = meetings.length ? meetings.map(m => `
+                    <div class="online-row">
+                        <div class="flex items-start justify-between gap-3 w-full">
+                            <div class="min-w-0">
+                                <p style="font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(m.subject)}</p>
+                                <p style="margin-top:4px;font-size:10px;color:var(--hc-muted);">${escapeHtml(providerLabel(m.provider))} · ${formatTime(m.startTime)}</p>
+                                <p style="margin-top:2px;font-size:10px;color:var(--hc-muted);">${m.participants ? m.participants.length : 0} participants</p>
+                            </div>
+                            <a class="hr-secondary" href="${m.joinUrl}" target="_blank" style="padding:4px 10px;font-size:9px;">Join</a>
+                        </div>
+                    </div>`).join('') : '<div style="padding:30px;text-align:center;font-size:12px;color:var(--hc-muted);">No meetings yet.</div>';
+            }
+            document.getElementById('meetingCount').textContent = meetings.length;
+        }
+
         // ── group form ──
         document.getElementById('hrGroupForm')?.addEventListener('submit', async event => {
             event.preventDefault();
@@ -2733,6 +3080,7 @@
                 const group = await response.json();
                 groups = [group, ...groups.filter(i => i.id !== group.id)];
                 renderGroups();
+                renderGroupList();
                 document.getElementById('hrGroupName').value = '';
                 document.getElementById('hrGroupDescription').value = '';
                 hiddenInput.value = '';
@@ -2806,6 +3154,7 @@
             const group = JSON.parse(message.body);
             groups = [group, ...groups.filter(i => i.id !== group.id)];
             renderGroups();
+            renderGroupList();
         }
 
         function handlePresence(message) {
@@ -2861,13 +3210,16 @@
             btn.addEventListener('click', () => closeModal(btn.closest('.comm-modal')));
         });
 
-        // ── Switch between direct and broadcast view ──
+        // ── Switch between direct, broadcast and groups view ──
         document.getElementById('navBroadcastsSwitch').addEventListener('click', function() {
             isBroadcastView = !isBroadcastView;
+            isGroupsView = false;
             const directView = document.getElementById('directView');
             const broadcastView = document.getElementById('broadcastView');
+            const groupsView = document.getElementById('groupsView');
             if (isBroadcastView) {
                 directView.classList.add('hidden');
+                groupsView.classList.remove('active');
                 broadcastView.classList.add('active');
                 document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
                 this.classList.add('active');
@@ -2891,11 +3243,48 @@
             }
         });
 
+        document.getElementById('navGroups').addEventListener('click', function(e) {
+            e.preventDefault();
+            isGroupsView = !isGroupsView;
+            isBroadcastView = false;
+            const directView = document.getElementById('directView');
+            const groupsView = document.getElementById('groupsView');
+            const broadcastView = document.getElementById('broadcastView');
+            if (isGroupsView) {
+                directView.classList.add('hidden');
+                broadcastView.classList.remove('active');
+                groupsView.classList.add('active');
+                document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+                this.classList.add('active');
+                document.getElementById('listTitle').textContent = 'Groups';
+                renderGroupList();
+                if (!selectedGroup) {
+                    clearGroupDetail();
+                } else {
+                    renderGroupDetail(selectedGroup);
+                }
+            } else {
+                directView.classList.remove('hidden');
+                groupsView.classList.remove('active');
+                document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+                document.getElementById('navInbox').classList.add('active');
+                currentView = 'inbox';
+                document.getElementById('listTitle').textContent = 'Inbox';
+                renderDirectContacts();
+            }
+        });
+
+        // Create group button in the list header
+        document.getElementById('createGroupBtn')?.addEventListener('click', () => openModal('groupModal'));
+
         // ── Direct Nav Click Handlers ──
         document.getElementById('navInbox').addEventListener('click', function(e) {
             e.preventDefault();
             if (isBroadcastView) {
                 document.getElementById('navBroadcastsSwitch').click();
+            }
+            if (isGroupsView) {
+                document.getElementById('navGroups').click();
             }
             document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
             this.classList.add('active');
@@ -2916,6 +3305,9 @@
             if (isBroadcastView) {
                 document.getElementById('navBroadcastsSwitch').click();
             }
+            if (isGroupsView) {
+                document.getElementById('navGroups').click();
+            }
             document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
             this.classList.add('active');
             currentView = 'mentions';
@@ -2934,6 +3326,9 @@
             e.preventDefault();
             if (isBroadcastView) {
                 document.getElementById('navBroadcastsSwitch').click();
+            }
+            if (isGroupsView) {
+                document.getElementById('navGroups').click();
             }
             document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
             this.classList.add('active');
@@ -2984,7 +3379,6 @@
         document.getElementById('memberDropdownToggle')?.addEventListener('click', toggleMemberDropdown);
         document.getElementById('memberDropdownSearch')?.addEventListener('input', filterMemberDropdown);
 
-        document.getElementById('navGroups')?.addEventListener('click', () => openModal('groupModal'));
         document.getElementById('navMeetings')?.addEventListener('click', () => openModal('meetingModal'));
 
         const outerMain = document.querySelector('main.flex-1');
