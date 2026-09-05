@@ -55,12 +55,10 @@
         .comm-page .flex-1,
         .comm-page .container,
         .comm-page .content {
-            padding: 0 !important;
             margin: 0 !important;
             max-width: 100% !important;
             width: 100% !important;
             border-radius: 0 !important;
-            background: var(--hc-surface);
         }
 
         main {
@@ -322,6 +320,7 @@
             text-align: right;
         }
         .message-author {
+            display: none;
             font-weight: 700;
             font-size: 11px;
             margin-bottom: 2px;
@@ -1397,12 +1396,14 @@
             upsertConversation(payload, contact);
             if (selectedContact && selectedContact.id === otherId) {
                 if (messages.querySelector('.empty-state')) messages.innerHTML = '';
+                const mine = payload.senderId === currentEmployeeId;
                 messages.insertAdjacentHTML('beforeend', `
-                    <div class="message-row mine">
+                    <div class="message-row ${mine ? 'mine' : ''}">
                         <div class="message-bubble">
+                            ${!mine ? `<div class="message-author">${escapeHtml(payload.senderName || contact?.fullName || 'Unknown')}</div>` : ''}
                             ${payload.content ? `<div>${escapeHtml(payload.content)}</div>` : ''}
                             ${attachmentList(payload.attachments || [])}
-                            <div class="message-meta">${formatTime(payload.createdAt)} · Delivered</div>
+                            <div class="message-meta">${formatTime(payload.createdAt)}${mine && payload.deliveredAt ? ' · Delivered' : ''}</div>
                         </div>
                     </div>
                 `);

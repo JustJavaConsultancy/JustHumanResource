@@ -1,5 +1,14 @@
 package com.justjava.humanresource.recruitment;
 
+import com.justjava.humanresource.core.enums.RecordStatus;
+import com.justjava.humanresource.hr.entity.Employee;
+import com.justjava.humanresource.hr.entity.JobStep;
+import com.justjava.humanresource.hr.entity.PayGroup;
+import com.justjava.humanresource.hr.entity.Department;
+import com.justjava.humanresource.hr.repository.EmployeeRepository;
+import com.justjava.humanresource.hr.repository.JobStepRepository;
+import com.justjava.humanresource.hr.repository.PayGroupRepository;
+import com.justjava.humanresource.hr.repository.DepartmentRepository;
 import com.justjava.humanresource.recruitment.enums.*;
 import com.justjava.humanresource.recruitment.repository.*;
 import com.justjava.humanresource.recruitment.service.RecruitmentService;
@@ -13,6 +22,8 @@ import org.flowable.engine.TaskService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @Controller @RequestMapping("/recruitment") @RequiredArgsConstructor
 public class RecruitmentController {
@@ -30,6 +41,10 @@ public class RecruitmentController {
     private final CandidateEmployeeConversionRepository conversionRepository;
     private final TaskService taskService;
     private final AuthenticationManager authenticationManager;
+    private final EmployeeRepository employeeRepository;
+    private final JobStepRepository jobStepRepository;
+    private final PayGroupRepository payGroupRepository;
+    private final DepartmentRepository departmentRepository;
 
     @GetMapping
     public String dashboard(Model model) {
@@ -66,6 +81,10 @@ public class RecruitmentController {
         model.addAttribute("canPrepareOpening", hasRecruitmentAccess());
         model.addAttribute("canReviewOpening", hasRecruitmentAccess() || isCurrentEmployee(opening.getHiringManagerEmployeeId()));
         model.addAttribute("canCloseOpening", hasRecruitmentAccess());
+        // Dropdown data for recruitment forms
+        model.addAttribute("employees", employeeRepository.findAllVisible().stream()
+                .filter(e -> e.getEmploymentStatus() == com.justjava.humanresource.core.enums.EmploymentStatus.ACTIVE)
+                .toList());
         return "recruitment/job-opening-detail";
     }
 
@@ -134,6 +153,21 @@ public class RecruitmentController {
         model.addAttribute("canCreateOffer", hasRecruitmentAccess());
         model.addAttribute("canSendOffer", hasRecruitmentAccess());
         model.addAttribute("canStartOnboarding", hasRecruitmentAccess());
+
+        // Dropdown data for recruitment forms
+        model.addAttribute("employees", employeeRepository.findAllVisible().stream()
+                .filter(e -> e.getEmploymentStatus() == com.justjava.humanresource.core.enums.EmploymentStatus.ACTIVE)
+                .toList());
+        model.addAttribute("jobSteps", jobStepRepository.findAll().stream()
+                .filter(js -> js.getJobGrade() != null)
+                .toList());
+        model.addAttribute("payGroups", payGroupRepository.findAll().stream()
+                .filter(pg -> pg.getStatus() == com.justjava.humanresource.core.enums.RecordStatus.ACTIVE)
+                .toList());
+        model.addAttribute("departments", departmentRepository.findAll().stream()
+                .filter(d -> d.getStatus() == com.justjava.humanresource.core.enums.RecordStatus.ACTIVE)
+                .toList());
+
         return "recruitment/application-detail";
     }
 
@@ -281,5 +315,38 @@ public class RecruitmentController {
             }
         }
         return null;
+    }
+
+    // Dropdown data endpoints for recruitment forms
+    @GetMapping("/dropdown/employees")
+    @ResponseBody
+    public List<Employee> getEmployeesForDropdown() {
+        return employeeRepository.findAllVisible().stream()
+                .filter(e -> e.getEmploymentStatus() == com.justjava.humanresource.core.enums.EmploymentStatus.ACTIVE)
+                .toList();
+    }
+
+    @GetMapping("/dropdown/job-steps")
+    @ResponseBody
+    public List<JobStep> getJobStepsForDropdown() {
+        return jobStepRepository.findAll().stream()
+                .filter(js -> js.getJobGrade() != null)
+                .toList();
+    }
+
+    @GetMapping("/dropdown/pay-groups")
+    @ResponseBody
+    public List<PayGroup> getPayGroupsForDropdown() {
+        return payGroupRepository.findAll().stream()
+                .filter(pg -> pg.getStatus() == RecordStatus.ACTIVE)
+                .toList();
+    }
+
+    @GetMapping("/dropdown/departments")
+    @ResponseBody
+    public List<Department> getDepartmentsForDropdown() {
+        return departmentRepository.findAll().stream()
+                .filter(d -> d.getStatus() == RecordStatus.ACTIVE)
+                .toList();
     }
 }

@@ -78,9 +78,55 @@ public class CommunicationService {
             throw new AccessDeniedException("Authenticated WebSocket principal is required");
         }
         String value = principal.getName();
+        // Handle HR system principal format: "HR:email@company.com"
+        if (value.startsWith("HR:")) {
+            String email = value.substring(3);
+            return getOrCreateHrSystemEmployee(email);
+        }
+        // Try to find by employee number first, then by email
         return employeeRepository.findByEmployeeNumber(value)
                 .or(() -> employeeRepository.findByEmail(value))
-                .orElseThrow(() -> new EntityNotFoundException("No employee profile found for " + value));
+                .orElseGet(() -> getOrCreateHrSystemEmployee(value));
+    }
+
+    @Transactional
+    public Employee getOrCreateHrSystemEmployee(String emailOrEmployeeNumber) {
+        // Check if HR system employee already exists
+        String hrSystemEmail = "hr-system@company.local";
+        Optional<Employee> existing = employeeRepository.findByEmail(hrSystemEmail);
+        if (existing.isPresent()) {
+            return existing.get();
+        }
+
+        // Create a new HR system employee
+        Employee hrSystem = new Employee();
+        hrSystem.setEmployeeNumber("HR-SYSTEM");
+        hrSystem.setFirstName("HR");
+        hrSystem.setLastName("System");
+        hrSystem.setEmail(hrSystemEmail);
+        hrSystem.setEmploymentStatus(EmploymentStatus.ACTIVE);
+        hrSystem.setStatus(com.justjava.humanresource.core.enums.RecordStatus.ACTIVE);
+        hrSystem.setRestrictedVisibility(true); // Not visible in employee lists
+        return employeeRepository.save(hrSystem);
+    }
+
+    @Transactional(readOnly = true)
+    public Employee getHrSenderForCurrentUser() {
+        // Get the actual user's email/name from Keycloak
+        Object email = authenticationManager.get("email");
+        String userEmail = email != null ? String.valueOf(email) : "HR";
+
+        // Check if current user has an employee profile
+        Optional<Employee> currentEmployee = email != null && !String.valueOf(email).isBlank()
+            ? employeeRepository.findByEmail(String.valueOf(email))
+            : Optional.empty();
+
+        if (currentEmployee.isPresent()) {
+            return currentEmployee.get();
+        }
+
+        // User is HR without profile - use HR system employee but we'll override sender info in response
+        return getOrCreateHrSystemEmployee(userEmail);
     }
 
     @Transactional(readOnly = true)
@@ -92,7 +138,8 @@ public class CommunicationService {
     @Transactional(readOnly = true)
     public List<EmployeeContactResponse> listContactsForHr() {
         assertHrCanMessageEmployees();
-        return listContactsFor(getCurrentEmployee());
+        // HR users may not have an employee profile; use HR sender fallback when necessary
+        return listContactsFor(getHrSenderForCurrentUser());
     }
 
     private List<EmployeeContactResponse> listContactsFor(Employee current) {
@@ -106,7 +153,8 @@ public class CommunicationService {
                     .ifPresent(message -> lastMessagesByEmployeeId.put(other.getId(), message));
         }
 
-        return employeeRepository.findAllVisible().stream()
+        // Build the visible contact list from non-restricted employees first
+        List<EmployeeContactResponse> contacts = new java.util.ArrayList<>(employeeRepository.findAllVisible().stream()
                 .filter(employee -> !employee.getId().equals(current.getId()))
                 .filter(this::isActiveEmployee)
                 .map(employee -> toContact(
@@ -114,8 +162,22 @@ public class CommunicationService {
                         chatMessageRepository.countByRecipient_IdAndSender_IdAndReadAtIsNull(current.getId(), employee.getId()),
                         conversationsByEmployeeId.get(employee.getId()),
                         lastMessagesByEmployeeId.get(employee.getId())))
-                .sorted(contactComparator())
-                .toList();
+                .toList());
+
+        // Include any conversation partners that are not in the visible list (e.g. HR system account)
+        Set<Long> visibleIds = contacts.stream().map(EmployeeContactResponse::id).collect(Collectors.toSet());
+        for (Map.Entry<Long, Conversation> entry : conversationsByEmployeeId.entrySet()) {
+            Long otherId = entry.getKey();
+            if (otherId.equals(current.getId()) || visibleIds.contains(otherId)) continue;
+            Conversation conv = entry.getValue();
+            Employee other = otherParticipant(conv, current);
+            if (!isActiveEmployee(other)) continue; // skip inactive
+            long unread = chatMessageRepository.countByRecipient_IdAndSender_IdAndReadAtIsNull(current.getId(), other.getId());
+            ChatMessage last = lastMessagesByEmployeeId.get(other.getId());
+            contacts.add(toContact(other, unread, conv, last));
+        }
+
+        return contacts.stream().sorted(contactComparator()).toList();
     }
 
     @Transactional(readOnly = true)
@@ -127,7 +189,8 @@ public class CommunicationService {
     @Transactional(readOnly = true)
     public List<ConversationResponse> listConversationsForHr() {
         assertHrCanMessageEmployees();
-        return listConversationsFor(getCurrentEmployee());
+        // Use HR sender fallback so HR users without employee profiles can still access HR conversations
+        return listConversationsFor(getHrSenderForCurrentUser());
     }
 
     private List<ConversationResponse> listConversationsFor(Employee current) {
@@ -152,7 +215,10 @@ public class CommunicationService {
         Employee sender = principal == null ? getCurrentEmployee() : employeeFromPrincipal(principal);
         Employee recipient = employeeRepository.findById(command.recipientEmployeeId())
                 .filter(this::isActiveEmployee)
-                .filter(employee -> !employee.isRestrictedVisibility())
+                // Allow replies to the HR system account even though it is marked restrictedVisibility
+                .filter(employee -> !employee.isRestrictedVisibility()
+                        || "HR-SYSTEM".equals(employee.getEmployeeNumber())
+                        || "hr-system@company.local".equalsIgnoreCase(employee.getEmail()))
                 .orElseThrow(() -> new EntityNotFoundException("Recipient not found"));
         if (sender.getId().equals(recipient.getId())) {
             throw new IllegalArgumentException("You cannot send a message to yourself");
@@ -182,13 +248,17 @@ public class CommunicationService {
     @Transactional
     public ChatMessageResponse sendHrDirectMessageWithAttachments(Long recipientEmployeeId, String content, List<MultipartFile> files) {
         assertHrCanMessageEmployees();
-        return sendDirectMessageWithAttachments(getCurrentEmployee(), recipientEmployeeId, content, files);
+        Employee sender = getHrSenderForCurrentUser();
+        return sendDirectMessageWithAttachments(sender, recipientEmployeeId, content, files);
     }
 
     private ChatMessageResponse sendDirectMessageWithAttachments(Employee sender, Long recipientEmployeeId, String content, List<MultipartFile> files) {
         Employee recipient = employeeRepository.findById(recipientEmployeeId)
                 .filter(this::isActiveEmployee)
-                .filter(employee -> !employee.isRestrictedVisibility())
+                // Allow replies/attachments to HR system account even though it is restrictedVisibility
+                .filter(employee -> !employee.isRestrictedVisibility()
+                        || "HR-SYSTEM".equals(employee.getEmployeeNumber())
+                        || "hr-system@company.local".equalsIgnoreCase(employee.getEmail()))
                 .orElseThrow(() -> new EntityNotFoundException("Recipient not found"));
         if (sender.getId().equals(recipient.getId())) {
             throw new IllegalArgumentException("You cannot send a message to yourself");
@@ -248,7 +318,7 @@ public class CommunicationService {
     @Transactional(readOnly = true)
     public List<ChatMessageResponse> getHrConversationMessages(Long conversationId) {
         assertHrCanMessageEmployees();
-        return getConversationMessagesFor(conversationId, getCurrentEmployee());
+        return getConversationMessagesFor(conversationId, getHrSenderForCurrentUser());
     }
 
     private List<ChatMessageResponse> getConversationMessagesFor(Long conversationId, Employee current) {
@@ -274,7 +344,7 @@ public class CommunicationService {
     @Transactional(readOnly = true)
     public ChatMessage getHrReadableMessage(Long messageId) {
         assertHrCanMessageEmployees();
-        return getReadableMessageFor(messageId, getCurrentEmployee());
+        return getReadableMessageFor(messageId, getHrSenderForCurrentUser());
     }
 
     private ChatMessage getReadableMessageFor(Long messageId, Employee current) {
@@ -518,12 +588,42 @@ public class CommunicationService {
     }
 
     private ChatMessageResponse toMessageResponse(ChatMessage message, List<ChatMessageAttachment> attachments) {
+        Employee sender = message.getSender();
+        // If sender is HR system employee, use actual HR user's info from auth context
+        String senderName = sender.getFullName();
+        String senderEmployeeNumber = sender.getEmployeeNumber();
+        if ("HR-SYSTEM".equals(sender.getEmployeeNumber())) {
+            // When HR sends messages the stored sender is a special HR system account.
+            // If the current viewer is an HR/admin user, show the authenticated HR user's name (as before).
+            // For normal employee viewers, show the HR system display name so messages appear as coming from HR.
+            if (authenticationManager.isHumanResource() || authenticationManager.isAdmin()) {
+                Object email = authenticationManager.get("email");
+                Object name = authenticationManager.get("name");
+                Object preferredUsername = authenticationManager.get("preferred_username");
+                if (name != null && !String.valueOf(name).isBlank()) {
+                    senderName = String.valueOf(name);
+                } else if (email != null && !String.valueOf(email).isBlank()) {
+                    // Extract name from email (before @)
+                    String emailStr = String.valueOf(email);
+                    senderName = emailStr.substring(0, emailStr.indexOf('@'));
+                } else if (preferredUsername != null && !String.valueOf(preferredUsername).isBlank()) {
+                    senderName = String.valueOf(preferredUsername);
+                } else {
+                    senderName = "HR";
+                }
+                senderEmployeeNumber = "HR";
+            } else {
+                senderName = sender.getFullName();
+                senderEmployeeNumber = "HR";
+            }
+        }
+
         return new ChatMessageResponse(
                 message.getId(),
                 message.getConversation().getId(),
                 message.getSender().getId(),
-                message.getSender().getEmployeeNumber(),
-                message.getSender().getFullName(),
+                senderEmployeeNumber,
+                senderName,
                 message.getRecipient().getId(),
                 message.getRecipient().getEmployeeNumber(),
                 message.getContent(),

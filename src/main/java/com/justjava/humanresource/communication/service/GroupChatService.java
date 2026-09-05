@@ -57,7 +57,9 @@ public class GroupChatService {
         if (isHrOrAdmin()) {
             return true;
         }
-        return currentEmployeeOptional() != null && isDepartmentHead(currentEmployeeOptional());
+        // Avoid calling currentEmployeeOptional() twice (may throw or return different results).
+        Employee current = currentEmployeeOptional();
+        return current != null && isDepartmentHead(current);
     }
 
     @Transactional(readOnly = true)

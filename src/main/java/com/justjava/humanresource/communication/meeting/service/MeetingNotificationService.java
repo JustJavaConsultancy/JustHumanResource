@@ -65,6 +65,9 @@ public class MeetingNotificationService {
             participant.setChatNotifiedAt(LocalDateTime.now());
             participant.setChatStatus("SENT");
             messagingTemplate.convertAndSendToUser(message.recipientEmployeeNumber(), "/queue/messages", message);
+            if (message.recipientEmployeeNumber() != null && ("HR-SYSTEM".equalsIgnoreCase(message.recipientEmployeeNumber()) || "HR".equalsIgnoreCase(message.recipientEmployeeNumber()))) {
+                messagingTemplate.convertAndSend("/topic/hr-inbox", message);
+            }
             messagingTemplate.convertAndSendToUser(message.senderEmployeeNumber(), "/queue/messages", message);
         } catch (RuntimeException ex) {
             markChatFailure(participant, errors, ex.getMessage());

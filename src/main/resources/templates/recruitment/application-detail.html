@@ -60,8 +60,16 @@
                 </div>
                 <input class="form-input" name="locationOrMeetingLink" placeholder="Location or meeting link">
                 <div class="grid md:grid-cols-2 gap-3">
-                    <input class="form-input" type="number" name="coordinatorEmployeeId" placeholder="Coordinator employee ID" required>
-                    <input class="form-input" name="panelEmployeeIds" placeholder="Panel employee IDs, comma separated" required>
+                    <select class="form-input" name="coordinatorEmployeeId" required>
+                        <option value="">Select coordinator</option>
+                        <option th:each="emp : ${employees}" th:value="${emp.id}" th:text="${emp.firstName + ' ' + emp.lastName + ' (' + emp.employeeNumber + ')'}">Employee</option>
+                    </select>
+                    <div class="relative">
+                        <select class="form-input" name="panelEmployeeIds" multiple required>
+                            <option th:each="emp : ${employees}" th:value="${emp.id}" th:text="${emp.firstName + ' ' + emp.lastName + ' (' + emp.employeeNumber + ')'}">Employee</option>
+                        </select>
+                        <small class="text-xs text-gray-400">Hold Ctrl/Cmd to select multiple</small>
+                    </div>
                 </div>
                 <div class="flex justify-end">
                     <button class="px-4 py-2 bg-primary-600 text-white rounded-lg">Schedule</button>
@@ -77,8 +85,14 @@
                     <input class="form-input" name="currency" value="NGN" maxlength="3">
                 </div>
                 <div class="grid md:grid-cols-2 gap-3">
-                    <input class="form-input" type="number" name="jobStepId" placeholder="Job step ID">
-                    <input class="form-input" type="number" name="payGroupId" placeholder="Pay group ID">
+                    <select class="form-input" name="jobStepId">
+                        <option value="">Select job step (optional)</option>
+                        <option th:each="js : ${jobSteps}" th:value="${js.id}" th:text="${(js.jobGrade?.name ?: 'N/A') + ' - ' + js.name + ' (' + js.grossSalary + ')'}">Job Step</option>
+                    </select>
+                    <select class="form-input" name="payGroupId">
+                        <option value="">Select pay group (optional)</option>
+                        <option th:each="pg : ${payGroups}" th:value="${pg.id}" th:text="${pg.name + ' (' + pg.code + ')'}">Pay Group</option>
+                    </select>
                 </div>
                 <div class="grid md:grid-cols-2 gap-3">
                     <input class="form-input" type="date" name="proposedStartDate" required>
@@ -107,7 +121,10 @@
                     <form th:if="${canSubmitScorecard}" method="post"
                           th:action="@{/recruitment/applications/{id}/interviews/{interviewId}/scorecards(id=${applicationId},interviewId=${interview.id})}"
                           class="grid md:grid-cols-5 gap-2 mt-4">
-                        <input class="form-input md:col-span-1" type="number" name="reviewerEmployeeId" placeholder="Reviewer ID" required>
+                        <select class="form-input md:col-span-1" name="reviewerEmployeeId" required>
+                            <option value="">Select reviewer</option>
+                            <option th:each="emp : ${employees}" th:value="${emp.id}" th:text="${emp.firstName + ' ' + emp.lastName + ' (' + emp.employeeNumber + ')'}">Employee</option>
+                        </select>
                         <input class="form-input md:col-span-1" type="number" min="1" max="5" name="overallScore" placeholder="Score" required>
                         <select class="form-input md:col-span-1" name="recommendation" required>
                             <option value="HIRE">Hire</option>
@@ -146,7 +163,10 @@
                     <div class="flex flex-wrap gap-2 mt-4">
                         <form th:if="${canApproveOffers and offer.status.name() == 'IN_APPROVAL'}" method="post" th:action="@{/recruitment/offers/{offerId}/approve(offerId=${offer.id})}">
                             <input type="hidden" name="applicationId" th:value="${applicationId}">
-                            <input class="form-input w-40" type="number" name="approverEmployeeId" placeholder="Approver ID" required>
+                            <select class="form-input w-40" name="approverEmployeeId" required>
+                                <option value="">Select approver</option>
+                                <option th:each="emp : ${employees}" th:value="${emp.id}" th:text="${emp.firstName + ' ' + emp.lastName + ' (' + emp.employeeNumber + ')'}">Employee</option>
+                            </select>
                             <button class="px-3 py-2 bg-emerald-600 text-white rounded-lg text-sm mt-2">Approve</button>
                         </form>
                         <form th:if="${canApproveOffers and offer.status.name() == 'IN_APPROVAL'}" method="post" th:action="@{/recruitment/offers/{offerId}/reject(offerId=${offer.id})}">
@@ -169,12 +189,24 @@
             <h3 class="font-bold mb-4">Start onboarding</h3>
             <form method="post" th:action="@{/recruitment/applications/{id}/onboarding(id=${applicationId})}" class="space-y-3">
                 <div class="grid md:grid-cols-2 gap-3">
-                    <input class="form-input" type="number" name="departmentId" th:value="${opening.departmentId}" placeholder="Department ID" required>
-                    <input class="form-input" type="number" name="managerId" placeholder="Manager ID">
+                    <select class="form-input" name="departmentId" required>
+                        <option value="">Select department</option>
+                        <option th:each="dept : ${departments}" th:value="${dept.id}" th:text="${dept.name + (dept.code != null and dept.code != '' ? ' (' + dept.code + ')' : '')}">Department</option>
+                    </select>
+                    <select class="form-input" name="managerId">
+                        <option value="">Select manager (optional)</option>
+                        <option th:each="emp : ${employees}" th:value="${emp.id}" th:text="${emp.firstName + ' ' + emp.lastName + ' (' + emp.employeeNumber + ')'}">Employee</option>
+                    </select>
                 </div>
                 <div class="grid md:grid-cols-2 gap-3">
-                    <input class="form-input" type="number" name="jobStepId" placeholder="Job step ID">
-                    <input class="form-input" type="number" name="payGroupId" placeholder="Pay group ID">
+                    <select class="form-input" name="jobStepId">
+                        <option value="">Select job step (optional)</option>
+                        <option th:each="js : ${jobSteps}" th:value="${js.id}" th:text="${(js.jobGrade?.name ?: 'N/A') + ' - ' + js.name + ' (' + js.grossSalary + ')'}">Job Step</option>
+                    </select>
+                    <select class="form-input" name="payGroupId">
+                        <option value="">Select pay group (optional)</option>
+                        <option th:each="pg : ${payGroups}" th:value="${pg.id}" th:text="${pg.name + ' (' + pg.code + ')'}">Pay Group</option>
+                    </select>
                 </div>
                 <input class="form-input" name="groups" value="employees" placeholder="Employee groups">
                 <div class="grid md:grid-cols-2 gap-3">
@@ -216,5 +248,6 @@
         </div>
     </section>
 </main>
+
 </body>
 </html>

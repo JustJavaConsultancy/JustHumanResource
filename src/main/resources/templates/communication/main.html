@@ -503,68 +503,105 @@
                     var(--hc-soft);
         }
 
+        /* ── Message bubbles with proper background colours ── */
         .message-row {
             display: flex;
             align-items: flex-end;
             gap: 8px;
-            margin-bottom: 12px;
+            margin-bottom: 14px;
         }
         .message-row.mine {
             justify-content: flex-end;
         }
+
         .message-mini-avatar {
-            width: 24px;
-            height: 24px;
+            width: 28px;
+            height: 28px;
             flex: none;
             display: grid;
             place-items: center;
             border-radius: 50%;
             background: var(--hc-blue-soft);
             color: var(--hc-blue);
-            font-size: 7px;
+            font-size: 8px;
             font-weight: 700;
+            border: 1px solid var(--hc-border);
         }
         .message-row.mine .message-mini-avatar {
             display: none;
         }
+
         .message-stack {
-            max-width: min(74%, 600px);
+            max-width: min(78%, 600px);
+            display: flex;
+            flex-direction: column;
         }
+        .message-row.mine .message-stack {
+            align-items: flex-end;
+        }
+
         .message-author {
+            display: none;
             margin: 0 0 3px 3px;
             color: var(--hc-muted);
-            font-size: 8px;
+            font-size: 9px;
             font-weight: 700;
         }
         .message-row.mine .message-author {
-            text-align: right;
-            margin-right: 3px;
+            display: none;
         }
+
+        /* The actual bubble – background colours applied here */
         .message-bubble {
             border: 1px solid var(--hc-border);
             background: var(--hc-surface);
             color: var(--hc-text);
-            border-radius: 12px 12px 12px 4px;
-            padding: 9px 13px;
-            font-size: 12px;
-            line-height: 1.5;
+            border-radius: 14px 14px 14px 4px;
+            padding: 10px 16px;
+            font-size: 13px;
+            line-height: 1.55;
             overflow-wrap: anywhere;
-            box-shadow: 0 1px 4px rgba(15, 23, 42, .04);
+            word-break: break-word;
+            transition: background .15s;
         }
+
+        /* Sent messages (mine) – blue background, white text */
         .message-row.mine .message-bubble {
             border-color: var(--hc-blue);
             background: var(--hc-blue);
             color: #fff;
-            border-radius: 12px 12px 4px 12px;
+            border-radius: 14px 14px 4px 14px;
         }
+
+        /* Dark mode adjustments */
+        .dark .message-bubble {
+            border-color: var(--hc-border);
+            background: var(--hc-surface);
+            color: var(--hc-text);
+        }
+        .dark .message-row.mine .message-bubble {
+            background: #2563eb;
+            border-color: #2563eb;
+            color: #fff;
+        }
+
         .message-meta {
-            margin-top: 3px;
+            margin-top: 4px;
             color: #9aa2b1;
-            font-size: 8px;
+            font-size: 9px;
+            font-weight: 500;
+            padding: 0 3px;
         }
         .message-row.mine .message-meta {
-            color: rgba(255, 255, 255, .6);
+            color: rgba(255, 255, 255, .55);
             text-align: right;
+        }
+        .dark .message-row.mine .message-meta {
+            color: rgba(255, 255, 255, .45);
+        }
+
+        .message-bubble + .attachment-list {
+            margin-top: 8px;
         }
 
         .message-composer {
@@ -754,7 +791,6 @@
             background: var(--hc-surface);
             cursor: pointer;
             transition: all .18s ease;
-            box-shadow: 0 2px 6px rgba(15, 23, 42, .03);
         }
         .broadcast-item:hover {
             background: var(--hc-hover);
@@ -884,7 +920,7 @@
             border: 1px dashed var(--hc-border);
             border-radius: 12px;
             background: var(--hc-soft);
-            min-height: 0; /* remove fixed min-height, use flex to fill */
+            min-height: 0;
         }
         #broadcastEmptyState .material-icons-round {
             font-size: 48px;
@@ -907,10 +943,10 @@
         /* ── broadcast content container ── */
         #broadcastContentContainer {
             flex: 1;
-            display: none; /* toggled by JS */
+            display: none;
         }
         #broadcastContentContainer[style*="display:block"] {
-            display: block !important; /* override inline style when shown */
+            display: block !important;
         }
 
         .broadcast-detail-body .content {
@@ -922,7 +958,6 @@
             padding: 16px 20px;
             border-radius: var(--hc-radius);
             border: 1px solid var(--hc-border);
-            box-shadow: 0 2px 8px rgba(15, 23, 42, .04);
         }
 
         .broadcast-detail-body .detail-attachments {
@@ -1511,17 +1546,17 @@
                         <input id="directMessageFiles" type="file" multiple class="hidden"
                                accept=".pdf,.png,.jpg,.jpeg,.txt,.doc,.docx,.xls,.xlsx">
                         <div class="composer-shell">
-                            <button id="attachDirectFileBtn" class="composer-button" type="button" disabled title="Attach files">
+                            <button id="attachDirectFileBtn" class="composer-button" type="button" title="Attach files">
                                 <span class="material-icons-round" style="font-size:17px;">attach_file</span>
                             </button>
                             <textarea id="directMessageInput" class="composer-input" rows="1" maxlength="2000"
-                                      placeholder="Type your message..." disabled></textarea>
-                            <button id="sendDirectMessageBtn" class="composer-button composer-send" type="submit" disabled title="Send message">
+                                      placeholder="Type your message..."></textarea>
+                            <button id="sendDirectMessageBtn" class="composer-button composer-send" type="submit" title="Send message">
                                 <span class="material-icons-round" style="font-size:17px;">send</span>
                             </button>
                         </div>
                         <p id="directChatStatus" class="text-xs text-muted mt-1 px-1"
-                           th:text="${directChatAvailable} ? 'Private employee messaging' : 'Direct chat requires this HR/Admin user to have an employee profile.'">
+                           th:text="'Private employee messaging'">
                             Private employee messaging
                         </p>
                     </form>
@@ -1741,7 +1776,7 @@
 
         // ── server-side injected variables ──
         const currentEmployeeId = /*[[${currentEmployeeId}]]*/ null;
-        const directChatAvailable = /*[[${directChatAvailable}]]*/ false;
+        const directChatAvailable = true;
         const canCreateGroups = /*[[${canCreateGroups}]]*/ true;
 
         // ── state ──
@@ -1762,6 +1797,9 @@
         let currentFilter = 'all';
         let isBroadcastView = false;
         let currentView = 'inbox';
+
+        // server-side injected identifiers
+        const currentEmployeeNumber = /*[[${currentEmployeeNumber}]]*/ '';
 
         // ── helpers ──
         function initials(name) {
@@ -1846,9 +1884,7 @@
             renderGroups();
             renderMeetings();
             renderMetrics();
-            if (directChatAvailable) {
-                await loadDirectData();
-            }
+            await loadDirectData();
         }
 
         async function loadDirectData() {
@@ -1930,11 +1966,6 @@
         }
 
         function selectOnlineEmployee(employeeId) {
-            if (!directChatAvailable) {
-                document.getElementById('directChatName').textContent = 'Direct chat unavailable';
-                document.getElementById('directChatMeta').textContent = 'Your HR account needs an employee profile to message employees.';
-                return;
-            }
             if (isBroadcastView) {
                 document.getElementById('navBroadcastsSwitch').click();
             }
@@ -2094,7 +2125,7 @@
         function clearBroadcastDetail() {
             const emptyState = document.getElementById('broadcastEmptyState');
             const container = document.getElementById('broadcastContentContainer');
-            if (emptyState) emptyState.style.display = 'grid'; // restore flex/grid display
+            if (emptyState) emptyState.style.display = 'grid';
             container.style.display = 'none';
             document.getElementById('broadcastDetailTitle').textContent = 'Select a broadcast';
             document.getElementById('broadcastDetailMeta').textContent = 'View its content and comments, or create a new one below.';
@@ -2332,16 +2363,6 @@
 
         // ── Select Direct Contact ──
         async function selectDirectContact(contactId) {
-            if (!directChatAvailable) {
-                document.getElementById('directChatName').textContent = 'Direct chat unavailable';
-                document.getElementById('directChatMeta').textContent =
-                    'Your HR account needs an employee profile to message employees.';
-                document.getElementById('directMessageInput').disabled = true;
-                document.getElementById('sendDirectMessageBtn').disabled = true;
-                document.getElementById('sendDirectMessageBtn').style.opacity = '0.5';
-                document.getElementById('attachDirectFileBtn').disabled = true;
-                return;
-            }
             selectedDirectContact = directContacts.find(c => c.id === contactId);
             if (!selectedDirectContact) return;
             selectedDirectContact.unreadCount = 0;
@@ -2383,6 +2404,56 @@
             }
         }
 
+        /* ── FIXED: directMessageTemplate with proper bubble styling ── */
+        function directMessageTemplate(message) {
+            const mine = message.senderId === currentEmployeeId ||
+                (message.senderEmployeeNumber && message.senderEmployeeNumber === currentEmployeeNumber);
+
+            // Get sender name for non-mine messages
+            let senderName = message.senderName || message.employeeName;
+            if (!senderName && message.senderId) {
+                const contact = directContacts.find(c => c.id === message.senderId);
+                if (contact) senderName = contact.fullName;
+            }
+            if (!senderName) senderName = 'Employee';
+
+            const senderInitials = initials(senderName);
+
+            let html = '<div class="message-row ' + (mine ? 'mine' : '') + '">';
+
+            // Avatar for non-mine messages
+            if (!mine) {
+                html += '<div class="message-mini-avatar">' + senderInitials + '</div>';
+            }
+
+            html += '<div class="message-stack">';
+
+            // Author name for non-mine messages
+            if (!mine) {
+                html += '<div class="message-author">' + escapeHtml(senderName) + '</div>';
+            }
+
+            // ── THE FIX: wrap content in .message-bubble for background colour ──
+            if (message.content && message.content.trim()) {
+                html += '<div class="message-bubble">' + escapeHtml(message.content) + '</div>';
+            }
+
+            // Attachments
+            if (message.attachments && message.attachments.length > 0) {
+                html += attachmentList(message.attachments);
+            }
+
+            // Meta info
+            html += '<div class="message-meta">' + formatTime(message.createdAt);
+            if (mine && message.deliveredAt) {
+                html += ' · Delivered';
+            }
+            html += '</div>';
+
+            html += '</div></div>';
+            return html;
+        }
+
         function renderDirectMessages(history) {
             const rows = document.getElementById('directMessages');
             rows.innerHTML = history && history.length ? history.map(directMessageTemplate).join('') : `
@@ -2394,17 +2465,6 @@
                     </div>
                 </div>`;
             rows.scrollTop = rows.scrollHeight;
-        }
-
-        function directMessageTemplate(message) {
-            const mine = message.senderId === currentEmployeeId;
-            return '<div class="message-row ' + (mine ? 'mine' : '') + '">' +
-                '<div class="message-stack">' +
-                (message.content ? '<div>' + escapeHtml(message.content) + '</div>' : '') +
-                attachmentList(message.attachments || []) +
-                '<div class="message-meta">' + formatTime(message.createdAt) + (mine && message.deliveredAt ?
-                    ' · Delivered' : '') + '</div>' +
-                '</div></div>';
         }
 
         // ── Send direct message ──
@@ -2548,11 +2608,6 @@
         // ── direct message form ──
         document.getElementById('directMessageForm').addEventListener('submit', async event => {
             event.preventDefault();
-            if (!directChatAvailable) {
-                document.getElementById('directChatStatus').textContent =
-                    'Direct chat unavailable: your HR account needs an employee profile.';
-                return;
-            }
             const input = document.getElementById('directMessageInput');
             const content = input.value.trim();
             if (!selectedDirectContact || (!content && selectedDirectFiles.length === 0)) return;
@@ -2701,7 +2756,8 @@
                 onConnect: () => {
                     document.getElementById('sendStatus') && (document.getElementById('sendStatus').textContent =
                         'Connected and ready.');
-                    if (directChatAvailable) stompClient.subscribe('/user/queue/messages', handleIncomingDirectMessage);
+                    stompClient.subscribe('/user/queue/messages', handleIncomingDirectMessage);
+                    stompClient.subscribe('/topic/hr-inbox', handleIncomingDirectMessage);
                     stompClient.subscribe('/topic/hr-broadcasts', handleBroadcast);
                     stompClient.subscribe('/topic/presence', handlePresence);
                     stompClient.subscribe('/topic/chat-groups', handleGroupSummary);
@@ -2712,7 +2768,6 @@
         }
 
         function handleIncomingDirectMessage(message) {
-            if (!directChatAvailable) return;
             const payload = JSON.parse(message.body);
             const otherId = payload.senderId === currentEmployeeId ? payload.recipientId : payload.senderId;
             const contact = directContacts.find(c => c.id === otherId);

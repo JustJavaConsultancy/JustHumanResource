@@ -31,7 +31,13 @@ public class CommunicationSocketController {
     public void sendDirectMessage(@Valid DirectMessageCommand command, Principal principal) {
         ChatMessageResponse response = communicationService.sendDirectMessage(command, principal);
         messagingTemplate.convertAndSendToUser(response.recipientEmployeeNumber(), "/queue/messages", response);
-        messagingTemplate.convertAndSendToUser(response.senderEmployeeNumber(), "/queue/messages", response);
+        // If recipient is the HR system account, also publish to the HR inbox topic so HR UIs (principal != employeeNumber) receive it
+        if (response.recipientEmployeeNumber() != null && ("HR-SYSTEM".equalsIgnoreCase(response.recipientEmployeeNumber()) || "HR".equalsIgnoreCase(response.recipientEmployeeNumber()))) {
+            messagingTemplate.convertAndSend("/topic/hr-inbox", response);
+        }
+        // For HR system employee, use the principal name (HR:email) for routing back to sender
+        String senderPrincipal = principal != null ? principal.getName() : response.senderEmployeeNumber();
+        messagingTemplate.convertAndSendToUser(senderPrincipal, "/queue/messages", response);
     }
 
     @MessageMapping("/broadcast.send")

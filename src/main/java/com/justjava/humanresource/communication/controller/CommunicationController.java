@@ -8,6 +8,7 @@ import com.justjava.humanresource.communication.dto.ChatGroupResponse;
 import com.justjava.humanresource.communication.dto.ChatMessageResponse;
 import com.justjava.humanresource.communication.dto.ConversationResponse;
 import com.justjava.humanresource.communication.dto.CreateChatGroupCommand;
+import com.justjava.humanresource.communication.dto.DirectMessageCommand;
 import com.justjava.humanresource.communication.dto.EmployeeContactResponse;
 import com.justjava.humanresource.communication.dto.GroupMessageResponse;
 import com.justjava.humanresource.communication.dto.PresenceResponse;
@@ -20,6 +21,7 @@ import com.justjava.humanresource.communication.service.GroupChatService;
 import com.justjava.humanresource.communication.service.PresenceService;
 import com.justjava.humanresource.core.config.AuthenticationManager;
 import com.justjava.humanresource.hr.entity.Employee;
+import java.security.Principal;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -85,9 +87,11 @@ public class CommunicationController {
             model.addAttribute("currentEmployeeNumber", employee.getEmployeeNumber());
             model.addAttribute("directChatAvailable", true);
         } catch (EntityNotFoundException | AccessDeniedException exception) {
-            model.addAttribute("currentEmployeeId", null);
-            model.addAttribute("currentEmployeeNumber", "");
-            model.addAttribute("directChatAvailable", false);
+            // HR without employee profile - use HR system employee
+            Employee hrSystem = communicationService.getOrCreateHrSystemEmployee("hr-system@company.local");
+            model.addAttribute("currentEmployeeId", hrSystem.getId());
+            model.addAttribute("currentEmployeeNumber", hrSystem.getEmployeeNumber());
+            model.addAttribute("directChatAvailable", true);
         }
         model.addAttribute("title", "Communication");
         model.addAttribute("subTitle", "Send HR broadcasts and monitor employee feedback");
@@ -141,6 +145,22 @@ public class CommunicationController {
             @RequestParam(required = false) List<MultipartFile> files) {
         ChatMessageResponse response = communicationService.sendDirectMessageWithAttachments(recipientEmployeeId, content, files);
         messagingTemplate.convertAndSendToUser(response.recipientEmployeeNumber(), "/queue/messages", response);
+        if (response.recipientEmployeeNumber() != null && ("HR-SYSTEM".equalsIgnoreCase(response.recipientEmployeeNumber()) || "HR".equalsIgnoreCase(response.recipientEmployeeNumber()))) {
+            messagingTemplate.convertAndSend("/topic/hr-inbox", response);
+        }
+        messagingTemplate.convertAndSendToUser(response.senderEmployeeNumber(), "/queue/messages", response);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping(value = "/communication/messages", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    public ResponseEntity<ChatMessageResponse> sendHrDirectMessageJson(
+            @Valid @RequestBody DirectMessageCommand command, Principal principal) {
+        ChatMessageResponse response = communicationService.sendDirectMessage(command, principal);
+        messagingTemplate.convertAndSendToUser(response.recipientEmployeeNumber(), "/queue/messages", response);
+        if (response.recipientEmployeeNumber() != null && ("HR-SYSTEM".equalsIgnoreCase(response.recipientEmployeeNumber()) || "HR".equalsIgnoreCase(response.recipientEmployeeNumber()))) {
+            messagingTemplate.convertAndSend("/topic/hr-inbox", response);
+        }
         messagingTemplate.convertAndSendToUser(response.senderEmployeeNumber(), "/queue/messages", response);
         return ResponseEntity.ok(response);
     }
@@ -153,6 +173,9 @@ public class CommunicationController {
             @RequestParam(required = false) List<MultipartFile> files) {
         ChatMessageResponse response = communicationService.sendHrDirectMessageWithAttachments(recipientEmployeeId, content, files);
         messagingTemplate.convertAndSendToUser(response.recipientEmployeeNumber(), "/queue/messages", response);
+        if (response.recipientEmployeeNumber() != null && ("HR-SYSTEM".equalsIgnoreCase(response.recipientEmployeeNumber()) || "HR".equalsIgnoreCase(response.recipientEmployeeNumber()))) {
+            messagingTemplate.convertAndSend("/topic/hr-inbox", response);
+        }
         messagingTemplate.convertAndSendToUser(response.senderEmployeeNumber(), "/queue/messages", response);
         return ResponseEntity.ok(response);
     }
