@@ -184,7 +184,7 @@ public class EmployeeOnboardingService {
     @Transactional
     public void updateEmployee(Long id, EmployeeDTO dto) {
         Employee employee = employeeRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Employee not found", id));
+                .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
 
 
         if (dto.getEmail() != null) {
@@ -211,18 +211,18 @@ public class EmployeeOnboardingService {
 
         if (dto.getDepartmentId() != null) {
             Department dept = departmentRepository.findById(dto.getDepartmentId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Department not found", dto.getDepartmentId()));
+                    .orElseThrow(() -> new ResourceNotFoundException("Department not found"));
             employee.setDepartment(dept);
         }
         if (dto.getJobStepId() != null) {
             JobStep step = jobStepRepository.findById(dto.getJobStepId())
-                    .orElseThrow(() -> new ResourceNotFoundException("JobStep not found", dto.getJobStepId()));
+                    .orElseThrow(() -> new ResourceNotFoundException("JobStep not found"));
             employee.setJobStep(step);
             recalculationRequired = true;
         }
         if (dto.getPayGroupId() != null) {
             PayGroup payGroup = payGroupRepository.findById(dto.getPayGroupId())
-                    .orElseThrow(() -> new ResourceNotFoundException("PayGroup not found", dto.getPayGroupId()));
+                    .orElseThrow(() -> new ResourceNotFoundException("PayGroup not found"));
             employee.setPayGroup(payGroup);
             recalculationRequired = true;
         }

@@ -36,7 +36,7 @@ public class EmployeePositionHistoryServiceImpl
     public EmployeePositionHistory createInitialPosition(Long employeeId) {
 
         Employee employee = employeeRepository.findById(employeeId)
-                .orElseThrow(() -> new ResourceNotFoundException("Employee", employeeId));
+                .orElseThrow(() -> new ResourceNotFoundException("Employee"));
 
         boolean alreadyExists = positionRepository.existsByEmployee_IdAndCurrentTrue(employeeId);
 
@@ -79,16 +79,16 @@ public class EmployeePositionHistoryServiceImpl
             LocalDate effectiveDate
     ) {
         Employee employee = employeeRepository.findById(employeeId)
-                .orElseThrow(() -> new ResourceNotFoundException("Employee", employeeId));
+                .orElseThrow(() -> new ResourceNotFoundException("Employee"));
 
         Department department = departmentRepository.findById(departmentId)
-                .orElseThrow(() -> new ResourceNotFoundException("Department", departmentId));
+                .orElseThrow(() -> new ResourceNotFoundException("Department"));
 
         JobStep jobStep = jobStepRepository.findById(jobStepId)
-                .orElseThrow(() -> new ResourceNotFoundException("JobStep", jobStepId));
+                .orElseThrow(() -> new ResourceNotFoundException("JobStep"));
 
         PayGroup payGroup = payGroupRepository.findById(payGroupId)
-                .orElseThrow(() -> new ResourceNotFoundException("PayGroup", payGroupId));
+                .orElseThrow(() -> new ResourceNotFoundException("PayGroup"));
 
         // ---------------------------------------------------------
         // STEP 1: Load ALL records for this employee on this date
@@ -197,7 +197,7 @@ public class EmployeePositionHistoryServiceImpl
         return positionRepository
                 .findByEmployee_IdAndCurrentTrue(employeeId)
                 .orElseThrow(() ->
-                        new ResourceNotFoundException("Active Position for Employee", employeeId));
+                        new ResourceNotFoundException("Active Position for Employee"));
     }
 
     @Override
@@ -206,7 +206,7 @@ public class EmployeePositionHistoryServiceImpl
         EmployeePositionHistory position = positionRepository
                 .findByEmployee_IdAndCurrentTrue(employeeId)
                 .orElseThrow(() ->
-                        new ResourceNotFoundException("Active Position for Employee", employeeId));
+                        new ResourceNotFoundException("Active Position for Employee"));
         return mapper.toDto(position);
     }
 }

@@ -3,7 +3,7 @@ package com.justjava.humanresource.core.exception;
 
 public class ResourceNotFoundException extends CustomException {
 
-    public ResourceNotFoundException(String resource, Object id) {
-        super(resource + " not found with id: " + id);
+    public ResourceNotFoundException(String resource) {
+        super(resource + " not found");
     }
 }

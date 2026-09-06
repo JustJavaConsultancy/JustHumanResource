@@ -1,45 +1,40 @@
 package com.justjava.humanresource.communication.entity;
 
-import com.justjava.humanresource.core.entity.BaseEntity;
 import com.justjava.humanresource.hr.entity.Employee;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
+@Entity
+@Table(name = "chat_group_members",
+        uniqueConstraints = @UniqueConstraint(name = "uk_group_employee", columnNames = {"group_id", "employee_id"}))
 @Getter
 @Setter
-@Entity
 @NoArgsConstructor
-@Table(name = "communication_chat_group_members",
-        uniqueConstraints = @UniqueConstraint(
-                name = "uk_chat_group_member",
-                columnNames = {"chat_group_id", "employee_id"}))
-public class ChatGroupMember extends BaseEntity {
+@AllArgsConstructor
+@Builder
+public class ChatGroupMember {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "chat_group_id", nullable = false)
-    private ChatGroup chatGroup;
+    @JoinColumn(name = "group_id", nullable = false)
+    private ChatGroup group;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "employee_id", nullable = false)
     private Employee employee;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 30)
+    @Column(nullable = false)
+    @Builder.Default
     private ChatGroupMemberRole role = ChatGroupMemberRole.MEMBER;
 
+    @CreationTimestamp
+    @Column(name = "joined_at", nullable = false, updatable = false)
     private LocalDateTime joinedAt;
-
-    private LocalDateTime removedAt;
 }

@@ -1,5 +1,6 @@
 package com.justjava.humanresource.communication.service;
 
+import com.justjava.humanresource.communication.dto.AvailableMemberResponse;
 import com.justjava.humanresource.communication.dto.BroadcastCommand;
 import com.justjava.humanresource.communication.dto.BroadcastCommentCommand;
 import com.justjava.humanresource.communication.dto.BroadcastCommentResponse;
@@ -140,6 +141,18 @@ public class CommunicationService {
         assertHrCanMessageEmployees();
         // HR users may not have an employee profile; use HR sender fallback when necessary
         return listContactsFor(getHrSenderForCurrentUser());
+    }
+
+    @Transactional(readOnly = true)
+    public List<AvailableMemberResponse> getAvailableMembersForGroup() {
+        return employeeRepository.findAllVisible().stream()
+                .filter(this::isActiveEmployee)
+                .map(employee -> new AvailableMemberResponse(
+                        employee.getId(),
+                        employee.getFullName(),
+                        employee.getDepartment() == null ? "Unassigned" : employee.getDepartment().getName()
+                ))
+                .toList();
     }
 
     private List<EmployeeContactResponse> listContactsFor(Employee current) {

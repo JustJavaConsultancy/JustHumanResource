@@ -287,10 +287,44 @@
         }
         .message-row {
             display: flex;
+            gap: 8px;
             margin-bottom: 14px;
+            align-items: flex-end;
         }
         .message-row.mine {
             justify-content: flex-end;
+        }
+        .message-row.mine .message-bubble {
+            border-radius: 12px 12px 4px 12px;
+        }
+        .message-row:not(.mine) .message-bubble {
+            border-radius: 12px 12px 12px 4px;
+        }
+        .message-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 11px;
+            color: #fff;
+            background: var(--hc-blue);
+            flex: 0 0 auto;
+            margin-bottom: 2px;
+        }
+        .message-row.mine .message-avatar {
+            display: none;
+            background: var(--hc-emerald);
+            order: 1;
+        }
+        .message-row:not(.mine) .message-avatar {
+            order: 0;
+        }
+        .message-bubble {
+            max-width: min(74%, 620px);
+            flex: 0 1 auto;
         }
         .message-bubble {
             max-width: min(74%, 620px);
@@ -320,7 +354,7 @@
             text-align: right;
         }
         .message-author {
-            display: none;
+            display: block;
             font-weight: 700;
             font-size: 11px;
             margin-bottom: 2px;
@@ -1187,10 +1221,12 @@
             }
             messages.innerHTML = history.map(msg => {
                 const mine = msg.senderId === currentEmployeeId;
+                const avatarColor = mine ? 'bg-emerald-600' : 'bg-slate-400';
                 return `
                     <div class="message-row ${mine ? 'mine' : ''}">
+                        <div class="message-avatar ${avatarColor}">${initials(msg.senderName)}</div>
                         <div class="message-bubble">
-                            ${!mine && isGroup ? `<div class="message-author">${escapeHtml(msg.senderName)}</div>` : ''}
+                            ${!mine ? `<div class="message-author">${escapeHtml(msg.senderName)}</div>` : ''}
                             ${msg.content ? `<div>${escapeHtml(msg.content)}</div>` : ''}
                             ${attachmentList(msg.attachments || [])}
                             <div class="message-meta">${formatTime(msg.createdAt)}${mine && msg.deliveredAt ? ' · Delivered' : ''}</div>
@@ -1397,10 +1433,13 @@
             if (selectedContact && selectedContact.id === otherId) {
                 if (messages.querySelector('.empty-state')) messages.innerHTML = '';
                 const mine = payload.senderId === currentEmployeeId;
+                const avatarColor = mine ? 'bg-emerald-600' : 'bg-slate-400';
+                const senderName = payload.senderName || contact?.fullName || 'Unknown';
                 messages.insertAdjacentHTML('beforeend', `
                     <div class="message-row ${mine ? 'mine' : ''}">
+                        <div class="message-avatar ${avatarColor}">${initials(senderName)}</div>
                         <div class="message-bubble">
-                            ${!mine ? `<div class="message-author">${escapeHtml(payload.senderName || contact?.fullName || 'Unknown')}</div>` : ''}
+                            ${!mine ? `<div class="message-author">${escapeHtml(senderName)}</div>` : ''}
                             ${payload.content ? `<div>${escapeHtml(payload.content)}</div>` : ''}
                             ${attachmentList(payload.attachments || [])}
                             <div class="message-meta">${formatTime(payload.createdAt)}${mine && payload.deliveredAt ? ' · Delivered' : ''}</div>
@@ -1419,8 +1458,10 @@
             if (selectedGroup && selectedGroup.id === payload.groupId) {
                 if (messages.querySelector('.empty-state')) messages.innerHTML = '';
                 const mine = payload.senderId === currentEmployeeId;
+                const avatarColor = mine ? 'bg-emerald-600' : 'bg-slate-400';
                 messages.insertAdjacentHTML('beforeend', `
                     <div class="message-row ${mine ? 'mine' : ''}">
+                        <div class="message-avatar ${avatarColor}">${initials(payload.senderName)}</div>
                         <div class="message-bubble">
                             ${!mine ? `<div class="message-author">${escapeHtml(payload.senderName)}</div>` : ''}
                             ${payload.content ? `<div>${escapeHtml(payload.content)}</div>` : ''}

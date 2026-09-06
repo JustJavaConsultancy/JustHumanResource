@@ -26,7 +26,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -81,13 +80,13 @@ public class EmployeeServiceImpl implements EmployeeService {
     @Override
     public Employee getByEmployeeNumber(String employeeNumber) {
         return employeeRepository.findByEmployeeNumber(employeeNumber)
-                .orElseThrow(() -> new ResourceNotFoundException("Employee", employeeNumber));
+                .orElseThrow(() -> new ResourceNotFoundException("Employee"));
     }
 
     @Override
     public Employee getByEmail(String email) {
         return employeeRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("Employee", email));
+                .orElseThrow(() -> new ResourceNotFoundException("Employee"));
     }
 
     /* =========================
@@ -107,7 +106,7 @@ public class EmployeeServiceImpl implements EmployeeService {
     public EmployeeDTO changeJobStep(Long employeeId, Long newJobStepId, LocalDate effectiveDate) {
         Employee employee = getById(employeeId);
         JobStep newJobStep = jobStepRepository.findById(newJobStepId)
-                .orElseThrow(() -> new ResourceNotFoundException("JobStep", newJobStepId));
+                .orElseThrow(() -> new ResourceNotFoundException("JobStep"));
         employee.setJobStep(newJobStep);
         Employee saved = employeeRepository.save(employee);
         payrollChangeOrchestrator.recalculateForEmployee(saved.getId(), effectiveDate);
@@ -228,7 +227,7 @@ public class EmployeeServiceImpl implements EmployeeService {
     @Override
     public Employee getById(Long employeeId) {
         return employeeRepository.findById(employeeId)
-                .orElseThrow(() -> new ResourceNotFoundException("Employee", employeeId));
+                .orElseThrow(() -> new ResourceNotFoundException("Employee"));
     }
 
     private boolean hasEmergencyContactData(EmployeeDTO dto) {
@@ -245,7 +244,7 @@ public class EmployeeServiceImpl implements EmployeeService {
     @Override
     public Employee getEmployeeWithBankDetails(Long id) {
         return employeeRepository.findByIdWithBankDetails(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Employee", id));
+                .orElseThrow(() -> new ResourceNotFoundException("Employee"));
     }
 
     @Override

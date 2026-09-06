@@ -68,4 +68,26 @@ public class AuthenticationManager {
         if (authentication == null || !(authentication.getPrincipal() instanceof DefaultOidcUser defaultOidcUser)) return null;
         return defaultOidcUser.getClaims();
     }
+
+    public String getCurrentUserEmail() {
+        Object email = this.get("preferred_username");
+        if (email == null) {
+            email = this.get("email");
+        }
+        return email != null ? email.toString() : null;
+    }
+
+    public String getCurrentUserName() {
+        Object name = this.get("name");
+        if (name == null) {
+            String given = (String) this.get("given_name");
+            String family = (String) this.get("family_name");
+            if (given != null && family != null) {
+                name = given + " " + family;
+            } else if (given != null) {
+                name = given;
+            }
+        }
+        return name != null ? name.toString() : getCurrentUserEmail();
+    }
 }

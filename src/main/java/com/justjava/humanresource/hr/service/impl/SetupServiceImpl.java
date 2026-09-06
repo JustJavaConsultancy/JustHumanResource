@@ -79,7 +79,7 @@ public class SetupServiceImpl implements SetupService {
 
         Department department = departmentRepository
                 .findById(command.getDepartmentId())
-                .orElseThrow(() -> new ResourceNotFoundException("Department", command.getDepartmentId()));
+                .orElseThrow(() -> new ResourceNotFoundException("Department"));
 
         JobGrade jobGrade = new JobGrade();
         jobGrade.setName(command.getGradeName());
@@ -155,7 +155,7 @@ public class SetupServiceImpl implements SetupService {
         PayGroup parent = null;
         if (command.getParentId() != null) {
             parent = payGroupRepository.findById(command.getParentId())
-                    .orElseThrow(() -> new ResourceNotFoundException("PayGroup", command.getParentId()));
+                    .orElseThrow(() -> new ResourceNotFoundException("PayGroup"));
         }
 
         PayGroup payGroup = new PayGroup();
@@ -177,12 +177,12 @@ public class SetupServiceImpl implements SetupService {
     @Override
     public PayGroupResponseDTO updatePayGroup(Long id, CreatePayGroupCommand command) {
         PayGroup payGroup = payGroupRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("PayGroup", id));
+                .orElseThrow(() -> new ResourceNotFoundException("PayGroup"));
 
         PayGroup parent = null;
         if (command.getParentId() != null) {
             parent = payGroupRepository.findById(command.getParentId())
-                    .orElseThrow(() -> new ResourceNotFoundException("PayGroup", command.getParentId()));
+                    .orElseThrow(() -> new ResourceNotFoundException("PayGroup"));
         }
 
         payGroup.setName(command.getName());
@@ -213,10 +213,10 @@ public class SetupServiceImpl implements SetupService {
         }
 
         JobGrade jobGrade = jobGradeRepository.findById(gradeId)
-                .orElseThrow(() -> new ResourceNotFoundException("JobGrade", gradeId));
+                .orElseThrow(() -> new ResourceNotFoundException("JobGrade"));
 
         Department department = departmentRepository.findById(command.getDepartmentId())
-                .orElseThrow(() -> new ResourceNotFoundException("Department", command.getDepartmentId()));
+                .orElseThrow(() -> new ResourceNotFoundException("Department"));
 
         jobGrade.setName(command.getGradeName());
         jobGrade.setDepartment(department);
