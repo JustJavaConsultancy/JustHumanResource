@@ -1425,7 +1425,26 @@
         function handleIncomingMessage(message) {
             const payload = JSON.parse(message.body);
             const otherId = payload.senderId === currentEmployeeId ? payload.recipientId : payload.senderId;
-            const contact = contacts.find(c => c.id === otherId);
+            let contact = contacts.find(c => c.id === otherId);
+
+            // If contact not found (e.g., HR-SYSTEM on first message), create minimal contact from payload
+            if (!contact) {
+                contact = {
+                    id: otherId,
+                    employeeNumber: payload.senderEmployeeNumber || 'HR',
+                    fullName: payload.senderName || 'HR',
+                    email: null,
+                    department: 'Human Resources',
+                    online: true,
+                    unreadCount: 0,
+                    conversationId: payload.conversationId,
+                    lastMessage: payload.content,
+                    lastMessageAt: payload.createdAt,
+                    hasConversation: true
+                };
+                contacts.unshift(contact);
+            }
+
             if (contact && (!selectedContact || selectedContact.id !== otherId)) {
                 contact.unreadCount = (contact.unreadCount || 0) + 1;
             }

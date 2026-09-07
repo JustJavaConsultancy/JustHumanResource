@@ -3261,8 +3261,24 @@
         function handleIncomingDirectMessage(message) {
             const payload = JSON.parse(message.body);
             const otherId = payload.senderId === currentEmployeeId ? payload.recipientId : payload.senderId;
-            const contact = directContacts.find(c => c.id === otherId);
-            if (contact && (!selectedDirectContact || selectedDirectContact.id !== otherId)) {
+            let contact = directContacts.find(c => c.id === otherId);
+            if (!contact) {
+                // Create minimal contact from WebSocket payload for new conversations (e.g., employee messaging HR first time)
+                contact = {
+                    id: payload.senderId,
+                    employeeNumber: payload.senderEmployeeNumber,
+                    fullName: payload.senderName,
+                    email: null,
+                    department: null,
+                    online: true,
+                    unreadCount: 1,
+                    conversationId: payload.conversationId,
+                    lastMessage: payload.content,
+                    lastMessageAt: payload.createdAt,
+                    hasConversation: true
+                };
+                directContacts.unshift(contact);
+            } else if (!selectedDirectContact || selectedDirectContact.id !== otherId) {
                 contact.unreadCount = (contact.unreadCount || 0) + 1;
             }
             upsertDirectConversation(payload, contact);
