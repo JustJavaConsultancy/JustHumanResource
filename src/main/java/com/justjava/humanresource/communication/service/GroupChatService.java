@@ -14,6 +14,7 @@ import com.justjava.humanresource.communication.repository.ChatGroupMemberReposi
 import com.justjava.humanresource.communication.repository.ChatGroupRepository;
 import com.justjava.humanresource.communication.repository.GroupChatMessageAttachmentRepository;
 import com.justjava.humanresource.communication.repository.GroupChatMessageRepository;
+import com.justjava.humanresource.core.config.AuthenticationManager;
 import com.justjava.humanresource.core.exception.ResourceNotFoundException;
 import com.justjava.humanresource.core.exception.UnauthorizedException;
 import com.justjava.humanresource.hr.entity.Employee;
@@ -36,6 +37,7 @@ public class GroupChatService {
     private final GroupChatMessageRepository groupChatMessageRepository;
     private final GroupChatMessageAttachmentRepository groupChatMessageAttachmentRepository;
     private final EmployeeRepository employeeRepository;
+    private final AuthenticationManager authenticationManager;
 
     public ChatGroup createGroup(CreateChatGroupCommand command, String creatorEmail, String creatorName) {
         ChatGroup group = ChatGroup.builder()
@@ -105,6 +107,15 @@ public class GroupChatService {
             }
         }
 
+        // Also check if current authenticated HR user is the creator
+        if (!isMember) {
+            String currentUserEmail = authenticationManager.getCurrentUserEmail();
+            if (currentUserEmail != null && group.getCreatedByEmail().equals(currentUserEmail)) {
+                isMember = true;
+                isAdmin = true;
+            }
+        }
+
         if (!isMember && employeeId != null) {
             throw new UnauthorizedException("You are not a member of this group");
         }
@@ -158,12 +169,21 @@ public class GroupChatService {
         ChatGroup group = chatGroupRepository.findByIdAndStatus(groupId, com.justjava.humanresource.core.enums.RecordStatus.ACTIVE)
                 .orElseThrow(() -> new ResourceNotFoundException("ChatGroup"));
 
-        // Verify sender is a member (or HR creator)
-        Employee sender = employeeRepository.findById(senderId)
-                .orElseThrow(() -> new ResourceNotFoundException("Employee"));
+        // Handle HR without employee profile - use HR system employee
+        Employee sender;
+        if (senderId == null) {
+            sender = employeeRepository.findByEmployeeNumber("HR-SYSTEM")
+                    .orElseGet(() -> createHrSystemEmployee());
+        } else {
+            sender = employeeRepository.findById(senderId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Employee"));
+        }
 
-        boolean isMember = chatGroupMemberRepository.existsByGroupIdAndEmployeeId(groupId, senderId);
-        boolean isHrCreator = group.getCreatedByEmail().equals(sender.getEmail());
+        boolean isMember = chatGroupMemberRepository.existsByGroupIdAndEmployeeId(groupId, sender.getId());
+
+        // Check if current authenticated user is the HR creator (using Keycloak email)
+        String currentUserEmail = authenticationManager.getCurrentUserEmail();
+        boolean isHrCreator = currentUserEmail != null && group.getCreatedByEmail().equals(currentUserEmail);
 
         if (!isMember && !isHrCreator) {
             throw new UnauthorizedException("Only group members can send messages");
@@ -189,12 +209,22 @@ public class GroupChatService {
         ChatGroup group = chatGroupRepository.findByIdAndStatus(groupId, com.justjava.humanresource.core.enums.RecordStatus.ACTIVE)
                 .orElseThrow(() -> new ResourceNotFoundException("ChatGroup"));
 
-        // Verify employee is a member (or HR creator)
-        Employee employee = employeeRepository.findById(employeeId)
-                .orElseThrow(() -> new ResourceNotFoundException("Employee"));
+        // Handle HR without employee profile - use HR system employee
+        Employee employee;
+        if (employeeId == null) {
+            // Try to get HR system employee
+            employee = employeeRepository.findByEmployeeNumber("HR-SYSTEM")
+                    .orElseGet(() -> createHrSystemEmployee());
+        } else {
+            employee = employeeRepository.findById(employeeId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Employee"));
+        }
 
-        boolean isMember = chatGroupMemberRepository.existsByGroupIdAndEmployeeId(groupId, employeeId);
-        boolean isHrCreator = group.getCreatedByEmail().equals(employee.getEmail());
+        boolean isMember = chatGroupMemberRepository.existsByGroupIdAndEmployeeId(groupId, employee.getId());
+
+        // Check if current authenticated user is the HR creator (using Keycloak email)
+        String currentUserEmail = authenticationManager.getCurrentUserEmail();
+        boolean isHrCreator = currentUserEmail != null && group.getCreatedByEmail().equals(currentUserEmail);
 
         if (!isMember && !isHrCreator) {
             throw new UnauthorizedException("Only group members can view messages");
@@ -209,11 +239,21 @@ public class GroupChatService {
         ChatGroup group = chatGroupRepository.findByIdAndStatus(groupId, com.justjava.humanresource.core.enums.RecordStatus.ACTIVE)
                 .orElseThrow(() -> new ResourceNotFoundException("ChatGroup"));
 
-        Employee employee = employeeRepository.findById(employeeId)
-                .orElseThrow(() -> new ResourceNotFoundException("Employee"));
+        // Handle HR without employee profile - use HR system employee
+        Employee employee;
+        if (employeeId == null) {
+            employee = employeeRepository.findByEmployeeNumber("HR-SYSTEM")
+                    .orElseGet(() -> createHrSystemEmployee());
+        } else {
+            employee = employeeRepository.findById(employeeId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Employee"));
+        }
 
-        boolean isMember = chatGroupMemberRepository.existsByGroupIdAndEmployeeId(groupId, employeeId);
-        boolean isHrCreator = group.getCreatedByEmail().equals(employee.getEmail());
+        boolean isMember = chatGroupMemberRepository.existsByGroupIdAndEmployeeId(groupId, employee.getId());
+
+        // Check if current authenticated user is the HR creator (using Keycloak email)
+        String currentUserEmail = authenticationManager.getCurrentUserEmail();
+        boolean isHrCreator = currentUserEmail != null && group.getCreatedByEmail().equals(currentUserEmail);
 
         if (!isMember && !isHrCreator) {
             throw new UnauthorizedException("Only group members can view messages");
@@ -228,8 +268,24 @@ public class GroupChatService {
         GroupChatMessage message = groupChatMessageRepository.findById(messageId)
                 .orElseThrow(() -> new ResourceNotFoundException("GroupChatMessage"));
 
-        // Verify employee is a member of the group
-        if (!chatGroupMemberRepository.existsByGroupIdAndEmployeeId(message.getGroup().getId(), employeeId)) {
+        // Handle HR without employee profile - use HR system employee
+        Employee employee;
+        if (employeeId == null) {
+            employee = employeeRepository.findByEmployeeNumber("HR-SYSTEM")
+                    .orElseGet(() -> createHrSystemEmployee());
+        } else {
+            employee = employeeRepository.findById(employeeId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Employee"));
+        }
+
+        // Verify employee is a member of the group (or HR creator)
+        boolean isMember = chatGroupMemberRepository.existsByGroupIdAndEmployeeId(message.getGroup().getId(), employee.getId());
+
+        // Check if current authenticated user is the HR creator (using Keycloak email)
+        String currentUserEmail = authenticationManager.getCurrentUserEmail();
+        boolean isHrCreator = currentUserEmail != null && message.getGroup().getCreatedByEmail().equals(currentUserEmail);
+
+        if (!isMember && !isHrCreator) {
             throw new UnauthorizedException("Only group members can add attachments");
         }
 
@@ -240,7 +296,7 @@ public class GroupChatService {
                 .storagePath(storagePath)
                 .contentType(contentType)
                 .fileSize(fileSize)
-                .uploadedByEmployeeId(employeeId)
+                .uploadedByEmployeeId(employee.getId())
                 .build();
 
         return groupChatMessageAttachmentRepository.save(attachment);
@@ -251,11 +307,21 @@ public class GroupChatService {
         ChatGroup group = chatGroupRepository.findByIdAndStatus(groupId, com.justjava.humanresource.core.enums.RecordStatus.ACTIVE)
                 .orElseThrow(() -> new ResourceNotFoundException("ChatGroup"));
 
-        Employee employee = employeeRepository.findById(employeeId)
-                .orElseThrow(() -> new ResourceNotFoundException("Employee"));
+        // Handle HR without employee profile - use HR system employee
+        Employee employee;
+        if (employeeId == null) {
+            employee = employeeRepository.findByEmployeeNumber("HR-SYSTEM")
+                    .orElseGet(() -> createHrSystemEmployee());
+        } else {
+            employee = employeeRepository.findById(employeeId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Employee"));
+        }
 
-        boolean isMember = chatGroupMemberRepository.existsByGroupIdAndEmployeeId(groupId, employeeId);
-        boolean isHrCreator = group.getCreatedByEmail().equals(employee.getEmail());
+        boolean isMember = chatGroupMemberRepository.existsByGroupIdAndEmployeeId(groupId, employee.getId());
+
+        // Check if current authenticated user is the HR creator (using Keycloak email)
+        String currentUserEmail = authenticationManager.getCurrentUserEmail();
+        boolean isHrCreator = currentUserEmail != null && group.getCreatedByEmail().equals(currentUserEmail);
 
         if (!isMember && !isHrCreator) {
             throw new UnauthorizedException("Only group members can view attachments");
@@ -320,5 +386,15 @@ public class GroupChatService {
         }
         // Return the last (most recent) message
         return toMessageResponse(messages.get(messages.size() - 1));
+    }
+
+    private Employee createHrSystemEmployee() {
+        return employeeRepository.save(Employee.builder()
+                .employeeNumber("HR-SYSTEM")
+                .email("hr-system@company.local")
+                .firstName("HR")
+                .lastName("System")
+                .status(com.justjava.humanresource.core.enums.RecordStatus.ACTIVE)
+                .build());
     }
 }

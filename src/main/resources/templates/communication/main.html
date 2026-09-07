@@ -1890,7 +1890,7 @@
                 <div id="groupListRows" class="overflow-y-auto flex-1"></div>
             </div>
 
-            <!-- Group Detail -->
+            <!-- Group Detail with Chat -->
             <div class="group-detail" id="groupDetail">
                 <div class="group-detail-header">
                     <h3 id="groupDetailTitle">Select a group</h3>
@@ -1915,6 +1915,33 @@
                             </div>
                             <div id="groupMembers"></div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Group Chat Area -->
+                <div class="group-chat-area" id="groupChatArea" style="display: none; flex-direction: column; height: 100%;">
+                    <div id="groupMessages" class="group-messages" style="flex: 1; overflow-y: auto; padding: 20px 24px; background: radial-gradient(circle at 50% 0%, rgba(37,99,235,.035), transparent 45%), var(--hc-soft);">
+                        <div class="empty-state" style="min-height:auto;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+                            <div style="text-align:center;">
+                                <span class="material-icons-round">chat_bubble</span>
+                                <p>No messages yet</p>
+                                <p>Send the first message to start the conversation.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="group-chat-composer" style="border-top: 1px solid var(--hc-border); background: var(--hc-surface); padding: 12px 16px; flex-shrink: 0;">
+                        <form id="groupMessageForm">
+                            <input id="groupMessageFiles" type="file" multiple class="hidden" accept=".pdf,.png,.jpg,.jpeg,.txt,.doc,.docx,.xls,.xlsx">
+                            <div class="composer-shell">
+                                <button id="attachGroupFileBtn" class="composer-button" type="button" title="Attach files">
+                                    <span class="material-icons-round" style="font-size:17px;">attach_file</span>
+                                </button>
+                                <textarea id="groupMessageInput" class="composer-input" rows="1" maxlength="2000" placeholder="Type your message..."></textarea>
+                                <button id="sendGroupMessageBtn" class="composer-button composer-send" type="submit" title="Send message">
+                                    <span class="material-icons-round" style="font-size:17px;">send</span>
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             </div>
@@ -2079,6 +2106,7 @@
         let selectedGroup = null;
         let activeCommentSubscription = null;
         let activeReceiptSubscription = null;
+        let activeGroupSubscription = null;
         let currentFilter = 'all';
         let isBroadcastView = false;
         let isGroupsView = false;
@@ -2371,6 +2399,121 @@
             selectedGroup = group;
             renderGroupList();
             renderGroupDetail(group);
+            await loadGroupMessages(group.id);
+            setupGroupChat(group.id);
+        }
+
+        async function loadGroupMessages(groupId) {
+            try {
+                const messages = await json('/communication/groups/' + groupId + '/messages');
+                renderGroupMessages(messages);
+            } catch (e) {
+                console.error('Failed to load group messages:', e);
+                const rows = document.getElementById('groupMessages');
+                rows.innerHTML = `
+                    <div class="empty-state" style="min-height:auto;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+                        <div style="text-align:center;">
+                            <span class="material-icons-round">error</span>
+                            <p>Could not load messages</p>
+                            <p>Please try again later.</p>
+                        </div>
+                    </div>`;
+            }
+        }
+
+        function renderGroupMessages(history) {
+            const rows = document.getElementById('groupMessages');
+            if (!history || !history.length) {
+                rows.innerHTML = `
+                    <div class="empty-state" style="min-height:auto;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+                        <div style="text-align:center;">
+                            <span class="material-icons-round">chat_bubble</span>
+                            <p>No messages yet</p>
+                            <p>Send the first message to start the conversation.</p>
+                        </div>
+                    </div>`;
+                return;
+            }
+            rows.innerHTML = history.map(msg => {
+                const mine = msg.senderId === currentEmployeeId;
+                return `
+                    <div class="message-row ${mine ? 'mine' : ''}">
+                        <div class="message-mini-avatar" style="background:${mine ? 'var(--hc-emerald)' : 'var(--hc-blue-soft)'};color:${mine ? '#fff' : 'var(--hc-blue)'};">${initials(msg.senderName)}</div>
+                        <div class="message-stack">
+                            ${!mine ? `<div class="message-author">${escapeHtml(msg.senderName)}</div>` : ''}
+                            <div class="message-bubble">${msg.content ? escapeHtml(msg.content) : ''}${attachmentList(msg.attachments || [])}
+                                <div class="message-meta">${formatTime(msg.createdAt)}${mine && msg.deliveredAt ? ' · Delivered' : ''}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            rows.scrollTop = rows.scrollHeight;
+        }
+
+        function setupGroupChat(groupId) {
+            // Show chat area
+            const chatArea = document.getElementById('groupChatArea');
+            if (chatArea) chatArea.style.display = 'flex';
+
+            // Subscribe to WebSocket for real-time messages
+            if (stompClient && stompClient.connected) {
+                if (activeGroupSubscription) activeGroupSubscription.unsubscribe();
+                activeGroupSubscription = stompClient.subscribe('/topic/chat-groups/' + groupId + '/messages', handleGroupMessage);
+            }
+
+            // Set up send message form
+            const form = document.getElementById('groupMessageForm');
+            if (form) {
+                form.onsubmit = async (e) => {
+                    e.preventDefault();
+                    const input = document.getElementById('groupMessageInput');
+                    const content = input.value.trim();
+                    if (!content) return;
+                    input.value = '';
+                    try {
+                        await fetch('/communication/groups/' + groupId + '/messages', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ content })
+                        });
+                    } catch (err) {
+                        console.error('Failed to send group message:', err);
+                        input.value = content; // Restore on error
+                    }
+                };
+            }
+        }
+
+        function handleGroupMessage(message) {
+            const payload = JSON.parse(message.body);
+            if (selectedGroup && selectedGroup.id === payload.groupId) {
+                const rows = document.getElementById('groupMessages');
+                if (!rows) return;
+                if (rows.querySelector('.empty-state')) rows.innerHTML = '';
+                const mine = payload.senderId === currentEmployeeId;
+                rows.insertAdjacentHTML('beforeend', `
+                    <div class="message-row ${mine ? 'mine' : ''}">
+                        <div class="message-mini-avatar" style="background:${mine ? 'var(--hc-emerald)' : 'var(--hc-blue-soft)'};color:${mine ? '#fff' : 'var(--hc-blue)'};">${initials(payload.senderName)}</div>
+                        <div class="message-stack">
+                            ${!mine ? `<div class="message-author">${escapeHtml(payload.senderName)}</div>` : ''}
+                            <div class="message-bubble">${payload.content ? escapeHtml(payload.content) : ''}${attachmentList(payload.attachments || [])}
+                                <div class="message-meta">${formatTime(payload.createdAt)}</div>
+                            </div>
+                        </div>
+                    </div>
+                `);
+                rows.scrollTop = rows.scrollHeight;
+            }
+            // Update group list with last message preview
+            renderGroups();
+        }
+
+        function updateGroupFromMessage(message) {
+            const group = groups.find(g => g.id === message.groupId);
+            if (!group) return;
+            group.lastMessage = message.content;
+            group.lastMessageAt = message.createdAt;
         }
 
         // ── Broadcasts ──
