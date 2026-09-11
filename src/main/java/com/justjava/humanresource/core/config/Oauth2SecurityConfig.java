@@ -36,7 +36,6 @@ public class Oauth2SecurityConfig {
     private static final Set<String> HR_ALLOWED_GROUPS = Set.of(
             "employees",
             "financialofficers",
-            "finance",
             "admin",
             "humanresource",
             "jobhr",
