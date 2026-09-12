@@ -9,6 +9,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -965,4 +968,19 @@ GROUP BY
             LocalDate end,
             String groupBy
     );
+
+/* ============================================================
+   LEGACY KPI SNAPSHOT BACKFILL
+   ============================================================ */
+
+    @Query("""
+    SELECT pr
+    FROM PayrollRun pr
+    WHERE pr.status = com.justjava.humanresource.core.enums.PayrollRunStatus.POSTED
+    AND NOT EXISTS (
+        SELECT 1 FROM PayrollRunKpiSnapshot s WHERE s.payrollRun = pr
+    )
+    ORDER BY pr.id ASC
+""")
+    Page<PayrollRun> findPostedRunsWithoutKpiSnapshot(Pageable pageable);
 }
