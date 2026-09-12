@@ -1,0 +1,2 @@
+package com.justjava.humanresource.employeeexit.repository; import com.justjava.humanresource.employeeexit.entity.ExitSettlementPayrollPosting; import org.springframework.data.jpa.repository.JpaRepository; import java.util.Optional;
+public interface ExitSettlementPayrollPostingRepository extends JpaRepository<ExitSettlementPayrollPosting,Long>{Optional<ExitSettlementPayrollPosting> findBySettlementId(Long id);Optional<ExitSettlementPayrollPosting> findByPostingKey(String key);}

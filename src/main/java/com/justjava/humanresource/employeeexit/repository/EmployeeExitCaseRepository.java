@@ -1,0 +1,3 @@
+package com.justjava.humanresource.employeeexit.repository;
+import com.justjava.humanresource.employeeexit.entity.EmployeeExitCase; import com.justjava.humanresource.employeeexit.enums.ExitStatus; import org.springframework.data.jpa.repository.JpaRepository; import java.util.*;
+public interface EmployeeExitCaseRepository extends JpaRepository<EmployeeExitCase,Long> { List<EmployeeExitCase> findAllByOrderByCreatedAtDesc(); List<EmployeeExitCase> findByEmployeeIdOrderByCreatedAtDesc(Long employeeId); boolean existsByEmployeeIdAndStatusIn(Long employeeId,Collection<ExitStatus> statuses); long countByStatus(ExitStatus status); }

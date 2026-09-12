@@ -1,0 +1,2 @@
+package com.justjava.humanresource.employeeexit.repository; import com.justjava.humanresource.employeeexit.entity.ExitHandoverItem; import org.springframework.data.jpa.repository.JpaRepository; import java.util.List;
+public interface ExitHandoverItemRepository extends JpaRepository<ExitHandoverItem,Long>{List<ExitHandoverItem> findByExitCaseIdOrderByCreatedAt(Long id); boolean existsByExitCaseIdAndCompletedFalse(Long id);}

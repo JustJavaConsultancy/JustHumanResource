@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:flowable="http://flowable.org/bpmn" targetNamespace="http://justjava.com/humanresource/employee-exit">
+ <process id="employeeExitProcess" name="Employee Exit" isExecutable="true">
+  <startEvent id="exitSubmitted"/><sequenceFlow id="x1" sourceRef="exitSubmitted" targetRef="exitApproval"/>
+  <userTask id="exitApproval" name="Approve Employee Exit" flowable:assignee="${currentApproverId}"/><sequenceFlow id="x2" sourceRef="exitApproval" targetRef="applyDecision"/>
+  <serviceTask id="applyDecision" name="Apply Exit Decision" flowable:delegateExpression="${applyExitApprovalDecisionDelegate}"/><sequenceFlow id="x3" sourceRef="applyDecision" targetRef="decisionGateway"/>
+  <exclusiveGateway id="decisionGateway"/>
+  <sequenceFlow id="x4" sourceRef="decisionGateway" targetRef="rejectedEnd"><conditionExpression xsi:type="tFormalExpression"><![CDATA[${exitDecision == 'REJECT'}]]></conditionExpression></sequenceFlow>
+  <sequenceFlow id="x5" sourceRef="decisionGateway" targetRef="reviseExit"><conditionExpression xsi:type="tFormalExpression"><![CDATA[${exitDecision == 'RETURN'}]]></conditionExpression></sequenceFlow>
+  <sequenceFlow id="x6" sourceRef="decisionGateway" targetRef="initializeClearance"><conditionExpression xsi:type="tFormalExpression"><![CDATA[${exitDecision == 'APPROVE' && !hasMoreExitApprovers}]]></conditionExpression></sequenceFlow>
+  <sequenceFlow id="x6a" sourceRef="decisionGateway" targetRef="exitApproval"><conditionExpression xsi:type="tFormalExpression"><![CDATA[${exitDecision == 'APPROVE' && hasMoreExitApprovers}]]></conditionExpression></sequenceFlow>
+  <userTask id="reviseExit" name="Revise Employee Exit" flowable:assignee="${initiatorEmployeeId}"/><sequenceFlow id="x7" sourceRef="reviseExit" targetRef="exitApproval"/>
+  <serviceTask id="initializeClearance" name="Initialize Clearance" flowable:delegateExpression="${initializeExitClearanceDelegate}"/><sequenceFlow id="x8" sourceRef="initializeClearance" targetRef="clearanceFork"/>
+  <parallelGateway id="clearanceFork"/>
+  <sequenceFlow id="x9" sourceRef="clearanceFork" targetRef="managerClearance"/><sequenceFlow id="x10" sourceRef="clearanceFork" targetRef="assetClearance"/><sequenceFlow id="x11" sourceRef="clearanceFork" targetRef="itClearance"/><sequenceFlow id="x12" sourceRef="clearanceFork" targetRef="hrClearance"/><sequenceFlow id="x13" sourceRef="clearanceFork" targetRef="payrollClearance"/>
+  <userTask id="managerClearance" name="Manager Handover Clearance" flowable:candidateGroups="departmentHead"/><userTask id="assetClearance" name="Asset and Facilities Clearance" flowable:candidateGroups="assetManager"/><userTask id="itClearance" name="IT and Security Clearance" flowable:candidateGroups="admin"/><userTask id="hrClearance" name="HR and Legal Clearance" flowable:candidateGroups="humanResource"/><userTask id="payrollClearance" name="Payroll and Finance Clearance" flowable:candidateGroups="financialOfficers"/>
+  <sequenceFlow id="x14" sourceRef="managerClearance" targetRef="clearanceJoin"/><sequenceFlow id="x15" sourceRef="assetClearance" targetRef="clearanceJoin"/><sequenceFlow id="x16" sourceRef="itClearance" targetRef="clearanceJoin"/><sequenceFlow id="x17" sourceRef="hrClearance" targetRef="clearanceJoin"/><sequenceFlow id="x18" sourceRef="payrollClearance" targetRef="clearanceJoin"/>
+  <parallelGateway id="clearanceJoin"/><sequenceFlow id="x19" sourceRef="clearanceJoin" targetRef="evaluateReadiness"/>
+  <serviceTask id="evaluateReadiness" name="Verify Exit Readiness" flowable:delegateExpression="${evaluateExitReadinessDelegate}"/><sequenceFlow id="x20" sourceRef="evaluateReadiness" targetRef="readinessGateway"/>
+  <exclusiveGateway id="readinessGateway"/><sequenceFlow id="x21" sourceRef="readinessGateway" targetRef="effectiveDateWait"><conditionExpression xsi:type="tFormalExpression"><![CDATA[${exitReady}]]></conditionExpression></sequenceFlow>
+  <sequenceFlow id="x22" sourceRef="readinessGateway" targetRef="resolveExceptions"><conditionExpression xsi:type="tFormalExpression"><![CDATA[${!exitReady}]]></conditionExpression></sequenceFlow>
+  <userTask id="resolveExceptions" name="Resolve Exit Exceptions" flowable:candidateGroups="humanResource"/><sequenceFlow id="x23" sourceRef="resolveExceptions" targetRef="evaluateReadiness"/>
+  <intermediateCatchEvent id="effectiveDateWait" name="Wait for Effective Exit Date"><timerEventDefinition><timeDate>${exitEffectiveAt}</timeDate></timerEventDefinition></intermediateCatchEvent><sequenceFlow id="x24" sourceRef="effectiveDateWait" targetRef="finalizeEmployment"/>
+  <serviceTask id="finalizeEmployment" name="Finalize Employment" flowable:delegateExpression="${finalizeEmployeeExitDelegate}"/><sequenceFlow id="x25" sourceRef="finalizeEmployment" targetRef="revokeAccess"/>
+  <serviceTask id="revokeAccess" name="Revoke Employee Access" flowable:async="true" flowable:delegateExpression="${revokeEmployeeAccessDelegate}"><extensionElements><flowable:failedJobRetryTimeCycle>R3/PT30S</flowable:failedJobRetryTimeCycle></extensionElements></serviceTask><sequenceFlow id="x26" sourceRef="revokeAccess" targetRef="completeExit"/>
+  <serviceTask id="completeExit" name="Complete Employee Exit" flowable:delegateExpression="${completeEmployeeExitDelegate}"/><sequenceFlow id="x27" sourceRef="completeExit" targetRef="completedEnd"/>
+  <endEvent id="rejectedEnd" name="Exit Rejected"/><endEvent id="completedEnd" name="Exit Completed"/>
+ </process>
+</definitions>

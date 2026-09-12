@@ -1,23 +1,18 @@
 package com.justjava.humanresource.communication.meeting.provider;
 
+import com.google.apps.meet.v2.Space;
+import com.google.apps.meet.v2.SpacesServiceClient;
 import com.justjava.humanresource.communication.meeting.MeetingProvider;
 import com.justjava.humanresource.communication.meeting.config.MeetingIntegrationProperties;
-import com.justjava.humanresource.communication.meeting.oauth.MeetingTokenService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestClientException;
-
-import java.util.Map;
 
 @Component
 @RequiredArgsConstructor
 public class GoogleMeetMeetingProviderClient implements MeetingProviderClient {
 
     private final MeetingIntegrationProperties properties;
-    private final MeetingTokenService tokenService;
-    private final RestClient restClient = RestClient.builder().build();
+    private final GoogleMeetClientFactory googleMeetClientFactory;
 
     @Override
     public MeetingProvider provider() {
@@ -39,21 +34,15 @@ public class GoogleMeetMeetingProviderClient implements MeetingProviderClient {
             throw new MeetingProviderException("Google Meet provider is not configured");
         }
         MeetingIntegrationProperties.Google google = properties.getProviders().getGoogle();
-        try {
-            Map<String, Object> response = restClient.post()
-                    .uri(google.getMeetBaseUrl() + "/spaces")
-                    .header("Authorization", tokenService.accessToken(provider()).authorizationHeader())
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(Map.of())
-                    .retrieve()
-                    .body(Map.class);
+        try (SpacesServiceClient client = googleMeetClientFactory.create(google)) {
+            Space response = client.createSpace(Space.newBuilder().build());
             return new CreatedMeeting(
-                    stringValue(response, "name"),
-                    stringValue(response, "meetingUri"),
+                    response.getName(),
+                    response.getMeetingUri(),
                     null,
                     "Google Meet space created"
             );
-        } catch (RestClientException ex) {
+        } catch (RuntimeException ex) {
             throw new MeetingProviderException("Google Meet creation failed", ex);
         }
     }
@@ -62,10 +51,4 @@ public class GoogleMeetMeetingProviderClient implements MeetingProviderClient {
         return value != null && !value.isBlank();
     }
 
-    private String stringValue(Map<String, Object> response, String key) {
-        if (response == null || response.get(key) == null) {
-            return null;
-        }
-        return String.valueOf(response.get(key));
-    }
 }

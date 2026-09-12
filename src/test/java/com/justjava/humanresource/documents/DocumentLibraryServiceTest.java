@@ -11,10 +11,13 @@ import com.justjava.humanresource.communication.entity.HrBroadcastAttachment;
 import com.justjava.humanresource.communication.repository.ChatMessageAttachmentRepository;
 import com.justjava.humanresource.communication.repository.GroupChatMessageAttachmentRepository;
 import com.justjava.humanresource.communication.repository.HrBroadcastAttachmentRepository;
+import com.justjava.humanresource.communication.service.CommunicationAttachmentService;
+import com.justjava.humanresource.communication.service.CommunicationService;
 import com.justjava.humanresource.core.config.AuthenticationManager;
 import com.justjava.humanresource.hr.entity.Employee;
 import com.justjava.humanresource.hr.repository.EmployeeDocumentRepository;
 import com.justjava.humanresource.hr.repository.EmployeeRepository;
+import com.justjava.humanresource.hr.service.EmployeeDocumentService;
 import com.justjava.humanresource.hr.service.EmployeeService;
 import com.justjava.humanresource.request.repository.WorkflowRequestAttachmentRepository;
 import com.justjava.humanresource.request.repository.WorkflowRequestRepository;
@@ -35,6 +38,7 @@ class DocumentLibraryServiceTest {
 
     private final AuthenticationManager authenticationManager = mock(AuthenticationManager.class);
     private final EmployeeService employeeService = mock(EmployeeService.class);
+    private final EmployeeDocumentService employeeDocumentService = mock(EmployeeDocumentService.class);
     private final EmployeeRepository employeeRepository = mock(EmployeeRepository.class);
     private final EmployeeDocumentRepository employeeDocumentRepository = mock(EmployeeDocumentRepository.class);
     private final WorkflowRequestAttachmentRepository attachmentRepository = mock(WorkflowRequestAttachmentRepository.class);
@@ -42,17 +46,22 @@ class DocumentLibraryServiceTest {
     private final ChatMessageAttachmentRepository chatMessageAttachmentRepository = mock(ChatMessageAttachmentRepository.class);
     private final GroupChatMessageAttachmentRepository groupChatMessageAttachmentRepository = mock(GroupChatMessageAttachmentRepository.class);
     private final HrBroadcastAttachmentRepository broadcastAttachmentRepository = mock(HrBroadcastAttachmentRepository.class);
+    private final CommunicationService communicationService = mock(CommunicationService.class);
+    private final CommunicationAttachmentService communicationAttachmentService = mock(CommunicationAttachmentService.class);
 
     private final DocumentLibraryService service = new DocumentLibraryService(
             authenticationManager,
             employeeService,
+            employeeDocumentService,
             employeeRepository,
             employeeDocumentRepository,
             attachmentRepository,
             requestRepository,
             chatMessageAttachmentRepository,
             groupChatMessageAttachmentRepository,
-            broadcastAttachmentRepository
+            broadcastAttachmentRepository,
+            communicationService,
+            communicationAttachmentService
     );
 
     @Test

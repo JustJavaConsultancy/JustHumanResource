@@ -1,0 +1,2 @@
+package com.justjava.humanresource.employeeexit.repository; import com.justjava.humanresource.employeeexit.entity.ExitAssetReturn; import org.springframework.data.jpa.repository.JpaRepository; import java.util.List;
+public interface ExitAssetReturnRepository extends JpaRepository<ExitAssetReturn,Long>{List<ExitAssetReturn> findByExitCaseIdOrderByAssetName(Long id);boolean existsByExitCaseIdAndExternalAssetId(Long exitId,String externalAssetId);}

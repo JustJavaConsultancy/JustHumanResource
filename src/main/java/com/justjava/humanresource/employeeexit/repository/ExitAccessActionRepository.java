@@ -1,0 +1,2 @@
+package com.justjava.humanresource.employeeexit.repository; import com.justjava.humanresource.employeeexit.entity.ExitAccessAction; import org.springframework.data.jpa.repository.JpaRepository; import java.util.*;
+public interface ExitAccessActionRepository extends JpaRepository<ExitAccessAction,Long>{List<ExitAccessAction> findByExitCaseId(Long id); Optional<ExitAccessAction> findByExitCaseIdAndSystemName(Long id,String system);}

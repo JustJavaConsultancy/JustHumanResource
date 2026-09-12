@@ -1,0 +1,2 @@
+package com.justjava.humanresource.employeeexit.repository; import com.justjava.humanresource.employeeexit.entity.ExitPackageComponent; import org.springframework.data.jpa.repository.JpaRepository; import java.util.*;
+public interface ExitPackageComponentRepository extends JpaRepository<ExitPackageComponent,Long>{Optional<ExitPackageComponent> findByComponentCode(String code);List<ExitPackageComponent> findByActiveTrueOrderByName();}

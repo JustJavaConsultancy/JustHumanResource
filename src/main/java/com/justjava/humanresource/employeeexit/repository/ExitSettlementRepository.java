@@ -1,0 +1,2 @@
+package com.justjava.humanresource.employeeexit.repository; import com.justjava.humanresource.employeeexit.entity.ExitSettlement; import org.springframework.data.jpa.repository.JpaRepository; import java.util.*;
+public interface ExitSettlementRepository extends JpaRepository<ExitSettlement,Long>{List<ExitSettlement> findByExitCaseIdOrderBySettlementVersionDesc(Long id); Optional<ExitSettlement> findFirstByExitCaseIdOrderBySettlementVersionDesc(Long id);}

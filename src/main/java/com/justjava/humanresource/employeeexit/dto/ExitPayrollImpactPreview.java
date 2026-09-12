@@ -1,0 +1,1 @@
+package com.justjava.humanresource.employeeexit.dto; import java.math.BigDecimal; import java.util.List; public record ExitPayrollImpactPreview(Long settlementId,Long employeeId,BigDecimal earnings,BigDecimal deductions,BigDecimal netImpact,List<ExitPayrollImpactLine> lines){}

@@ -1,0 +1,1 @@
+package com.justjava.humanresource.employeeexit.enums; public enum ExitPackageCalculationMethod { FIXED_AMOUNT, MANUAL, DAYS_PRORATED, MONTHS_OF_SERVICE, PERCENT_OF_BASIC, YEARS_OF_SERVICE_MULTIPLIER, LEAVE_BALANCE }

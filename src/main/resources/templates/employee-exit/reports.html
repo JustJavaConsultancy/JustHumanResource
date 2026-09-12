@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout}">
+<head><title>Exit Reports</title></head>
+<body>
+<main layout:fragment="content" class="space-y-6">
+    <div class="flex justify-between items-center">
+        <div><h2 class="text-2xl font-bold">Exit Reports</h2><p class="text-gray-500">Operational status, settlement liability and recoveries</p></div>
+        <a href="/employee-exits" class="btn-secondary">Back to exits</a>
+    </div>
+
+    <form method="get" action="/employee-exits/reports" class="grid md:grid-cols-5 gap-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5">
+        <input type="date" name="from" th:value="${filter.from}" class="form-input">
+        <input type="date" name="to" th:value="${filter.to}" class="form-input">
+        <select name="status" class="form-input"><option value="">All statuses</option><option th:each="s:${statuses}" th:value="${s}" th:text="${s}" th:selected="${filter.status == s}"></option></select>
+        <select name="exitType" class="form-input"><option value="">All types</option><option th:each="t:${exitTypes}" th:value="${t}" th:text="${t}" th:selected="${filter.exitType == t}"></option></select>
+        <button class="btn-primary">Apply filters</button>
+    </form>
+
+    <div class="grid md:grid-cols-5 gap-4">
+        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5"><p class="text-sm text-gray-500">Total exits</p><strong class="text-2xl" th:text="${summary.total()}">0</strong></div>
+        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5"><p class="text-sm text-gray-500">Active exits</p><strong class="text-2xl" th:text="${summary.active()}">0</strong></div>
+        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5"><p class="text-sm text-gray-500">Pending clearance</p><strong class="text-2xl" th:text="${summary.pendingClearance()}">0</strong></div>
+        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5"><p class="text-sm text-gray-500">Settlement liability</p><strong class="text-2xl" th:text="${summary.approvedSettlementLiability()}">0</strong></div>
+        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5"><p class="text-sm text-gray-500">Asset recovery</p><strong class="text-2xl" th:text="${summary.assetRecovery()}">0</strong></div>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-6">
+        <section class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+            <h3 class="font-bold mb-4">By status</h3>
+            <div th:each="row:${summary.byStatus()}" class="flex justify-between py-2 border-b"><span th:text="${row.key}">Status</span><strong th:text="${row.value}">0</strong></div>
+        </section>
+        <section class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+            <h3 class="font-bold mb-4">By type</h3>
+            <div th:each="row:${summary.byType()}" class="flex justify-between py-2 border-b"><span th:text="${row.key}">Type</span><strong th:text="${row.value}">0</strong></div>
+        </section>
+    </div>
+</main>
+</body>
+</html>

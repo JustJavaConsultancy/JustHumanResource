@@ -1,0 +1,1 @@
+package com.justjava.humanresource.employeeexit.dto; import java.util.List; public record ExitReadinessResult(boolean ready,List<ExitReadinessBlocker> blockers){public String summary(){return blockers.stream().map(ExitReadinessBlocker::message).reduce((a,b)->a+"; "+b).orElse("Ready");}}

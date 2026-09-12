@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" xmlns:th="http://www.thymeleaf.org" layout:decorate="~{layouts/employeeLayout}">
+<head><title>Exit Request</title></head>
+<body>
+<main layout:fragment="content" class="space-y-6">
+    <div>
+        <a href="/employee/exit" class="text-sm text-primary-600">Back to my exit requests</a>
+        <div class="flex justify-between mt-2"><h3 class="text-xl font-bold" th:text="${exit.exitNumber}">EXIT</h3><span class="badge badge-info" th:text="${exit.status}">STATUS</span></div>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+        <div class="grid md:grid-cols-3 gap-4">
+            <div><p class="text-sm text-gray-500">Reason</p><p th:text="${exit.reasonCode}">Reason</p></div>
+            <div><p class="text-sm text-gray-500">Notice date</p><p th:text="${exit.noticeDate}">Date</p></div>
+            <div><p class="text-sm text-gray-500">Proposed last day</p><p th:text="${exit.proposedLastWorkingDate}">Date</p></div>
+        </div>
+        <form th:if="${exit.status.name() == 'DRAFT'}" method="post" th:action="@{/employee/exit/{id}/submit(id=${exit.id})}" class="mt-5"><button class="btn-primary">Submit for approval</button></form>
+    </div>
+
+    <div th:if="${reviseTask != null}" class="bg-white dark:bg-gray-800 rounded-xl border border-amber-200 p-6">
+        <h4 class="font-bold mb-4">Revise returned exit</h4>
+        <form method="post" th:action="@{/employee/exit/{id}/tasks/{task}/revise(id=${exit.id},task=${reviseTask.id})}" class="grid md:grid-cols-2 gap-3">
+            <input name="reasonCode" th:value="${exit.reasonCode}" class="form-input" required>
+            <input type="date" name="noticeDate" th:value="${exit.noticeDate}" class="form-input" required>
+            <input type="date" name="proposedLastWorkingDate" th:value="${exit.proposedLastWorkingDate}" class="form-input" required>
+            <input type="number" min="0" name="contractualNoticeDays" th:value="${exit.contractualNoticeDays}" class="form-input">
+            <input type="number" min="0" name="noticeWaivedDays" th:value="${exit.noticeWaivedDays}" class="form-input">
+            <textarea name="reasonDetails" th:text="${exit.reasonDetails}" class="form-input md:col-span-2"></textarea>
+            <button class="btn-primary md:col-span-2">Save and return to approval</button>
+        </form>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+        <div class="flex justify-between items-center mb-4">
+            <h4 class="font-bold">Readiness</h4>
+            <span class="badge" th:classappend="${readiness.ready()} ? ' badge-success' : ' badge-warning'" th:text="${readiness.ready()} ? 'Ready' : 'Blocked'">Status</span>
+        </div>
+        <ul th:if="${!#lists.isEmpty(readiness.blockers())}" class="space-y-2 text-sm">
+            <li th:each="b:${readiness.blockers()}" class="p-3 rounded-lg bg-amber-50 text-amber-900"><strong th:text="${b.category()}">CATEGORY</strong> <span th:text="${b.message()}">Blocker</span></li>
+        </ul>
+        <p th:if="${#lists.isEmpty(readiness.blockers())}" class="text-sm text-gray-500">No readiness blockers.</p>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+        <h4 class="font-bold mb-4">Documents</h4>
+        <div th:each="d:${documents}" class="flex justify-between items-center py-3 border-b">
+            <div><p class="font-medium" th:text="${d.documentType}">Document</p><p class="text-sm text-gray-500" th:text="${d.fileName}">file.pdf</p></div>
+            <a th:href="@{/employee/exit/{id}/documents/{docId}(id=${exit.id},docId=${d.id})}" class="btn-secondary">Download</a>
+        </div>
+        <form method="post" enctype="multipart/form-data" th:action="@{/employee/exit/{id}/documents(id=${exit.id})}" class="grid md:grid-cols-3 gap-3 mt-4">
+            <select name="documentType" class="form-input" required><option th:each="t:${documentTypes}" th:value="${t}" th:text="${t}"></option></select>
+            <input type="file" name="file" class="form-input" required>
+            <button class="btn-primary">Upload document</button>
+        </form>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+        <h4 class="font-bold mb-4">Clearance progress</h4>
+        <div th:each="c:${clearances}" class="flex justify-between py-3 border-b"><span th:text="${c.clearanceType}">Type</span><span th:text="${c.status}">Status</span></div>
+        <p th:if="${#lists.isEmpty(clearances)}" class="text-sm text-gray-500">Clearance will begin after approval.</p>
+    </div>
+</main>
+</body>
+</html>

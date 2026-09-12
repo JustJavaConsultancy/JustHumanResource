@@ -14,12 +14,17 @@ import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.multipart.MultipartFile;
+import jakarta.validation.Valid;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -33,6 +38,7 @@ public class DocumentLibraryController {
     private final ChatMessageAttachmentRepository chatMessageAttachmentRepository;
     private final GroupChatMessageAttachmentRepository groupChatMessageAttachmentRepository;
     private final HrBroadcastAttachmentRepository broadcastAttachmentRepository;
+    private final SimpMessagingTemplate messagingTemplate;
 
     @GetMapping("/documents/library")
     public String library(Model model) {
@@ -59,6 +65,32 @@ public class DocumentLibraryController {
     @ResponseBody
     public List<DocumentLibraryItemDTO> myDocuments() {
         return documentLibraryService.currentEmployeeDocuments();
+    }
+
+    @GetMapping("/api/documents/library/employees")
+    @ResponseBody
+    public List<DocumentLibraryEmployeeOption> employees() {
+        return documentLibraryService.employeeOptions();
+    }
+
+    @PostMapping(value = "/api/documents/library/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @ResponseBody
+    public ResponseEntity<DocumentLibraryItemDTO> uploadLibraryDocument(
+            @RequestParam Long ownerEmployeeId,
+            @RequestParam String documentName,
+            @RequestParam("file") MultipartFile file) {
+        return ResponseEntity.ok(documentLibraryService.uploadLibraryDocument(ownerEmployeeId, documentName, file));
+    }
+
+    @PostMapping(value = "/api/documents/library/forward", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    public ResponseEntity<DocumentForwardResponse> forwardDocuments(@Valid @RequestBody DocumentForwardCommand command) {
+        DocumentForwardResult result = documentLibraryService.forwardDocuments(command);
+        result.messages().forEach(message -> {
+            messagingTemplate.convertAndSendToUser(message.recipientEmployeeNumber(), "/queue/messages", message);
+            messagingTemplate.convertAndSendToUser(message.senderEmployeeNumber(), "/queue/messages", message);
+        });
+        return ResponseEntity.ok(result.response());
     }
 
     @GetMapping("/api/documents/library/direct-chat/{attachmentId}")

@@ -2,23 +2,17 @@ package com.justjava.humanresource.communication.meeting.provider;
 
 import com.justjava.humanresource.communication.meeting.MeetingProvider;
 import com.justjava.humanresource.communication.meeting.config.MeetingIntegrationProperties;
-import com.justjava.humanresource.communication.meeting.oauth.MeetingTokenService;
+import com.microsoft.graph.models.OnlineMeeting;
+import com.microsoft.graph.serviceclient.GraphServiceClient;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestClientException;
-
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 @Component
 @RequiredArgsConstructor
 public class MicrosoftTeamsMeetingProviderClient implements MeetingProviderClient {
 
     private final MeetingIntegrationProperties properties;
-    private final MeetingTokenService tokenService;
-    private final RestClient restClient = RestClient.builder().build();
+    private final MicrosoftGraphClientFactory graphClientFactory;
 
     @Override
     public MeetingProvider provider() {
@@ -41,26 +35,25 @@ public class MicrosoftTeamsMeetingProviderClient implements MeetingProviderClien
             throw new MeetingProviderException("Microsoft Teams meeting provider is not configured");
         }
         MeetingIntegrationProperties.Microsoft microsoft = properties.getProviders().getMicrosoft();
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("subject", request.subject());
-        body.put("startDateTime", request.startTime().toOffsetDateTime().toString());
-        body.put("endDateTime", request.endTime().toOffsetDateTime().toString());
+        OnlineMeeting meeting = new OnlineMeeting();
+        meeting.setSubject(request.subject());
+        meeting.setStartDateTime(request.startTime().toOffsetDateTime());
+        meeting.setEndDateTime(request.endTime().toOffsetDateTime());
 
         try {
-            Map<String, Object> response = restClient.post()
-                    .uri(microsoft.getGraphBaseUrl() + "/users/{userId}/onlineMeetings", microsoft.getDefaultOrganizerUserId())
-                    .header("Authorization", tokenService.accessToken(provider()).authorizationHeader())
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(body)
-                    .retrieve()
-                    .body(Map.class);
+            GraphServiceClient graphClient = graphClientFactory.create(microsoft);
+            OnlineMeeting response = graphClient
+                    .users()
+                    .byUserId(microsoft.getDefaultOrganizerUserId())
+                    .onlineMeetings()
+                    .post(meeting);
             return new CreatedMeeting(
-                    stringValue(response, "id"),
-                    stringValue(response, "joinWebUrl"),
+                    response == null ? null : response.getId(),
+                    response == null ? null : response.getJoinWebUrl(),
                     null,
                     "Microsoft Teams meeting created"
             );
-        } catch (RestClientException ex) {
+        } catch (RuntimeException ex) {
             throw new MeetingProviderException("Microsoft Teams meeting creation failed", ex);
         }
     }
@@ -69,10 +62,4 @@ public class MicrosoftTeamsMeetingProviderClient implements MeetingProviderClien
         return value != null && !value.isBlank();
     }
 
-    private String stringValue(Map<String, Object> response, String key) {
-        if (response == null || response.get(key) == null) {
-            return null;
-        }
-        return String.valueOf(response.get(key));
-    }
 }
