@@ -27,7 +27,7 @@ public class GlobalControllerAdvice {
     }
     @ModelAttribute("userName")
     public String addUserName(HttpServletRequest request) {
-            return (String) authenticationManager.get("name");
+        return (String) authenticationManager.get("name");
 
     }
 
@@ -40,6 +40,15 @@ public class GlobalControllerAdvice {
     public boolean canAccessDocumentLibrary() {
         return authenticationManager.isHumanResource() || authenticationManager.isAdmin();
     }
+
+    @ModelAttribute("isHrAdmin")
+    public boolean isHrAdmin() {
+        return authenticationManager.isHumanResource()
+                || authenticationManager.isJobHR()
+                || authenticationManager.isRestrictedHr()
+                || authenticationManager.isAdmin();
+    }
+
 
     @ResponseStatus(HttpStatus.FORBIDDEN)
     @ExceptionHandler(AccessDeniedException.class)

@@ -1,2 +1,115 @@
-<!DOCTYPE html><html xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" xmlns:th="http://www.thymeleaf.org" layout:decorate="~{layouts/employeeLayout}"><head><title>My Exit Request</title></head><body><main layout:fragment="content" class="space-y-6">
-<div><h3 class="text-lg font-bold">My Exit Request</h3><p class="text-sm text-gray-500">Submit a resignation and follow its progress.</p></div><div class="grid lg:grid-cols-2 gap-6"><section class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6"><h4 class="font-bold mb-4">New resignation</h4><form method="post" action="/employee/exit" class="space-y-4"><input type="hidden" name="employeeId" th:value="${employee.id}"><input type="hidden" name="exitType" value="RESIGNATION"><label class="block text-sm">Reason<input name="reasonCode" value="PERSONAL" class="form-input mt-1" required></label><label class="block text-sm">Notice date<input type="date" name="noticeDate" class="form-input mt-1" required></label><label class="block text-sm">Proposed last working date<input type="date" name="proposedLastWorkingDate" class="form-input mt-1" required></label><label class="block text-sm">Details<textarea name="reasonDetails" class="form-input mt-1"></textarea></label><input type="hidden" name="contractualNoticeDays" value="0"><input type="hidden" name="noticeWaivedDays" value="0"><button class="btn-primary w-full">Create draft</button></form></section><section class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6"><h4 class="font-bold mb-4">Previous requests</h4><a th:each="x:${exits}" th:href="@{/employee/exit/{id}(id=${x.id})}" class="flex justify-between py-3 border-b"><span th:text="${x.exitNumber}"></span><span class="badge badge-info" th:text="${x.status}"></span></a><p th:if="${#lists.isEmpty(exits)}" class="text-sm text-gray-500">No exit requests.</p></section></div></main></body></html>
+<!DOCTYPE html>
+<html xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:th="http://www.thymeleaf.org"
+      layout:decorate="~{layouts/employeeLayout}">
+<head>
+    <title>My Exit Request</title>
+</head>
+<body>
+<main layout:fragment="content" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    <!-- Page Header -->
+    <div class="mb-8">
+        <h2 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <span class="material-icons-round text-primary-600">directions_run</span>
+            My Exit Request
+        </h2>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            Submit a new resignation request and track the progress of your previous submissions.
+        </p>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+
+        <!-- Left Column: Form (Takes up 7 columns for better input readability) -->
+        <div class="lg:col-span-7">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div class="px-6 py-5 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Submit New Resignation</h3>
+                </div>
+
+                <form method="post" action="/employee/exit" class="p-6 space-y-6">
+                    <!-- Hidden Core Data -->
+                    <input type="hidden" name="employeeId" th:value="${employee.id}">
+                    <input type="hidden" name="exitType" value="RESIGNATION">
+                    <input type="hidden" name="contractualNoticeDays" value="0">
+                    <input type="hidden" name="noticeWaivedDays" value="0">
+
+                    <!-- Reason Input -->
+                    <div>
+                        <label for="reasonCode" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Reason for Exit</label>
+                        <input type="text" id="reasonCode" name="reasonCode" class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-gray-900 bg-white focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 dark:border-gray-600 dark:bg-gray-700 dark:text-white transition-all shadow-sm outline-none placeholder-gray-400" placeholder="e.g., Personal, Career Growth, Relocation" required>
+                    </div>
+
+                    <!-- Date Row -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div>
+                            <label for="noticeDate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Notice Date</label>
+                            <input type="date" id="noticeDate" name="noticeDate" class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-gray-900 bg-white focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 dark:border-gray-600 dark:bg-gray-700 dark:text-white transition-all shadow-sm outline-none" required>
+                        </div>
+                        <div>
+                            <label for="proposedLastWorkingDate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Proposed Last Day</label>
+                            <input type="date" id="proposedLastWorkingDate" name="proposedLastWorkingDate" class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-gray-900 bg-white focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 dark:border-gray-600 dark:bg-gray-700 dark:text-white transition-all shadow-sm outline-none" required>
+                        </div>
+                    </div>
+
+                    <!-- Details Textarea -->
+                    <div>
+                        <label for="reasonDetails" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Additional Details (Optional)</label>
+                        <textarea id="reasonDetails" name="reasonDetails" rows="4" class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-gray-900 bg-white focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 dark:border-gray-600 dark:bg-gray-700 dark:text-white transition-all shadow-sm outline-none placeholder-gray-400" placeholder="Provide any additional context or handover notes..."></textarea>
+                    </div>
+
+                    <div class="pt-4 mt-2">
+                        <button type="submit" class="w-full sm:w-auto inline-flex justify-center items-center gap-2 px-6 py-2.5 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm focus:ring-4 focus:ring-primary-500/30">
+                            <span class="material-icons-round text-sm">save</span>
+                            Create Draft Request
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Right Column: History List (Takes up 5 columns) -->
+        <div class="lg:col-span-5 space-y-6">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Request History</h3>
+                    <span class="material-icons-round text-gray-400">history</span>
+                </div>
+
+                <!-- Empty State -->
+                <div th:if="${#lists.isEmpty(exits)}" class="text-center py-10 px-4 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                    <span class="material-icons-round text-4xl text-gray-300 dark:text-gray-600 mb-3">inbox</span>
+                    <p class="text-sm font-medium text-gray-900 dark:text-white">No previous requests</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Your exit history will appear here.</p>
+                </div>
+
+                <!-- Populated List -->
+                <div th:unless="${#lists.isEmpty(exits)}" class="space-y-3">
+                    <a th:each="x : ${exits}" th:href="@{/employee/exit/{id}(id=${x.id})}" class="group block p-4 rounded-xl border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 hover:bg-white dark:hover:bg-gray-700 hover:border-primary-200 dark:hover:border-primary-500 transition-all shadow-sm hover:shadow">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-full bg-primary-50 dark:bg-gray-700 flex items-center justify-center text-primary-600 dark:text-primary-400 group-hover:bg-primary-100 transition-colors">
+                                    <span class="material-icons-round text-xl">description</span>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-bold text-gray-900 dark:text-white" th:text="${x.exitNumber}"></p>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">View details &rarr;</p>
+                                </div>
+                            </div>
+                            <div>
+                                <span class="badge badge-info shadow-sm" th:text="${x.status}"></span>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+</main>
+</body>
+</html>
