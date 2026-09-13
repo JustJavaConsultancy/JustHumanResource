@@ -69,7 +69,7 @@ public class HistoricalPayrollAdjustmentServiceImpl implements HistoricalPayroll
     @Transactional(readOnly = true)
     public List<HistoricalPayrollPayItemDTO> getAdjustablePayItems(Long employeeId, Long periodId) {
         PayrollPeriod period = payrollPeriodRepository.findById(periodId)
-                .orElseThrow(() -> new ResourceNotFoundException("PayrollPeriod", periodId));
+                .orElseThrow(() -> new ResourceNotFoundException("PayrollPeriod"));
         Employee employee = validateEmployeeInCompany(employeeId, period.getCompanyId());
         PayrollRun latest = getLatestPostedRun(employee.getId(), period);
 
@@ -139,7 +139,7 @@ public class HistoricalPayrollAdjustmentServiceImpl implements HistoricalPayroll
     @Transactional(readOnly = true)
     public List<PayrollVersionHistoryDTO> getVersionHistory(Long employeeId, Long periodId) {
         PayrollPeriod period = payrollPeriodRepository.findById(periodId)
-                .orElseThrow(() -> new ResourceNotFoundException("PayrollPeriod", periodId));
+                .orElseThrow(() -> new ResourceNotFoundException("PayrollPeriod"));
         return payrollRunRepository
                 .findPostedVersionsForEmployeeAndPeriod(employeeId, period.getPeriodStart(), period.getPeriodEnd())
                 .stream()
@@ -151,7 +151,7 @@ public class HistoricalPayrollAdjustmentServiceImpl implements HistoricalPayroll
     @Transactional(readOnly = true)
     public PayrollOriginalVsAdjustedDTO compareOriginalToLatest(Long employeeId, Long periodId) {
         PayrollPeriod period = payrollPeriodRepository.findById(periodId)
-                .orElseThrow(() -> new ResourceNotFoundException("PayrollPeriod", periodId));
+                .orElseThrow(() -> new ResourceNotFoundException("PayrollPeriod"));
         PayrollRun original = payrollRunRepository
                 .findOriginalPostedRunForEmployeeAndPeriod(employeeId, period.getPeriodStart(), period.getPeriodEnd())
                 .orElseThrow(() -> new IllegalStateException("Original posted payroll run not found."));
@@ -163,7 +163,7 @@ public class HistoricalPayrollAdjustmentServiceImpl implements HistoricalPayroll
     @Transactional(readOnly = true)
     public List<PayrollOriginalVsAdjustedDTO> compareOriginalToLatestForPeriod(Long companyId, Long periodId) {
         PayrollPeriod period = payrollPeriodRepository.findById(periodId)
-                .orElseThrow(() -> new ResourceNotFoundException("PayrollPeriod", periodId));
+                .orElseThrow(() -> new ResourceNotFoundException("PayrollPeriod"));
         if (!period.getCompanyId().equals(companyId)) {
             throw new IllegalStateException("Period does not belong to provided company.");
         }
@@ -201,7 +201,7 @@ public class HistoricalPayrollAdjustmentServiceImpl implements HistoricalPayroll
 
     private PayrollPeriod validateClosedPeriod(Long periodId) {
         PayrollPeriod period = payrollPeriodRepository.findById(periodId)
-                .orElseThrow(() -> new ResourceNotFoundException("PayrollPeriod", periodId));
+                .orElseThrow(() -> new ResourceNotFoundException("PayrollPeriod"));
         if (period.getStatus() != PayrollPeriodStatus.CLOSED) {
             throw new IllegalStateException("Historical payroll adjustment is only allowed for CLOSED periods.");
         }
@@ -217,7 +217,7 @@ public class HistoricalPayrollAdjustmentServiceImpl implements HistoricalPayroll
 
     private Employee validateEmployeeInCompany(Long employeeId, Long companyId) {
         Employee employee = employeeRepository.findById(employeeId)
-                .orElseThrow(() -> new ResourceNotFoundException("Employee", employeeId));
+                .orElseThrow(() -> new ResourceNotFoundException("Employee"));
         if (employee.getDepartment() == null
                 || employee.getDepartment().getCompany() == null
                 || !employee.getDepartment().getCompany().getId().equals(companyId)) {

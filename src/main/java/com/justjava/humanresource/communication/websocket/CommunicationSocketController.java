@@ -6,10 +6,7 @@ import com.justjava.humanresource.communication.dto.BroadcastCommentResponse;
 import com.justjava.humanresource.communication.dto.BroadcastResponse;
 import com.justjava.humanresource.communication.dto.ChatMessageResponse;
 import com.justjava.humanresource.communication.dto.DirectMessageCommand;
-import com.justjava.humanresource.communication.dto.GroupMessageCommand;
-import com.justjava.humanresource.communication.dto.GroupMessageResponse;
 import com.justjava.humanresource.communication.service.CommunicationService;
-import com.justjava.humanresource.communication.service.GroupChatService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
@@ -24,14 +21,19 @@ import java.security.Principal;
 public class CommunicationSocketController {
 
     private final CommunicationService communicationService;
-    private final GroupChatService groupChatService;
     private final SimpMessagingTemplate messagingTemplate;
 
     @MessageMapping("/chat.send")
     public void sendDirectMessage(@Valid DirectMessageCommand command, Principal principal) {
         ChatMessageResponse response = communicationService.sendDirectMessage(command, principal);
         messagingTemplate.convertAndSendToUser(response.recipientEmployeeNumber(), "/queue/messages", response);
-        messagingTemplate.convertAndSendToUser(response.senderEmployeeNumber(), "/queue/messages", response);
+        // If recipient is the HR system account, also publish to the HR inbox topic so HR UIs (principal != employeeNumber) receive it
+        if (response.recipientEmployeeNumber() != null && ("HR-SYSTEM".equalsIgnoreCase(response.recipientEmployeeNumber()) || "HR".equalsIgnoreCase(response.recipientEmployeeNumber()))) {
+            messagingTemplate.convertAndSend("/topic/hr-inbox", response);
+        }
+        // For HR system employee, use the principal name (HR:email) for routing back to sender
+        String senderPrincipal = principal != null ? principal.getName() : response.senderEmployeeNumber();
+        messagingTemplate.convertAndSendToUser(senderPrincipal, "/queue/messages", response);
     }
 
     @MessageMapping("/broadcast.send")
@@ -57,19 +59,5 @@ public class CommunicationSocketController {
     public void markRead(@DestinationVariable Long broadcastId) {
         BroadcastResponse response = communicationService.markBroadcastRead(broadcastId);
         messagingTemplate.convertAndSend("/topic/hr-broadcasts/" + response.id() + "/receipts", response);
-    }
-
-    @MessageMapping("/groups.message")
-    public void sendGroupMessage(@Valid GroupMessageCommand command, Principal principal) {
-        GroupMessageResponse response = groupChatService.sendMessage(command, principal);
-        messagingTemplate.convertAndSend("/topic/chat-groups/" + response.groupId() + "/messages", response);
-        for (String employeeNumber : groupChatService.activeMemberEmployeeNumbers(response.groupId())) {
-            messagingTemplate.convertAndSendToUser(
-                    employeeNumber,
-                    "/queue/group-notifications",
-                    groupChatService.getGroupSummary(response.groupId())
-            );
-        }
-        messagingTemplate.convertAndSend("/topic/chat-groups", groupChatService.getGroupSummary(response.groupId()));
     }
 }

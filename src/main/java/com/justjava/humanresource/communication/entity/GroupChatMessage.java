@@ -1,34 +1,43 @@
 package com.justjava.humanresource.communication.entity;
 
-import com.justjava.humanresource.core.entity.BaseEntity;
 import com.justjava.humanresource.hr.entity.Employee;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.Lob;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
 
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "group_chat_messages")
 @Getter
 @Setter
-@Entity
 @NoArgsConstructor
-@Table(name = "communication_group_chat_messages")
-public class GroupChatMessage extends BaseEntity {
+@AllArgsConstructor
+@Builder
+public class GroupChatMessage {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "chat_group_id", nullable = false)
-    private ChatGroup chatGroup;
+    @JoinColumn(name = "group_id", nullable = false)
+    private ChatGroup group;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "sender_id", nullable = false)
     private Employee sender;
 
-    @Lob
-    @Column(nullable = false, length = 2000)
+    @Column(columnDefinition = "TEXT")
     private String content;
+
+    @Column(name = "delivered_at")
+    private LocalDateTime deliveredAt;
+
+    @Column(name = "read_at")
+    private LocalDateTime readAt;
+
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
 }

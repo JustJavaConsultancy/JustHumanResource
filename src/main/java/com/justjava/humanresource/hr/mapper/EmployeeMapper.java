@@ -93,19 +93,19 @@ public abstract class EmployeeMapper {
     protected Department resolveDepartment(Long id) {
         if (id == null) return null;
         return departmentRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Department", id));
+                .orElseThrow(() -> new ResourceNotFoundException("Department"));
     }
 
     protected JobStep resolveJobStep(Long id) {
         if (id == null) return null;
         return jobStepRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("JobStep", id));
+                .orElseThrow(() -> new ResourceNotFoundException("JobStep"));
     }
 
     protected PayGroup resolvePayGroup(Long id) {
         if (id == null) return null;
         return payGroupRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("PayGroup", id));
+                .orElseThrow(() -> new ResourceNotFoundException("PayGroup"));
     }
 
     public List<EmployeeDTO> toDtoList(List<Employee> employees) {

@@ -25,9 +25,10 @@ public class EmployeePrincipalHandshakeHandler extends DefaultHandshakeHandler {
                 && authentication.getPrincipal() instanceof DefaultOidcUser oidcUser) {
             Object email = oidcUser.getClaims().get("email");
             if (email != null) {
-                return employeeRepository.findByEmail(String.valueOf(email))
+                String emailStr = String.valueOf(email);
+                return employeeRepository.findByEmail(emailStr)
                         .<Principal>map(employee -> employee::getEmployeeNumber)
-                        .orElse(() -> String.valueOf(email));
+                        .orElse(() -> "HR:" + emailStr);
             }
         }
         return principal;

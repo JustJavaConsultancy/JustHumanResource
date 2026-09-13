@@ -1,5 +1,6 @@
 package com.justjava.humanresource.communication.controller;
 
+import com.justjava.humanresource.communication.dto.AvailableMemberResponse;
 import com.justjava.humanresource.communication.dto.BroadcastCommentCommand;
 import com.justjava.humanresource.communication.dto.BroadcastCommentResponse;
 import com.justjava.humanresource.communication.dto.BroadcastCommand;
@@ -8,18 +9,21 @@ import com.justjava.humanresource.communication.dto.ChatGroupResponse;
 import com.justjava.humanresource.communication.dto.ChatMessageResponse;
 import com.justjava.humanresource.communication.dto.ConversationResponse;
 import com.justjava.humanresource.communication.dto.CreateChatGroupCommand;
+import com.justjava.humanresource.communication.dto.DirectMessageCommand;
 import com.justjava.humanresource.communication.dto.EmployeeContactResponse;
+import com.justjava.humanresource.communication.dto.GroupMessageAttachmentResponse;
+import com.justjava.humanresource.communication.dto.GroupMessageCommand;
 import com.justjava.humanresource.communication.dto.GroupMessageResponse;
 import com.justjava.humanresource.communication.dto.PresenceResponse;
-import com.justjava.humanresource.communication.entity.ChatMessageAttachment;
-import com.justjava.humanresource.communication.entity.GroupChatMessageAttachment;
-import com.justjava.humanresource.communication.entity.HrBroadcastAttachment;
+import com.justjava.humanresource.communication.entity.*;
 import com.justjava.humanresource.communication.service.CommunicationAttachmentService;
 import com.justjava.humanresource.communication.service.CommunicationService;
 import com.justjava.humanresource.communication.service.GroupChatService;
 import com.justjava.humanresource.communication.service.PresenceService;
 import com.justjava.humanresource.core.config.AuthenticationManager;
+import com.justjava.humanresource.core.exception.ResourceNotFoundException;
 import com.justjava.humanresource.hr.entity.Employee;
+import java.security.Principal;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -32,14 +36,12 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.justjava.humanresource.communication.repository.GroupChatMessageAttachmentRepository;
+
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Controller
@@ -47,9 +49,10 @@ import java.util.List;
 public class CommunicationController {
 
     private final CommunicationService communicationService;
-    private final GroupChatService groupChatService;
     private final PresenceService presenceService;
     private final CommunicationAttachmentService attachmentService;
+    private final GroupChatService groupChatService;
+    private final GroupChatMessageAttachmentRepository groupChatMessageAttachmentRepository;
     private final AuthenticationManager authenticationManager;
     private final SimpMessagingTemplate messagingTemplate;
 
@@ -59,7 +62,7 @@ public class CommunicationController {
         model.addAttribute("employee", employee);
         model.addAttribute("currentEmployeeId", employee.getId());
         model.addAttribute("currentEmployeeNumber", employee.getEmployeeNumber());
-        model.addAttribute("canCreateGroups", groupChatService.canCreateGroups());
+        model.addAttribute("canCreateGroups", false);
         model.addAttribute("title", "Communication");
         model.addAttribute("subTitle", "Chat with colleagues and follow HR broadcasts");
         return "employees/communication";
@@ -71,7 +74,7 @@ public class CommunicationController {
         model.addAttribute("employee", employee);
         model.addAttribute("currentEmployeeId", employee.getId());
         model.addAttribute("currentEmployeeNumber", employee.getEmployeeNumber());
-        model.addAttribute("canCreateGroups", groupChatService.canCreateGroups());
+        model.addAttribute("canCreateGroups", false);
         model.addAttribute("title", "Messages");
         model.addAttribute("subTitle", "Chats and HR updates");
         return "mobile/communication";
@@ -85,14 +88,16 @@ public class CommunicationController {
             model.addAttribute("currentEmployeeNumber", employee.getEmployeeNumber());
             model.addAttribute("directChatAvailable", true);
         } catch (EntityNotFoundException | AccessDeniedException exception) {
-            model.addAttribute("currentEmployeeId", null);
-            model.addAttribute("currentEmployeeNumber", "");
-            model.addAttribute("directChatAvailable", false);
+            // HR without employee profile - use HR system employee
+            Employee hrSystem = communicationService.getOrCreateHrSystemEmployee("hr-system@company.local");
+            model.addAttribute("currentEmployeeId", hrSystem.getId());
+            model.addAttribute("currentEmployeeNumber", hrSystem.getEmployeeNumber());
+            model.addAttribute("directChatAvailable", true);
         }
         model.addAttribute("title", "Communication");
         model.addAttribute("subTitle", "Send HR broadcasts and monitor employee feedback");
         model.addAttribute("isRestrictedHr", authenticationManager.isRestrictedHr());
-        model.addAttribute("canCreateGroups", groupChatService.canCreateGroups());
+        model.addAttribute("canCreateGroups", false);
         return "communication/main";
     }
 
@@ -141,6 +146,22 @@ public class CommunicationController {
             @RequestParam(required = false) List<MultipartFile> files) {
         ChatMessageResponse response = communicationService.sendDirectMessageWithAttachments(recipientEmployeeId, content, files);
         messagingTemplate.convertAndSendToUser(response.recipientEmployeeNumber(), "/queue/messages", response);
+        if (response.recipientEmployeeNumber() != null && ("HR-SYSTEM".equalsIgnoreCase(response.recipientEmployeeNumber()) || "HR".equalsIgnoreCase(response.recipientEmployeeNumber()))) {
+            messagingTemplate.convertAndSend("/topic/hr-inbox", response);
+        }
+        messagingTemplate.convertAndSendToUser(response.senderEmployeeNumber(), "/queue/messages", response);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping(value = "/communication/messages", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    public ResponseEntity<ChatMessageResponse> sendHrDirectMessageJson(
+            @Valid @RequestBody DirectMessageCommand command, Principal principal) {
+        ChatMessageResponse response = communicationService.sendDirectMessage(command, principal);
+        messagingTemplate.convertAndSendToUser(response.recipientEmployeeNumber(), "/queue/messages", response);
+        if (response.recipientEmployeeNumber() != null && ("HR-SYSTEM".equalsIgnoreCase(response.recipientEmployeeNumber()) || "HR".equalsIgnoreCase(response.recipientEmployeeNumber()))) {
+            messagingTemplate.convertAndSend("/topic/hr-inbox", response);
+        }
         messagingTemplate.convertAndSendToUser(response.senderEmployeeNumber(), "/queue/messages", response);
         return ResponseEntity.ok(response);
     }
@@ -153,6 +174,9 @@ public class CommunicationController {
             @RequestParam(required = false) List<MultipartFile> files) {
         ChatMessageResponse response = communicationService.sendHrDirectMessageWithAttachments(recipientEmployeeId, content, files);
         messagingTemplate.convertAndSendToUser(response.recipientEmployeeNumber(), "/queue/messages", response);
+        if (response.recipientEmployeeNumber() != null && ("HR-SYSTEM".equalsIgnoreCase(response.recipientEmployeeNumber()) || "HR".equalsIgnoreCase(response.recipientEmployeeNumber()))) {
+            messagingTemplate.convertAndSend("/topic/hr-inbox", response);
+        }
         messagingTemplate.convertAndSendToUser(response.senderEmployeeNumber(), "/queue/messages", response);
         return ResponseEntity.ok(response);
     }
@@ -255,68 +279,26 @@ public class CommunicationController {
         return presenceService.getOnlineEmployees();
     }
 
-    @GetMapping({"/employee/communication/groups", "/mobile/employee/communication/groups", "/communication/groups"})
+    // ============ Available Members for Chat Groups ============
+
+    @GetMapping("/communication/groups/available-members")
     @ResponseBody
-    public List<ChatGroupResponse> groups() {
-        return groupChatService.listMyGroups();
+    public List<AvailableMemberResponse> hrAvailableMembers() {
+        return communicationService.getAvailableMembersForGroup();
     }
 
-    @PostMapping({"/employee/communication/groups", "/mobile/employee/communication/groups", "/communication/groups"})
+    @GetMapping("/employee/communication/groups/available-members")
     @ResponseBody
-    public ResponseEntity<ChatGroupResponse> createGroup(@Valid @RequestBody CreateChatGroupCommand command) {
-        ChatGroupResponse response = groupChatService.createGroup(command);
-        messagingTemplate.convertAndSend("/topic/chat-groups", response);
-        for (String employeeNumber : groupChatService.activeMemberEmployeeNumbers(response.id())) {
-            messagingTemplate.convertAndSendToUser(employeeNumber, "/queue/group-notifications", response);
-        }
-        return ResponseEntity.ok(response);
+    public List<AvailableMemberResponse> employeeAvailableMembers() {
+        return communicationService.getAvailableMembersForGroup();
     }
 
-    @GetMapping({"/employee/communication/groups/available-members", "/mobile/employee/communication/groups/available-members", "/communication/groups/available-members"})
+    @GetMapping("/mobile/employee/communication/groups/available-members")
     @ResponseBody
-    public List<EmployeeContactResponse> availableGroupMembers() {
-        return groupChatService.availableMembers();
+    public List<AvailableMemberResponse> mobileEmployeeAvailableMembers() {
+        return communicationService.getAvailableMembersForGroup();
     }
 
-    @GetMapping({"/employee/communication/groups/{groupId}/messages", "/mobile/employee/communication/groups/{groupId}/messages", "/communication/groups/{groupId}/messages"})
-    @ResponseBody
-    public List<GroupMessageResponse> groupMessages(@PathVariable Long groupId) {
-        return groupChatService.getGroupMessages(groupId);
-    }
-
-    @PostMapping(value = {"/employee/communication/groups/{groupId}/messages", "/mobile/employee/communication/groups/{groupId}/messages"},
-            consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @ResponseBody
-    public ResponseEntity<GroupMessageResponse> sendGroupMessageWithAttachments(
-            @PathVariable Long groupId,
-            @RequestParam(required = false) String content,
-            @RequestParam(required = false) List<MultipartFile> files) {
-        GroupMessageResponse response = groupChatService.sendMessageWithAttachments(groupId, content, files);
-        messagingTemplate.convertAndSend("/topic/chat-groups/" + response.groupId() + "/messages", response);
-        for (String employeeNumber : groupChatService.activeMemberEmployeeNumbers(response.groupId())) {
-            messagingTemplate.convertAndSendToUser(
-                    employeeNumber,
-                    "/queue/group-notifications",
-                    groupChatService.getGroupSummary(response.groupId())
-            );
-        }
-        messagingTemplate.convertAndSend("/topic/chat-groups", groupChatService.getGroupSummary(response.groupId()));
-        return ResponseEntity.ok(response);
-    }
-
-    @GetMapping("/employee/communication/groups/messages/{messageId}/attachments/{attachmentId}")
-    public ResponseEntity<Resource> downloadGroupAttachment(@PathVariable Long messageId, @PathVariable Long attachmentId) {
-        groupChatService.getReadableMessage(messageId);
-        GroupChatMessageAttachment attachment = attachmentService.getGroupAttachment(messageId, attachmentId);
-        return attachmentResponse(attachment.getContentType(), attachment.getFileSize(), attachment.getOriginalFilename(), false, attachment.getStoragePath());
-    }
-
-    @GetMapping("/employee/communication/groups/messages/{messageId}/attachments/{attachmentId}/view")
-    public ResponseEntity<Resource> viewGroupAttachment(@PathVariable Long messageId, @PathVariable Long attachmentId) {
-        groupChatService.getReadableMessage(messageId);
-        GroupChatMessageAttachment attachment = attachmentService.getGroupAttachment(messageId, attachmentId);
-        return attachmentResponse(attachment.getContentType(), attachment.getFileSize(), attachment.getOriginalFilename(), true, attachment.getStoragePath());
-    }
 
     @GetMapping({"/employee/communication/broadcasts/{broadcastId}/attachments/{attachmentId}",
             "/communication/broadcasts/{broadcastId}/attachments/{attachmentId}"})
@@ -331,6 +313,231 @@ public class CommunicationController {
     public ResponseEntity<Resource> viewBroadcastAttachment(@PathVariable Long broadcastId, @PathVariable Long attachmentId) {
         communicationService.getReadableBroadcast(broadcastId);
         HrBroadcastAttachment attachment = attachmentService.getBroadcastAttachment(broadcastId, attachmentId);
+        return attachmentResponse(attachment.getContentType(), attachment.getFileSize(), attachment.getOriginalFilename(), true, attachment.getStoragePath());
+    }
+
+    // ============ Chat Group Endpoints ============
+
+    @GetMapping("/employee/communication/groups")
+    @ResponseBody
+    public List<ChatGroupResponse> employeeGroups() {
+        Employee employee = communicationService.getCurrentEmployee();
+        return groupChatService.getGroupsForEmployee(employee.getId());
+    }
+
+    @GetMapping("/communication/groups")
+    @ResponseBody
+    public List<ChatGroupResponse> hrGroups() {
+        // For HR, get groups they created (they may not have employee profile)
+        return groupChatService.getGroupsCreatedByHr(authenticationManager.getCurrentUserEmail());
+    }
+
+    @GetMapping("/employee/communication/groups/{groupId}")
+    @ResponseBody
+    public ChatGroupResponse employeeGroupDetails(@PathVariable Long groupId) {
+        Employee employee = communicationService.getCurrentEmployee();
+        return groupChatService.getGroupDetails(groupId, employee.getId());
+    }
+
+    @GetMapping("/communication/groups/{groupId}")
+    @ResponseBody
+    public ChatGroupResponse hrGroupDetails(@PathVariable Long groupId) {
+        Long employeeId = null;
+        try {
+            Employee employee = communicationService.getCurrentEmployee();
+            employeeId = employee.getId();
+        } catch (Exception e) {
+            // HR without employee profile
+        }
+        return groupChatService.getGroupDetails(groupId, employeeId);
+    }
+
+    @PostMapping(value = "/communication/groups", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    public ResponseEntity<ChatGroupResponse> createGroup(@Valid @RequestBody CreateChatGroupCommand command) {
+        String creatorEmail = authenticationManager.getCurrentUserEmail();
+        String creatorName = authenticationManager.getCurrentUserName();
+        ChatGroup group = groupChatService.createGroup(command, creatorEmail, creatorName);
+        ChatGroupResponse response = ChatGroupResponse.from(group, null, true, true, 1, null);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/communication/groups/{groupId}/members")
+    @ResponseBody
+    public ResponseEntity<Void> addMember(@PathVariable Long groupId, @RequestParam Long employeeId) {
+        groupChatService.addMember(groupId, employeeId, com.justjava.humanresource.communication.entity.ChatGroupMemberRole.MEMBER);
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/communication/groups/{groupId}/members/{employeeId}")
+    @ResponseBody
+    public ResponseEntity<Void> removeMember(@PathVariable Long groupId, @PathVariable Long employeeId) {
+        Long requesterId = null;
+        try {
+            Employee employee = communicationService.getCurrentEmployee();
+            requesterId = employee.getId();
+        } catch (Exception e) {
+            // HR without employee profile - need to get HR system employee ID
+            Employee hrSystem = communicationService.getOrCreateHrSystemEmployee("hr-system@company.local");
+            requesterId = hrSystem.getId();
+        }
+        groupChatService.removeMember(groupId, employeeId, requesterId);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/employee/communication/groups/{groupId}/messages")
+    @ResponseBody
+    public List<GroupMessageResponse> employeeGroupMessages(@PathVariable Long groupId) {
+        Employee employee = communicationService.getCurrentEmployee();
+        return groupChatService.getMessages(groupId, employee.getId());
+    }
+
+    @GetMapping("/communication/groups/{groupId}/messages")
+    @ResponseBody
+    public List<GroupMessageResponse> hrGroupMessages(@PathVariable Long groupId) {
+        Long employeeId = null;
+        try {
+            Employee employee = communicationService.getCurrentEmployee();
+            employeeId = employee.getId();
+        } catch (Exception e) {
+            // HR without employee profile
+        }
+        return groupChatService.getMessages(groupId, employeeId);
+    }
+
+    @GetMapping("/employee/communication/groups/{groupId}/messages/since")
+    @ResponseBody
+    public List<GroupMessageResponse> employeeGroupMessagesSince(@PathVariable Long groupId,
+                                                                  @RequestParam LocalDateTime since) {
+        Employee employee = communicationService.getCurrentEmployee();
+        return groupChatService.getMessagesSince(groupId, employee.getId(), since);
+    }
+
+    @GetMapping("/communication/groups/{groupId}/messages/since")
+    @ResponseBody
+    public List<GroupMessageResponse> hrGroupMessagesSince(@PathVariable Long groupId,
+                                                            @RequestParam LocalDateTime since) {
+        Long employeeId = null;
+        try {
+            Employee employee = communicationService.getCurrentEmployee();
+            employeeId = employee.getId();
+        } catch (Exception e) {
+            // HR without employee profile
+        }
+        return groupChatService.getMessagesSince(groupId, employeeId, since);
+    }
+
+    @PostMapping(value = "/employee/communication/groups/{groupId}/messages", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    public ResponseEntity<GroupMessageResponse> sendEmployeeGroupMessage(@PathVariable Long groupId,
+                                                                          @Valid @RequestBody GroupMessageCommand command) {
+        Employee employee = communicationService.getCurrentEmployee();
+        GroupChatMessage message = groupChatService.sendMessage(groupId, employee.getId(), command);
+        GroupMessageResponse response = groupChatService.toMessageResponse(message);
+        messagingTemplate.convertAndSend("/topic/chat-groups/" + groupId + "/messages", response);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping(value = "/communication/groups/{groupId}/messages", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    public ResponseEntity<GroupMessageResponse> sendHrGroupMessage(@PathVariable Long groupId,
+                                                                    @Valid @RequestBody GroupMessageCommand command) {
+        Long employeeId = null;
+        try {
+            Employee employee = communicationService.getCurrentEmployee();
+            employeeId = employee.getId();
+        } catch (Exception e) {
+            // HR without employee profile - use HR system employee
+            Employee hrSystem = communicationService.getOrCreateHrSystemEmployee("hr-system@company.local");
+            employeeId = hrSystem.getId();
+        }
+        GroupChatMessage message = groupChatService.sendMessage(groupId, employeeId, command);
+        GroupMessageResponse response = groupChatService.toMessageResponse(message);
+        messagingTemplate.convertAndSend("/topic/chat-groups/" + groupId + "/messages", response);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/employee/communication/groups/{groupId}/attachments")
+    @ResponseBody
+    public List<GroupMessageAttachmentResponse> employeeGroupAttachments(@PathVariable Long groupId) {
+        Employee employee = communicationService.getCurrentEmployee();
+        return groupChatService.getAttachments(groupId, employee.getId());
+    }
+
+    @GetMapping("/communication/groups/{groupId}/attachments")
+    @ResponseBody
+    public List<GroupMessageAttachmentResponse> hrGroupAttachments(@PathVariable Long groupId) {
+        Long employeeId = null;
+        try {
+            Employee employee = communicationService.getCurrentEmployee();
+            employeeId = employee.getId();
+        } catch (Exception e) {
+            // HR without employee profile
+        }
+        return groupChatService.getAttachments(groupId, employeeId);
+    }
+
+    @GetMapping("/employee/communication/groups/{groupId}/messages/{messageId}/attachments/{attachmentId}")
+    public ResponseEntity<Resource> downloadEmployeeGroupAttachment(@PathVariable Long groupId,
+                                                                     @PathVariable Long messageId,
+                                                                     @PathVariable Long attachmentId) {
+        Employee employee = communicationService.getCurrentEmployee();
+        groupChatService.getGroupDetails(groupId, employee.getId()); // Verify access
+        GroupChatMessageAttachment attachment = groupChatMessageAttachmentRepository.findByMessageId(messageId)
+                .stream().filter(a -> a.getId().equals(attachmentId))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("Attachment not found"));
+        return attachmentResponse(attachment.getContentType(), attachment.getFileSize(), attachment.getOriginalFilename(), false, attachment.getStoragePath());
+    }
+
+    @GetMapping("/communication/groups/{groupId}/messages/{messageId}/attachments/{attachmentId}")
+    public ResponseEntity<Resource> downloadHrGroupAttachment(@PathVariable Long groupId,
+                                                               @PathVariable Long messageId,
+                                                               @PathVariable Long attachmentId) {
+        Long employeeId = null;
+        try {
+            Employee employee = communicationService.getCurrentEmployee();
+            employeeId = employee.getId();
+        } catch (Exception e) {
+            // HR without employee profile
+        }
+        groupChatService.getGroupDetails(groupId, employeeId); // Verify access
+        GroupChatMessageAttachment attachment = groupChatMessageAttachmentRepository.findByMessageId(messageId)
+                .stream().filter(a -> a.getId().equals(attachmentId))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("Attachment not found"));
+        return attachmentResponse(attachment.getContentType(), attachment.getFileSize(), attachment.getOriginalFilename(), false, attachment.getStoragePath());
+    }
+
+    @GetMapping("/employee/communication/groups/{groupId}/messages/{messageId}/attachments/{attachmentId}/view")
+    public ResponseEntity<Resource> viewEmployeeGroupAttachment(@PathVariable Long groupId,
+                                                                 @PathVariable Long messageId,
+                                                                 @PathVariable Long attachmentId) {
+        Employee employee = communicationService.getCurrentEmployee();
+        groupChatService.getGroupDetails(groupId, employee.getId()); // Verify access
+        GroupChatMessageAttachment attachment = groupChatMessageAttachmentRepository.findByMessageId(messageId)
+                .stream().filter(a -> a.getId().equals(attachmentId))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("Attachment not found"));
+        return attachmentResponse(attachment.getContentType(), attachment.getFileSize(), attachment.getOriginalFilename(), true, attachment.getStoragePath());
+    }
+
+    @GetMapping("/communication/groups/{groupId}/messages/{messageId}/attachments/{attachmentId}/view")
+    public ResponseEntity<Resource> viewHrGroupAttachment(@PathVariable Long groupId,
+                                                           @PathVariable Long messageId,
+                                                           @PathVariable Long attachmentId) {
+        Long employeeId = null;
+        try {
+            Employee employee = communicationService.getCurrentEmployee();
+            employeeId = employee.getId();
+        } catch (Exception e) {
+            // HR without employee profile
+        }
+        groupChatService.getGroupDetails(groupId, employeeId); // Verify access
+        GroupChatMessageAttachment attachment = groupChatMessageAttachmentRepository.findByMessageId(messageId)
+                .stream().filter(a -> a.getId().equals(attachmentId))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("Attachment not found"));
         return attachmentResponse(attachment.getContentType(), attachment.getFileSize(), attachment.getOriginalFilename(), true, attachment.getStoragePath());
     }
 

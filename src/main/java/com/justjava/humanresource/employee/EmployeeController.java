@@ -103,9 +103,12 @@ public class EmployeeController {
             ).ifPresent(line -> primaryManagerMap.put(employee.getId(), line.getManager().getId()));
         }
 
-        employees.forEach(e ->
-                System.out.println("Employee: " + e.getFirstName() + " " + e.getEmploymentStatus()
-                        + ", Department: " + e.getDepartment().getName()));
+        // FIX: add null check for department before calling getName()
+        employees.forEach(e -> {
+            String deptName = e.getDepartment() != null ? e.getDepartment().getName() : "No Department";
+            System.out.println("Employee: " + e.getFirstName() + " " + e.getEmploymentStatus()
+                    + ", Department: " + deptName);
+        });
 
         List<Deduction>  deductions = payrollSetupService.getActiveDeductions();
         List<Allowance>  allowances = payrollSetupService.getActiveAllowances();

@@ -51,7 +51,7 @@ public class AssetCatalogServiceImpl implements AssetCatalogService {
     @Transactional
     public AssetCatalogItem update(Long id, UpdateAssetCatalogItemCommand command) {
         AssetCatalogItem item = repository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("AssetCatalogItem", id));
+                .orElseThrow(() -> new ResourceNotFoundException("AssetCatalogItem"));
         item.setAssetName(command.getAssetName());
         item.setCategory(command.getCategory());
         item.setUnitOfMeasure(command.getUnitOfMeasure());
@@ -64,7 +64,7 @@ public class AssetCatalogServiceImpl implements AssetCatalogService {
     @Transactional
     public AssetCatalogItem retire(Long id) {
         AssetCatalogItem item = repository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("AssetCatalogItem", id));
+                .orElseThrow(() -> new ResourceNotFoundException("AssetCatalogItem"));
         item.setStatus(AssetCatalogStatus.RETIRED);
         return repository.save(item);
     }

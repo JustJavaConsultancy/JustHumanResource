@@ -53,8 +53,8 @@ public class DocumentLibraryService {
     private static final String EMPLOYEE_DOCUMENT = "EMPLOYEE_DOCUMENT";
     private static final String REQUEST_ATTACHMENT = "REQUEST_ATTACHMENT";
     private static final String DIRECT_CHAT_ATTACHMENT = "DIRECT_CHAT_ATTACHMENT";
-    private static final String GROUP_CHAT_ATTACHMENT = "GROUP_CHAT_ATTACHMENT";
     private static final String BROADCAST_ATTACHMENT = "BROADCAST_ATTACHMENT";
+    private static final String GROUP_CHAT_ATTACHMENT = "GROUP_CHAT_ATTACHMENT";
 
     private final AuthenticationManager authenticationManager;
     private final EmployeeService employeeService;
@@ -370,33 +370,6 @@ public class DocumentLibraryService {
         );
     }
 
-    private DocumentLibraryItemDTO fromGroupChatAttachment(GroupChatMessageAttachment attachment) {
-        Employee sender = attachment.getMessage().getSender();
-        String groupName = attachment.getMessage().getChatGroup() == null ? null : attachment.getMessage().getChatGroup().getName();
-        return new DocumentLibraryItemDTO(
-                attachment.getId(),
-                GROUP_CHAT_ATTACHMENT,
-                attachment.getOriginalFilename(),
-                attachment.getOriginalFilename(),
-                attachment.getContentType(),
-                attachment.getFileSize(),
-                attachment.getUploadedAt(),
-                attachment.getUploadedByEmployeeId() == null ? null : String.valueOf(attachment.getUploadedByEmployeeId()),
-                sender == null ? attachment.getUploadedByEmployeeId() : sender.getId(),
-                sender == null ? null : sender.getFullName(),
-                sender == null ? null : sender.getEmployeeNumber(),
-                null,
-                null,
-                null,
-                null,
-                null,
-                "Group chat",
-                groupName == null ? "Group message attachment" : "Group message in " + groupName,
-                "/api/documents/library/group-chat/" + attachment.getId() + "/view",
-                "/api/documents/library/group-chat/" + attachment.getId()
-        );
-    }
-
     private DocumentLibraryItemDTO fromBroadcastAttachment(HrBroadcastAttachment attachment) {
         String title = attachment.getBroadcast() == null ? null : attachment.getBroadcast().getTitle();
         return new DocumentLibraryItemDTO(
@@ -420,6 +393,32 @@ public class DocumentLibraryService {
                 title,
                 "/api/documents/library/broadcast/" + attachment.getId() + "/view",
                 "/api/documents/library/broadcast/" + attachment.getId()
+        );
+    }
+
+    private DocumentLibraryItemDTO fromGroupChatAttachment(GroupChatMessageAttachment attachment) {
+        Employee sender = attachment.getMessage().getSender();
+        return new DocumentLibraryItemDTO(
+                attachment.getId(),
+                GROUP_CHAT_ATTACHMENT,
+                attachment.getOriginalFilename(),
+                attachment.getOriginalFilename(),
+                attachment.getContentType(),
+                attachment.getFileSize(),
+                attachment.getUploadedAt(),
+                attachment.getUploadedByEmployeeId() == null ? null : String.valueOf(attachment.getUploadedByEmployeeId()),
+                sender == null ? attachment.getUploadedByEmployeeId() : sender.getId(),
+                sender == null ? null : sender.getFullName(),
+                sender == null ? null : sender.getEmployeeNumber(),
+                null,
+                null,
+                null,
+                String.valueOf(attachment.getMessage().getGroup().getId()),
+                attachment.getMessage().getGroup().getName(),
+                "Group chat",
+                "Group chat attachment in " + attachment.getMessage().getGroup().getName(),
+                "/api/documents/library/group-chat/" + attachment.getId() + "/view",
+                "/api/documents/library/group-chat/" + attachment.getId()
         );
     }
 

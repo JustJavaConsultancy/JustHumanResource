@@ -1,47 +1,47 @@
 package com.justjava.humanresource.communication.entity;
 
-import com.justjava.humanresource.core.entity.BaseEntity;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
+@Entity
+@Table(name = "group_chat_message_attachments")
 @Getter
 @Setter
-@Entity
 @NoArgsConstructor
-@Table(name = "communication_group_chat_message_attachments")
-public class GroupChatMessageAttachment extends BaseEntity {
+@AllArgsConstructor
+@Builder
+public class GroupChatMessageAttachment {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "message_id", nullable = false)
     private GroupChatMessage message;
 
-    @Column(nullable = false)
+    @Column(name = "original_filename", nullable = false, length = 255)
     private String originalFilename;
 
-    @Column(nullable = false, unique = true)
+    @Column(name = "stored_filename", nullable = false, length = 255)
     private String storedFilename;
 
-    @Column(nullable = false, length = 1000)
+    @Column(name = "storage_path", nullable = false, length = 500)
     private String storagePath;
 
-    @Column(nullable = false)
+    @Column(name = "content_type", nullable = false, length = 100)
     private String contentType;
 
-    @Column(nullable = false)
+    @Column(name = "file_size", nullable = false)
     private Long fileSize;
 
-    @Column(nullable = false)
+    @Column(name = "uploaded_by_employee_id")
     private Long uploadedByEmployeeId;
 
-    @Column(nullable = false)
+    @CreationTimestamp
+    @Column(name = "uploaded_at", nullable = false, updatable = false)
     private LocalDateTime uploadedAt;
 }

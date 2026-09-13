@@ -1,28 +1,25 @@
 package com.justjava.humanresource.communication.entity;
 
-import com.justjava.humanresource.core.entity.BaseEntity;
-import com.justjava.humanresource.hr.entity.Department;
-import com.justjava.humanresource.hr.entity.Employee;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import com.justjava.humanresource.core.enums.RecordStatus;
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 
+@Entity
+@Table(name = "chat_groups")
 @Getter
 @Setter
-@Entity
 @NoArgsConstructor
-@Table(name = "communication_chat_groups")
-public class ChatGroup extends BaseEntity {
+@AllArgsConstructor
+@Builder
+public class ChatGroup {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
     @Column(nullable = false, length = 100)
     private String name;
@@ -30,23 +27,23 @@ public class ChatGroup extends BaseEntity {
     @Column(length = 500)
     private String description;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "department_id")
-    private Department department;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "created_by_employee_id")
-    private Employee createdByEmployee;
-
-    @Column(length = 200)
+    // HR creator info (from Keycloak - HR may not have employee profile)
+    @Column(name = "created_by_email", nullable = false, length = 255)
     private String createdByEmail;
 
-    @Column(length = 40)
-    private String createdByRole;
+    @Column(name = "created_by_name", nullable = false, length = 255)
+    private String createdByName;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 30)
-    private ChatGroupStatus status = ChatGroupStatus.ACTIVE;
+    @Column(nullable = false)
+    @Builder.Default
+    private RecordStatus status = RecordStatus.ACTIVE;
 
-    private LocalDateTime lastMessageAt;
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt;
 }

@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -85,22 +86,22 @@ public class CommunicationAttachmentService {
     }
 
     @Transactional
-    public List<GroupChatMessageAttachment> storeGroupAttachments(GroupChatMessage message, List<MultipartFile> files, Long actorId) {
-        return validFiles(files).stream()
-                .map(file -> storeGroupAttachment(message, file, actorId))
-                .toList();
-    }
-
-    @Transactional
     public List<HrBroadcastAttachment> storeBroadcastAttachments(HrBroadcast broadcast, List<MultipartFile> files, String actorEmail) {
         return validFiles(files).stream()
                 .map(file -> storeBroadcastAttachment(broadcast, file, actorEmail))
                 .toList();
     }
 
+    @Transactional
+    public List<GroupChatMessageAttachment> storeGroupAttachments(GroupChatMessage message, List<MultipartFile> files, Long actorId) {
+        return validFiles(files).stream()
+                .map(file -> storeGroupAttachment(message, file, actorId))
+                .toList();
+    }
+
     @Transactional(readOnly = true)
-    public ChatMessageAttachment getDirectAttachment(Long messageId, Long attachmentId) {
-        ChatMessageAttachment attachment = directAttachmentRepository.findById(attachmentId)
+    public GroupChatMessageAttachment getGroupAttachment(Long messageId, Long attachmentId) {
+        GroupChatMessageAttachment attachment = groupAttachmentRepository.findById(attachmentId)
                 .orElseThrow(() -> new IllegalArgumentException("Attachment not found"));
         if (!attachment.getMessage().getId().equals(messageId)) {
             throw new IllegalArgumentException("Attachment does not belong to this message");
@@ -109,8 +110,8 @@ public class CommunicationAttachmentService {
     }
 
     @Transactional(readOnly = true)
-    public GroupChatMessageAttachment getGroupAttachment(Long messageId, Long attachmentId) {
-        GroupChatMessageAttachment attachment = groupAttachmentRepository.findById(attachmentId)
+    public ChatMessageAttachment getDirectAttachment(Long messageId, Long attachmentId) {
+        ChatMessageAttachment attachment = directAttachmentRepository.findById(attachmentId)
                 .orElseThrow(() -> new IllegalArgumentException("Attachment not found"));
         if (!attachment.getMessage().getId().equals(messageId)) {
             throw new IllegalArgumentException("Attachment does not belong to this message");
@@ -151,20 +152,6 @@ public class CommunicationAttachmentService {
         return directAttachmentRepository.save(attachment);
     }
 
-    private GroupChatMessageAttachment storeGroupAttachment(GroupChatMessage message, MultipartFile file, Long actorId) {
-        StoredFile storedFile = storeFile("groups", message.getId(), file);
-        GroupChatMessageAttachment attachment = new GroupChatMessageAttachment();
-        attachment.setMessage(message);
-        attachment.setOriginalFilename(storedFile.originalFilename());
-        attachment.setStoredFilename(storedFile.storedFilename());
-        attachment.setStoragePath(storedFile.storagePath());
-        attachment.setContentType(storedFile.contentType());
-        attachment.setFileSize(storedFile.fileSize());
-        attachment.setUploadedByEmployeeId(actorId);
-        attachment.setUploadedAt(LocalDateTime.now());
-        return groupAttachmentRepository.save(attachment);
-    }
-
     private HrBroadcastAttachment storeBroadcastAttachment(HrBroadcast broadcast, MultipartFile file, String actorEmail) {
         StoredFile storedFile = storeFile("broadcasts", broadcast.getId(), file);
         HrBroadcastAttachment attachment = new HrBroadcastAttachment();
@@ -177,6 +164,20 @@ public class CommunicationAttachmentService {
         attachment.setUploadedByEmail(actorEmail);
         attachment.setUploadedAt(LocalDateTime.now());
         return broadcastAttachmentRepository.save(attachment);
+    }
+
+    private GroupChatMessageAttachment storeGroupAttachment(GroupChatMessage message, MultipartFile file, Long actorId) {
+        StoredFile storedFile = storeFile("groups", message.getId(), file);
+        GroupChatMessageAttachment attachment = new GroupChatMessageAttachment();
+        attachment.setMessage(message);
+        attachment.setOriginalFilename(storedFile.originalFilename());
+        attachment.setStoredFilename(storedFile.storedFilename());
+        attachment.setStoragePath(storedFile.storagePath());
+        attachment.setContentType(storedFile.contentType());
+        attachment.setFileSize(storedFile.fileSize());
+        attachment.setUploadedByEmployeeId(actorId);
+        attachment.setUploadedAt(LocalDateTime.now());
+        return groupAttachmentRepository.save(attachment);
     }
 
     private List<MultipartFile> validFiles(List<MultipartFile> files) {

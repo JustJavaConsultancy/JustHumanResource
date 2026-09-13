@@ -109,22 +109,6 @@ public class DocumentLibraryController {
         return attachmentResponse(attachment.getContentType(), attachment.getFileSize(), attachment.getOriginalFilename(), true, attachment.getStoragePath());
     }
 
-    @GetMapping("/api/documents/library/group-chat/{attachmentId}")
-    public ResponseEntity<Resource> downloadGroupChatAttachment(@PathVariable Long attachmentId) {
-        documentLibraryService.requireDocumentLibraryAccess();
-        GroupChatMessageAttachment attachment = groupChatMessageAttachmentRepository.findById(attachmentId)
-                .orElseThrow(() -> new IllegalArgumentException("Attachment not found"));
-        return attachmentResponse(attachment.getContentType(), attachment.getFileSize(), attachment.getOriginalFilename(), false, attachment.getStoragePath());
-    }
-
-    @GetMapping("/api/documents/library/group-chat/{attachmentId}/view")
-    public ResponseEntity<Resource> viewGroupChatAttachment(@PathVariable Long attachmentId) {
-        documentLibraryService.requireDocumentLibraryAccess();
-        GroupChatMessageAttachment attachment = groupChatMessageAttachmentRepository.findById(attachmentId)
-                .orElseThrow(() -> new IllegalArgumentException("Attachment not found"));
-        return attachmentResponse(attachment.getContentType(), attachment.getFileSize(), attachment.getOriginalFilename(), true, attachment.getStoragePath());
-    }
-
     @GetMapping("/api/documents/library/broadcast/{attachmentId}")
     public ResponseEntity<Resource> downloadBroadcastAttachment(@PathVariable Long attachmentId) {
         documentLibraryService.requireDocumentLibraryAccess();
@@ -137,6 +121,22 @@ public class DocumentLibraryController {
     public ResponseEntity<Resource> viewBroadcastAttachment(@PathVariable Long attachmentId) {
         documentLibraryService.requireDocumentLibraryAccess();
         HrBroadcastAttachment attachment = broadcastAttachmentRepository.findById(attachmentId)
+                .orElseThrow(() -> new IllegalArgumentException("Attachment not found"));
+        return attachmentResponse(attachment.getContentType(), attachment.getFileSize(), attachment.getOriginalFilename(), true, attachment.getStoragePath());
+    }
+
+    @GetMapping("/api/documents/library/group-chat/{attachmentId}")
+    public ResponseEntity<Resource> downloadGroupChatAttachment(@PathVariable Long attachmentId) {
+        documentLibraryService.requireDocumentLibraryAccess();
+        GroupChatMessageAttachment attachment = groupChatMessageAttachmentRepository.findById(attachmentId)
+                .orElseThrow(() -> new IllegalArgumentException("Attachment not found"));
+        return attachmentResponse(attachment.getContentType(), attachment.getFileSize(), attachment.getOriginalFilename(), false, attachment.getStoragePath());
+    }
+
+    @GetMapping("/api/documents/library/group-chat/{attachmentId}/view")
+    public ResponseEntity<Resource> viewGroupChatAttachment(@PathVariable Long attachmentId) {
+        documentLibraryService.requireDocumentLibraryAccess();
+        GroupChatMessageAttachment attachment = groupChatMessageAttachmentRepository.findById(attachmentId)
                 .orElseThrow(() -> new IllegalArgumentException("Attachment not found"));
         return attachmentResponse(attachment.getContentType(), attachment.getFileSize(), attachment.getOriginalFilename(), true, attachment.getStoragePath());
     }

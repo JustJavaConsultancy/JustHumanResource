@@ -83,7 +83,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
 
         Employee employee = employeeRepository.findById(employeeId)
                 .orElseThrow(() ->
-                        new ResourceNotFoundException("Employee", employeeId));
+                        new ResourceNotFoundException("Employee"));
 
         Long companyId = employee
                 .getDepartment()
@@ -968,7 +968,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
 
         PayrollRun run = payrollRunRepository.findById(id)
                 .orElseThrow(() ->
-                        new ResourceNotFoundException("PayrollRun", id));
+                        new ResourceNotFoundException("PayrollRun"));
 
         if (run.getStatus() == PayrollRunStatus.POSTED)
             throw new IllegalStateException(
