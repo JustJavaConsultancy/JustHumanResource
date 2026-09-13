@@ -1,6 +1,6 @@
 # Employee Exit Module User Guide
 
-Last updated: 2026-09-03
+Last updated: 2026-09-13
 
 ## Purpose
 
@@ -55,6 +55,12 @@ Package settings:
 
 ```text
 /employee-exits/settings/package-components
+```
+
+Assigned assets:
+
+```text
+/employee-exits/assigned-assets
 ```
 
 ## Key Statuses
@@ -154,6 +160,23 @@ Common employee documents include:
 
 For resignation exits, the resignation letter is required before the exit can become fully ready.
 
+### Required Documents By Exit Type
+
+The currently confirmed readiness rules are:
+
+| Exit type | Required document policy |
+| --- | --- |
+| `RESIGNATION` | Requires `RESIGNATION_LETTER`. |
+| `TERMINATION` | Requires `TERMINATION_LETTER`. |
+| `RETIREMENT` | No confirmed required document yet. |
+| `CONTRACT_EXPIRY` | No confirmed required document yet. |
+| `REDUNDANCY` | No confirmed required document yet. |
+| `DEATH_IN_SERVICE` | No confirmed required document yet. |
+| `ABANDONMENT` | No confirmed required document yet. |
+| `OTHER` | No confirmed required document yet. |
+
+Unconfirmed exit types can still accept uploaded documents, including `OTHER`, `HANDOVER_NOTE`, `CLEARANCE_FORM`, and settlement documents. Update the required-document service when the business confirms stricter rules for those exit types.
+
 ### Download Exit Documents
 
 On your exit detail page, use the `Download` action beside any document visible to you.
@@ -179,6 +202,7 @@ The list page shows:
 - Exit type
 - Status
 - Effective or proposed last working date
+- Links to reports, package settings, assigned assets, and start-exit actions
 
 Select an exit number to open the detail page.
 
@@ -263,6 +287,12 @@ Possible blockers include:
 
 Use this section to identify what still needs action before finalization.
 
+### Resolve Readiness Exceptions
+
+If the workflow reaches the `resolveExceptions` task, the HR detail page shows a `Re-check and continue` action in the active task panel.
+
+Before using it, resolve the listed readiness blockers, such as pending clearance, pending asset disposition, missing required documents, or settlement posting. The action re-runs readiness validation and only completes the workflow task when operational blockers have been cleared.
+
 ## Approver Guide
 
 ### Approve, Return, Or Reject An Exit
@@ -301,8 +331,8 @@ Before this clearance can be completed:
 On the exit detail page:
 
 1. Review the `Handover` section.
-2. Add handover items if needed.
-3. Mark each handover item complete.
+2. Add handover items if needed from the visible handover form.
+3. Mark each handover item complete from the handover item row.
 4. Complete the manager clearance task.
 
 Valid clearance outcomes:
@@ -324,6 +354,16 @@ Company assets -> Sync assigned assets
 The system snapshots assets currently assigned to the employee from the local assigned-asset source.
 
 The sync is idempotent. Running it more than once does not duplicate the same external asset ID for the same exit case.
+
+The sync source is the local assigned-assets page:
+
+```text
+/employee-exits/assigned-assets
+```
+
+Use that page to select an employee, add assigned assets, view existing active and inactive assigned assets, or mark assigned assets inactive. Inactive assigned assets are not pulled into an exit case during sync.
+
+If sync finds no records, the exit detail page shows that no assigned assets were found for the employee.
 
 ### Add A Missing Asset Manually
 
@@ -516,6 +556,12 @@ Available filters:
 - Status
 - Exit type
 
+The report status filter hides reserved statuses that the current workflow does not normally set:
+
+- `SUBMITTED`
+- `NOTICE_PERIOD`
+- `ON_HOLD`
+
 There is also a JSON summary endpoint:
 
 ```text
@@ -538,10 +584,11 @@ Typical flow:
 10. Settlement is calculated, approved, previewed, and posted to payroll.
 11. Required documents are uploaded.
 12. Readiness blockers are resolved.
-13. The workflow waits for the effective exit date if necessary.
-14. Employment is finalized.
-15. Access is revoked.
-16. Exit case is completed.
+13. If the workflow enters `resolveExceptions`, HR re-checks and continues after blockers are cleared.
+14. The workflow waits for the effective exit date if necessary.
+15. Employment is finalized.
+16. Access is revoked.
+17. Exit case is completed.
 
 ## Common Blocking Messages
 
@@ -549,7 +596,7 @@ Typical flow:
 | --- | --- |
 | Pending clearance | Complete all clearance tasks or waive with a reason where allowed. |
 | Pending asset disposition | Mark all assigned assets as returned, transferred, written off, waived, or recoverable from settlement. |
-| Missing required document | Upload the resignation or termination letter, depending on exit type. |
+| Missing required document | Upload the document required for the exit type. Current confirmed rules require resignation letters for resignation exits and termination letters for termination exits. |
 | Settlement not approved | Finance should approve the calculated settlement. |
 | Settlement not posted | Finance should post the approved settlement to payroll. |
 | Effective date not reached | Wait until the effective exit date. |

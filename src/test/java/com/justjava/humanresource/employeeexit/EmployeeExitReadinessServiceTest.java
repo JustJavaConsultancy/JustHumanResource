@@ -28,7 +28,7 @@ class EmployeeExitReadinessServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new EmployeeExitReadinessService(exits, clearances, assets, documents, settlements, access);
+        service = new EmployeeExitReadinessService(exits, clearances, assets, documents, settlements, access, new ExitRequiredDocumentService());
     }
 
     @Test
@@ -48,6 +48,44 @@ class EmployeeExitReadinessServiceTest {
         assertFalse(result.ready());
         assertTrue(result.blockers().stream().anyMatch(b -> b.category() == com.justjava.humanresource.employeeexit.dto.ExitReadinessBlocker.Category.MISSING_REQUIRED_DOCUMENT));
         assertTrue(result.blockers().stream().anyMatch(b -> b.category() == com.justjava.humanresource.employeeexit.dto.ExitReadinessBlocker.Category.SETTLEMENT_NOT_APPROVED));
+    }
+
+    @Test
+    void terminationRequiresTerminationLetter() {
+        EmployeeExitCase exit = new EmployeeExitCase();
+        exit.setId(12L);
+        exit.setExitType(ExitType.TERMINATION);
+        exit.setEffectiveExitDate(LocalDate.now());
+        when(exits.require(12L)).thenReturn(exit);
+        when(clearances.existsByExitCaseIdAndStatusNotIn(eq(12L), anyList())).thenReturn(false);
+        when(assets.findByExitCaseIdOrderByAssetName(12L)).thenReturn(List.of());
+        when(documents.existsByExitCaseIdAndDocumentType(12L, ExitDocumentType.TERMINATION_LETTER)).thenReturn(false);
+        when(settlements.findFirstByExitCaseIdOrderBySettlementVersionDesc(12L)).thenReturn(Optional.empty());
+
+        var result = service.validate(12L);
+
+        assertFalse(result.ready());
+        assertTrue(result.blockers().stream().anyMatch(b -> b.category() == com.justjava.humanresource.employeeexit.dto.ExitReadinessBlocker.Category.MISSING_REQUIRED_DOCUMENT
+                && b.message().contains("TERMINATION_LETTER")));
+    }
+
+    @Test
+    void exitTypeWithoutConfirmedDocumentPolicyDoesNotGetMissingDocumentBlocker() {
+        EmployeeExitCase exit = new EmployeeExitCase();
+        exit.setId(13L);
+        exit.setExitType(ExitType.RETIREMENT);
+        exit.setEffectiveExitDate(LocalDate.now());
+        ExitSettlement settlement = new ExitSettlement();
+        settlement.setStatus(SettlementStatus.POSTED);
+        when(exits.require(13L)).thenReturn(exit);
+        when(clearances.existsByExitCaseIdAndStatusNotIn(eq(13L), anyList())).thenReturn(false);
+        when(assets.findByExitCaseIdOrderByAssetName(13L)).thenReturn(List.of());
+        when(settlements.findFirstByExitCaseIdOrderBySettlementVersionDesc(13L)).thenReturn(Optional.of(settlement));
+
+        var result = service.validate(13L);
+
+        assertTrue(result.blockers().stream().noneMatch(b -> b.category() == com.justjava.humanresource.employeeexit.dto.ExitReadinessBlocker.Category.MISSING_REQUIRED_DOCUMENT));
+        verifyNoInteractions(documents);
     }
 
     @Test

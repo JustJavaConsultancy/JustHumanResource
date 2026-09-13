@@ -9,6 +9,10 @@ import java.time.*; import java.util.*;
 @Service @RequiredArgsConstructor
 public class EmployeeExitService {
  private static final EnumSet<ExitStatus> ACTIVE=EnumSet.of(ExitStatus.DRAFT,ExitStatus.SUBMITTED,ExitStatus.IN_APPROVAL,ExitStatus.RETURNED,ExitStatus.APPROVED,ExitStatus.NOTICE_PERIOD,ExitStatus.CLEARANCE_IN_PROGRESS,ExitStatus.SETTLEMENT_IN_PROGRESS,ExitStatus.READY_TO_EXIT,ExitStatus.ON_HOLD);
+ // Reserved/internal statuses: not set anywhere in the current create/submit/approve/clearance/cancel flow.
+ // Kept in the enum for backward compatibility (existing rows, historical reports, future workflow plans)
+ // but hidden from ordinary UI status filters so users are not confused by options that never occur.
+ private static final EnumSet<ExitStatus> UI_HIDDEN_STATUSES=EnumSet.of(ExitStatus.SUBMITTED,ExitStatus.NOTICE_PERIOD,ExitStatus.ON_HOLD);
  private final EmployeeExitCaseRepository exits; private final EmployeeRepository employees; private final ExitClearanceItemRepository clearances; private final ExitAssetReturnRepository assets; private final ExitHandoverItemRepository handovers; private final ExitSettlementRepository settlements; private final EmployeeExitActivityService activity; private final ExitApprovalRouteService approvalRoutes; private final RuntimeService runtimeService;
  @Transactional public EmployeeExitCase create(CreateEmployeeExitCommand c,Long actorId){
   Employee e=employees.findById(c.getEmployeeId()).orElseThrow(()->new IllegalArgumentException("Employee not found."));
@@ -26,5 +30,6 @@ public class EmployeeExitService {
  @Transactional public boolean evaluateReadiness(Long id){boolean pending=clearances.existsByExitCaseIdAndStatusNotIn(id,List.of(ClearanceStatus.CLEARED,ClearanceStatus.CLEARED_WITH_EXCEPTION,ClearanceStatus.WAIVED));EmployeeExitCase x=require(id);if(!pending){x.setStatus(ExitStatus.READY_TO_EXIT);x.setClearanceCompletedAt(LocalDateTime.now());exits.save(x);}return !pending;}
  @Transactional public EmployeeExitCase cancel(Long id,String reason,Long actorId){EmployeeExitCase x=require(id);if(EnumSet.of(ExitStatus.COMPLETED,ExitStatus.REJECTED,ExitStatus.CANCELLED).contains(x.getStatus()))throw new IllegalStateException("This exit can no longer be cancelled.");x.setStatus(ExitStatus.CANCELLED);x.setCancelledAt(LocalDateTime.now());x.setCancellationReason(reason);exits.save(x);if(x.getWorkflowInstanceId()!=null)runtimeService.deleteProcessInstance(x.getWorkflowInstanceId(),"Exit cancelled");activity.record(id,"CANCELLED","Exit cancelled: "+reason,actorId,null);return x;}
  @Transactional(readOnly=true) public EmployeeExitCase require(Long id){return exits.findById(id).orElseThrow(()->new IllegalArgumentException("Exit case not found."));}
+ public List<ExitStatus> uiVisibleStatuses(){return Arrays.stream(ExitStatus.values()).filter(s->!UI_HIDDEN_STATUSES.contains(s)).toList();}
  private String group(ClearanceType t){return switch(t){case MANAGER_HANDOVER->"departmentHead";case ASSET_AND_FACILITIES->"assetManager";case IT_AND_SECURITY->"admin";case HR_AND_LEGAL->"humanResource";case PAYROLL_AND_FINANCE->"financialOfficers";};}
 }

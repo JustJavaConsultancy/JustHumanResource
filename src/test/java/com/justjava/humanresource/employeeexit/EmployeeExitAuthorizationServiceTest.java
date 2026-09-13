@@ -3,6 +3,7 @@ package com.justjava.humanresource.employeeexit;
 import com.justjava.humanresource.core.config.AuthenticationManager;
 import com.justjava.humanresource.employeeexit.entity.EmployeeExitCase;
 import com.justjava.humanresource.employeeexit.entity.EmployeeExitDocument;
+import com.justjava.humanresource.employeeexit.enums.ClearanceType;
 import com.justjava.humanresource.employeeexit.enums.ExitDocumentVisibility;
 import com.justjava.humanresource.employeeexit.service.EmployeeExitAuthorizationService;
 import com.justjava.humanresource.hr.entity.Employee;
@@ -62,9 +63,39 @@ class EmployeeExitAuthorizationServiceTest {
 
     @Test
     void assetManagerCanManageAssets() {
-        when(auth.get("groups")).thenReturn(List.of("/assetManager"));
+        when(auth.get("groups")).thenReturn(List.of("assetManager"));
 
         assertTrue(service.canManageAssets());
+    }
+
+    @Test
+    void assetManagerCanCompleteAssetClearance() {
+        when(auth.get("groups")).thenReturn(List.of("assetManager"));
+
+        assertTrue(service.canCompleteClearance(ClearanceType.ASSET_AND_FACILITIES, employee(7L)));
+    }
+
+    @Test
+    void departmentHeadCanViewExitCases() {
+        when(auth.get("groups")).thenReturn(List.of("departmentHead"));
+
+        assertTrue(service.canView(exit(8L), employee(7L)));
+    }
+
+    @Test
+    void departmentHeadCanCompleteManagerHandoverClearance() {
+        when(auth.get("groups")).thenReturn(List.of("departmentHead"));
+
+        assertTrue(service.canCompleteClearance(ClearanceType.MANAGER_HANDOVER, employee(7L)));
+    }
+
+    @Test
+    void slashPrefixedGroupIsNotAcceptedForAssetManagerOrDepartmentHead() {
+        when(auth.get("groups")).thenReturn(List.of("/assetManager", "/departmentHead"));
+
+        assertFalse(service.canManageAssets());
+        assertFalse(service.canCompleteClearance(ClearanceType.ASSET_AND_FACILITIES, employee(7L)));
+        assertFalse(service.canCompleteClearance(ClearanceType.MANAGER_HANDOVER, employee(7L)));
     }
 
     private EmployeeExitCase exit(Long employeeId) {

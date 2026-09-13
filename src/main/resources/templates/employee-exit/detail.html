@@ -24,6 +24,15 @@
                 <form th:if="${exit.status.name() == 'DRAFT'}" method="post" th:action="@{/employee-exits/{id}/submit(id=${exit.id})}" class="mt-5">
                     <button class="btn-primary">Submit for approval</button>
                 </form>
+
+                <form th:if="${exit.status.name() != 'COMPLETED' and exit.status.name() != 'REJECTED' and exit.status.name() != 'CANCELLED'}"
+                      method="post" th:action="@{/employee-exits/{id}/cancel(id=${exit.id})}"
+                      onsubmit="return confirm('Cancel this exit case? This cannot be undone.');"
+                      class="mt-5 pt-5 border-t border-gray-100 dark:border-gray-700 space-y-3">
+                    <label class="block text-sm font-medium text-gray-600">Cancel this exit</label>
+                    <textarea name="reason" class="form-input" placeholder="Reason for cancellation" required></textarea>
+                    <button class="btn-danger">Cancel exit</button>
+                </form>
             </div>
 
             <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
@@ -50,21 +59,63 @@
             </div>
 
             <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
-                <div class="flex justify-between items-center mb-4">
+                <div class="flex justify-between items-center mb-1">
                     <h3 class="font-bold">Company assets</h3>
                     <form method="post" th:action="@{/employee-exits/{id}/assets/sync(id=${exit.id})}">
                         <button class="btn-secondary">Sync assigned assets</button>
                     </form>
                 </div>
+                <p class="text-xs text-gray-500 mb-4">Sync pulls from this employee's locally assigned assets. Manage that source on the <a th:href="@{/employee-exits/assigned-assets(employeeId=${exit.employeeId})}" class="text-primary-600">Assigned assets</a> page.</p>
                 <div th:each="a:${assets}" class="py-3 border-b border-gray-100 dark:border-gray-700">
                     <div class="flex justify-between"><span th:text="${a.assetName}">Asset</span><span th:text="${a.disposition}">Pending</span></div>
+                    <form th:if="${exit.status.name() != 'COMPLETED'}" method="post" th:action="@{/employee-exits/{id}/assets/{assetId}/dispose(id=${exit.id},assetId=${a.id})}" class="grid sm:grid-cols-4 gap-3 mt-3">
+                        <select name="disposition" class="form-input">
+                            <option value="RETURNED">Returned</option>
+                            <option value="TRANSFERRED">Transferred</option>
+                            <option value="WRITTEN_OFF">Written off</option>
+                            <option value="WAIVED">Waived</option>
+                            <option value="RECOVER_FROM_SETTLEMENT">Recover from settlement</option>
+                        </select>
+                        <input name="condition" class="form-input" placeholder="Return condition">
+                        <input type="number" step="0.01" min="0" name="recoveryAmount" class="form-input" placeholder="Recovery amount (required if recovering from settlement)">
+                        <button class="btn-secondary">Update disposition</button>
+                    </form>
                 </div>
+                <p th:if="${#lists.isEmpty(assets)}" class="text-sm text-gray-500">No assigned assets found for this employee.</p>
                 <form method="post" th:action="@{/employee-exits/{id}/assets(id=${exit.id})}" class="grid sm:grid-cols-2 gap-3 mt-4">
                     <input name="externalAssetId" class="form-input" placeholder="External asset ID" required>
                     <input name="assetName" class="form-input" placeholder="Asset name" required>
                     <input name="externalAssetCode" class="form-input" placeholder="Asset code">
                     <input name="category" class="form-input" placeholder="Category">
                     <button class="btn-primary sm:col-span-2">Add assigned asset</button>
+                </form>
+            </div>
+
+            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+                <h3 class="font-bold mb-1">Handover</h3>
+                <p class="text-xs text-gray-500 mb-4">All items must be marked complete before manager handover clearance can be completed.</p>
+                <div th:each="h:${handovers}" class="py-3 border-b border-gray-100 dark:border-gray-700">
+                    <div class="flex justify-between items-start gap-3">
+                        <div>
+                            <p class="font-medium" th:text="${h.subject}">Subject</p>
+                            <p class="text-sm text-gray-500" th:text="${h.details}">Details</p>
+                            <p class="text-xs text-gray-400" th:if="${h.successorEmployeeId != null}">Successor employee ID: <span th:text="${h.successorEmployeeId}">0</span></p>
+                        </div>
+                        <div class="text-right space-y-2">
+                            <span class="badge" th:classappend="${h.completed} ? ' badge-success' : ' badge-warning'" th:text="${h.completed} ? 'Completed' : 'Pending'">Status</span>
+                            <p th:if="${h.completed}" class="text-xs text-gray-400">Verified by <span th:text="${h.verifiedByEmployeeId}">0</span> on <span th:text="${h.verifiedAt}">date</span></p>
+                            <form th:if="${!h.completed}" method="post" th:action="@{/employee-exits/{id}/handovers/{itemId}/complete(id=${exit.id},itemId=${h.id})}">
+                                <button class="btn-secondary">Mark complete</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <p th:if="${#lists.isEmpty(handovers)}" class="text-sm text-gray-500">No handover items yet.</p>
+                <form method="post" th:action="@{/employee-exits/{id}/handovers(id=${exit.id})}" class="grid sm:grid-cols-3 gap-3 mt-4">
+                    <input name="subject" class="form-input" placeholder="Subject" required>
+                    <input name="details" class="form-input" placeholder="Details">
+                    <input type="number" name="successorEmployeeId" class="form-input" placeholder="Successor employee ID">
+                    <button class="btn-primary sm:col-span-3">Add handover item</button>
                 </form>
             </div>
 
@@ -138,6 +189,19 @@
                     <select name="status" class="form-input"><option value="CLEARED">Cleared</option><option value="CLEARED_WITH_EXCEPTION">Cleared with exception</option><option value="WAIVED">Waived</option></select>
                     <button class="btn-primary w-full">Complete clearance</button>
                 </form>
+                <div th:if="${t.taskDefinitionKey == 'resolveExceptions'}" class="mt-4 space-y-3">
+                    <p class="text-sm text-gray-500">Exit readiness found blockers after clearance. Resolve them below, then re-check to continue the workflow.</p>
+                    <ul th:if="${!#lists.isEmpty(readiness.blockers())}" class="space-y-2 text-sm">
+                        <li th:each="b:${readiness.blockers()}" class="p-3 rounded-lg bg-amber-50 text-amber-900">
+                            <strong th:text="${b.category()}">CATEGORY</strong>
+                            <span th:text="${b.message()}">Blocker</span>
+                        </li>
+                    </ul>
+                    <p th:if="${#lists.isEmpty(readiness.blockers())}" class="text-sm text-emerald-600">No blockers remain. Ready to re-check and continue.</p>
+                    <form method="post" th:action="@{/employee-exits/{id}/tasks/{task}/resolve-exceptions(id=${exit.id},task=${t.id})}">
+                        <button class="btn-primary w-full">Re-check and continue</button>
+                    </form>
+                </div>
             </div>
         </aside>
     </div>
