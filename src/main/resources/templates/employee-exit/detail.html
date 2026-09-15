@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout}">
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{employee-exit/workflow-layout}">
 <head><title>Employee Exit</title></head>
 <body>
 <main layout:fragment="content" class="space-y-6">
     <div class="flex justify-between items-start">
         <div>
-            <a href="/employee-exits" class="text-sm text-primary-600">Back to employee exits</a>
+            <a th:if="${canSeeExitList}" href="/employee-exits" class="text-sm text-primary-600">Back to employee exits</a>
             <h2 class="text-2xl font-bold mt-2" th:text="${exit.exitNumber}">EXIT</h2>
             <p class="text-gray-500" th:text="${employee.fullName + ' - ' + exit.exitType}">Employee</p>
         </div>
@@ -21,11 +21,11 @@
                     <div><p class="text-gray-400">Notice date</p><p th:text="${exit.noticeDate}">Date</p></div>
                     <div><p class="text-gray-400">Last working date</p><p th:text="${exit.effectiveExitDate ?: exit.proposedLastWorkingDate}">Date</p></div>
                 </div>
-                <form th:if="${exit.status.name() == 'DRAFT'}" method="post" th:action="@{/employee-exits/{id}/submit(id=${exit.id})}" class="mt-5">
+                <form th:if="${exit.status.name() == 'DRAFT' and canActAsHr}" method="post" th:action="@{/employee-exits/{id}/submit(id=${exit.id})}" class="mt-5">
                     <button class="btn-primary">Submit for approval</button>
                 </form>
 
-                <form th:if="${exit.status.name() != 'COMPLETED' and exit.status.name() != 'REJECTED' and exit.status.name() != 'CANCELLED'}"
+                <form th:if="${canActAsHr and exit.status.name() != 'COMPLETED' and exit.status.name() != 'REJECTED' and exit.status.name() != 'CANCELLED'}"
                       method="post" th:action="@{/employee-exits/{id}/cancel(id=${exit.id})}"
                       onsubmit="return confirm('Cancel this exit case? This cannot be undone.');"
                       class="mt-5 pt-5 border-t border-gray-100 dark:border-gray-700 space-y-3">
@@ -58,17 +58,17 @@
                 <p th:if="${#lists.isEmpty(clearances)}" class="text-sm text-gray-500">Clearance starts after approval.</p>
             </div>
 
-            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+            <div th:if="${canViewAssetSection}" class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
                 <div class="flex justify-between items-center mb-1">
                     <h3 class="font-bold">Company assets</h3>
-                    <form method="post" th:action="@{/employee-exits/{id}/assets/sync(id=${exit.id})}">
+                    <form th:if="${canUseAssetActions}" method="post" th:action="@{/employee-exits/{id}/assets/sync(id=${exit.id})}">
                         <button class="btn-secondary">Sync assigned assets</button>
                     </form>
                 </div>
-                <p class="text-xs text-gray-500 mb-4">Sync pulls from this employee's locally assigned assets. Manage that source on the <a th:href="@{/employee-exits/assigned-assets(employeeId=${exit.employeeId})}" class="text-primary-600">Assigned assets</a> page.</p>
+                <p th:if="${canUseAssetActions}" class="text-xs text-gray-500 mb-4">Sync pulls from this employee's locally assigned assets. Manage that source on the <a th:href="@{/employee-exits/assigned-assets(employeeId=${exit.employeeId})}" class="text-primary-600">Assigned assets</a> page.</p>
                 <div th:each="a:${assets}" class="py-3 border-b border-gray-100 dark:border-gray-700">
                     <div class="flex justify-between"><span th:text="${a.assetName}">Asset</span><span th:text="${a.disposition}">Pending</span></div>
-                    <form th:if="${exit.status.name() != 'COMPLETED'}" method="post" th:action="@{/employee-exits/{id}/assets/{assetId}/dispose(id=${exit.id},assetId=${a.id})}" class="grid sm:grid-cols-4 gap-3 mt-3">
+                    <form th:if="${canUseAssetActions and exit.status.name() != 'COMPLETED'}" method="post" th:action="@{/employee-exits/{id}/assets/{assetId}/dispose(id=${exit.id},assetId=${a.id})}" class="grid sm:grid-cols-4 gap-3 mt-3">
                         <select name="disposition" class="form-input">
                             <option value="RETURNED">Returned</option>
                             <option value="TRANSFERRED">Transferred</option>
@@ -82,7 +82,7 @@
                     </form>
                 </div>
                 <p th:if="${#lists.isEmpty(assets)}" class="text-sm text-gray-500">No assigned assets found for this employee.</p>
-                <form method="post" th:action="@{/employee-exits/{id}/assets(id=${exit.id})}" class="grid sm:grid-cols-2 gap-3 mt-4">
+                <form th:if="${canUseAssetActions}" method="post" th:action="@{/employee-exits/{id}/assets(id=${exit.id})}" class="grid sm:grid-cols-2 gap-3 mt-4">
                     <input name="externalAssetId" class="form-input" placeholder="External asset ID" required>
                     <input name="assetName" class="form-input" placeholder="Asset name" required>
                     <input name="externalAssetCode" class="form-input" placeholder="Asset code">
@@ -91,7 +91,7 @@
                 </form>
             </div>
 
-            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+            <div th:if="${canViewHandoverSection}" class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
                 <h3 class="font-bold mb-1">Handover</h3>
                 <p class="text-xs text-gray-500 mb-4">All items must be marked complete before manager handover clearance can be completed.</p>
                 <div th:each="h:${handovers}" class="py-3 border-b border-gray-100 dark:border-gray-700">
@@ -104,14 +104,14 @@
                         <div class="text-right space-y-2">
                             <span class="badge" th:classappend="${h.completed} ? ' badge-success' : ' badge-warning'" th:text="${h.completed} ? 'Completed' : 'Pending'">Status</span>
                             <p th:if="${h.completed}" class="text-xs text-gray-400">Verified by <span th:text="${h.verifiedByEmployeeId}">0</span> on <span th:text="${h.verifiedAt}">date</span></p>
-                            <form th:if="${!h.completed}" method="post" th:action="@{/employee-exits/{id}/handovers/{itemId}/complete(id=${exit.id},itemId=${h.id})}">
+                            <form th:if="${canUseHandoverActions and !h.completed}" method="post" th:action="@{/employee-exits/{id}/handovers/{itemId}/complete(id=${exit.id},itemId=${h.id})}">
                                 <button class="btn-secondary">Mark complete</button>
                             </form>
                         </div>
                     </div>
                 </div>
                 <p th:if="${#lists.isEmpty(handovers)}" class="text-sm text-gray-500">No handover items yet.</p>
-                <form method="post" th:action="@{/employee-exits/{id}/handovers(id=${exit.id})}" class="grid sm:grid-cols-3 gap-3 mt-4">
+                <form th:if="${canUseHandoverActions}" method="post" th:action="@{/employee-exits/{id}/handovers(id=${exit.id})}" class="grid sm:grid-cols-3 gap-3 mt-4">
                     <input name="subject" class="form-input" placeholder="Subject" required>
                     <input name="details" class="form-input" placeholder="Details">
                     <input type="number" name="successorEmployeeId" class="form-input" placeholder="Successor employee ID">
@@ -119,24 +119,24 @@
                 </form>
             </div>
 
-            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+            <div th:if="${canViewSettlementSection}" class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
                 <h3 class="font-bold mb-4">Final settlement</h3>
                 <div th:each="s:${settlements}" class="flex flex-wrap justify-between gap-3 py-3 border-b">
                     <span th:text="${'Version '+s.settlementVersion+' - '+s.status}">Version</span>
                     <strong th:text="${s.currency+' '+s.netSettlement}">NGN 0</strong>
-                    <div class="flex gap-2">
+                    <div th:if="${canUseSettlementActions}" class="flex gap-2">
                         <a th:href="@{/employee-exits/{id}/settlements/{settlementId}/payroll-preview(id=${exit.id},settlementId=${s.id})}" class="btn-secondary">Payroll preview</a>
                         <form th:if="${s.status.name() == 'IN_APPROVAL'}" method="post" th:action="@{/employee-exits/{id}/settlements/{settlementId}/approve(id=${exit.id},settlementId=${s.id})}">
                             <button class="btn-primary">Approve</button>
                         </form>
                     </div>
                 </div>
-                <form method="post" th:action="@{/employee-exits/{id}/settlements/package(id=${exit.id})}" class="grid sm:grid-cols-3 gap-3 mt-4">
+                <form th:if="${canUseSettlementActions}" method="post" th:action="@{/employee-exits/{id}/settlements/package(id=${exit.id})}" class="grid sm:grid-cols-3 gap-3 mt-4">
                     <input type="number" step="0.01" min="0" name="monthlyBasic" class="form-input" placeholder="Monthly basic" required>
                     <input type="number" step="0.01" min="0" name="leaveDays" class="form-input" placeholder="Leave days">
                     <button class="btn-primary">Calculate from package rules</button>
                 </form>
-                <form method="post" th:action="@{/employee-exits/{id}/settlements(id=${exit.id})}" class="grid sm:grid-cols-2 gap-3 mt-4">
+                <form th:if="${canUseSettlementActions}" method="post" th:action="@{/employee-exits/{id}/settlements(id=${exit.id})}" class="grid sm:grid-cols-2 gap-3 mt-4">
                     <select name="lineType" class="form-input"><option value="SALARY">Salary</option><option value="LEAVE_ENCASHMENT">Leave encashment</option><option value="SEVERANCE">Severance</option><option value="NOTICE_PAY">Notice pay</option><option value="ASSET_RECOVERY">Asset recovery</option><option value="OTHER_DEDUCTION">Other deduction</option></select>
                     <input name="description" class="form-input" placeholder="Description" required>
                     <input type="number" step="0.01" min="0" name="amount" class="form-input" placeholder="Amount" required>
@@ -145,16 +145,17 @@
                 </form>
             </div>
 
-            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+            <div th:if="${canViewDocumentSection}" class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
                 <h3 class="font-bold mb-4">Documents</h3>
                 <div th:each="d:${documents}" class="flex justify-between items-center py-3 border-b">
                     <div><p class="font-medium" th:text="${d.documentType}">Document</p><p class="text-sm text-gray-500" th:text="${d.fileName}">file.pdf</p></div>
                     <div class="flex gap-2">
                         <a th:href="@{/employee-exits/{id}/documents/{docId}(id=${exit.id},docId=${d.id})}" class="btn-secondary">Download</a>
-                        <form method="post" th:action="@{/employee-exits/{id}/documents/{docId}/delete(id=${exit.id},docId=${d.id})}"><button class="btn-danger">Delete</button></form>
+                        <form th:if="${canManageDocuments}" method="post" th:action="@{/employee-exits/{id}/documents/{docId}/delete(id=${exit.id},docId=${d.id})}"><button class="btn-danger">Delete</button></form>
                     </div>
                 </div>
-                <form method="post" enctype="multipart/form-data" th:action="@{/employee-exits/{id}/documents(id=${exit.id})}" class="grid sm:grid-cols-3 gap-3 mt-4">
+                <p th:if="${#lists.isEmpty(documents)}" class="text-sm text-gray-500">No documents available.</p>
+                <form th:if="${canManageDocuments}" method="post" enctype="multipart/form-data" th:action="@{/employee-exits/{id}/documents(id=${exit.id})}" class="grid sm:grid-cols-3 gap-3 mt-4">
                     <select name="documentType" class="form-input" required><option th:each="t:${documentTypes}" th:value="${t}" th:text="${t}"></option></select>
                     <select name="visibility" class="form-input"><option th:each="v:${documentVisibilities}" th:value="${v}" th:text="${v}"></option></select>
                     <input type="file" name="file" class="form-input" required>
@@ -162,20 +163,20 @@
                 </form>
             </div>
 
-            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+            <div th:if="${canActAsHr}" class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
                 <h3 class="font-bold mb-4">Activity</h3>
                 <div th:each="a:${activities}" class="border-l-2 border-primary-200 pl-4 py-2"><p class="font-medium" th:text="${a.activityType}">Activity</p><p class="text-sm text-gray-500" th:text="${a.description}">Description</p></div>
             </div>
         </section>
 
         <aside class="space-y-4">
-            <div th:each="t:${tasks}" class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5">
+            <div th:each="taskAction:${taskActions}" th:with="t=${taskAction.task}" class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5">
                 <h3 class="font-bold" th:text="${t.name}">Task</h3>
-                <form th:if="${t.taskDefinitionKey == 'exitApproval'}" method="post" th:action="@{/employee-exits/{id}/tasks/{task}/decision(id=${exit.id},task=${t.id})}" class="space-y-3 mt-4">
+                <form th:if="${taskAction.approvalTask}" method="post" th:action="@{/employee-exits/{id}/tasks/{task}/decision(id=${exit.id},task=${t.id})}" class="space-y-3 mt-4">
                     <textarea name="comment" class="form-input" placeholder="Comments"></textarea>
                     <div class="grid grid-cols-3 gap-2"><button name="decision" value="RETURN" class="p-2 bg-amber-100 rounded">Return</button><button name="decision" value="REJECT" class="p-2 bg-red-100 rounded">Reject</button><button name="decision" value="APPROVE" class="p-2 bg-emerald-600 text-white rounded">Approve</button></div>
                 </form>
-                <form th:if="${t.taskDefinitionKey == 'reviseExit'}" method="post" th:action="@{/employee-exits/{id}/tasks/{task}/revise(id=${exit.id},task=${t.id})}" class="grid gap-3 mt-4">
+                <form th:if="${taskAction.revisionTask}" method="post" th:action="@{/employee-exits/{id}/tasks/{task}/revise(id=${exit.id},task=${t.id})}" class="grid gap-3 mt-4">
                     <input name="reasonCode" th:value="${exit.reasonCode}" class="form-input" required>
                     <input type="date" name="noticeDate" th:value="${exit.noticeDate}" class="form-input" required>
                     <input type="date" name="proposedLastWorkingDate" th:value="${exit.proposedLastWorkingDate}" class="form-input" required>
@@ -184,12 +185,12 @@
                     <textarea name="reasonDetails" th:text="${exit.reasonDetails}" class="form-input"></textarea>
                     <button class="btn-primary">Save and return to approval</button>
                 </form>
-                <form th:if="${#strings.endsWith(t.taskDefinitionKey,'Clearance')}" method="post" th:action="@{/employee-exits/{id}/tasks/{task}/clearance(id=${exit.id},task=${t.id})}" class="space-y-3 mt-4">
+                <form th:if="${taskAction.clearanceTask}" method="post" th:action="@{/employee-exits/{id}/tasks/{task}/clearance(id=${exit.id},task=${t.id})}" class="space-y-3 mt-4">
                     <textarea name="comments" class="form-input" placeholder="Clearance notes"></textarea>
                     <select name="status" class="form-input"><option value="CLEARED">Cleared</option><option value="CLEARED_WITH_EXCEPTION">Cleared with exception</option><option value="WAIVED">Waived</option></select>
                     <button class="btn-primary w-full">Complete clearance</button>
                 </form>
-                <div th:if="${t.taskDefinitionKey == 'resolveExceptions'}" class="mt-4 space-y-3">
+                <div th:if="${taskAction.resolveExceptionsTask}" class="mt-4 space-y-3">
                     <p class="text-sm text-gray-500">Exit readiness found blockers after clearance. Resolve them below, then re-check to continue the workflow.</p>
                     <ul th:if="${!#lists.isEmpty(readiness.blockers())}" class="space-y-2 text-sm">
                         <li th:each="b:${readiness.blockers()}" class="p-3 rounded-lg bg-amber-50 text-amber-900">

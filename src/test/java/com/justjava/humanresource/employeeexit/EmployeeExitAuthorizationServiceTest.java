@@ -8,6 +8,7 @@ import com.justjava.humanresource.employeeexit.enums.ExitDocumentVisibility;
 import com.justjava.humanresource.employeeexit.service.EmployeeExitAuthorizationService;
 import com.justjava.humanresource.hr.entity.Employee;
 import com.justjava.humanresource.hr.repository.EmployeeRepository;
+import org.flowable.task.api.Task;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -76,6 +77,18 @@ class EmployeeExitAuthorizationServiceTest {
     }
 
     @Test
+    void assetManagerCanCompleteAssetClearanceOnlyUnlessAdmin() {
+        when(auth.get("groups")).thenReturn(List.of("assetManager"));
+        Employee actor = employee(7L);
+
+        assertTrue(service.canCompleteClearance(ClearanceType.ASSET_AND_FACILITIES, actor));
+        assertFalse(service.canCompleteClearance(ClearanceType.MANAGER_HANDOVER, actor));
+        assertFalse(service.canCompleteClearance(ClearanceType.IT_AND_SECURITY, actor));
+        assertFalse(service.canCompleteClearance(ClearanceType.HR_AND_LEGAL, actor));
+        assertFalse(service.canCompleteClearance(ClearanceType.PAYROLL_AND_FINANCE, actor));
+    }
+
+    @Test
     void departmentHeadCanViewExitCases() {
         when(auth.get("groups")).thenReturn(List.of("departmentHead"));
 
@@ -90,12 +103,127 @@ class EmployeeExitAuthorizationServiceTest {
     }
 
     @Test
+    void departmentHeadCanCompleteManagerHandoverClearanceOnlyUnlessAdmin() {
+        when(auth.get("groups")).thenReturn(List.of("departmentHead"));
+        Employee actor = employee(7L);
+
+        assertTrue(service.canCompleteClearance(ClearanceType.MANAGER_HANDOVER, actor));
+        assertFalse(service.canCompleteClearance(ClearanceType.ASSET_AND_FACILITIES, actor));
+        assertFalse(service.canCompleteClearance(ClearanceType.IT_AND_SECURITY, actor));
+        assertFalse(service.canCompleteClearance(ClearanceType.HR_AND_LEGAL, actor));
+        assertFalse(service.canCompleteClearance(ClearanceType.PAYROLL_AND_FINANCE, actor));
+    }
+
+    @Test
     void slashPrefixedGroupIsNotAcceptedForAssetManagerOrDepartmentHead() {
         when(auth.get("groups")).thenReturn(List.of("/assetManager", "/departmentHead"));
 
         assertFalse(service.canManageAssets());
         assertFalse(service.canCompleteClearance(ClearanceType.ASSET_AND_FACILITIES, employee(7L)));
         assertFalse(service.canCompleteClearance(ClearanceType.MANAGER_HANDOVER, employee(7L)));
+    }
+
+    @Test
+    void financeCanCompletePayrollClearanceOnly() {
+        when(auth.isFinancialOfficer()).thenReturn(true);
+        Employee actor = employee(7L);
+
+        assertTrue(service.canCompleteClearance(ClearanceType.PAYROLL_AND_FINANCE, actor));
+        assertFalse(service.canCompleteClearance(ClearanceType.MANAGER_HANDOVER, actor));
+        assertFalse(service.canCompleteClearance(ClearanceType.ASSET_AND_FACILITIES, actor));
+        assertFalse(service.canCompleteClearance(ClearanceType.IT_AND_SECURITY, actor));
+        assertFalse(service.canCompleteClearance(ClearanceType.HR_AND_LEGAL, actor));
+    }
+
+    @Test
+    void hrCanCompleteHrAndLegalClearanceOnlyUnlessAdmin() {
+        when(auth.isHumanResource()).thenReturn(true);
+        Employee actor = employee(7L);
+
+        assertTrue(service.canCompleteClearance(ClearanceType.HR_AND_LEGAL, actor));
+        assertFalse(service.canCompleteClearance(ClearanceType.MANAGER_HANDOVER, actor));
+        assertFalse(service.canCompleteClearance(ClearanceType.ASSET_AND_FACILITIES, actor));
+        assertFalse(service.canCompleteClearance(ClearanceType.IT_AND_SECURITY, actor));
+        assertFalse(service.canCompleteClearance(ClearanceType.PAYROLL_AND_FINANCE, actor));
+    }
+
+    @Test
+    void adminCanCompleteAllClearanceTypes() {
+        when(auth.isAdmin()).thenReturn(true);
+        Employee actor = employee(7L);
+
+        for (ClearanceType type : ClearanceType.values()) {
+            assertTrue(service.canCompleteClearance(type, actor), type + " should be completable by admin");
+        }
+    }
+
+    @Test
+    void employeeCanSelfViewOwnExitOnly() {
+        Employee actor = employee(7L);
+        EmployeeExitCase own = exit(7L);
+        EmployeeExitCase other = exit(8L);
+
+        assertTrue(service.canViewSelfServiceExit(own, actor));
+        assertFalse(service.canViewSelfServiceExit(other, actor));
+    }
+
+    @Test
+    void exitingEmployeeCannotOperationalViewJustByOwningTheCase() {
+        Employee actor = employee(7L);
+        EmployeeExitCase own = exit(7L);
+
+        assertFalse(service.canViewOperationalExit(own, actor, List.of()));
+    }
+
+    @Test
+    void hrCanOperationalView() {
+        when(auth.isHumanResource()).thenReturn(true);
+
+        assertTrue(service.canViewOperationalExit(exit(8L), employee(7L), List.of()));
+    }
+
+    @Test
+    void adminCanOperationalView() {
+        when(auth.isAdmin()).thenReturn(true);
+
+        assertTrue(service.canViewOperationalExit(exit(8L), employee(7L), List.of()));
+    }
+
+    @Test
+    void financeCanOperationalView() {
+        when(auth.isFinancialOfficer()).thenReturn(true);
+
+        assertTrue(service.canViewOperationalExit(exit(8L), employee(7L), List.of()));
+    }
+
+    @Test
+    void assetManagerCanOperationalView() {
+        when(auth.get("groups")).thenReturn(List.of("assetManager"));
+
+        assertTrue(service.canViewOperationalExit(exit(8L), employee(7L), List.of()));
+    }
+
+    @Test
+    void departmentHeadCanOperationalView() {
+        when(auth.get("groups")).thenReturn(List.of("departmentHead"));
+
+        assertTrue(service.canViewOperationalExit(exit(8L), employee(7L), List.of()));
+    }
+
+    @Test
+    void activeTaskAssigneeCanOperationalViewWithoutAnyOtherRole() {
+        Task task = mock(Task.class);
+        when(task.getAssignee()).thenReturn("7");
+
+        assertTrue(service.canViewOperationalExit(exit(8L), employee(7L), List.of(task)));
+    }
+
+    @Test
+    void unrelatedEmployeeCannotOperationalView() {
+        Task task = mock(Task.class);
+        when(task.getAssignee()).thenReturn("99");
+
+        assertFalse(service.canViewOperationalExit(exit(8L), employee(7L), List.of(task)));
     }
 
     private EmployeeExitCase exit(Long employeeId) {

@@ -4,11 +4,16 @@ import com.justjava.humanresource.employeeexit.dto.ExitPackageComponentCommand;
 import com.justjava.humanresource.employeeexit.dto.ExitPackageRuleCommand;
 import com.justjava.humanresource.employeeexit.entity.ExitPackageComponent;
 import com.justjava.humanresource.employeeexit.entity.ExitPackageRule;
+import com.justjava.humanresource.employeeexit.enums.ExitType;
 import com.justjava.humanresource.employeeexit.repository.ExitPackageComponentRepository;
 import com.justjava.humanresource.employeeexit.repository.ExitPackageRuleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -40,11 +45,23 @@ public class ExitPackageConfigurationService {
         rule.setCalculationMethod(command.getCalculationMethod());
         rule.setFixedAmount(command.getFixedAmount());
         rule.setPercentage(command.getPercentage());
-        rule.setAppliesToExitTypes(command.getAppliesToExitTypes());
+        rule.setAppliesToExitTypes(normalizeExitTypes(command.getAppliesToExitTypes()));
         rule.setMinimumYearsOfService(command.getMinimumYearsOfService());
         rule.setMaximumYearsOfService(command.getMaximumYearsOfService());
         rule.setRequiresManualApproval(command.isRequiresManualApproval());
         rule.setActive(command.isActive());
         return rules.save(rule);
+    }
+
+
+    private String normalizeExitTypes(List<ExitType> exitTypes) {
+        if (exitTypes == null || exitTypes.isEmpty()) {
+            return null;
+        }
+        return exitTypes.stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .map(Enum::name)
+                .collect(Collectors.joining(","));
     }
 }

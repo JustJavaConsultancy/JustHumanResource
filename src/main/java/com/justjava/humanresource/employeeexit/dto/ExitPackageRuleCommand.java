@@ -1,9 +1,11 @@
 package com.justjava.humanresource.employeeexit.dto;
 
 import com.justjava.humanresource.employeeexit.enums.ExitPackageCalculationMethod;
+import com.justjava.humanresource.employeeexit.enums.ExitType;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import java.math.BigDecimal;
+import java.util.List;
 
 @Data
 public class ExitPackageRuleCommand {
@@ -11,7 +13,7 @@ public class ExitPackageRuleCommand {
     @NotNull private ExitPackageCalculationMethod calculationMethod;
     private BigDecimal fixedAmount;
     private BigDecimal percentage;
-    private String appliesToExitTypes;
+    private List<ExitType> appliesToExitTypes;
     private Integer minimumYearsOfService;
     private Integer maximumYearsOfService;
     private boolean requiresManualApproval;

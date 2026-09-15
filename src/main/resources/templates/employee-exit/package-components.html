@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout}">
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{employee-exit/workflow-layout}">
 <head><title>Exit Package Settings</title></head>
 <body>
 <main layout:fragment="content" class="space-y-6">
     <div class="flex justify-between items-center">
         <div><h2 class="text-2xl font-bold">Exit Package Settings</h2><p class="text-gray-500">Settlement components and calculation rules</p></div>
-        <a href="/employee-exits" class="btn-secondary">Back to exits</a>
+        <a th:if="${canSeeExitList}" href="/employee-exits" class="btn-secondary">Back to exits</a>
     </div>
     <div class="grid lg:grid-cols-2 gap-6">
         <section class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
@@ -30,7 +30,15 @@
                 <select name="calculationMethod" class="form-input"><option th:each="m:${calculationMethods}" th:value="${m}" th:text="${m}"></option></select>
                 <input type="number" step="0.01" min="0" name="fixedAmount" class="form-input" placeholder="Fixed amount">
                 <input type="number" step="0.0001" min="0" name="percentage" class="form-input" placeholder="Percentage">
-                <input name="appliesToExitTypes" class="form-input" placeholder="Exit types, comma separated">
+                <div class="md:col-span-2">
+                    <p class="text-sm font-medium mb-2">Applies to exit types <span class="text-gray-500 font-normal">(leave all unchecked to apply to every exit type)</span></p>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        <label th:each="t:${exitTypes}" class="flex items-center gap-2">
+                            <input type="checkbox" name="appliesToExitTypes" th:value="${t}">
+                            <span th:text="${t}">Exit type</span>
+                        </label>
+                    </div>
+                </div>
                 <input type="number" min="0" name="minimumYearsOfService" class="form-input" placeholder="Minimum years">
                 <input type="number" min="0" name="maximumYearsOfService" class="form-input" placeholder="Maximum years">
                 <label class="flex items-center gap-2"><input type="checkbox" name="requiresManualApproval" value="true"> Manual approval</label>

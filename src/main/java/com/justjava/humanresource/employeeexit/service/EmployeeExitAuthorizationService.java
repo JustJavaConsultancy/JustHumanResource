@@ -4,6 +4,8 @@ import com.justjava.humanresource.core.config.AuthenticationManager; import com.
  private final AuthenticationManager auth; private final EmployeeRepository employees;
  public Employee currentEmployee(){Object email=auth.get("email");if(email==null)throw new ExitAccessDeniedException("Authenticated user has no email claim.");return employees.findByEmail(email.toString()).orElseThrow(()->new ExitAccessDeniedException("Authenticated employee record not found."));}
  public boolean isHr(){return auth.isHumanResource()||auth.isJobHR()||auth.isRestrictedHr()||auth.isAdmin();}
+ public boolean isAdmin(){return auth.isAdmin();}
+ public boolean isDepartmentHead(){return group("departmentHead");}
  public boolean canView(EmployeeExitCase x,Employee actor){return x.getEmployeeId().equals(actor.getId())||isHr()||auth.isFinancialOfficer()||group("assetManager")||group("departmentHead");}
  public boolean canCreateFor(Long employeeId,Employee actor){return employeeId.equals(actor.getId())||isHr();}
  public boolean canSubmit(EmployeeExitCase x,Employee actor){return x.getEmployeeId().equals(actor.getId())||isHr();}
@@ -15,4 +17,19 @@ import com.justjava.humanresource.core.config.AuthenticationManager; import com.
  public boolean canManageSettlement(){return auth.isFinancialOfficer()||auth.isAdmin();} public boolean canManageAssets(){return isHr()||group("assetManager")||auth.isAdmin();}
  public boolean canViewReports(){return isHr()||auth.isFinancialOfficer()||group("assetManager");}
  public void require(boolean allowed,String message){if(!allowed)throw new ExitAccessDeniedException(message);} private boolean group(String g){Object v=auth.get("groups");return v instanceof Collection<?> c&&c.contains(g);}
+
+
+ public boolean canViewSelfServiceExit(EmployeeExitCase exit,Employee actor){return exit.getEmployeeId().equals(actor.getId());}
+ public boolean canViewOperationalExit(EmployeeExitCase exit,Employee actor,Collection<Task> activeTasks){return isHr()||auth.isFinancialOfficer()||group("assetManager")||group("departmentHead")||isAssignedActiveTask(actor,activeTasks);}
+ private boolean isAssignedActiveTask(Employee actor,Collection<Task> activeTasks){return activeTasks!=null&&activeTasks.stream().anyMatch(t->String.valueOf(actor.getId()).equals(t.getAssignee()));}
+
+
+ public boolean canManageExitCase(Employee actor){return isHr();}
+ public boolean canViewSettlementSection(Employee actor){return isHr()||auth.isFinancialOfficer();}
+ public boolean canUseSettlementActions(Employee actor){return canManageSettlement();}
+ public boolean canViewAssetSection(Employee actor){return isHr()||group("assetManager")||auth.isFinancialOfficer();}
+ public boolean canUseAssetActions(Employee actor){return canManageAssets();}
+ public boolean canViewHandoverSection(Employee actor){return isHr()||group("departmentHead");}
+ public boolean canUseHandoverActions(Employee actor){return isHr()||group("departmentHead");}
+ public boolean canResolveExceptions(Employee actor){return isHr();}
 }
