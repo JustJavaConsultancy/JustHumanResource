@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/mobileEmployeeLayout}">
+<head>
+    <meta charset="UTF-8">
+    <title>My Requests</title>
+    <style>
+        .mr-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; }
+        .dark .mr-card { background: #1f2937; border-color: #374151; }
+        .mr-stat { padding: 12px; }
+        .mr-badge { display:inline-flex; align-items:center; padding:2px 8px; border-radius:999px; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.02em; }
+        .mr-badge-success { background:#dcfce7; color:#166534; }
+        .mr-badge-error { background:#fee2e2; color:#991b1b; }
+        .mr-badge-warning { background:#fef3c7; color:#92400e; }
+        .mr-badge-info { background:#dbeafe; color:#1e40af; }
+        .mr-badge-neutral { background:#f1f5f9; color:#475569; }
+        .dark .mr-badge-neutral { background:#374151; color:#d1d5db; }
+        .mr-input { width:100%; border:1px solid #d1d5db; background:#fff; border-radius:10px; padding:10px 12px; font-size:14px; outline:none; }
+        .dark .mr-input { border-color:#374151; background:#0f172a; color:#e5e7eb; }
+        .mr-input:focus { border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,.15); }
+        .mr-primary { background:#2463eb; color:#fff; padding:10px 16px; border-radius:12px; font-weight:600; font-size:14px; }
+        .mr-secondary { background:#f1f5f9; color:#0f172a; padding:10px 16px; border-radius:12px; font-weight:600; font-size:14px; border:1px solid #e5e7eb; }
+        .dark .mr-secondary { background:#1e293b; color:#e5e7eb; border-color:#334155; }
+        .mr-sheet-backdrop { position:fixed; inset:0; background:rgba(15,23,42,.5); z-index:60; }
+        .mr-sheet { position:fixed; left:0; right:0; bottom:0; background:#fff; border-radius:20px 20px 0 0; z-index:70; max-height:92vh; display:flex; flex-direction:column; }
+        .dark .mr-sheet { background:#0f172a; }
+        .mr-sheet-head { padding:14px 18px; border-bottom:1px solid #e5e7eb; display:flex; justify-content:space-between; align-items:center; }
+        .dark .mr-sheet-head { border-bottom-color:#334155; }
+        .mr-sheet-body { padding:16px 18px; overflow-y:auto; flex:1; }
+        .mr-sheet-foot { padding:12px 18px; border-top:1px solid #e5e7eb; display:flex; gap:8px; justify-content:flex-end; }
+        .dark .mr-sheet-foot { border-top-color:#334155; }
+        .mr-field-label { font-size:11px; font-weight:600; color:#475569; text-transform:uppercase; letter-spacing:.03em; margin-bottom:4px; display:block; }
+        .dark .mr-field-label { color:#94a3b8; }
+        .mr-line-row { border:1px solid #e5e7eb; border-radius:10px; padding:10px; margin-bottom:8px; }
+        .dark .mr-line-row { border-color:#334155; }
+        .mr-fab { position:fixed; right:16px; bottom:88px; z-index:40; width:56px; height:56px; border-radius:50%; background:#2463eb; color:#fff; display:flex; align-items:center; justify-content:center; box-shadow:0 10px 25px -8px rgba(37,99,235,.5); }
+        .mr-toast { position:fixed; left:50%; transform:translateX(-50%); bottom:100px; z-index:100; background:#111827; color:#fff; padding:10px 16px; border-radius:12px; font-size:13px; font-weight:600; box-shadow:0 8px 20px -4px rgba(0,0,0,.4); animation:mr-toast-in .2s ease; }
+        @keyframes mr-toast-in { from { opacity:0; transform:translateX(-50%) translateY(6px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
+        .mr-empty { padding:32px 16px; text-align:center; color:#94a3b8; }
+    </style>
+</head>
+<body>
+<main layout:fragment="content" class="px-4 pb-24 pt-2 space-y-4">
+
+    <!-- Header -->
+    <div class="flex items-start justify-between">
+        <div>
+            <h2 class="text-xl font-bold">My Requests</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Create, submit and track workflow requests</p>
+        </div>
+        <a th:href="@{/mobile/employee/requests/userGuide}"
+           class="flex size-9 items-center justify-center rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+            <span class="material-symbols-outlined text-slate-600 dark:text-slate-300 text-lg">help</span>
+        </a>
+    </div>
+
+    <!-- Stat cards -->
+    <div class="grid grid-cols-2 gap-3">
+        <div class="mr-card mr-stat">
+            <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Open</p>
+            <p id="statOpen" class="mt-1 text-2xl font-bold">0</p>
+        </div>
+        <div class="mr-card mr-stat">
+            <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Pending My Approval</p>
+            <p id="statApproval" class="mt-1 text-2xl font-bold">0</p>
+        </div>
+        <div class="mr-card mr-stat">
+            <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Approved</p>
+            <p id="statApproved" class="mt-1 text-2xl font-bold">0</p>
+        </div>
+        <div class="mr-card mr-stat">
+            <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Returned/Rejected</p>
+            <p id="statException" class="mt-1 text-2xl font-bold">0</p>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="mr-card p-3 space-y-2">
+        <input id="mrSearch" placeholder="Search number or title" class="mr-input">
+        <div class="grid grid-cols-3 gap-2">
+            <select id="mrTypeFilter" class="mr-input text-xs"><option value="">All types</option></select>
+            <select id="mrStatusFilter" class="mr-input text-xs">
+                <option value="">All statuses</option>
+                <option>DRAFT</option>
+                <option>IN_APPROVAL</option>
+                <option>RETURNED_FOR_CORRECTION</option>
+                <option>APPROVED</option>
+                <option>REJECTED</option>
+                <option>CANCELLED</option>
+                <option>CLOSED</option>
+            </select>
+            <select id="mrPriorityFilter" class="mr-input text-xs">
+                <option value="">All priorities</option>
+                <option>LOW</option><option>NORMAL</option><option>HIGH</option><option>URGENT</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Tabs: My Requests / Approvals -->
+    <div class="flex gap-2 border-b border-slate-200 dark:border-slate-700">
+        <button id="tabMine" onclick="switchTab('mine')" class="px-3 py-2 text-sm font-semibold border-b-2 border-primary text-primary">My Requests</button>
+        <button id="tabApprovals" onclick="switchTab('approvals')" class="px-3 py-2 text-sm font-semibold border-b-2 border-transparent text-slate-500">Pending Approvals <span id="approvalCountPill" class="ml-1 hidden text-[10px] bg-amber-100 text-amber-700 rounded-full px-1.5 py-0.5">0</span></button>
+    </div>
+
+    <!-- My requests list -->
+    <div id="mrRequestsList" class="space-y-2"></div>
+
+    <!-- Approvals list -->
+    <div id="mrTasksList" class="space-y-2 hidden"></div>
+
+    <!-- FAB: new request -->
+    <button type="button" onclick="openRequestSheet()" class="mr-fab">
+        <span class="material-symbols-outlined">add</span>
+    </button>
+
+    <!-- Request sheet -->
+    <div id="requestSheetBackdrop" class="mr-sheet-backdrop hidden" onclick="closeRequestSheet()"></div>
+    <div id="requestSheet" class="mr-sheet hidden">
+        <div class="mr-sheet-head">
+            <div>
+                <p id="requestSheetTitle" class="text-base font-bold">New Request</p>
+                <p id="requestSheetSubtitle" class="text-[11px] text-slate-500">Create a draft to submit for approval</p>
+            </div>
+            <button type="button" onclick="closeRequestSheet()"><span class="material-symbols-outlined text-slate-500">close</span></button>
+        </div>
+        <form id="requestForm" class="mr-sheet-body space-y-4">
+
+            <!-- Common fields -->
+            <div>
+                <label class="mr-field-label">Type</label>
+                <select id="requestType" class="mr-input" required></select>
+            </div>
+            <div>
+                <label class="mr-field-label">Priority</label>
+                <select id="priority" class="mr-input">
+                    <option>NORMAL</option><option>LOW</option><option>HIGH</option><option>URGENT</option>
+                </select>
+            </div>
+            <div>
+                <label class="mr-field-label">Title</label>
+                <input id="title" class="mr-input" maxlength="200" required>
+            </div>
+            <div>
+                <label class="mr-field-label">Description</label>
+                <textarea id="description" rows="2" class="mr-input"></textarea>
+            </div>
+
+            <!-- Staff Requisition -->
+            <div id="staffFields" class="hidden space-y-3">
+                <p class="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1"><span class="material-symbols-outlined text-primary text-base">groups</span>Staff Requisition</p>
+                <div><label class="mr-field-label">Job Title</label><input id="staffJobTitle" class="mr-input"></div>
+                <div><label class="mr-field-label">Department</label><select id="staffDepartmentId" class="mr-input"></select></div>
+                <div><label class="mr-field-label">Job Grade (optional)</label><select id="staffJobGradeId" class="mr-input"></select></div>
+                <div><label class="mr-field-label">Employment Type</label><select id="staffEmploymentType" class="mr-input"></select></div>
+                <div><label class="mr-field-label">Number of Positions</label><input id="staffPositions" type="number" min="1" class="mr-input"></div>
+                <div><label class="mr-field-label">Requisition Reason</label><select id="staffRequisitionReason" class="mr-input" onchange="toggleReplacementEmployee()"></select></div>
+                <div id="staffReplacementGroup" class="hidden"><label class="mr-field-label">Replacement Employee</label><select id="staffReplacementId" class="mr-input"></select></div>
+                <div><label class="mr-field-label">Target Start Date</label><input id="staffStartDate" type="date" class="mr-input"></div>
+                <div><label class="mr-field-label">Estimated Monthly Cost</label><input id="staffMonthlyCost" type="number" min="0" step="0.01" class="mr-input"></div>
+                <label class="inline-flex items-center gap-2 text-sm"><input id="staffBudgeted" type="checkbox"> Budgeted</label>
+                <div><label class="mr-field-label">Reason For Hire</label><textarea id="staffReason" rows="2" class="mr-input"></textarea></div>
+            </div>
+
+            <!-- File Request -->
+            <div id="fileFields" class="hidden space-y-3">
+                <p class="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1"><span class="material-symbols-outlined text-primary text-base">folder_open</span>File Request</p>
+                <div><label class="mr-field-label">Category</label><select id="fileCategory" class="mr-input"></select></div>
+                <div><label class="mr-field-label">Confidentiality</label><select id="fileConfidentiality" class="mr-input"></select></div>
+                <div><label class="mr-field-label">Access Type</label><select id="fileAccessType" class="mr-input"></select></div>
+                <label class="inline-flex items-center gap-2 text-sm"><input id="fileRetention" type="checkbox"> Retention required</label>
+                <div><label class="mr-field-label">Purpose</label><textarea id="filePurpose" rows="2" class="mr-input"></textarea></div>
+                <div><label class="mr-field-label">Initial Attachment (optional)</label><input id="initialAttachment" type="file" class="text-xs w-full"></div>
+            </div>
+
+            <!-- Asset Request -->
+            <div id="assetFields" class="hidden space-y-3">
+                <p class="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1"><span class="material-symbols-outlined text-primary text-base">devices</span>Asset Request</p>
+                <div><label class="mr-field-label">Required Date</label><input id="assetRequiredDate" type="date" class="mr-input"></div>
+                <div><label class="mr-field-label">Business Justification</label><textarea id="assetJustification" rows="2" class="mr-input"></textarea></div>
+                <div class="flex items-center justify-between">
+                    <p class="text-xs font-semibold">Assets</p>
+                    <button type="button" onclick="addItemRow()" class="text-xs px-3 py-1.5 rounded-md border border-slate-200 dark:border-slate-600">+ Add</button>
+                </div>
+                <div id="itemRows"></div>
+            </div>
+
+            <!-- Expense Reimbursement -->
+            <div id="expenseFields" class="hidden space-y-3">
+                <p class="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1"><span class="material-symbols-outlined text-primary text-base">receipt_long</span>Expense Reimbursement</p>
+                <div><label class="mr-field-label">Start Date</label><input id="expenseStartDate" type="date" class="mr-input"></div>
+                <div><label class="mr-field-label">End Date</label><input id="expenseEndDate" type="date" class="mr-input"></div>
+                <div><label class="mr-field-label">Payment Method</label><select id="expensePaymentMethod" class="mr-input"></select></div>
+                <div><label class="mr-field-label">Currency</label><input id="expenseCurrency" maxlength="3" value="NGN" class="mr-input uppercase"></div>
+                <div><label class="mr-field-label">Business Purpose</label><textarea id="expensePurpose" rows="2" class="mr-input"></textarea></div>
+                <div class="flex items-center justify-between">
+                    <p class="text-xs font-semibold">Expense Lines</p>
+                    <button type="button" onclick="addExpenseRow()" class="text-xs px-3 py-1.5 rounded-md border border-slate-200 dark:border-slate-600">+ Add</button>
+                </div>
+                <div id="expenseRows"></div>
+                <p class="text-right text-sm font-semibold">Total: <span id="expenseTotal">0.00</span></p>
+                <div><label class="mr-field-label">Attachment (optional)</label><input id="expenseAttachment" type="file" class="text-xs w-full"></div>
+            </div>
+
+            <div id="requestFormError" class="hidden text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2"></div>
+        </form>
+        <div class="mr-sheet-foot">
+            <button type="button" onclick="closeRequestSheet()" class="mr-secondary">Cancel</button>
+            <button type="button" id="requestFormSubmitBtn" onclick="submitRequestForm()" class="mr-primary">Create Draft</button>
+        </div>
+    </div>
+
+    <!-- Approval sheet -->
+    <div id="approvalSheetBackdrop" class="mr-sheet-backdrop hidden" onclick="closeApprovalSheet()"></div>
+    <div id="approvalSheet" class="mr-sheet hidden">
+        <div class="mr-sheet-head">
+            <p id="approvalSheetTitle" class="text-base font-bold">Approve Request</p>
+            <button type="button" onclick="closeApprovalSheet()"><span class="material-symbols-outlined text-slate-500">close</span></button>
+        </div>
+        <div class="mr-sheet-body space-y-2">
+            <label id="approvalSheetLabel" class="mr-field-label">Comment (optional)</label>
+            <textarea id="approvalSheetComment" rows="4" class="mr-input"></textarea>
+            <div id="approvalSheetError" class="hidden text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2"></div>
+        </div>
+        <div class="mr-sheet-foot">
+            <button type="button" onclick="closeApprovalSheet()" class="mr-secondary">Cancel</button>
+            <button type="button" id="approvalSheetSubmit" onclick="submitApprovalSheet()" class="mr-primary">Approve</button>
+        </div>
+    </div>
+
+    <script>
+        const mrApi = '/api/requests';
+        const mrPageBase = '/mobile/employee/requests';
+        let mrRequests = [], mrTasks = [], mrTypes = [], mrStaffOptions = {}, mrFileOptions = {}, mrExpenseOptions = {}, mrContext = {}, mrAssetCatalog = [], mrAssetCatalogLoaded = false;
+        let mrMode = 'create', mrEditingId = null;
+
+        function mrEscape(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+        function fmtType(v) { return (v || '').replaceAll('_', ' '); }
+        function mrBadge(status) {
+            const cls = status === 'APPROVED' ? 'mr-badge-success'
+                : (status === 'REJECTED' || status === 'CANCELLED') ? 'mr-badge-error'
+                : status === 'RETURNED_FOR_CORRECTION' ? 'mr-badge-warning'
+                : status === 'IN_APPROVAL' ? 'mr-badge-info' : 'mr-badge-neutral';
+            return `<span class="mr-badge ${cls}">${mrEscape(fmtType(status))}</span>`;
+        }
+        function showToast(msg) {
+            const el = document.createElement('div');
+            el.className = 'mr-toast';
+            el.textContent = msg;
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 2200);
+        }
+        function showError(msg) {
+            const el = document.getElementById('requestFormError');
+            el.textContent = msg;
+            el.classList.remove('hidden');
+        }
+        function hideError() { document.getElementById('requestFormError').classList.add('hidden'); }
+        async function mrJson(url, options) {
+            const res = await fetch(url, options);
+            if (!res.ok) throw new Error(await res.text() || `HTTP ${res.status}`);
+            const ct = res.headers.get('content-type') || '';
+            return ct.includes('application/json') ? res.json() : null;
+        }
+
+        async function loadData() {
+            try {
+                [mrRequests, mrTasks, mrTypes, mrStaffOptions, mrFileOptions, mrExpenseOptions, mrContext] = await Promise.all([
+                    mrJson(mrApi + '/visible'),
+                    mrJson(mrApi + '/approvals/tasks'),
+                    mrJson(mrApi + '/types'),
+                    mrJson(mrApi + '/staff-requisition-options'),
+                    mrJson(mrApi + '/file-options'),
+                    mrJson(mrApi + '/expense-reimbursement-options'),
+                    mrJson(mrApi + '/context')
+                ]);
+                mrRequests = mrRequests || []; mrTasks = mrTasks || []; mrTypes = mrTypes || [];
+                mrStaffOptions = mrStaffOptions || {}; mrFileOptions = mrFileOptions || {};
+                mrExpenseOptions = mrExpenseOptions || {}; mrContext = mrContext || {};
+                renderTypeOptions();
+                renderStaffOptions();
+                renderFileOptions();
+                renderExpenseOptions();
+                renderRequests();
+                renderTasks();
+                renderStats();
+            } catch (e) { showToast('Load failed: ' + (e.message || e)); }
+        }
+
+        function renderTypeOptions() {
+            const opts = mrTypes.map(t => `<option value="${mrEscape(t.code)}">${mrEscape(t.name)}</option>`).join('');
+            document.getElementById('requestType').innerHTML = opts;
+            document.getElementById('mrTypeFilter').innerHTML = '<option value="">All types</option>' + opts;
+            updateTypeFields();
+        }
+        function populateSelect(id, placeholder, options, optional) {
+            document.getElementById(id).innerHTML =
+                `<option value="">${placeholder}${optional ? ' (optional)' : ''}</option>` +
+                (options || []).map(o => `<option value="${mrEscape(o.value)}">${mrEscape(o.label)}</option>`).join('');
+        }
+        function renderStaffOptions() {
+            populateSelect('staffDepartmentId', 'Select department', mrStaffOptions.departments || []);
+            populateSelect('staffJobGradeId', 'Select job grade', mrStaffOptions.jobGrades || [], true);
+            populateSelect('staffReplacementId', 'Select replacement employee', mrStaffOptions.employees || [], true);
+            populateSelect('staffEmploymentType', 'Select employment type', mrStaffOptions.employmentTypes || []);
+            populateSelect('staffRequisitionReason', 'Select requisition reason', mrStaffOptions.requisitionReasons || []);
+            toggleReplacementEmployee();
+        }
+        function renderFileOptions() {
+            populateSelect('fileCategory', 'Select category', mrFileOptions.fileCategories || []);
+            populateSelect('fileConfidentiality', 'Select confidentiality', mrFileOptions.confidentialityLevels || []);
+            populateSelect('fileAccessType', 'Select access type', mrFileOptions.requestedAccessTypes || []);
+        }
+        function renderExpenseOptions() {
+            populateSelect('expensePaymentMethod', 'Select payment method', mrExpenseOptions.paymentMethods || []);
+            document.querySelectorAll('[data-expense-cat]').forEach(sel => populateExpenseCat(sel));
+        }
+        function populateExpenseCat(sel) {
+            const cur = sel.value;
+            sel.innerHTML = '<option value="">Category</option>' + (mrExpenseOptions.expenseCategories || [])
+                .map(o => `<option value="${mrEscape(o.value)}">${mrEscape(o.label)}</option>`).join('');
+            sel.value = cur;
+        }
+        function toggleReplacementEmployee() {
+            const v = document.getElementById('staffRequisitionReason').value === 'REPLACEMENT';
+            document.getElementById('staffReplacementGroup').classList.toggle('hidden', !v);
+        }
+
+        function isRequestOwner(r) { return mrContext && Number(r.requesterEmployeeId) === Number(mrContext.employeeId); }
+        function rowWasFreeRoute(r) { return r.approvalRouteType === 'FREE_ROUTE'; }
+        function canEditRequestRow(r) {
+            if (!isRequestOwner(r)) return false;
+            if (r.status === 'DRAFT') return true;
+            if (r.status === 'RETURNED_FOR_CORRECTION') return true;
+            return false;
+        }
+
+        function renderRequests() {
+            const type = document.getElementById('mrTypeFilter').value;
+            const status = document.getElementById('mrStatusFilter').value;
+            const priority = document.getElementById('mrPriorityFilter').value;
+            const search = document.getElementById('mrSearch').value.toLowerCase();
+            const filtered = mrRequests.filter(r =>
+                (!type || r.requestType === type) &&
+                (!status || r.status === status) &&
+                (!priority || r.priority === priority) &&
+                (!search || (r.requestNumber || '').toLowerCase().includes(search) || (r.title || '').toLowerCase().includes(search))
+            );
+            const wrap = document.getElementById('mrRequestsList');
+            if (!filtered.length) { wrap.innerHTML = `<div class="mr-empty"><span class="material-symbols-outlined text-3xl">inbox</span><p class="mt-2 text-sm">No requests found.</p></div>`; return; }
+            wrap.innerHTML = filtered.map(r => `
+                <a href="${mrPageBase}/${r.id}" class="mr-card block p-3 space-y-2 active:bg-slate-50 dark:active:bg-slate-800">
+                    <div class="flex items-start justify-between gap-2">
+                        <div class="min-w-0 flex-1">
+                            <p class="text-[10px] text-slate-500 font-semibold">${mrEscape(r.requestNumber || '')} · ${mrEscape(fmtType(r.requestType))}</p>
+                            <p class="text-sm font-semibold truncate">${mrEscape(r.title || '')}</p>
+                        </div>
+                        ${mrBadge(r.status)}
+                    </div>
+                    <div class="flex items-center justify-between text-[11px] text-slate-500">
+                        <span>Priority: ${mrEscape(r.priority || 'NORMAL')}</span>
+                        ${canEditRequestRow(r) ? `<button type="button" onclick="event.preventDefault(); event.stopPropagation(); openEditRequestSheet(${r.id})" class="text-primary font-semibold flex items-center gap-1"><span class="material-symbols-outlined text-sm">edit</span>Edit</button>` : ''}
+                    </div>
+                </a>`).join('');
+        }
+
+        function renderTasks() {
+            const pill = document.getElementById('approvalCountPill');
+            if (mrTasks.length) { pill.classList.remove('hidden'); pill.textContent = mrTasks.length; } else { pill.classList.add('hidden'); }
+            const wrap = document.getElementById('mrTasksList');
+            if (!mrTasks.length) { wrap.innerHTML = `<div class="mr-empty"><span class="material-symbols-outlined text-3xl">task_alt</span><p class="mt-2 text-sm">No pending approvals.</p></div>`; return; }
+            wrap.innerHTML = mrTasks.map(t => {
+                const rid = t.variables && t.variables.workflowRequestId ? t.variables.workflowRequestId : '';
+                const matched = rid ? mrRequests.find(r => Number(r.id) === Number(rid)) : null;
+                const isFree = matched && matched.approvalRouteType === 'FREE_ROUTE';
+                return `<div class="mr-card p-3 space-y-2">
+                    <div class="flex items-start justify-between gap-2">
+                        <div class="min-w-0 flex-1">
+                            <p class="text-[10px] text-slate-500 font-semibold">${rid ? `Request #${mrEscape(rid)}` : ''}${isFree ? ' · <span class="mr-badge mr-badge-info">FREE ROUTE</span>' : ''}</p>
+                            <p class="text-sm font-semibold truncate">${mrEscape(t.taskName || t.taskDefinitionKey || '')}</p>
+                            <p class="text-[11px] text-slate-500">${mrEscape((t.createdTime || '').replace('T', ' '))}</p>
+                        </div>
+                        ${rid ? `<a href="${mrPageBase}/${rid}" class="text-primary text-xs font-semibold">Open</a>` : ''}
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="openApprovalSheet('${mrEscape(t.taskId)}','approve')" class="flex-1 text-xs py-2 rounded-lg bg-green-600 text-white font-semibold">Approve</button>
+                        <button onclick="openApprovalSheet('${mrEscape(t.taskId)}','reject')" class="flex-1 text-xs py-2 rounded-lg bg-red-600 text-white font-semibold">Reject</button>
+                        <button onclick="openApprovalSheet('${mrEscape(t.taskId)}','return')" class="flex-1 text-xs py-2 rounded-lg bg-orange-600 text-white font-semibold">Return</button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function renderStats() {
+            document.getElementById('statOpen').textContent = mrRequests.filter(r => ['DRAFT','SUBMITTED','IN_APPROVAL','RETURNED_FOR_CORRECTION'].includes(r.status)).length;
+            document.getElementById('statApproval').textContent = mrTasks.length;
+            document.getElementById('statApproved').textContent = mrRequests.filter(r => r.status === 'APPROVED').length;
+            document.getElementById('statException').textContent = mrRequests.filter(r => ['RETURNED_FOR_CORRECTION','REJECTED'].includes(r.status)).length;
+        }
+
+        function switchTab(t) {
+            const mine = document.getElementById('mrRequestsList');
+            const tasks = document.getElementById('mrTasksList');
+            const tabMine = document.getElementById('tabMine');
+            const tabApp = document.getElementById('tabApprovals');
+            if (t === 'mine') {
+                mine.classList.remove('hidden'); tasks.classList.add('hidden');
+                tabMine.classList.add('text-primary','border-primary'); tabMine.classList.remove('text-slate-500','border-transparent');
+                tabApp.classList.remove('text-primary','border-primary'); tabApp.classList.add('text-slate-500','border-transparent');
+            } else {
+                mine.classList.add('hidden'); tasks.classList.remove('hidden');
+                tabApp.classList.add('text-primary','border-primary'); tabApp.classList.remove('text-slate-500','border-transparent');
+                tabMine.classList.remove('text-primary','border-primary'); tabMine.classList.add('text-slate-500','border-transparent');
+            }
+        }
+
+        function updateTypeFields() {
+            const v = document.getElementById('requestType').value;
+            ['staffFields','fileFields','assetFields','expenseFields'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+                document.querySelectorAll(`#${id} input, #${id} select, #${id} textarea, #${id} button`).forEach(el => el.disabled = true);
+            });
+            const map = { STAFF_REQUISITION: 'staffFields', FILE_REQUEST: 'fileFields', ASSET_REQUEST: 'assetFields', EXPENSE_REIMBURSEMENT: 'expenseFields' };
+            const target = map[v];
+            if (target) {
+                document.getElementById(target).classList.remove('hidden');
+                document.querySelectorAll(`#${target} input, #${target} select, #${target} textarea, #${target} button`).forEach(el => el.disabled = false);
+                if (v === 'ASSET_REQUEST') {
+                    loadAssetCatalog();
+                    if (!document.getElementById('itemRows').children.length) addItemRow();
+                }
+                if (v === 'EXPENSE_REIMBURSEMENT') {
+                    if (!document.getElementById('expenseRows').children.length) addExpenseRow();
+                }
+            }
+        }
+
+        async function loadAssetCatalog() {
+            if (mrAssetCatalogLoaded) return;
+            try {
+                mrAssetCatalog = await mrJson('/api/assets/catalog') || [];
+                mrAssetCatalogLoaded = true;
+                document.querySelectorAll('[data-asset-item]').forEach(sel => populateAssetItemSelect(sel));
+            } catch (e) { /* ignore */ }
+        }
+        function populateAssetItemSelect(sel) {
+            const cur = sel.value;
+            sel.innerHTML = '<option value="">Select asset</option>' +
+                mrAssetCatalog.filter(a => a.status !== 'RETIRED').map(a => `<option value="${a.id}">${mrEscape(a.assetName)}${a.assetCode ? ' (' + mrEscape(a.assetCode) + ')' : ''}</option>`).join('');
+            sel.value = cur;
+        }
+
+        function addItemRow(item) {
+            const wrap = document.getElementById('itemRows');
+            const row = document.createElement('div');
+            row.className = 'mr-line-row space-y-2';
+            row.innerHTML = `
+                <div class="flex items-center justify-between">
+                    <span class="text-[11px] font-semibold text-slate-500">Asset</span>
+                    <button type="button" onclick="this.closest('.mr-line-row').remove()" class="text-red-600 text-xs">Remove</button>
+                </div>
+                <select data-asset-item class="mr-input"></select>
+                <div class="grid grid-cols-2 gap-2">
+                    <input data-asset-qty type="number" min="1" placeholder="Qty" class="mr-input">
+                    <input data-asset-notes placeholder="Notes" class="mr-input">
+                </div>`;
+            wrap.appendChild(row);
+            populateAssetItemSelect(row.querySelector('[data-asset-item]'));
+            if (item) {
+                row.querySelector('[data-asset-item]').value = item.assetItemId != null ? item.assetItemId : '';
+                row.querySelector('[data-asset-qty]').value = item.quantity != null ? item.quantity : '';
+                row.querySelector('[data-asset-notes]').value = item.notes || '';
+            }
+        }
+
+        function addExpenseRow(line) {
+            const wrap = document.getElementById('expenseRows');
+            const row = document.createElement('div');
+            row.className = 'mr-line-row space-y-2';
+            row.innerHTML = `
+                <div class="flex items-center justify-between">
+                    <span class="text-[11px] font-semibold text-slate-500">Line</span>
+                    <button type="button" onclick="this.closest('.mr-line-row').remove(); updateExpenseTotal();" class="text-red-600 text-xs">Remove</button>
+                </div>
+                <input data-expense-desc placeholder="Description" class="mr-input">
+                <select data-expense-cat class="mr-input"></select>
+                <div class="grid grid-cols-2 gap-2">
+                    <input data-expense-date type="date" class="mr-input">
+                    <input data-expense-amount type="number" min="0" step="0.01" placeholder="Amount" class="mr-input" oninput="updateExpenseTotal()">
+                </div>
+                <input data-expense-merchant placeholder="Merchant (optional)" class="mr-input">`;
+            wrap.appendChild(row);
+            populateExpenseCat(row.querySelector('[data-expense-cat]'));
+            if (line) {
+                row.querySelector('[data-expense-desc]').value = line.description || '';
+                row.querySelector('[data-expense-cat]').value = line.category || '';
+                row.querySelector('[data-expense-date]').value = line.expenseDate || '';
+                row.querySelector('[data-expense-amount]').value = line.amount != null ? line.amount : '';
+                row.querySelector('[data-expense-merchant]').value = line.merchant || '';
+            }
+            updateExpenseTotal();
+        }
+
+        function updateExpenseTotal() {
+            let total = 0;
+            document.querySelectorAll('#expenseRows [data-expense-amount]').forEach(inp => { total += Number(inp.value) || 0; });
+            document.getElementById('expenseTotal').textContent = total.toFixed(2);
+        }
+
+        function resetRequestForm() {
+            mrMode = 'create'; mrEditingId = null;
+            document.getElementById('requestForm').reset();
+            document.getElementById('itemRows').innerHTML = '';
+            document.getElementById('expenseRows').innerHTML = '';
+            document.getElementById('requestType').disabled = false;
+            document.getElementById('requestSheetTitle').textContent = 'New Request';
+            document.getElementById('requestSheetSubtitle').textContent = 'Create a draft to submit for approval';
+            document.getElementById('requestFormSubmitBtn').textContent = 'Create Draft';
+            hideError();
+            updateExpenseTotal();
+            updateTypeFields();
+        }
+
+        function openRequestSheet() {
+            resetRequestForm();
+            document.getElementById('requestSheetBackdrop').classList.remove('hidden');
+            document.getElementById('requestSheet').classList.remove('hidden');
+        }
+        function closeRequestSheet() {
+            document.getElementById('requestSheetBackdrop').classList.add('hidden');
+            document.getElementById('requestSheet').classList.add('hidden');
+        }
+
+        async function openEditRequestSheet(id) {
+            try {
+                resetRequestForm();
+                mrMode = 'edit'; mrEditingId = id;
+                document.getElementById('requestSheetTitle').textContent = 'Edit Request';
+                document.getElementById('requestSheetSubtitle').textContent = 'Update draft details';
+                document.getElementById('requestFormSubmitBtn').textContent = 'Save Changes';
+                document.getElementById('requestSheetBackdrop').classList.remove('hidden');
+                document.getElementById('requestSheet').classList.remove('hidden');
+                const data = await mrJson(`${mrApi}/${id}/edit`);
+                if (!data.canEdit) { closeRequestSheet(); showToast('This request can no longer be edited.'); return; }
+                await fillRequestForm(data);
+            } catch (e) { showError(e.message); }
+        }
+
+        async function fillRequestForm(d) {
+            document.getElementById('requestType').value = d.requestType || '';
+            document.getElementById('priority').value = d.priority || 'NORMAL';
+            document.getElementById('title').value = d.title || '';
+            document.getElementById('description').value = d.description || '';
+            document.getElementById('requestType').disabled = true;
+            updateTypeFields();
+            if (d.requestType === 'STAFF_REQUISITION' && d.staffRequisition) {
+                const s = d.staffRequisition;
+                document.getElementById('staffJobTitle').value = s.jobTitle || '';
+                document.getElementById('staffDepartmentId').value = s.departmentId != null ? s.departmentId : '';
+                document.getElementById('staffJobGradeId').value = s.jobGradeId != null ? s.jobGradeId : '';
+                document.getElementById('staffEmploymentType').value = s.employmentType || '';
+                document.getElementById('staffPositions').value = s.numberOfPositions != null ? s.numberOfPositions : '';
+                document.getElementById('staffRequisitionReason').value = s.requisitionReason || '';
+                document.getElementById('staffReplacementId').value = s.replacementEmployeeId != null ? s.replacementEmployeeId : '';
+                document.getElementById('staffStartDate').value = s.targetStartDate || '';
+                document.getElementById('staffMonthlyCost').value = s.estimatedMonthlyCost != null ? s.estimatedMonthlyCost : '';
+                document.getElementById('staffBudgeted').checked = !!s.budgeted;
+                document.getElementById('staffReason').value = s.reasonForHire || '';
+                toggleReplacementEmployee();
+            }
+            if (d.requestType === 'FILE_REQUEST' && d.fileRequest) {
+                const f = d.fileRequest;
+                document.getElementById('fileCategory').value = f.fileCategory || '';
+                document.getElementById('fileConfidentiality').value = f.confidentialityLevel || '';
+                document.getElementById('fileAccessType').value = f.requestedAccessType || '';
+                document.getElementById('fileRetention').checked = !!f.retentionRequired;
+                document.getElementById('filePurpose').value = f.purpose || '';
+            }
+            if (d.requestType === 'ASSET_REQUEST' && d.assetRequest) {
+                document.getElementById('assetRequiredDate').value = d.assetRequest.requiredDate || '';
+                document.getElementById('assetJustification').value = d.assetRequest.justification || '';
+                document.getElementById('itemRows').innerHTML = '';
+                await loadAssetCatalog();
+                (d.assetRequest.items || []).forEach(it => addItemRow(it));
+                if (!document.getElementById('itemRows').children.length) addItemRow();
+            }
+            if (d.requestType === 'EXPENSE_REIMBURSEMENT' && d.expenseReimbursement) {
+                const e = d.expenseReimbursement;
+                document.getElementById('expenseStartDate').value = e.expenseStartDate || '';
+                document.getElementById('expenseEndDate').value = e.expenseEndDate || '';
+                document.getElementById('expensePaymentMethod').value = e.paymentMethod || '';
+                document.getElementById('expenseCurrency').value = e.currency || 'NGN';
+                document.getElementById('expensePurpose').value = e.businessPurpose || '';
+                document.getElementById('expenseRows').innerHTML = '';
+                (e.lines || []).forEach(line => addExpenseRow(line));
+                if (!document.getElementById('expenseRows').children.length) addExpenseRow();
+            }
+        }
+
+        function collectPayload() {
+            const type = document.getElementById('requestType').value;
+            const payload = {
+                requestType: type,
+                priority: document.getElementById('priority').value,
+                title: document.getElementById('title').value,
+                description: document.getElementById('description').value
+            };
+            if (type === 'STAFF_REQUISITION') {
+                payload.staffRequisition = {
+                    jobTitle: document.getElementById('staffJobTitle').value,
+                    departmentId: numOrNull('staffDepartmentId'),
+                    jobGradeId: numOrNull('staffJobGradeId'),
+                    employmentType: document.getElementById('staffEmploymentType').value,
+                    numberOfPositions: numOrNull('staffPositions'),
+                    requisitionReason: document.getElementById('staffRequisitionReason').value,
+                    replacementEmployeeId: numOrNull('staffReplacementId'),
+                    targetStartDate: strOrNull('staffStartDate'),
+                    estimatedMonthlyCost: numOrNull('staffMonthlyCost'),
+                    budgeted: document.getElementById('staffBudgeted').checked,
+                    reasonForHire: document.getElementById('staffReason').value
+                };
+            }
+            if (type === 'FILE_REQUEST') {
+                payload.fileRequest = {
+                    fileCategory: document.getElementById('fileCategory').value,
+                    confidentialityLevel: document.getElementById('fileConfidentiality').value,
+                    requestedAccessType: document.getElementById('fileAccessType').value,
+                    retentionRequired: document.getElementById('fileRetention').checked,
+                    purpose: document.getElementById('filePurpose').value
+                };
+            }
+            if (type === 'ASSET_REQUEST') {
+                const items = Array.from(document.querySelectorAll('#itemRows .mr-line-row')).map(row => ({
+                    assetItemId: Number(row.querySelector('[data-asset-item]').value) || null,
+                    quantity: Number(row.querySelector('[data-asset-qty]').value) || null,
+                    notes: row.querySelector('[data-asset-notes]').value || ''
+                })).filter(x => x.assetItemId);
+                payload.assetRequest = {
+                    requiredDate: strOrNull('assetRequiredDate'),
+                    justification: document.getElementById('assetJustification').value,
+                    items
+                };
+            }
+            if (type === 'EXPENSE_REIMBURSEMENT') {
+                const lines = Array.from(document.querySelectorAll('#expenseRows .mr-line-row')).map(row => ({
+                    description: row.querySelector('[data-expense-desc]').value,
+                    category: row.querySelector('[data-expense-cat]').value,
+                    expenseDate: row.querySelector('[data-expense-date]').value || null,
+                    amount: Number(row.querySelector('[data-expense-amount]').value) || 0,
+                    merchant: row.querySelector('[data-expense-merchant]').value || ''
+                })).filter(l => l.description || l.amount);
+                payload.expenseReimbursement = {
+                    expenseStartDate: strOrNull('expenseStartDate'),
+                    expenseEndDate: strOrNull('expenseEndDate'),
+                    paymentMethod: document.getElementById('expensePaymentMethod').value,
+                    currency: document.getElementById('expenseCurrency').value,
+                    businessPurpose: document.getElementById('expensePurpose').value,
+                    lines
+                };
+            }
+            return payload;
+        }
+        function numOrNull(id) { const v = document.getElementById(id).value; return v === '' ? null : Number(v); }
+        function strOrNull(id) { const v = document.getElementById(id).value; return v === '' ? null : v; }
+
+        async function submitRequestForm() {
+            hideError();
+            try {
+                const payload = collectPayload();
+                if (!payload.requestType) { showError('Type is required.'); return; }
+                if (!payload.title) { showError('Title is required.'); return; }
+                const btn = document.getElementById('requestFormSubmitBtn');
+                btn.disabled = true;
+                let result;
+                if (mrMode === 'edit' && mrEditingId) {
+                    result = await mrJson(`${mrApi}/${mrEditingId}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+                } else {
+                    result = await mrJson(mrApi, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+                }
+                // upload initial attachment for FILE_REQUEST
+                const fileInput = document.getElementById('initialAttachment');
+                if (payload.requestType === 'FILE_REQUEST' && fileInput.files.length && result && result.id) {
+                    const fd = new FormData(); fd.append('file', fileInput.files[0]);
+                    try { await fetch(`${mrApi}/${result.id}/attachments`, { method:'POST', body: fd }); } catch (e) { /* non-fatal */ }
+                }
+                const expAttach = document.getElementById('expenseAttachment');
+                if (payload.requestType === 'EXPENSE_REIMBURSEMENT' && expAttach.files.length && result && result.id) {
+                    const fd = new FormData(); fd.append('file', expAttach.files[0]);
+                    try { await fetch(`${mrApi}/${result.id}/attachments`, { method:'POST', body: fd }); } catch (e) { /* non-fatal */ }
+                }
+                closeRequestSheet();
+                showToast(mrMode === 'edit' ? 'Request updated.' : 'Draft created.');
+                btn.disabled = false;
+                await loadData();
+            } catch (e) {
+                document.getElementById('requestFormSubmitBtn').disabled = false;
+                showError(e.message || String(e));
+            }
+        }
+
+        // Approval sheet
+        let approvalState = null;
+        function openApprovalSheet(taskId, action) {
+            approvalState = { taskId, action };
+            const titles = { approve: 'Approve Request', reject: 'Reject Request', return: 'Return Request' };
+            const labels = { approve: 'Comment (optional)', reject: 'Comment (required)', return: 'Comment (required)' };
+            document.getElementById('approvalSheetTitle').textContent = titles[action];
+            document.getElementById('approvalSheetLabel').textContent = labels[action];
+            document.getElementById('approvalSheetComment').value = '';
+            document.getElementById('approvalSheetError').classList.add('hidden');
+            const btn = document.getElementById('approvalSheetSubmit');
+            btn.textContent = titles[action].split(' ')[0];
+            btn.className = action === 'approve' ? 'mr-primary' : action === 'reject' ? 'mr-primary' : 'mr-primary';
+            btn.style.background = action === 'approve' ? '#16a34a' : action === 'reject' ? '#dc2626' : '#d97706';
+            document.getElementById('approvalSheetBackdrop').classList.remove('hidden');
+            document.getElementById('approvalSheet').classList.remove('hidden');
+        }
+        function closeApprovalSheet() {
+            document.getElementById('approvalSheetBackdrop').classList.add('hidden');
+            document.getElementById('approvalSheet').classList.add('hidden');
+            approvalState = null;
+        }
+        async function submitApprovalSheet() {
+            if (!approvalState) return;
+            const { taskId, action } = approvalState;
+            const comment = document.getElementById('approvalSheetComment').value.trim();
+            const errEl = document.getElementById('approvalSheetError');
+            if (action !== 'approve' && !comment) { errEl.textContent = 'A comment is required.'; errEl.classList.remove('hidden'); return; }
+            try {
+                await mrJson(`${mrApi}/approvals/${action}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({taskId, comment}) });
+                closeApprovalSheet();
+                showToast(`Request ${action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : 'returned'}.`);
+                await loadData();
+            } catch (e) { errEl.textContent = e.message || String(e); errEl.classList.remove('hidden'); }
+        }
+
+        // Wire filters
+        ['mrSearch','mrTypeFilter','mrStatusFilter','mrPriorityFilter'].forEach(id => {
+            document.getElementById(id).addEventListener('input', renderRequests);
+            document.getElementById(id).addEventListener('change', renderRequests);
+        });
+        document.getElementById('requestType').addEventListener('change', updateTypeFields);
+
+        // Kick off
+        loadData();
+    </script>
+</main>
+</body>
+</html>

@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/mobileEmployeeLayout}">
+<head>
+    <title>Lock Approval</title>
+    <style>
+        .la-card { background:#fff; border-radius:12px; border:1px solid #e5e7eb; padding:14px; margin-bottom:10px; }
+        .la-row { display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid #f3f4f6; font-size:0.8rem; }
+        .la-row:last-child { border-bottom:none; }
+        .la-sheet { position:fixed; bottom:0; left:0; right:0; z-index:50; transform:translateY(100%); transition:transform .3s; background:#fff; border-radius:20px 20px 0 0; max-height:92vh; overflow-y:auto; padding-bottom:env(safe-area-inset-bottom); }
+        .la-sheet.open { transform:translateY(0); }
+        .la-backdrop { position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:49; display:none; }
+        .la-backdrop.open { display:block; }
+    </style>
+</head>
+<body>
+<section layout:fragment="content">
+
+    <!-- Header -->
+    <div class="bg-blue-900 rounded-xl p-4 mb-4 text-white">
+        <p class="text-xs text-blue-300 uppercase font-semibold">Payroll Lock Approval</p>
+        <p class="text-sm text-blue-200 mt-1">Review and approve payroll lock requests</p>
+    </div>
+
+    <!-- No pending requests -->
+    <div th:unless="${approvalRequests != null and !approvalRequests.isEmpty()}"
+         class="la-card text-center py-8 mb-4">
+        <span class="material-symbols-outlined text-gray-300 block" style="font-size:48px">inbox</span>
+        <p class="font-semibold text-sm text-gray-600 mt-2">No pending approvals</p>
+        <p class="text-xs text-gray-400 mt-1">All payroll lock requests have been processed.</p>
+    </div>
+
+    <!-- Pending requests -->
+    <div th:each="request : ${approvalRequests}"
+         th:with="vars=${request.variables},
+                  periodStart=${vars.periodStart},
+                  periodEnd=${vars.periodEnd},
+                  totalGross=${vars.totalGross},
+                  totalDeductions=${vars.totalDeductions},
+                  totalNet=${vars.totalNet},
+                  empCount=${vars.employeeCount}"
+         class="mb-4">
+
+        <!-- Period header -->
+        <div class="la-card mb-2">
+            <div class="flex items-center justify-between mb-2">
+                <div>
+                    <p class="font-bold text-sm"
+                       th:text="${#temporals.format(periodStart,'MMMM yyyy')} + ' Payroll Lock Request'">Period</p>
+                    <p class="text-xs text-gray-400"
+                       th:text="'Submitted ' + ${#temporals.format(request.createdTime,'dd MMM yyyy, HH:mm')}">—</p>
+                </div>
+                <span class="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">pending</span>
+            </div>
+
+            <!-- Summary stats -->
+            <div class="grid grid-cols-3 gap-2 text-xs text-center mb-3">
+                <div class="bg-gray-50 rounded p-2">
+                    <p class="text-gray-400">Gross</p>
+                    <p class="font-bold"
+                       th:text="${totalGross != null ? '₦' + #numbers.formatDecimal(totalGross,1,'COMMA',0,'POINT') : '—'}">—</p>
+                </div>
+                <div class="bg-red-50 rounded p-2">
+                    <p class="text-gray-400">Deductions</p>
+                    <p class="font-bold text-red-600"
+                       th:text="${totalDeductions != null ? '₦' + #numbers.formatDecimal(totalDeductions,1,'COMMA',0,'POINT') : '—'}">—</p>
+                </div>
+                <div class="bg-blue-50 rounded p-2">
+                    <p class="text-gray-400">Net Pay</p>
+                    <p class="font-bold text-blue-700"
+                       th:text="${totalNet != null ? '₦' + #numbers.formatDecimal(totalNet,1,'COMMA',0,'POINT') : '—'}">—</p>
+                </div>
+            </div>
+            <p class="text-xs text-gray-400 mb-3" th:text="${empCount} + ' employees processed'">0 employees</p>
+
+            <!-- Action buttons -->
+            <div class="flex gap-2">
+                <button th:onclick="|openRejectSheet('${request.taskId}')|"
+                        class="flex-1 py-2.5 border border-gray-300 text-gray-700 text-sm font-semibold rounded-xl flex items-center justify-center gap-2">
+                    <span class="material-symbols-outlined" style="font-size:16px">cancel</span> Return
+                </button>
+                <button th:onclick="|openApproveSheet('${request.taskId}')|"
+                        class="flex-1 py-2.5 bg-green-600 text-white text-sm font-bold rounded-xl flex items-center justify-center gap-2">
+                    <span class="material-symbols-outlined" style="font-size:16px">check_circle</span> Approve
+                </button>
+            </div>
+        </div>
+
+        <!-- Employee slips -->
+        <div class="la-card">
+            <p class="font-semibold text-sm mb-3">Employee Details</p>
+            <div th:if="${paySlips == null or #lists.isEmpty(paySlips)}"
+                 class="text-xs text-gray-400 text-center py-3">No employee data available.</div>
+            <div th:each="slip : ${paySlips}" class="la-row">
+                <div class="flex items-center gap-2">
+                    <div class="w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs"
+                         th:text="${slip.employeeName.substring(0,1).toUpperCase()}">A</div>
+                    <span class="font-medium text-sm" th:text="${slip.employeeName}">Name</span>
+                </div>
+                <div class="text-right text-xs">
+                    <p class="font-semibold text-blue-700" th:text="'₦' + ${#numbers.formatDecimal(slip.netPay,1,'COMMA',0,'POINT')}">₦0</p>
+                    <p class="text-gray-400" th:text="'Gross: ₦' + ${#numbers.formatDecimal(slip.grossPay,1,'COMMA',0,'POINT')}">₦0</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Approve Sheet -->
+        <div th:id="|approveBackdrop-${request.taskId}|" class="la-backdrop"
+             th:onclick="|closeApproveSheet('${request.taskId}')|"></div>
+        <div th:id="|approveSheet-${request.taskId}|" class="la-sheet">
+            <div class="p-4 border-b border-gray-100 flex items-center justify-between">
+                <p class="font-bold text-sm text-green-700">Approve Period Lock?</p>
+                <button th:onclick="|closeApproveSheet('${request.taskId}')|" class="text-gray-400">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <div class="p-4">
+                <p class="text-sm text-gray-600 mb-4">
+                    Are you sure you want to approve the lock for
+                    <strong th:text="${#temporals.format(periodStart,'MMMM yyyy')}">this period</strong>?
+                    This will finalise the payroll period and all payslips.
+                    <span class="font-semibold text-red-600">This action cannot be undone.</span>
+                </p>
+                <form th:action="@{/mobile/finance/approve/lock}" method="post">
+                    <input type="hidden" name="taskId" th:value="${request.taskId}"/>
+                    <div class="flex gap-3">
+                        <button type="button" th:onclick="|closeApproveSheet('${request.taskId}')|"
+                                class="flex-1 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold">Cancel</button>
+                        <button type="submit"
+                                class="flex-1 py-2.5 bg-green-600 text-white rounded-xl text-sm font-bold">Confirm &amp; Lock</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Reject Sheet -->
+        <div th:id="|rejectBackdrop-${request.taskId}|" class="la-backdrop"
+             th:onclick="|closeRejectSheet('${request.taskId}')|"></div>
+        <div th:id="|rejectSheet-${request.taskId}|" class="la-sheet">
+            <div class="p-4 border-b border-gray-100 flex items-center justify-between">
+                <p class="font-bold text-sm text-red-700">Return Lock Request?</p>
+                <button th:onclick="|closeRejectSheet('${request.taskId}')|" class="text-gray-400">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <div class="p-4">
+                <p class="text-sm text-gray-600 mb-3">
+                    Return the lock request for
+                    <strong th:text="${#temporals.format(periodStart,'MMMM yyyy')}">this period</strong>.
+                    HR will be notified and can resubmit after corrections.
+                </p>
+                <form th:action="@{/mobile/finance/reject/lock}" method="post">
+                    <input type="hidden" name="taskId" th:value="${request.taskId}"/>
+                    <textarea name="reason" rows="3"
+                              class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mb-3"
+                              placeholder="Reason for return (optional)..."></textarea>
+                    <div class="flex gap-3">
+                        <button type="button" th:onclick="|closeRejectSheet('${request.taskId}')|"
+                                class="flex-1 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold">Cancel</button>
+                        <button type="submit"
+                                class="flex-1 py-2.5 bg-red-600 text-white rounded-xl text-sm font-bold">Confirm Return</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Closed Periods Archive -->
+    <div th:if="${completedProcesses != null and !#lists.isEmpty(completedProcesses)}" class="la-card">
+        <div class="flex items-center justify-between mb-3">
+            <p class="font-semibold text-sm">Closed Periods</p>
+            <a th:href="@{/mobile/finance/lockedPeriods}" class="text-blue-600 text-xs font-semibold">View All</a>
+        </div>
+        <div th:each="period : ${completedProcesses}" class="la-row">
+            <div>
+                <p class="font-medium text-sm" th:text="${period.processVariables['periodEnd']}">—</p>
+                <p class="text-xs text-gray-400" th:text="${period.endTime}">—</p>
+            </div>
+            <div class="text-right">
+                <p class="font-semibold text-sm" th:text="${period.processVariables['reconNet']}">—</p>
+                <span class="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">locked</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openApproveSheet(taskId) {
+            document.getElementById('approveSheet-' + taskId).classList.add('open');
+            document.getElementById('approveBackdrop-' + taskId).classList.add('open');
+        }
+        function closeApproveSheet(taskId) {
+            document.getElementById('approveSheet-' + taskId).classList.remove('open');
+            document.getElementById('approveBackdrop-' + taskId).classList.remove('open');
+        }
+        function openRejectSheet(taskId) {
+            document.getElementById('rejectSheet-' + taskId).classList.add('open');
+            document.getElementById('rejectBackdrop-' + taskId).classList.add('open');
+        }
+        function closeRejectSheet(taskId) {
+            document.getElementById('rejectSheet-' + taskId).classList.remove('open');
+            document.getElementById('rejectBackdrop-' + taskId).classList.remove('open');
+        }
+    </script>
+
+</section>
+</body>
+</html>

@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/mobileEmployeeLayout}">
+<head>
+    <meta charset="UTF-8">
+    <title>Job Structure</title>
+    <style>
+        .jstr-card { background:#fff; border:1px solid #e5e7eb; border-radius:14px; }
+        .dark .jstr-card { background:#1f2937; border-color:#374151; }
+        .jstr-stat { padding:12px; }
+        .jstr-stat-icon { width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; }
+        .jstr-badge { display:inline-flex; align-items:center; padding:2px 8px; border-radius:999px; font-size:10px; font-weight:700; letter-spacing:.02em; }
+        .jstr-badge-basic { background:#dbeafe; color:#1d4ed8; text-transform:uppercase; }
+        .jstr-badge-gross { background:#d1fae5; color:#065f46; text-transform:uppercase; }
+        .jstr-badge-dept  { background:#dbeafe; color:#1e40af; }
+        .dark .jstr-badge-basic { background:rgba(37,99,235,.2); color:#93c5fd; }
+        .dark .jstr-badge-gross { background:rgba(5,150,105,.2); color:#6ee7b7; }
+        .jstr-input { width:100%; border:1px solid #d1d5db; background:#fff; border-radius:10px; padding:10px 12px; font-size:14px; outline:none; }
+        .dark .jstr-input { border-color:#374151; background:#0f172a; color:#e5e7eb; }
+        .jstr-input:focus { border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,.15); }
+        .jstr-primary { background:#2463eb; color:#fff; padding:10px 16px; border-radius:12px; font-weight:600; font-size:14px; }
+        .jstr-secondary { background:#f1f5f9; color:#0f172a; padding:10px 16px; border-radius:12px; font-weight:600; font-size:14px; border:1px solid #e5e7eb; }
+        .dark .jstr-secondary { background:#1e293b; color:#e5e7eb; border-color:#334155; }
+        .jstr-sheet-backdrop { position:fixed; inset:0; background:rgba(15,23,42,.5); z-index:60; }
+        .jstr-sheet { position:fixed; left:0; right:0; bottom:0; background:#fff; border-radius:20px 20px 0 0; z-index:70; max-height:92vh; display:flex; flex-direction:column; }
+        .dark .jstr-sheet { background:#0f172a; }
+        .jstr-sheet-head { padding:14px 18px; border-bottom:1px solid #e5e7eb; display:flex; justify-content:space-between; align-items:center; }
+        .dark .jstr-sheet-head { border-bottom-color:#334155; }
+        .jstr-sheet-body { padding:16px 18px; overflow-y:auto; flex:1; }
+        .jstr-sheet-foot { padding:12px 18px; border-top:1px solid #e5e7eb; display:flex; gap:8px; justify-content:flex-end; }
+        .dark .jstr-sheet-foot { border-top-color:#334155; }
+        .jstr-field-label { font-size:11px; font-weight:600; color:#475569; text-transform:uppercase; letter-spacing:.03em; margin-bottom:4px; display:block; }
+        .dark .jstr-field-label { color:#94a3b8; }
+        .jstr-step-row { background:#f9fafb; border:1px solid #e5e7eb; border-radius:12px; padding:10px; margin-bottom:8px; }
+        .dark .jstr-step-row { background:#111827; border-color:#374151; }
+        .jstr-toast { position:fixed; left:50%; transform:translateX(-50%); bottom:100px; z-index:100; background:#111827; color:#fff; padding:10px 16px; border-radius:12px; font-size:13px; font-weight:600; box-shadow:0 8px 20px -4px rgba(0,0,0,.4); }
+        .jstr-empty { padding:32px 16px; text-align:center; color:#94a3b8; }
+        .jstr-grade-avatar { width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:14px; flex-shrink:0; }
+        .jstr-gc-1 { background:#3b82f6; } .jstr-gc-2 { background:#10b981; } .jstr-gc-3 { background:#8b5cf6; }
+        .jstr-gc-4 { background:#f59e0b; } .jstr-gc-5 { background:#ef4444; } .jstr-gc-6 { background:#06b6d4; } .jstr-gc-7 { background:#ec4899; }
+        .jstr-salary-toggle { display:inline-flex; border:1px solid #d1d5db; border-radius:8px; overflow:hidden; flex-shrink:0; }
+        .dark .jstr-salary-toggle { border-color:#4b5563; }
+        .jstr-salary-toggle input[type="radio"] { display:none; }
+        .jstr-salary-toggle label { padding:6px 10px; font-size:11px; font-weight:600; cursor:pointer; color:#6b7280; user-select:none; }
+        .jstr-salary-toggle input[value="BASIC"]:checked + label { background:#2563eb; color:#fff; }
+        .jstr-salary-toggle input[value="GROSS"]:checked + label { background:#059669; color:#fff; }
+        .jstr-grade-card { border:1px solid #e5e7eb; border-radius:14px; padding:12px; background:#fff; }
+        .dark .jstr-grade-card { background:#1f2937; border-color:#374151; }
+        .jstr-progress { height:4px; background:linear-gradient(90deg,#3b82f6,#10b981,#8b5cf6,#f59e0b); border-radius:2px; margin:8px 0; }
+        .jstr-fab { position:fixed; right:16px; bottom:88px; z-index:40; width:56px; height:56px; border-radius:50%; background:#2463eb; color:#fff; display:flex; align-items:center; justify-content:center; box-shadow:0 10px 25px -8px rgba(37,99,235,.5); }
+    </style>
+</head>
+<body>
+<main layout:fragment="content" class="px-4 pb-24 pt-2 space-y-4">
+
+    <!-- Header -->
+    <div class="flex items-start justify-between">
+        <div>
+            <h2 class="text-xl font-bold">Job Structure</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Grades, steps and salary levels</p>
+        </div>
+        <button type="button" onclick="jstrOpenAdd()" class="flex size-9 items-center justify-center rounded-full bg-primary text-white shadow-sm">
+            <span class="material-symbols-outlined text-lg">add</span>
+        </button>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-3 gap-2">
+        <div class="jstr-card jstr-stat">
+            <div class="jstr-stat-icon bg-blue-100 mb-2">
+                <span class="material-symbols-outlined text-blue-600 text-lg">layers</span>
+            </div>
+            <p class="text-2xl font-bold leading-tight" th:text="${#lists.size(grades)}">0</p>
+            <p class="text-[10px] text-slate-500 uppercase tracking-wide font-semibold">Grades</p>
+        </div>
+        <div class="jstr-card jstr-stat">
+            <div class="jstr-stat-icon bg-green-100 mb-2">
+                <span class="material-symbols-outlined text-green-600 text-lg">stairs</span>
+            </div>
+            <p class="text-2xl font-bold leading-tight" th:text="${totalSteps}">0</p>
+            <p class="text-[10px] text-slate-500 uppercase tracking-wide font-semibold">Steps</p>
+        </div>
+        <div class="jstr-card jstr-stat">
+            <div class="jstr-stat-icon bg-orange-100 mb-2">
+                <span class="material-symbols-outlined text-orange-600 text-lg">people</span>
+            </div>
+            <p class="text-2xl font-bold leading-tight" th:text="${employees}">0</p>
+            <p class="text-[10px] text-slate-500 uppercase tracking-wide font-semibold">Employees</p>
+        </div>
+    </div>
+
+    <!-- Search -->
+    <div class="jstr-card p-3">
+        <input id="jstrSearch" placeholder="Search grade or department" class="jstr-input" oninput="jstrRenderGrades()">
+    </div>
+
+    <!-- Section title + add button -->
+    <div class="flex items-center justify-between px-1">
+        <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary text-base">layers</span>
+            <h3 class="text-sm font-bold">Job Grades (with steps)</h3>
+        </div>
+        <button type="button" onclick="jstrOpenAdd()" class="text-xs text-primary font-semibold flex items-center gap-1">
+            <span class="material-symbols-outlined text-sm">add_circle</span> Add
+        </button>
+    </div>
+
+    <!-- Grades list (cards) -->
+    <div id="jstrGradesList" class="space-y-3">
+        <div th:each="grade, iterStat : ${grades}"
+             class="jstr-grade-card jstr-grade-card-item"
+             th:attr="data-grade-id=${grade.id},
+                      data-grade-name=${grade.name ?: ''},
+                      data-grade-dept=${grade.departmentName ?: ''},
+                      data-grade-desc=${grade.name != null ? grade.name + ' positions' : ''},
+                      data-color-idx=${iterStat.index + 1 <= 7 ? iterStat.index + 1 : 1},
+                      data-steps=${grade.steps != null ?
+                        '[' + #strings.listJoin(
+                          grade.steps.!['{&quot;id&quot;:' + id
+                                      + ',&quot;name&quot;:&quot;' + name + '&quot;'
+                                      + ',&quot;basicSalary&quot;:' + (basicSalary != null ? basicSalary : 'null')
+                                      + ',&quot;grossSalary&quot;:' + (grossSalary != null ? grossSalary : 'null') + '}'],
+                        ',') + ']'
+                        : '[]'}">
+            <div class="flex items-start justify-between gap-2">
+                <div class="flex items-center gap-3 min-w-0 flex-1">
+                    <div th:text="${grade.id}"
+                         th:classappend="'jstr-gc-' + ${iterStat.index + 1 <= 7 ? iterStat.index + 1 : 1}"
+                         class="jstr-grade-avatar">1</div>
+                    <div class="min-w-0 flex-1">
+                        <p th:text="${grade.name}" class="text-sm font-bold truncate">Entry Level</p>
+                        <p th:text="${grade.departmentName}" class="text-[11px] text-slate-500 truncate">General</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-1 flex-shrink-0">
+                    <button type="button" th:attr="data-grade-id=${grade.id}" onclick="jstrOpenEdit(this.dataset.gradeId)"
+                            class="p-1.5 text-slate-400 hover:text-primary">
+                        <span class="material-symbols-outlined text-base">edit</span>
+                    </button>
+                </div>
+            </div>
+            <p th:text="${grade.name + ' positions'}" class="text-[11px] text-slate-500 mt-2">Positions</p>
+            <div class="flex items-center justify-between mt-2">
+                <span th:text="${(grade.steps != null ? grade.steps.size() : 0) + ' steps'}"
+                      class="text-[11px] font-semibold text-slate-600 dark:text-slate-300">0 steps</span>
+                <span class="jstr-salary-types flex items-center gap-1"></span>
+            </div>
+            <button type="button" onclick="jstrToggleDetails(this)"
+                    class="mt-3 w-full text-xs font-semibold text-primary flex items-center justify-center gap-1 py-2 border-t border-slate-100 dark:border-slate-700">
+                <span class="jstr-details-label">View details</span>
+                <span class="material-symbols-outlined text-sm jstr-details-caret">expand_more</span>
+            </button>
+            <div class="jstr-details-panel hidden pt-2"></div>
+        </div>
+    </div>
+
+    <div id="jstrGradesEmpty" class="jstr-empty hidden">
+        <span class="material-symbols-outlined text-3xl">layers</span>
+        <p class="mt-2 text-sm">No grades found.</p>
+    </div>
+
+    <!-- FAB -->
+    <button type="button" onclick="jstrOpenAdd()" class="jstr-fab" aria-label="Add grade">
+        <span class="material-symbols-outlined">add</span>
+    </button>
+
+    <!-- ADD sheet -->
+    <div id="jstrAddBackdrop" class="jstr-sheet-backdrop hidden" onclick="jstrCloseAdd()"></div>
+    <div id="jstrAddSheet" class="jstr-sheet hidden">
+        <div class="jstr-sheet-head">
+            <div>
+                <p class="text-base font-bold">Create Grade with Steps</p>
+                <p class="text-[11px] text-slate-500">Define grade, department and salary steps</p>
+            </div>
+            <button type="button" onclick="jstrCloseAdd()"><span class="material-symbols-outlined text-slate-500">close</span></button>
+        </div>
+        <form id="jstrAddForm" th:action="@{/addJobGroup}" method="post" class="contents">
+            <div class="jstr-sheet-body space-y-4">
+                <div>
+                    <label class="jstr-field-label">Grade Name *</label>
+                    <input type="text" required name="gradeName" placeholder="e.g. Senior Analyst" class="jstr-input">
+                </div>
+                <div>
+                    <label class="jstr-field-label">Department *</label>
+                    <select required name="departmentId" class="jstr-input">
+                        <option value="">Select department</option>
+                        <option th:each="d : ${departments}" th:value="${d.id}" th:text="${d.name}">Engineering</option>
+                    </select>
+                </div>
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="jstr-field-label mb-0">Steps * <span class="normal-case text-slate-400">(at least one)</span></label>
+                        <div class="flex items-center gap-2 text-[10px] text-slate-500">
+                            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-blue-500"></span>Basic</span>
+                            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span>Gross</span>
+                        </div>
+                    </div>
+                    <div id="jstrAddSteps"></div>
+                    <button type="button" onclick="jstrAddStepRow()"
+                            class="mt-2 w-full flex items-center justify-center gap-1 px-3 py-2 text-xs text-primary border border-dashed border-primary/40 rounded-lg">
+                        <span class="material-symbols-outlined text-sm">add_circle</span> Add another step
+                    </button>
+                </div>
+                <div id="jstrAddError" class="hidden text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2"></div>
+            </div>
+            <div class="jstr-sheet-foot">
+                <button type="button" onclick="jstrCloseAdd()" class="jstr-secondary">Cancel</button>
+                <button type="submit" id="jstrAddSubmitBtn" class="jstr-primary">Create</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- EDIT sheet -->
+    <div id="jstrEditBackdrop" class="jstr-sheet-backdrop hidden" onclick="jstrCloseEdit()"></div>
+    <div id="jstrEditSheet" class="jstr-sheet hidden">
+        <div class="jstr-sheet-head">
+            <div>
+                <p class="text-base font-bold">Edit Job Grade</p>
+                <p class="text-[11px] text-slate-500">Update grade name, department and steps</p>
+            </div>
+            <button type="button" onclick="jstrCloseEdit()"><span class="material-symbols-outlined text-slate-500">close</span></button>
+        </div>
+        <form id="jstrEditForm" th:action="@{/updateJobGroup}" method="post" class="contents">
+            <input type="hidden" name="id" id="jstrEditGradeId">
+            <div class="jstr-sheet-body space-y-4">
+                <div>
+                    <label class="jstr-field-label">Grade Name *</label>
+                    <input type="text" required id="jstrEditGradeName" name="gradeName" class="jstr-input">
+                </div>
+                <div>
+                    <label class="jstr-field-label">Department *</label>
+                    <select id="jstrEditGradeDept" name="departmentId" class="jstr-input">
+                        <option value="">Select department</option>
+                        <option th:each="d : ${departments}" th:value="${d.id}" th:text="${d.name}">Engineering</option>
+                    </select>
+                </div>
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="jstr-field-label mb-0">Steps * <span class="normal-case text-slate-400">(at least one)</span></label>
+                        <div class="flex items-center gap-2 text-[10px] text-slate-500">
+                            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-blue-500"></span>Basic</span>
+                            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span>Gross</span>
+                        </div>
+                    </div>
+                    <div id="jstrEditSteps"></div>
+                    <button type="button" onclick="jstrAddEditStepRow(null)"
+                            class="mt-2 w-full flex items-center justify-center gap-1 px-3 py-2 text-xs text-primary border border-dashed border-primary/40 rounded-lg">
+                        <span class="material-symbols-outlined text-sm">add_circle</span> Add another step
+                    </button>
+                </div>
+                <div id="jstrEditError" class="hidden text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2"></div>
+            </div>
+            <div class="jstr-sheet-foot">
+                <button type="button" onclick="jstrCloseEdit()" class="jstr-secondary">Cancel</button>
+                <button type="submit" id="jstrEditSubmitBtn" class="jstr-primary">Update</button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        // ─────────────────────────────────────────────────────────────
+        // Helpers
+        // ─────────────────────────────────────────────────────────────
+        function jstrEscape(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+        function jstrFmt(n) { return Number(n).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 5 }); }
+        function jstrShowToast(msg) {
+            const el = document.createElement('div');
+            el.className = 'jstr-toast';
+            el.textContent = msg;
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 2200);
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // ADD sheet step rows
+        // ─────────────────────────────────────────────────────────────
+        function jstrAddStepRow() {
+            const container = document.getElementById('jstrAddSteps');
+            const idx = container.children.length;
+            const basicId = `jstr_add_${idx}_BASIC`;
+            const grossId = `jstr_add_${idx}_GROSS`;
+            const annualId = `jstr_add_annual_${idx}`;
+            const row = document.createElement('div');
+            row.className = 'jstr-step-row';
+            row.innerHTML = `
+                <div class="flex flex-col gap-2">
+                    <input type="text" required name="steps[${idx}].stepName" placeholder="Step name (e.g. Step 1)" class="jstr-input">
+                    <div class="relative">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium pointer-events-none">₦</span>
+                        <input type="number" required name="steps[${idx}].basicSalary" placeholder="0.00000" min="0" step="0.00001"
+                               class="jstr-input pl-7">
+                    </div>
+                    <div class="flex items-center justify-between gap-2">
+                        <div class="jstr-salary-toggle">
+                            <input type="radio" id="${basicId}" name="jstrAddSalaryGroup_${idx}" value="BASIC" checked onchange="jstrUpdateAddSalaryName(this)">
+                            <label for="${basicId}" data-val="BASIC">Basic</label>
+                            <input type="radio" id="${grossId}" name="jstrAddSalaryGroup_${idx}" value="GROSS" onchange="jstrUpdateAddSalaryName(this)">
+                            <label for="${grossId}" data-val="GROSS">Gross</label>
+                        </div>
+                        <button type="button" onclick="jstrRemoveAddStep(this)"
+                                class="p-1.5 text-slate-400 hover:text-red-500 rounded-lg">
+                            <span class="material-symbols-outlined text-base">delete</span>
+                        </button>
+                    </div>
+                    <label class="flex items-center gap-2 bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 rounded-lg px-3 py-2">
+                        <input type="checkbox" id="${annualId}" name="steps[${idx}].annual" class="rounded border-blue-300 text-blue-500">
+                        <span class="text-[11px] text-blue-700 dark:text-blue-400">Tick if Salary Figure is <strong>Annual</strong></span>
+                    </label>
+                </div>`;
+            container.appendChild(row);
+        }
+
+        function jstrRemoveAddStep(btn) {
+            const container = document.getElementById('jstrAddSteps');
+            if (container.children.length <= 1) { alert('At least one step is required.'); return; }
+            btn.closest('.jstr-step-row').remove();
+            jstrRefreshAddIndices();
+        }
+
+        function jstrRefreshAddIndices() {
+            document.querySelectorAll('#jstrAddSteps .jstr-step-row').forEach((row, i) => {
+                const nameInput = row.querySelector('input[type="text"]');
+                const salaryInput = row.querySelector('input[type="number"]');
+                const radios = row.querySelectorAll('input[type="radio"]');
+                const annual = row.querySelector('input[type="checkbox"]');
+                if (nameInput) nameInput.name = `steps[${i}].stepName`;
+                if (annual)    annual.name    = `steps[${i}].annual`;
+                const checked = row.querySelector('input[type="radio"]:checked');
+                const type = checked ? checked.value : 'BASIC';
+                if (salaryInput) salaryInput.name = type === 'GROSS' ? `steps[${i}].grossSalary` : `steps[${i}].basicSalary`;
+                radios.forEach(r => {
+                    r.name = `jstrAddSalaryGroup_${i}`;
+                    r.id = `jstr_add_${i}_${r.value}`;
+                    const lbl = row.querySelector(`label[data-val="${r.value}"]`);
+                    if (lbl) lbl.setAttribute('for', r.id);
+                });
+                if (annual) {
+                    annual.id = `jstr_add_annual_${i}`;
+                    const annualLbl = row.querySelector(`label[for^="jstr_add_annual_"]`);
+                    if (annualLbl) annualLbl.setAttribute('for', `jstr_add_annual_${i}`);
+                }
+            });
+        }
+
+        function jstrUpdateAddSalaryName(radio) {
+            const row = radio.closest('.jstr-step-row');
+            const salaryInput = row.querySelector('input[type="number"]');
+            if (!salaryInput) return;
+            const m = salaryInput.name.match(/steps\[(\d+)\]/);
+            const idx = m ? m[1] : '0';
+            salaryInput.name = radio.value === 'GROSS' ? `steps[${idx}].grossSalary` : `steps[${idx}].basicSalary`;
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // EDIT sheet step rows
+        // ─────────────────────────────────────────────────────────────
+        function jstrAddEditStepRow(step) {
+            const container = document.getElementById('jstrEditSteps');
+            const idx = container.children.length;
+            const isGross = step && step.grossSalary != null && Number(step.grossSalary) > 0;
+            const amount = isGross ? (step.grossSalary || '') : (step ? (step.basicSalary || '') : '');
+            const stepName = step ? (step.name || '') : '';
+            const stepId = step ? (step.id || '') : '';
+            const basicId = `jstr_edit_${idx}_BASIC`;
+            const grossId = `jstr_edit_${idx}_GROSS`;
+            const annualId = `jstr_edit_annual_${idx}`;
+            const salaryField = isGross ? `steps[${idx}].grossSalary` : `steps[${idx}].basicSalary`;
+
+            const row = document.createElement('div');
+            row.className = 'jstr-step-row';
+            row.innerHTML = `
+                <input type="hidden" name="steps[${idx}].id" value="${jstrEscape(stepId)}">
+                <div class="flex flex-col gap-2">
+                    <input type="text" required name="steps[${idx}].stepName" value="${jstrEscape(stepName)}" placeholder="Step name (e.g. Step 1)" class="jstr-input">
+                    <div class="relative">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium pointer-events-none">₦</span>
+                        <input type="number" required name="${salaryField}" value="${jstrEscape(amount)}" placeholder="0.00000" min="0" step="0.00001"
+                               class="jstr-input pl-7">
+                    </div>
+                    <div class="flex items-center justify-between gap-2">
+                        <div class="jstr-salary-toggle">
+                            <input type="radio" id="${basicId}" name="jstrEditSalaryGroup_${idx}" value="BASIC" ${!isGross ? 'checked' : ''} onchange="jstrUpdateEditSalaryName(this)">
+                            <label for="${basicId}" data-val="BASIC">Basic</label>
+                            <input type="radio" id="${grossId}" name="jstrEditSalaryGroup_${idx}" value="GROSS" ${isGross ? 'checked' : ''} onchange="jstrUpdateEditSalaryName(this)">
+                            <label for="${grossId}" data-val="GROSS">Gross</label>
+                        </div>
+                        <button type="button" onclick="jstrRemoveEditStep(this)"
+                                class="p-1.5 text-slate-400 hover:text-red-500 rounded-lg">
+                            <span class="material-symbols-outlined text-base">delete</span>
+                        </button>
+                    </div>
+                    <label class="flex items-center gap-2 bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 rounded-lg px-3 py-2">
+                        <input type="checkbox" id="${annualId}" name="steps[${idx}].annual" class="rounded border-blue-300 text-blue-500">
+                        <span class="text-[11px] text-blue-700 dark:text-blue-400">Tick if Salary Figure is <strong>Annual</strong></span>
+                    </label>
+                </div>`;
+            container.appendChild(row);
+        }
+
+        function jstrRemoveEditStep(btn) {
+            const container = document.getElementById('jstrEditSteps');
+            if (container.children.length <= 1) { alert('At least one step is required.'); return; }
+            btn.closest('.jstr-step-row').remove();
+            jstrRefreshEditIndices();
+        }
+
+        function jstrRefreshEditIndices() {
+            document.querySelectorAll('#jstrEditSteps .jstr-step-row').forEach((row, i) => {
+                const hidden = row.querySelector('input[type="hidden"]');
+                const nameInput = row.querySelector('input[type="text"]');
+                const salaryInput = row.querySelector('input[type="number"]');
+                const radios = row.querySelectorAll('input[type="radio"]');
+                const annual = row.querySelector('input[type="checkbox"]');
+                if (hidden) hidden.name = `steps[${i}].id`;
+                if (nameInput) nameInput.name = `steps[${i}].stepName`;
+                if (annual) annual.name = `steps[${i}].annual`;
+                const checked = row.querySelector('input[type="radio"]:checked');
+                const type = checked ? checked.value : 'BASIC';
+                if (salaryInput) salaryInput.name = type === 'GROSS' ? `steps[${i}].grossSalary` : `steps[${i}].basicSalary`;
+                radios.forEach(r => {
+                    r.name = `jstrEditSalaryGroup_${i}`;
+                    r.id = `jstr_edit_${i}_${r.value}`;
+                    const lbl = row.querySelector(`label[data-val="${r.value}"]`);
+                    if (lbl) lbl.setAttribute('for', r.id);
+                });
+                if (annual) {
+                    annual.id = `jstr_edit_annual_${i}`;
+                    const annualLbl = row.querySelector(`label[for^="jstr_edit_annual_"]`);
+                    if (annualLbl) annualLbl.setAttribute('for', `jstr_edit_annual_${i}`);
+                }
+            });
+        }
+
+        function jstrUpdateEditSalaryName(radio) {
+            const row = radio.closest('.jstr-step-row');
+            const salaryInput = row.querySelector('input[type="number"]');
+            if (!salaryInput) return;
+            const m = salaryInput.name.match(/steps\[(\d+)\]/);
+            const idx = m ? m[1] : '0';
+            salaryInput.name = radio.value === 'GROSS' ? `steps[${idx}].grossSalary` : `steps[${idx}].basicSalary`;
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // Sheet open/close
+        // ─────────────────────────────────────────────────────────────
+        function jstrOpenAdd() {
+            document.getElementById('jstrAddForm').reset();
+            document.getElementById('jstrAddSteps').innerHTML = '';
+            jstrAddStepRow();
+            document.getElementById('jstrAddError').classList.add('hidden');
+            document.getElementById('jstrAddBackdrop').classList.remove('hidden');
+            document.getElementById('jstrAddSheet').classList.remove('hidden');
+        }
+        function jstrCloseAdd() {
+            document.getElementById('jstrAddBackdrop').classList.add('hidden');
+            document.getElementById('jstrAddSheet').classList.add('hidden');
+        }
+
+        function jstrOpenEdit(id) {
+            const card = document.querySelector(`.jstr-grade-card-item[data-grade-id="${id}"]`);
+            if (!card) return;
+            document.getElementById('jstrEditGradeId').value = id;
+            document.getElementById('jstrEditGradeName').value = card.dataset.gradeName || '';
+            const deptName = (card.dataset.gradeDept || '').trim();
+            const sel = document.getElementById('jstrEditGradeDept');
+            for (const opt of sel.options) {
+                if (opt.text.trim() === deptName) { opt.selected = true; break; }
+            }
+            let steps = [];
+            try { steps = JSON.parse(card.dataset.steps || '[]'); } catch (_) {}
+            document.getElementById('jstrEditSteps').innerHTML = '';
+            if (!steps.length) jstrAddEditStepRow(null);
+            else steps.forEach(s => jstrAddEditStepRow(s));
+            document.getElementById('jstrEditError').classList.add('hidden');
+            document.getElementById('jstrEditBackdrop').classList.remove('hidden');
+            document.getElementById('jstrEditSheet').classList.remove('hidden');
+        }
+        function jstrCloseEdit() {
+            document.getElementById('jstrEditBackdrop').classList.add('hidden');
+            document.getElementById('jstrEditSheet').classList.add('hidden');
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // Grade list rendering (search filter + inline details)
+        // ─────────────────────────────────────────────────────────────
+        function jstrRenderGrades() {
+            const q = (document.getElementById('jstrSearch').value || '').toLowerCase().trim();
+            const cards = document.querySelectorAll('.jstr-grade-card-item');
+            let visible = 0;
+            cards.forEach(c => {
+                const name = (c.dataset.gradeName || '').toLowerCase();
+                const dept = (c.dataset.gradeDept || '').toLowerCase();
+                const show = !q || name.includes(q) || dept.includes(q);
+                c.classList.toggle('hidden', !show);
+                if (show) visible++;
+            });
+            document.getElementById('jstrGradesEmpty').classList.toggle('hidden', visible !== 0);
+        }
+
+        function jstrToggleDetails(btn) {
+            const card = btn.closest('.jstr-grade-card-item');
+            const panel = card.querySelector('.jstr-details-panel');
+            const label = btn.querySelector('.jstr-details-label');
+            const caret = btn.querySelector('.jstr-details-caret');
+            if (panel.classList.contains('hidden')) {
+                jstrRenderDetails(card, panel);
+                panel.classList.remove('hidden');
+                label.textContent = 'Hide details';
+                caret.textContent = 'expand_less';
+            } else {
+                panel.classList.add('hidden');
+                label.textContent = 'View details';
+                caret.textContent = 'expand_more';
+            }
+        }
+
+        function jstrRenderDetails(card, panel) {
+            let steps = [];
+            try { steps = JSON.parse(card.dataset.steps || '[]'); } catch (_) {}
+            const typed = steps.map(s => {
+                const isGross = s.grossSalary != null && Number(s.grossSalary) > 0;
+                const amount = isGross ? Number(s.grossSalary) : Number(s.basicSalary ?? 0);
+                return { ...s, _isGross: isGross, _amount: amount };
+            });
+            const basicSteps = typed.filter(s => !s._isGross);
+            const grossSteps = typed.filter(s => s._isGross);
+            function stats(arr) {
+                if (!arr.length) return null;
+                const vals = arr.map(s => s._amount);
+                return { min: Math.min(...vals), max: Math.max(...vals), avg: vals.reduce((a,v)=>a+v,0)/vals.length };
+            }
+            const bs = stats(basicSteps), gs = stats(grossSteps);
+
+            const stepsHtml = typed.length
+                ? typed.map((s, i) => {
+                    const cls = s._isGross ? 'jstr-badge jstr-badge-gross' : 'jstr-badge jstr-badge-basic';
+                    const label = s._isGross ? 'Gross' : 'Basic';
+                    return `
+                    <div class="flex justify-between items-center py-2 border-b border-slate-100 dark:border-slate-700/60 text-xs last:border-0">
+                      <div class="flex items-center gap-2 min-w-0">
+                        <span class="w-5 h-5 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-[10px] font-bold text-slate-500 flex-shrink-0">${i + 1}</span>
+                        <span class="text-slate-700 dark:text-slate-300 truncate">${jstrEscape(s.name || ('Step ' + (i + 1)))}</span>
+                      </div>
+                      <div class="flex items-center gap-2 flex-shrink-0 ml-2">
+                        <span class="${cls}">${label}</span>
+                        <span class="font-mono font-semibold text-slate-800 dark:text-slate-100">₦${jstrFmt(s._amount)}</span>
+                      </div>
+                    </div>`;
+                }).join('')
+                : '<p class="text-slate-400 italic text-xs py-3 text-center">No steps defined</p>';
+
+            function statBlock(label, cls, dotCls, st) {
+                if (!st) return '';
+                return `
+                    <div class="rounded-xl border border-slate-100 dark:border-slate-700 p-2 mb-2">
+                        <div class="flex items-center gap-1.5 mb-1">
+                            <span class="w-2 h-2 rounded-full ${dotCls}"></span>
+                            <span class="text-[10px] font-semibold uppercase tracking-wide ${cls}">${label}</span>
+                        </div>
+                        <div class="grid grid-cols-3 gap-1">
+                            <div class="text-center"><p class="text-[10px] text-slate-400 mb-0.5">Min</p><p class="text-[11px] font-semibold font-mono">₦${jstrFmt(st.min)}</p></div>
+                            <div class="text-center border-x border-slate-100 dark:border-slate-700"><p class="text-[10px] text-slate-400 mb-0.5">Avg</p><p class="text-[11px] font-semibold font-mono ${cls}">₦${jstrFmt(st.avg)}</p></div>
+                            <div class="text-center"><p class="text-[10px] text-slate-400 mb-0.5">Max</p><p class="text-[11px] font-semibold font-mono">₦${jstrFmt(st.max)}</p></div>
+                        </div>
+                    </div>`;
+            }
+
+            const statsHtml = (bs || gs) ? `
+                <div class="pt-3 border-t border-slate-200 dark:border-slate-700">
+                    <h5 class="text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-2">Salary Summary</h5>
+                    ${statBlock('Basic Salary', 'text-blue-600', 'bg-blue-500', bs)}
+                    ${statBlock('Gross Salary', 'text-emerald-600', 'bg-emerald-500', gs)}
+                    <div class="jstr-progress"></div>
+                </div>` : '';
+
+            panel.innerHTML = `
+                <div class="mt-2">
+                    <div class="flex items-center justify-between mb-2">
+                        <h5 class="text-xs font-bold text-slate-800 dark:text-slate-200">Steps <span class="text-slate-400 font-normal">(${typed.length})</span></h5>
+                        ${typed.length ? `<div class="flex gap-1">${basicSteps.length ? `<span class="jstr-badge jstr-badge-basic">${basicSteps.length} B</span>` : ''}${grossSteps.length ? `<span class="jstr-badge jstr-badge-gross">${grossSteps.length} G</span>` : ''}</div>` : ''}
+                    </div>
+                    <div class="border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1 max-h-56 overflow-y-auto">
+                        ${stepsHtml}
+                    </div>
+                    ${statsHtml}
+                </div>`;
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // Submit guards + init salary-type chips on cards
+        // ─────────────────────────────────────────────────────────────
+        document.addEventListener('DOMContentLoaded', function () {
+            const addForm = document.getElementById('jstrAddForm');
+            const editForm = document.getElementById('jstrEditForm');
+            if (addForm) {
+                addForm.addEventListener('submit', function () {
+                    const btn = document.getElementById('jstrAddSubmitBtn');
+                    if (btn) { btn.disabled = true; btn.textContent = 'Submitting…'; }
+                });
+            }
+            if (editForm) {
+                editForm.addEventListener('submit', function () {
+                    const btn = document.getElementById('jstrEditSubmitBtn');
+                    if (btn) { btn.disabled = true; btn.textContent = 'Submitting…'; }
+                });
+            }
+
+            // Render salary-type chips on each grade card
+            document.querySelectorAll('.jstr-grade-card-item').forEach(card => {
+                let steps = [];
+                try { steps = JSON.parse(card.dataset.steps || '[]'); } catch (_) {}
+                const basic = steps.filter(s => !(s.grossSalary != null && Number(s.grossSalary) > 0)).length;
+                const gross = steps.filter(s => s.grossSalary != null && Number(s.grossSalary) > 0).length;
+                const chips = [];
+                if (basic) chips.push(`<span class="jstr-badge jstr-badge-basic">${basic} Basic</span>`);
+                if (gross) chips.push(`<span class="jstr-badge jstr-badge-gross">${gross} Gross</span>`);
+                const el = card.querySelector('.jstr-salary-types');
+                if (el) el.innerHTML = chips.join(' ');
+            });
+
+            jstrRenderGrades();
+        });
+
+        // expose for inline handlers
+        window.jstrOpenAdd = jstrOpenAdd;
+        window.jstrCloseAdd = jstrCloseAdd;
+        window.jstrOpenEdit = jstrOpenEdit;
+        window.jstrCloseEdit = jstrCloseEdit;
+        window.jstrAddStepRow = jstrAddStepRow;
+        window.jstrRemoveAddStep = jstrRemoveAddStep;
+        window.jstrUpdateAddSalaryName = jstrUpdateAddSalaryName;
+        window.jstrAddEditStepRow = jstrAddEditStepRow;
+        window.jstrRemoveEditStep = jstrRemoveEditStep;
+        window.jstrUpdateEditSalaryName = jstrUpdateEditSalaryName;
+        window.jstrToggleDetails = jstrToggleDetails;
+        window.jstrRenderGrades = jstrRenderGrades;
+    </script>
+</main>
+</body>
+</html>

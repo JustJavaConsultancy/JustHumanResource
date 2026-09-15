@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/mobileEmployeeLayout}">
+<head>
+    <title>Appraisal Summary</title>
+    <style>
+        .ka-card { background:#fff; border-radius:12px; border:1px solid #e5e7eb; padding:14px; margin-bottom:10px; }
+        .ka-stat { background:#fff; border-radius:12px; border:1px solid #e5e7eb; padding:14px; }
+        .ka-badge { padding:2px 8px; border-radius:9999px; font-size:0.7rem; font-weight:500; }
+        .ka-exceeds { background:#dcfce7; color:#166534; }
+        .ka-meets { background:#dbeafe; color:#1e40af; }
+        .ka-needs { background:#fef3c7; color:#92400e; }
+        .ka-unknown { background:#f1f5f9; color:#64748b; }
+        .ka-bar { height:5px; border-radius:99px; background:#f1f5f9; overflow:hidden; }
+        .ka-bar-fill { height:100%; border-radius:99px; background:#1d4ed8; }
+    </style>
+</head>
+<body>
+<section layout:fragment="content">
+
+    <!-- Back nav -->
+    <a th:href="@{/mobile/kpi-report}" class="flex items-center gap-1 text-blue-600 text-sm mb-4">
+        <span class="material-symbols-outlined" style="font-size:16px">arrow_back</span>Back to KPI Dashboard
+    </a>
+
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-2 gap-3 mb-4">
+        <div class="ka-stat">
+            <span class="material-symbols-outlined text-blue-500" style="font-size:18px">assignment</span>
+            <p class="text-2xl font-extrabold mt-1" th:text="${totalAppraisals}">0</p>
+            <p class="text-xs text-gray-500">Total Appraisals</p>
+        </div>
+        <div class="ka-stat">
+            <span class="material-symbols-outlined text-indigo-500" style="font-size:18px">score</span>
+            <p class="text-2xl font-extrabold mt-1" th:text="${#numbers.formatDecimal(avgFinalScore,1,2)}">0.00</p>
+            <p class="text-xs text-gray-500">Avg Final Score</p>
+        </div>
+        <div class="ka-stat">
+            <span class="material-symbols-outlined text-emerald-500" style="font-size:18px">star</span>
+            <p class="text-2xl font-extrabold text-emerald-600 mt-1" th:text="${exceedsExpectations}">0</p>
+            <p class="text-xs text-gray-500">Exceeds Expectations</p>
+        </div>
+        <div class="ka-stat">
+            <span class="material-symbols-outlined text-amber-500" style="font-size:18px">flag</span>
+            <p class="text-2xl font-extrabold text-amber-600 mt-1" th:text="${needsImprovement}">0</p>
+            <p class="text-xs text-gray-500">Needs Improvement</p>
+        </div>
+    </div>
+
+    <!-- Appraisal Cards -->
+    <p class="text-xs font-semibold text-gray-500 uppercase mb-2">Appraisal Results
+        <span class="ml-1 font-normal normal-case" th:text="'(' + ${totalAppraisals} + ' records)'"></span>
+    </p>
+
+    <div th:if="${appraisals == null or #lists.isEmpty(appraisals)}" class="text-center py-12">
+        <span class="material-symbols-outlined text-gray-300" style="font-size:48px">rate_review</span>
+        <p class="text-sm text-gray-500 mt-2">No appraisal records found.</p>
+    </div>
+
+    <div th:each="ap, apStat : ${appraisals}" class="ka-card"
+         th:with="safeName=${ap.employeeName != null ? ap.employeeName : '?'}">
+        <div class="flex items-start justify-between mb-2">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0"
+                     th:classappend="'av-' + ${apStat.index % 5}"
+                     th:style="'background:' + (${apStat.index % 5 == 0} ? '#dbeafe;color:#1d4ed8' : ${apStat.index % 5 == 1} ? '#ede9fe;color:#6d28d9' : ${apStat.index % 5 == 2} ? '#dcfce7;color:#15803d' : ${apStat.index % 5 == 3} ? '#fef3c7;color:#b45309' : '#fce7f3;color:#be185d')"
+                     th:text="${safeName.substring(0,1).toUpperCase()}">A</div>
+                <div>
+                    <p class="font-semibold text-sm" th:text="${ap.employeeName != null ? ap.employeeName : 'Unknown'}">Name</p>
+                    <p class="text-xs text-gray-400" th:text="${ap.employeeId != null ? 'ID: ' + ap.employeeId : ''}"></p>
+                </div>
+            </div>
+            <!-- Outcome badge -->
+            <span th:if="${ap.outcome == null}" class="ka-badge ka-unknown">N/A</span>
+            <span th:if="${ap.outcome != null and #strings.toUpperCase(ap.outcome.toString()) == 'EXCEEDS_EXPECTATIONS'}"
+                  class="ka-badge ka-exceeds">Exceeds</span>
+            <span th:if="${ap.outcome != null and #strings.toUpperCase(ap.outcome.toString()) == 'MEETS_EXPECTATIONS'}"
+                  class="ka-badge ka-meets">Meets</span>
+            <span th:if="${ap.outcome != null and #strings.toUpperCase(ap.outcome.toString()) == 'NEEDS_IMPROVEMENT'}"
+                  class="ka-badge ka-needs">Needs Improvement</span>
+            <span th:if="${ap.outcome != null
+                           and #strings.toUpperCase(ap.outcome.toString()) != 'EXCEEDS_EXPECTATIONS'
+                           and #strings.toUpperCase(ap.outcome.toString()) != 'MEETS_EXPECTATIONS'
+                           and #strings.toUpperCase(ap.outcome.toString()) != 'NEEDS_IMPROVEMENT'}"
+                  class="ka-badge ka-unknown" th:text="${ap.outcome}">OTHER</span>
+        </div>
+        <!-- Cycle -->
+        <span class="inline-block px-2 py-0.5 bg-blue-50 text-blue-700 text-xs font-bold rounded-lg mb-2"
+              th:text="${ap.cycleName != null ? ap.cycleName : 'N/A'}">Cycle</span>
+        <!-- Score row -->
+        <div class="grid grid-cols-3 gap-2 text-xs text-center mb-2">
+            <div class="bg-gray-50 rounded p-2">
+                <p class="text-gray-500">KPI</p>
+                <p class="font-semibold" th:text="${ap.kpiScore != null ? #numbers.formatDecimal(ap.kpiScore,1,2) : '—'}">—</p>
+            </div>
+            <div class="bg-gray-50 rounded p-2">
+                <p class="text-gray-500">Manager</p>
+                <p class="font-semibold" th:text="${ap.managerScore != null ? #numbers.formatDecimal(ap.managerScore,1,2) : '—'}">—</p>
+            </div>
+            <div class="bg-blue-50 rounded p-2">
+                <p class="text-gray-500">Final</p>
+                <p class="font-bold text-blue-900" th:text="${ap.finalScore != null ? #numbers.formatDecimal(ap.finalScore,1,2) : '—'}">—</p>
+            </div>
+        </div>
+        <!-- Score bar -->
+        <div th:if="${ap.finalScore != null}" class="ka-bar">
+            <div class="ka-bar-fill"
+                 th:style="'width:' + ${#numbers.formatDecimal(ap.finalScore.doubleValue() > 100 ? 100 : ap.finalScore.doubleValue(), 1, 0)} + '%'"></div>
+        </div>
+        <!-- Scorecard link -->
+        <a th:if="${ap.employeeId != null}"
+           th:href="@{/kpi-report/employee-scorecard/{id}(id=${ap.employeeId})}"
+           class="flex items-center gap-1 text-xs text-blue-600 mt-2">
+            View Scorecard <span class="material-symbols-outlined" style="font-size:14px">open_in_new</span>
+        </a>
+    </div>
+
+</section>
+</body>
+</html>

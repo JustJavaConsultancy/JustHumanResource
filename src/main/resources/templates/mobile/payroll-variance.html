@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/mobileEmployeeLayout}">
+<head>
+    <title>Payroll Variance Report</title>
+    <style>
+        .pv-stat { background:#fff; border-radius:12px; border:1px solid #e5e7eb; padding:14px; }
+        .pv-card { background:#fff; border-radius:12px; border:1px solid #e5e7eb; padding:14px; margin-bottom:10px; }
+        .pv-detail { display:none; margin-top:10px; }
+        .pv-detail.open { display:block; }
+        .pv-row { display:flex; justify-content:space-between; align-items:center; padding:5px 0; border-bottom:1px solid #f3f4f6; font-size:0.75rem; }
+        .pv-row:last-child { border-bottom:none; }
+        .var-up { color:#16a34a; }
+        .var-down { color:#dc2626; }
+        .var-zero { color:#9ca3af; }
+    </style>
+</head>
+<body>
+<section layout:fragment="content">
+
+    <!-- Header -->
+    <div class="bg-blue-900 rounded-xl p-4 mb-4 text-white">
+        <p class="text-xs text-blue-300 uppercase font-semibold">Payroll Variance Report</p>
+        <p class="text-sm text-blue-200 mt-1"
+           th:text="${#temporals.format(periodStart,'MMM d, yyyy')} + ' – ' + ${#temporals.format(periodEnd,'MMM d, yyyy')}">Period</p>
+        <p class="text-xs text-blue-300 mt-1" th:text="${totalEmployees} + ' employees analysed'">0 analysed</p>
+    </div>
+
+    <!-- Summary Stats -->
+    <div class="grid grid-cols-2 gap-3 mb-4">
+        <div class="pv-stat text-center">
+            <p class="text-xs text-gray-500">Employees</p>
+            <p class="text-xl font-bold text-blue-900" th:text="${totalEmployees}">0</p>
+        </div>
+        <div class="pv-stat text-center">
+            <p class="text-xs text-gray-500">Pay Increases</p>
+            <p class="text-xl font-bold text-green-600" th:text="${totalIncreased}">0</p>
+        </div>
+        <div class="pv-stat text-center">
+            <p class="text-xs text-gray-500">Pay Decreases</p>
+            <p class="text-xl font-bold text-red-600" th:text="${totalDecreased}">0</p>
+        </div>
+        <div class="pv-stat text-center">
+            <p class="text-xs text-gray-500">Amendments</p>
+            <p class="text-xl font-bold text-amber-600" th:text="${amendmentCount}">0</p>
+        </div>
+    </div>
+
+    <!-- Filter -->
+    <div class="pv-card mb-4">
+        <p class="font-semibold text-sm mb-3">Filter</p>
+        <div class="space-y-3">
+            <div>
+                <label class="text-xs font-semibold text-gray-500 uppercase">Period Start</label>
+                <input type="date" id="filterPeriodStart"
+                       th:value="${#temporals.format(periodStart,'yyyy-MM-dd')}"
+                       class="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"/>
+            </div>
+            <div>
+                <label class="text-xs font-semibold text-gray-500 uppercase">Period End</label>
+                <input type="date" id="filterPeriodEnd"
+                       th:value="${#temporals.format(periodEnd,'yyyy-MM-dd')}"
+                       class="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"/>
+            </div>
+            <div>
+                <label class="text-xs font-semibold text-gray-500 uppercase">Department ID (optional)</label>
+                <input type="number" id="filterDepartmentId" placeholder="All"
+                       class="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"/>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="applyFilters()"
+                        class="flex-1 py-2.5 bg-blue-900 text-white text-sm font-bold rounded-xl flex items-center justify-center gap-2">
+                    <span class="material-symbols-outlined" style="font-size:18px">filter_list</span>
+                    Apply Filter
+                </button>
+                <button onclick="exportCsv()"
+                        class="flex-1 py-2.5 bg-gray-100 text-gray-700 text-sm font-semibold rounded-xl flex items-center justify-center gap-2">
+                    <span class="material-symbols-outlined" style="font-size:18px">table_view</span>
+                    Export CSV
+                </button>
+            </div>
+            <div id="filterSpinner" class="hidden flex items-center justify-center gap-2 text-xs text-gray-400">
+                <span class="material-symbols-outlined animate-spin" style="font-size:16px">autorenew</span>
+                Loading…
+            </div>
+        </div>
+    </div>
+
+    <!-- Empty State -->
+    <div th:if="${varianceReport == null or #lists.isEmpty(varianceReport)}"
+         class="text-center py-10">
+        <span class="material-symbols-outlined text-gray-300" style="font-size:48px">compare_arrows</span>
+        <p class="text-sm text-gray-500 mt-2">No variance data found for this period.</p>
+        <p class="text-xs text-gray-400 mt-1">Ensure payroll runs are posted for both periods.</p>
+    </div>
+
+    <!-- Variance Cards -->
+    <div id="varianceList">
+        <div th:each="row, rStat : ${varianceReport}" class="pv-card"
+             th:with="safeName=${row.employeeName != null ? row.employeeName : 'Unknown'}">
+
+            <!-- Employee header -->
+            <div class="flex items-center justify-between mb-2"
+                 onclick="pvToggle('pv-' + [[${rStat.index}]])"
+                 style="cursor:pointer;">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs"
+                         th:text="${safeName.substring(0,1).toUpperCase()}">A</div>
+                    <div>
+                        <p class="font-semibold text-sm" th:text="${safeName}">Name</p>
+                        <p class="text-xs text-gray-400" th:text="${row.employeeNumber != null ? row.employeeNumber : '—'}">EMP-001</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <!-- Variance badge -->
+                    <span th:if="${row.netVariance != null and row.netVariance.compareTo(T(java.math.BigDecimal).ZERO) > 0}"
+                          class="text-xs font-bold var-up flex items-center gap-1">
+                        <span class="material-symbols-outlined" style="font-size:14px">trending_up</span>
+                        +<span th:text="${#numbers.formatDecimal(row.netVariance,1,'COMMA',0,'POINT')}">0</span>
+                    </span>
+                    <span th:if="${row.netVariance != null and row.netVariance.compareTo(T(java.math.BigDecimal).ZERO) < 0}"
+                          class="text-xs font-bold var-down flex items-center gap-1">
+                        <span class="material-symbols-outlined" style="font-size:14px">trending_down</span>
+                        <span th:text="${#numbers.formatDecimal(row.netVariance,1,'COMMA',0,'POINT')}">0</span>
+                    </span>
+                    <span th:if="${row.netVariance == null or row.netVariance.compareTo(T(java.math.BigDecimal).ZERO) == 0}"
+                          class="text-xs var-zero">0.00</span>
+                    <span class="material-symbols-outlined text-gray-400" style="font-size:16px"
+                          th:id="'pv-icon-' + ${rStat.index}">expand_more</span>
+                </div>
+            </div>
+
+            <!-- Summary row -->
+            <div class="grid grid-cols-3 gap-2 text-xs text-center mb-2">
+                <div class="bg-gray-50 rounded p-1.5">
+                    <p class="text-gray-400">Dept</p>
+                    <p class="font-semibold truncate" th:text="${row.department != null ? row.department : '—'}">—</p>
+                </div>
+                <div class="bg-gray-50 rounded p-1.5">
+                    <p class="text-gray-400">Prev Net</p>
+                    <p class="font-semibold"
+                       th:text="${row.newEmployee} ? 'New' : (row.previousNet != null ? '₦' + #numbers.formatDecimal(row.previousNet,1,'COMMA',0,'POINT') : '—')">—</p>
+                </div>
+                <div class="bg-blue-50 rounded p-1.5">
+                    <p class="text-gray-400">Curr Net</p>
+                    <p class="font-semibold text-blue-700"
+                       th:text="${row.currentNet != null ? '₦' + #numbers.formatDecimal(row.currentNet,1,'COMMA',0,'POINT') : '—'}">—</p>
+                </div>
+            </div>
+
+            <!-- Type & reasons -->
+            <div class="flex flex-wrap gap-1 mb-1">
+                <span th:if="${row.amendment}"
+                      class="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">AMENDMENT</span>
+                <span th:if="${!row.amendment}"
+                      class="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700">STANDARD</span>
+                <span th:each="reason : ${row.reasons}"
+                      th:text="${reason}"
+                      class="text-xs font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600"></span>
+            </div>
+
+            <!-- Expandable breakdown -->
+            <div class="pv-detail" th:id="'pv-' + ${rStat.index}">
+                <!-- Amendment reason banner -->
+                <div th:if="${row.amendmentReason != null}"
+                     class="flex items-center gap-1 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs font-semibold text-amber-800 mb-3">
+                    <span class="material-symbols-outlined" style="font-size:14px">info</span>
+                    Amendment: <span th:text="${row.amendmentReason}" class="font-bold ml-1">—</span>
+                </div>
+
+                <p class="text-xs font-bold text-gray-500 uppercase mb-2">Component Breakdown</p>
+                <div th:if="${row.lineVariances == null or #lists.isEmpty(row.lineVariances)}"
+                     class="text-xs text-gray-400 text-center py-2">No line items.</div>
+
+                <div th:each="line : ${row.lineVariances}" class="pv-row">
+                    <div class="flex-1 min-w-0 mr-2">
+                        <p class="font-semibold font-mono text-xs" th:text="${line.componentCode}">CODE</p>
+                        <p class="text-gray-400 truncate" style="font-size:0.7rem;" th:text="${line.description}">Desc</p>
+                    </div>
+                    <div class="text-right flex-shrink-0">
+                        <p class="font-bold text-xs"
+                           th:classappend="${line.variance != null and line.variance.compareTo(T(java.math.BigDecimal).ZERO) > 0} ? 'var-up' : (${line.variance != null and line.variance.compareTo(T(java.math.BigDecimal).ZERO) < 0} ? 'var-down' : 'var-zero')"
+                           th:text="${line.variance != null ? #numbers.formatDecimal(line.variance,1,'COMMA',0,'POINT') : '—'}">—</p>
+                        <span th:if="${line.changeType == 'ADDED'}"
+                              class="text-xs font-bold px-1.5 py-0.5 rounded-full bg-green-100 text-green-700">ADDED</span>
+                        <span th:if="${line.changeType == 'REMOVED'}"
+                              class="text-xs font-bold px-1.5 py-0.5 rounded-full bg-red-100 text-red-700">REMOVED</span>
+                        <span th:if="${line.changeType == 'CHANGED'}"
+                              class="text-xs font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700">CHANGED</span>
+                        <span th:if="${line.changeType == 'UNCHANGED'}"
+                              class="text-xs px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500">UNCHANGED</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Insight Cards -->
+    <div th:if="${varianceReport != null and !#lists.isEmpty(varianceReport)}" class="space-y-3 mb-4">
+        <div class="pv-card">
+            <p class="text-xs font-bold text-gray-500 uppercase mb-1">Net Variance Total</p>
+            <p class="text-2xl font-extrabold"
+               th:classappend="${totalNetVariance != null and totalNetVariance.compareTo(T(java.math.BigDecimal).ZERO) >= 0} ? 'var-up' : 'var-down'"
+               th:text="${(totalNetVariance != null and totalNetVariance.compareTo(T(java.math.BigDecimal).ZERO) >= 0) ? '+' : ''} + ${#numbers.formatDecimal(totalNetVariance != null ? totalNetVariance : 0,1,'COMMA',0,'POINT')}">₦0</p>
+            <p class="text-xs text-gray-400 mt-1" th:text="'Across ' + ${totalEmployees} + ' employees'">0 employees</p>
+        </div>
+        <div class="pv-card">
+            <p class="text-xs font-bold text-gray-500 uppercase mb-1">Highest Variance</p>
+            <div th:if="${highestVariance != null}">
+                <p class="text-xl font-extrabold text-blue-900"
+                   th:text="'₦' + ${#numbers.formatDecimal(highestVariance.netVariance.abs(),1,'COMMA',0,'POINT')}">₦0</p>
+                <p class="text-xs text-gray-500 mt-1" th:text="${highestVariance.employeeName}">—</p>
+            </div>
+            <p th:if="${highestVariance == null}" class="text-xl font-extrabold text-gray-400">—</p>
+        </div>
+        <div class="rounded-xl bg-blue-900 p-4 text-white">
+            <p class="text-xs text-blue-200 uppercase font-bold mb-1">Change Reasons Detected</p>
+            <div class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-white" style="font-size:28px">category</span>
+                <span class="text-2xl font-extrabold" th:text="${distinctReasonCount}">0</span>
+            </div>
+            <p class="text-blue-200 text-xs mt-2"
+               th:text="'Distinct reasons across ' + ${totalEmployees} + ' employees'">0 employees</p>
+        </div>
+    </div>
+
+    <script th:inline="javascript">
+        function pvToggle(id) {
+            const detail = document.getElementById(id);
+            const idx = id.replace('pv-', '');
+            const icon = document.getElementById('pv-icon-' + idx);
+            if (!detail) return;
+            const open = detail.classList.toggle('open');
+            if (icon) icon.textContent = open ? 'expand_less' : 'expand_more';
+        }
+
+        async function applyFilters() {
+            const periodStart  = document.getElementById('filterPeriodStart').value;
+            const periodEnd    = document.getElementById('filterPeriodEnd').value;
+            const departmentId = document.getElementById('filterDepartmentId').value;
+            const spinner      = document.getElementById('filterSpinner');
+
+            if (!periodStart || !periodEnd) { alert('Please select both dates.'); return; }
+            if (periodEnd < periodStart) { alert('End must not be before start.'); return; }
+
+            spinner.classList.remove('hidden');
+            try {
+                const params = new URLSearchParams({ companyId: 1, periodStart, periodEnd });
+                if (departmentId) params.append('departmentId', departmentId);
+                const res  = await fetch(`/api/payroll/reports/variance?${params}`);
+                if (!res.ok) throw new Error('Server error ' + res.status);
+                const data = await res.json();
+                renderCards(data);
+            } catch (err) {
+                alert('Failed to load data: ' + err.message);
+            } finally {
+                spinner.classList.add('hidden');
+            }
+        }
+
+        function fmt(v) {
+            if (v == null) return '—';
+            return '₦' + Number(v).toLocaleString('en-NG', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+        }
+
+        function renderCards(data) {
+            const list = document.getElementById('varianceList');
+            if (!data || data.length === 0) {
+                list.innerHTML = '<div class="text-center py-8"><p class="text-sm text-gray-400">No variance data for the selected period.</p></div>';
+                return;
+            }
+            list.innerHTML = data.map((row, i) => {
+                const name = row.employeeName || 'Unknown';
+                const initials = name.substring(0, 1).toUpperCase();
+                const v = Number(row.netVariance) || 0;
+                const varHtml = v > 0
+                    ? `<span class="text-xs font-bold var-up flex items-center gap-1"><span class="material-symbols-outlined" style="font-size:14px">trending_up</span>+${fmt(v).replace('₦','')}</span>`
+                    : v < 0
+                        ? `<span class="text-xs font-bold var-down flex items-center gap-1"><span class="material-symbols-outlined" style="font-size:14px">trending_down</span>${fmt(v).replace('₦','')}</span>`
+                        : `<span class="text-xs var-zero">0.00</span>`;
+                const reasonPills = (row.reasons || []).map(r =>
+                    `<span class="text-xs font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">${r}</span>`
+                ).join('');
+                const typeBadge = row.amendment
+                    ? `<span class="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">AMENDMENT</span>`
+                    : `<span class="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700">STANDARD</span>`;
+                const lineRows = (row.lineVariances || []).map(l => {
+                    const lv = Number(l.variance) || 0;
+                    const lvCls = lv > 0 ? 'var-up' : lv < 0 ? 'var-down' : 'var-zero';
+                    const lvTxt = lv > 0 ? '+' + fmt(lv).replace('₦','') : fmt(lv).replace('₦','');
+                    return `<div class="pv-row"><div class="flex-1 mr-2"><p class="font-semibold font-mono text-xs">${l.componentCode||''}</p><p class="text-gray-400" style="font-size:0.7rem">${l.description||''}</p></div><p class="font-bold text-xs ${lvCls}">${lvTxt}</p></div>`;
+                }).join('') || '<p class="text-xs text-gray-400 text-center py-2">No line items.</p>';
+
+                return `<div class="pv-card">
+                    <div class="flex items-center justify-between mb-2" onclick="pvToggle('pvd-${i}')" style="cursor:pointer">
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs">${initials}</div>
+                            <div><p class="font-semibold text-sm">${name}</p><p class="text-xs text-gray-400">${row.employeeNumber||'—'}</p></div>
+                        </div>
+                        <div class="flex items-center gap-2">${varHtml}<span class="material-symbols-outlined text-gray-400" style="font-size:16px" id="pvd-icon-${i}">expand_more</span></div>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 text-xs text-center mb-2">
+                        <div class="bg-gray-50 rounded p-1.5"><p class="text-gray-400">Dept</p><p class="font-semibold truncate">${row.department||'—'}</p></div>
+                        <div class="bg-gray-50 rounded p-1.5"><p class="text-gray-400">Prev Net</p><p class="font-semibold">${row.newEmployee ? 'New' : fmt(row.previousNet)}</p></div>
+                        <div class="bg-blue-50 rounded p-1.5"><p class="text-gray-400">Curr Net</p><p class="font-semibold text-blue-700">${fmt(row.currentNet)}</p></div>
+                    </div>
+                    <div class="flex flex-wrap gap-1 mb-1">${typeBadge}${reasonPills}</div>
+                    <div class="pv-detail" id="pvd-${i}">
+                        <p class="text-xs font-bold text-gray-500 uppercase mb-2">Component Breakdown</p>
+                        ${lineRows}
+                    </div>
+                </div>`;
+            }).join('');
+
+            // wire up dynamic toggle
+            data.forEach((_, i) => {
+                const detail = document.getElementById('pvd-' + i);
+                const icon   = document.getElementById('pvd-icon-' + i);
+                if (!detail) return;
+                detail.parentElement.querySelector('[onclick]').setAttribute('onclick', `pvToggleById('pvd-${i}','pvd-icon-${i}')`);
+            });
+        }
+
+        function pvToggleById(detailId, iconId) {
+            const detail = document.getElementById(detailId);
+            const icon   = document.getElementById(iconId);
+            if (!detail) return;
+            const open = detail.classList.toggle('open');
+            if (icon) icon.textContent = open ? 'expand_less' : 'expand_more';
+        }
+
+        function exportCsv() {
+            const cards = document.querySelectorAll('#varianceList .pv-card');
+            if (cards.length === 0) { alert('No data to export.'); return; }
+            const lines = [['Employee','EMP No','Dept','Prev Net','Curr Net','Variance','Type'].join(',')];
+            cards.forEach(card => {
+                const cells = card.querySelectorAll('.grid > div > p:last-child');
+                const name  = card.querySelector('.font-semibold.text-sm')?.textContent?.trim() || '';
+                const emp   = card.querySelector('.text-gray-400')?.textContent?.trim() || '';
+                const dept  = cells[0]?.textContent?.trim() || '';
+                const prev  = cells[1]?.textContent?.trim() || '';
+                const curr  = cells[2]?.textContent?.trim() || '';
+                const varEl = card.querySelector('.var-up,.var-down,.var-zero');
+                const varV  = varEl?.textContent?.trim() || '';
+                const type  = card.querySelector('.bg-amber-100,.bg-blue-50')?.textContent?.trim() || '';
+                lines.push([name,emp,dept,prev,curr,varV,type].map(v => '"' + v.replace(/"/g,'""') + '"').join(','));
+            });
+            const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+            const url  = URL.createObjectURL(blob);
+            const a    = document.createElement('a');
+            a.href = url; a.download = 'payroll-variance.csv'; a.click();
+            URL.revokeObjectURL(url);
+        }
+    </script>
+
+</section>
+</body>
+</html>

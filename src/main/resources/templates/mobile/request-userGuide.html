@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/mobileEmployeeLayout}">
+<head>
+    <meta charset="UTF-8">
+    <title>Request Workflow Guide</title>
+    <style>
+        .rg-card { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 14px; box-shadow: 0 1px 2px rgba(15,23,42,.04); }
+        .dark .rg-card { background: #1e293b; border-color: #334155; }
+        .rg-head { padding: .75rem 1rem; display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; }
+        .rg-head h3 { font-size: .95rem; font-weight: 700; }
+        .rg-head .rg-chev { transition: transform .2s ease; }
+        .rg-card.open .rg-chev { transform: rotate(180deg); }
+        .rg-body { padding: 0 1rem 1rem; font-size: .82rem; line-height: 1.55; color: #475569; display: none; }
+        .dark .rg-body { color: #cbd5e1; }
+        .rg-card.open .rg-body { display: block; }
+        .rg-pill { display: inline-flex; align-items: center; border-radius: 999px; padding: .18rem .55rem; font-size: .68rem; font-weight: 700; }
+        .rg-pill.blue { background: #dbeafe; color: #1e40af; }
+        .rg-pill.green { background: #dcfce7; color: #166534; }
+        .rg-pill.yellow { background: #fef3c7; color: #92400e; }
+        .rg-pill.red { background: #fee2e2; color: #991b1b; }
+        .rg-pill.gray { background: #f1f5f9; color: #334155; }
+        .rg-code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; background: #f1f5f9; border-radius: 6px; padding: .05rem .35rem; font-size: .72rem; }
+        .dark .rg-code { background: #334155; color: #e2e8f0; }
+        .rg-step { display: inline-flex; align-items: center; justify-content: center; width: 1.5rem; height: 1.5rem; border-radius: 999px; background: #2463eb; color: #fff; font-weight: 700; font-size: .72rem; flex: none; }
+        .rg-hero { border-radius: 16px; padding: 1.1rem 1rem; color: #fff; background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 60%, #3b82f6 100%); }
+        .rg-hero h1 { font-size: 1.15rem; font-weight: 800; }
+        .rg-hero p { font-size: .78rem; color: #dbeafe; margin-top: .3rem; }
+        .rg-hero .rg-actions { display: flex; gap: .5rem; margin-top: .75rem; flex-wrap: wrap; }
+        .rg-hero a.rg-btn { background: #fff; color: #1d4ed8; font-weight: 700; font-size: .75rem; padding: .45rem .8rem; border-radius: 999px; }
+        .rg-hero a.rg-btn.outline { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.6); }
+        .rg-list { list-style: disc; padding-left: 1.1rem; }
+        .rg-list li { margin-bottom: .35rem; }
+        .rg-ol { list-style: decimal; padding-left: 1.1rem; }
+        .rg-ol li { margin-bottom: .35rem; }
+        .rg-note { border-radius: 10px; padding: .65rem .75rem; font-size: .75rem; }
+        .rg-note.blue { background: #eff6ff; color: #1e3a8a; border: 1px solid #bfdbfe; }
+        .rg-note.amber { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+        .rg-row { display: grid; grid-template-columns: 100px 1fr; gap: .5rem; padding: .5rem 0; border-bottom: 1px solid #e5e7eb; font-size: .78rem; }
+        .rg-row:last-child { border-bottom: none; }
+        .dark .rg-row { border-color: #334155; }
+        .rg-row .k { color: #64748b; font-weight: 600; }
+        .rg-row .v { color: #1e293b; }
+        .dark .rg-row .v { color: #f1f5f9; }
+    </style>
+</head>
+<body>
+<section layout:fragment="content" class="px-5 pb-24 pt-2 space-y-4">
+
+    <div class="rg-hero">
+        <p class="text-[0.65rem] uppercase tracking-widest text-blue-100 font-semibold">User Guide</p>
+        <h1>Request Workflow</h1>
+        <p>Create, submit, approve, return, reject, and track requests from your phone.</p>
+        <div class="rg-actions">
+            <a class="rg-btn" href="/mobile/employee/requests">Open Requests</a>
+            <a class="rg-btn outline" href="#quick-start">Quick Start</a>
+        </div>
+    </div>
+
+    <div class="rg-card open" id="overview">
+        <div class="rg-head" onclick="rgToggle('overview')">
+            <h3>1. Overview</h3>
+            <span class="material-symbols-outlined rg-chev text-slate-400">expand_more</span>
+        </div>
+        <div class="rg-body">
+            The Request Workflow lets employees and approvers manage organization-wide requests. You can create drafts,
+            submit for approval, attach files, select FAM assets, claim expenses, comment, and monitor progress from
+            the approval timeline.
+        </div>
+    </div>
+
+    <div class="rg-card" id="quick-start">
+        <div class="rg-head" onclick="rgToggle('quick-start')">
+            <h3>2. Quick Start</h3>
+            <span class="material-symbols-outlined rg-chev text-slate-400">expand_more</span>
+        </div>
+        <div class="rg-body space-y-3">
+            <div class="flex gap-2 items-start"><span class="rg-step">1</span><p>Open <strong>Requests</strong> from the bottom nav or go to <span class="rg-code">/mobile/employee/requests</span>.</p></div>
+            <div class="flex gap-2 items-start"><span class="rg-step">2</span><p>Tap <strong>+ New Request</strong>, pick a type, and complete the form.</p></div>
+            <div class="flex gap-2 items-start"><span class="rg-step">3</span><p>Create the draft, review, then tap <strong>Submit</strong>.</p></div>
+            <div class="flex gap-2 items-start"><span class="rg-step">4</span><p>Track decisions in the approval timeline, comments, and activity log.</p></div>
+        </div>
+    </div>
+
+    <div class="rg-card" id="request-types">
+        <div class="rg-head" onclick="rgToggle('request-types')">
+            <h3>3. Request Types</h3>
+            <span class="material-symbols-outlined rg-chev text-slate-400">expand_more</span>
+        </div>
+        <div class="rg-body space-y-3">
+            <div>
+                <span class="rg-pill blue">Staff Requisition</span>
+                <p class="mt-1">Request new or replacement headcount. Requires job and staffing details.</p>
+            </div>
+            <div>
+                <span class="rg-pill green">File Request</span>
+                <p class="mt-1">Access or process files/documents. Requires an attachment before submission.</p>
+            </div>
+            <div>
+                <span class="rg-pill yellow">Asset Request</span>
+                <p class="mt-1">Tools, software, equipment, or supplies. Requires a FAM asset selection, quantity, required date, and business justification.</p>
+            </div>
+            <div>
+                <span class="rg-pill green">Expense Reimbursement</span>
+                <p class="mt-1">Claim repayment for business expenses. Requires expense lines and a receipt/supporting attachment.</p>
+            </div>
+            <div>
+                <span class="rg-pill gray">General Request</span>
+                <p class="mt-1">Anything that doesn't fit the other categories. Only common fields required.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="rg-card" id="create">
+        <div class="rg-head" onclick="rgToggle('create')">
+            <h3>4. Create And Manage</h3>
+            <span class="material-symbols-outlined rg-chev text-slate-400">expand_more</span>
+        </div>
+        <div class="rg-body space-y-4">
+            <div>
+                <h4 class="font-semibold text-slate-800 dark:text-slate-100 mb-1.5">Create Draft</h4>
+                <ol class="rg-ol">
+                    <li>Tap <strong>+ New Request</strong>.</li>
+                    <li>Select request type and priority.</li>
+                    <li>Enter title and description.</li>
+                    <li>Fill type-specific fields.</li>
+                    <li>Tap <strong>Create Draft</strong>.</li>
+                </ol>
+            </div>
+            <div>
+                <h4 class="font-semibold text-slate-800 dark:text-slate-100 mb-1.5">Submit And Track</h4>
+                <ol class="rg-ol">
+                    <li>Open the request detail page.</li>
+                    <li>Add attachments, FAM assets, or expense lines as required.</li>
+                    <li>Tap <strong>Submit</strong>.</li>
+                    <li>Watch status, comments, and timeline.</li>
+                </ol>
+            </div>
+            <div>
+                <h4 class="font-semibold text-slate-800 dark:text-slate-100 mb-1.5">Edit A Request</h4>
+                <ol class="rg-ol">
+                    <li>Find the request in your list.</li>
+                    <li>Tap the edit icon (draft or returned-for-correction requests only).</li>
+                    <li>Update the details and tap <strong>Save Changes</strong>.</li>
+                    <li>Editing only saves details — reopen and tap <strong>Submit</strong> or <strong>Send To</strong> to resend it.</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <div class="rg-card" id="approval">
+        <div class="rg-head" onclick="rgToggle('approval')">
+            <h3>5. Approval Flow</h3>
+            <span class="material-symbols-outlined rg-chev text-slate-400">expand_more</span>
+        </div>
+        <div class="rg-body space-y-3">
+            <p>Requests are routed through the approval workflow. If a task is assigned to you, it appears under <strong>Pending Approvals</strong>.</p>
+            <div class="rg-row"><span class="rg-pill green">Approve</span><span>Moves the request forward or completes approval.</span></div>
+            <div class="rg-row"><span class="rg-pill red">Reject</span><span>Stops the workflow. Comment required.</span></div>
+            <div class="rg-row"><span class="rg-pill yellow">Return</span><span>Sends back for correction. Comment required.</span></div>
+        </div>
+    </div>
+
+    <div class="rg-card" id="free-route">
+        <div class="rg-head" onclick="rgToggle('free-route')">
+            <h3>6. Free Route</h3>
+            <span class="material-symbols-outlined rg-chev text-slate-400">expand_more</span>
+        </div>
+        <div class="rg-body space-y-3">
+            <p>Free Route is a separate way to get a request approved. It sends the request to one specific employee you choose, instead of your normal approval route.</p>
+            <div class="rg-note blue">
+                When a request is returned for correction, it continues through the same route family it originally used. A request first submitted normally is resubmitted with <strong>Submit</strong>. A request first sent through Free Route is sent again with <strong>Send To</strong>.
+            </div>
+            <div>
+                <h4 class="font-semibold text-slate-800 dark:text-slate-100 mb-1">Submit</h4>
+                <p>Follows your normal configured approval route (manager chain or HR-configured path). Available while the request is a draft, or returned after previous normal submission.</p>
+            </div>
+            <div>
+                <h4 class="font-semibold text-slate-800 dark:text-slate-100 mb-1">Send To</h4>
+                <p>Sends directly to one employee you select. Available while the request is a draft, or returned after previously being sent this way.</p>
+            </div>
+            <ul class="rg-list">
+                <li>The recipient can <strong>Approve</strong>, <strong>Reject</strong>, <strong>Return</strong>, or <strong>Forward</strong> the request.</li>
+                <li><strong>Forward</strong> is only available on Free Route requests.</li>
+                <li>Forwarding can chain from person to person until someone approves, rejects, or returns.</li>
+                <li>Approving a Free Route request finalizes it as approved.</li>
+                <li>Rejecting stops it immediately.</li>
+                <li>Returning sends it back to you for correction.</li>
+                <li>You cannot select yourself or the current holder as the next recipient.</li>
+            </ul>
+            <div class="rg-note amber">
+                Free Route is chosen by you on an individual request — it is not something HR/admin configures for a request type.
+            </div>
+        </div>
+    </div>
+
+    <div class="rg-card" id="statuses">
+        <div class="rg-head" onclick="rgToggle('statuses')">
+            <h3>7. Status Guide</h3>
+            <span class="material-symbols-outlined rg-chev text-slate-400">expand_more</span>
+        </div>
+        <div class="rg-body">
+            <div class="rg-row"><span class="rg-pill gray">Draft</span><span>Created but not submitted. Can be edited.</span></div>
+            <div class="rg-row"><span class="rg-pill yellow">In Approval</span><span>Assigned to approvers.</span></div>
+            <div class="rg-row"><span class="rg-pill yellow">Returned</span><span>Needs updates before resubmission. Can be edited.</span></div>
+            <div class="rg-row"><span class="rg-pill green">Approved</span><span>All required approvers approved.</span></div>
+            <div class="rg-row"><span class="rg-pill red">Rejected</span><span>Rejected and workflow ended.</span></div>
+            <div class="rg-row"><span class="rg-pill gray">Closed</span><span>Approved work fulfilled and closed.</span></div>
+        </div>
+    </div>
+
+    <div class="rg-card" id="troubleshooting">
+        <div class="rg-head" onclick="rgToggle('troubleshooting')">
+            <h3>8. Troubleshooting</h3>
+            <span class="material-symbols-outlined rg-chev text-slate-400">expand_more</span>
+        </div>
+        <div class="rg-body space-y-3">
+            <div>
+                <h4 class="font-semibold text-slate-800 dark:text-slate-100 mb-1">I cannot create a request</h4>
+                <p>Confirm your login email is linked to an employee record.</p>
+            </div>
+            <div>
+                <h4 class="font-semibold text-slate-800 dark:text-slate-100 mb-1">No approval route is configured</h4>
+                <p>Ask HR/admin to check your primary reporting line.</p>
+            </div>
+            <div>
+                <h4 class="font-semibold text-slate-800 dark:text-slate-100 mb-1">File request will not submit</h4>
+                <p>Upload at least one supported attachment first.</p>
+            </div>
+            <div>
+                <h4 class="font-semibold text-slate-800 dark:text-slate-100 mb-1">Asset request will not submit</h4>
+                <p>Select at least one asset from FAM, enter a valid quantity, required date, and business justification.</p>
+            </div>
+            <div>
+                <h4 class="font-semibold text-slate-800 dark:text-slate-100 mb-1">Expense reimbursement will not submit</h4>
+                <p>Add at least one expense line and upload a receipt or supporting document first.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="pt-3 flex justify-center">
+        <a href="/mobile/employee/requests" class="inline-flex items-center gap-2 bg-primary text-white px-5 py-2.5 rounded-full text-sm font-semibold shadow-md">
+            <span class="material-symbols-outlined text-base">arrow_forward</span>
+            Go To Requests
+        </a>
+    </div>
+
+    <script>
+        function rgToggle(id) {
+            var el = document.getElementById(id);
+            if (!el) return;
+            el.classList.toggle('open');
+        }
+    </script>
+
+</section>
+</body>
+</html>

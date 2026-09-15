@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/mobileEmployeeLayout}">
+<head>
+    <title>Pension Report</title>
+    <style>
+        .ppr-stat { background:#fff; border-radius:12px; border:1px solid #e5e7eb; padding:14px; }
+        .ppr-card { background:#fff; border-radius:12px; border:1px solid #e5e7eb; padding:14px; margin-bottom:10px; }
+        .ppr-row { display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid #f3f4f6; font-size:0.8rem; }
+        .ppr-row:last-child { border-bottom:none; }
+    </style>
+</head>
+<body>
+<section layout:fragment="content">
+
+    <div class="bg-blue-900 rounded-xl p-4 mb-4 text-white">
+        <p class="text-xs text-blue-300 uppercase font-semibold">Pension Report</p>
+        <p class="text-sm text-blue-200 mt-1" th:text="'Jan 1, ' + ${reportYear} + ' – Dec 31, ' + ${reportYear}">2026</p>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-2 gap-3 mb-4">
+        <div class="ppr-stat">
+            <p class="text-xs text-gray-500">Employee Contributions</p>
+            <p class="text-lg font-bold text-blue-900"
+               th:text="'₦' + ${#numbers.formatDecimal(totalEmployeeContribution,1,'COMMA',2,'POINT')}">₦0.00</p>
+        </div>
+        <div class="ppr-stat">
+            <p class="text-xs text-gray-500">Employer Contributions</p>
+            <p class="text-lg font-bold text-green-600"
+               th:text="'₦' + ${#numbers.formatDecimal(totalEmployerContribution,1,'COMMA',2,'POINT')}">₦0.00</p>
+        </div>
+        <div class="ppr-stat">
+            <p class="text-xs text-gray-500">Total Liability</p>
+            <p class="text-lg font-bold text-amber-600"
+               th:text="'₦' + ${#numbers.formatDecimal(totalLiability,1,'COMMA',2,'POINT')}">₦0.00</p>
+        </div>
+        <div class="ppr-stat">
+            <p class="text-xs text-gray-500">Employees</p>
+            <p class="text-lg font-bold text-blue-900" th:text="${totalRecords}">0</p>
+        </div>
+    </div>
+
+    <!-- Empty state -->
+    <div th:if="${pensionReport == null or #lists.isEmpty(pensionReport)}" class="text-center py-12">
+        <span class="material-symbols-outlined text-gray-300" style="font-size:48px">savings</span>
+        <p class="text-sm text-gray-500 mt-2">No pension records found.</p>
+    </div>
+
+    <!-- Pension Cards -->
+    <div th:each="pension, pStat : ${pensionReport}" class="ppr-card"
+         th:with="safeName=${pension.employeeName != null ? pension.employeeName : 'Unknown'}">
+        <div class="flex items-start justify-between mb-2">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs"
+                     th:text="${safeName.substring(0,1).toUpperCase()}">A</div>
+                <div>
+                    <p class="font-semibold text-sm" th:text="${safeName}">Name</p>
+                    <p class="text-xs text-gray-400" th:text="'EMP-' + ${pension.employeeId}">EMP-001</p>
+                </div>
+            </div>
+            <span class="text-xs font-semibold px-2 py-1 rounded"
+                  th:classappend="${pension.pensionScheme != null} ? 'bg-green-50 text-green-700' : 'bg-gray-50 text-gray-500'"
+                  th:text="${pension.pensionScheme != null ? pension.pensionScheme : 'Not Assigned'}">Scheme</span>
+        </div>
+        <div class="grid grid-cols-3 gap-2 text-xs text-center">
+            <div class="bg-blue-50 rounded p-2">
+                <p class="text-gray-400">Employee</p>
+                <p class="font-semibold text-blue-700"
+                   th:text="${pension.employeeContribution != null ? '₦' + #numbers.formatDecimal(pension.employeeContribution,1,'COMMA',0,'POINT') : '—'}">—</p>
+            </div>
+            <div class="bg-green-50 rounded p-2">
+                <p class="text-gray-400">Employer</p>
+                <p class="font-semibold text-green-700"
+                   th:text="${pension.employerContribution != null ? '₦' + #numbers.formatDecimal(pension.employerContribution,1,'COMMA',0,'POINT') : '—'}">—</p>
+            </div>
+            <div class="bg-amber-50 rounded p-2">
+                <p class="text-gray-400">Total</p>
+                <p class="font-semibold text-amber-700"
+                   th:if="${pension.employeeContribution != null and pension.employerContribution != null}"
+                   th:text="'₦' + ${#numbers.formatDecimal(pension.employeeContribution + pension.employerContribution,1,'COMMA',0,'POINT')}">—</p>
+                <p class="font-semibold text-gray-400" th:unless="${pension.employeeContribution != null and pension.employerContribution != null}">—</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Totals -->
+    <div th:if="${pensionReport != null and !#lists.isEmpty(pensionReport)}"
+         class="ppr-card" style="background:#eff6ff;">
+        <p class="font-bold text-sm mb-2">Summary — <span th:text="${totalRecords}">0</span> employees</p>
+        <div class="ppr-row">
+            <span class="text-gray-500">Employee Contributions</span>
+            <span class="font-bold text-blue-700" th:text="'₦' + ${#numbers.formatDecimal(totalEmployeeContribution,1,'COMMA',2,'POINT')}">₦0.00</span>
+        </div>
+        <div class="ppr-row">
+            <span class="text-gray-500">Employer Contributions</span>
+            <span class="font-bold text-green-700" th:text="'₦' + ${#numbers.formatDecimal(totalEmployerContribution,1,'COMMA',2,'POINT')}">₦0.00</span>
+        </div>
+        <div class="ppr-row">
+            <span class="text-gray-500">Total Liability</span>
+            <span class="font-bold text-amber-700" th:text="'₦' + ${#numbers.formatDecimal(totalLiability,1,'COMMA',2,'POINT')}">₦0.00</span>
+        </div>
+    </div>
+
+</section>
+</body>
+</html>

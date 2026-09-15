@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/mobileEmployeeLayout}">
+<head>
+    <meta charset="UTF-8">
+    <title>HR Command · JustHR</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL@20..48,100..700,0..1&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              colors: {
+                primary: "#2463eb",
+                "background-light": "#f6f6f8",
+                "background-dark": "#111621",
+              },
+              fontFamily: { display: ["Inter"] },
+              borderRadius: { DEFAULT: "1rem", lg: "1.5rem", xl: "2rem", full: "9999px" },
+            }
+          }
+        }
+    </script>
+    <style>
+        * { -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'Inter', sans-serif; background-color: #f6f6f8; }
+        .dark body { background-color: #111621; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* idx- prefixed classes to avoid collision */
+        .idx-badge { padding:0.2rem 0.6rem; font-size:0.6rem; font-weight:600; border-radius:9999px; letter-spacing:0.02em; text-transform:uppercase; display:inline-flex; align-items:center; gap:0.2rem; }
+        .idx-badge-success { background:#dcfce7; color:#15803d; }
+        .idx-badge-warning { background:#fef3c7; color:#b45309; }
+        .idx-badge-info    { background:#dbeafe; color:#1e40af; }
+        .idx-badge-error   { background:#fee2e2; color:#b91c1c; }
+        .idx-badge-neutral { background:#f3f4f6; color:#4b5563; }
+        .dark .idx-badge-success { background:#14532d; color:#86efac; }
+        .dark .idx-badge-warning { background:#92400e; color:#fde68a; }
+        .dark .idx-badge-info    { background:#1e3a8a; color:#bfdbfe; }
+        .dark .idx-badge-error   { background:#7f1d1d; color:#fecaca; }
+        .dark .idx-badge-neutral { background:#374151; color:#d1d5db; }
+
+        .idx-progress { height:6px; background:#e5e7eb; border-radius:9999px; overflow:hidden; }
+        .dark .idx-progress { background:#374151; }
+        .idx-progress-fill { height:100%; border-radius:9999px; }
+
+        .idx-stat-card { transition: transform 0.15s; }
+        .idx-stat-card:active { transform: scale(0.97); }
+
+        .idx-action-btn { transition: transform 0.15s, background 0.15s; }
+        .idx-action-btn:active { transform: scale(0.95); }
+
+        .idx-list-item { transition: background 0.15s; }
+        .idx-list-item:active { background:#f1f5f9; }
+        .dark .idx-list-item:active { background:#26334d; }
+    </style>
+</head>
+<body>
+<main class="flex-1 overflow-y-auto no-scrollbar px-5 pb-4 space-y-5" layout:fragment="content">
+
+    <!-- ===== PAGE HEADER ===== -->
+    <div class="flex items-center justify-between mt-2">
+        <div class="flex items-center gap-2">
+            <div class="w-10 h-10 bg-primary/10 dark:bg-primary/20 rounded-2xl flex items-center justify-center shadow-inner">
+                <span class="material-symbols-outlined text-primary">shield_person</span>
+            </div>
+            <div>
+                <h2 class="text-xl font-bold tracking-tight">HR Command</h2>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Overview &amp; quick admin tools</p>
+            </div>
+        </div>
+        <div class="px-3 py-1.5 bg-white dark:bg-slate-800 rounded-full border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-600 dark:text-slate-300"
+             th:text="${#temporals.format(#temporals.createNow(), 'dd MMM yyyy')}">01 Mar 2026</div>
+    </div>
+
+
+    <!-- ===== STAT GRID (2 columns on mobile) ===== -->
+    <div class="grid grid-cols-2 gap-3">
+
+        <!-- Total Employees -->
+        <div class="idx-stat-card p-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+            <div class="flex items-center justify-between mb-3">
+                <div class="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-blue-600 dark:text-blue-400">groups</span>
+                </div>
+                <span class="text-[0.6rem] font-semibold text-green-600 flex items-center">
+                    <span class="material-symbols-outlined text-[0.7rem] mr-0.5">trending_up</span>+2.4%
+                </span>
+            </div>
+            <p class="text-xl font-bold text-slate-900 dark:text-white">1,248</p>
+            <p class="text-[0.65rem] text-slate-500 dark:text-slate-400 mt-0.5">Total Employees</p>
+            <p class="text-[0.55rem] text-slate-400 mt-1.5 flex items-center gap-1">
+                <span class="material-symbols-outlined text-[0.6rem]">check_circle</span>
+                1,206 active · 42 leave
+            </p>
+        </div>
+
+        <!-- On Leave Today -->
+        <div class="idx-stat-card p-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+            <div class="flex items-center justify-between mb-3">
+                <div class="w-9 h-9 rounded-xl bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-orange-600 dark:text-orange-400">beach_access</span>
+                </div>
+                <span class="text-[0.55rem] font-semibold text-slate-500 uppercase tracking-wider">Today</span>
+            </div>
+            <p class="text-xl font-bold text-slate-900 dark:text-white">42</p>
+            <p class="text-[0.65rem] text-slate-500 dark:text-slate-400 mt-0.5">On Leave Today</p>
+            <div class="mt-2">
+                <div class="idx-progress">
+                    <div class="idx-progress-fill bg-orange-500" style="width: 3.4%"></div>
+                </div>
+                <p class="text-[0.55rem] text-slate-400 mt-1">3.4% of workforce</p>
+            </div>
+        </div>
+
+        <!-- Pending Approvals -->
+        <div class="idx-stat-card p-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+            <div class="flex items-center justify-between mb-3">
+                <div class="w-9 h-9 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-red-600 dark:text-red-400">assignment_late</span>
+                </div>
+                <span class="idx-badge idx-badge-error">+5</span>
+            </div>
+            <p class="text-xl font-bold text-slate-900 dark:text-white">15</p>
+            <p class="text-[0.65rem] text-slate-500 dark:text-slate-400 mt-0.5">Pending Approvals</p>
+            <p class="text-[0.55rem] text-slate-400 mt-1.5 flex items-center gap-1">
+                <span class="material-symbols-outlined text-[0.6rem]">warning</span>
+                3 urgent · 12 routine
+            </p>
+        </div>
+
+        <!-- On Probation -->
+        <div class="idx-stat-card p-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+            <div class="flex items-center justify-between mb-3">
+                <div class="w-9 h-9 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-purple-600 dark:text-purple-400">timer</span>
+                </div>
+                <span class="idx-badge idx-badge-info">Active</span>
+            </div>
+            <p class="text-xl font-bold text-slate-900 dark:text-white">28</p>
+            <p class="text-[0.65rem] text-slate-500 dark:text-slate-400 mt-0.5">On Probation</p>
+            <p class="text-[0.55rem] text-slate-400 mt-1.5 flex items-center gap-1">
+                <span class="material-symbols-outlined text-[0.6rem]">calendar_month</span>
+                Avg. 45 days left
+            </p>
+        </div>
+    </div>
+
+
+    <!-- ===== QUICK ACTIONS (Admin routes) ===== -->
+    <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200 dark:border-slate-700">
+        <div class="flex items-center gap-2 mb-4">
+            <span class="material-symbols-outlined text-primary">apps</span>
+            <h3 class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Quick Actions</h3>
+        </div>
+        <div class="grid grid-cols-3 gap-3">
+
+            <a th:href="@{/mobile/departments}"
+               class="idx-action-btn flex flex-col items-center gap-1.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-700/50 border border-slate-100 dark:border-slate-700">
+                <div class="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-blue-600 dark:text-blue-400">domain</span>
+                </div>
+                <span class="text-[0.65rem] font-semibold text-slate-600 dark:text-slate-300 text-center">Departments</span>
+            </a>
+
+            <a th:href="@{/mobile/job-structure}"
+               class="idx-action-btn flex flex-col items-center gap-1.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-700/50 border border-slate-100 dark:border-slate-700">
+                <div class="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-indigo-600 dark:text-indigo-400">account_tree</span>
+                </div>
+                <span class="text-[0.65rem] font-semibold text-slate-600 dark:text-slate-300 text-center">Job Structure</span>
+            </a>
+
+            <a th:href="@{/mobile/tax-band}"
+               class="idx-action-btn flex flex-col items-center gap-1.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-700/50 border border-slate-100 dark:border-slate-700">
+                <div class="w-10 h-10 rounded-xl bg-teal-100 dark:bg-teal-900/30 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-teal-600 dark:text-teal-400">receipt_long</span>
+                </div>
+                <span class="text-[0.65rem] font-semibold text-slate-600 dark:text-slate-300 text-center">Tax Bands</span>
+            </a>
+
+            <a th:href="@{/mobile/promotion}"
+               class="idx-action-btn flex flex-col items-center gap-1.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-700/50 border border-slate-100 dark:border-slate-700">
+                <div class="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-amber-600 dark:text-amber-400">trending_up</span>
+                </div>
+                <span class="text-[0.65rem] font-semibold text-slate-600 dark:text-slate-300 text-center">Promotion</span>
+            </a>
+
+            <a th:href="@{/mobile/pension}"
+               class="idx-action-btn flex flex-col items-center gap-1.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-700/50 border border-slate-100 dark:border-slate-700">
+                <div class="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-emerald-600 dark:text-emerald-400">savings</span>
+                </div>
+                <span class="text-[0.65rem] font-semibold text-slate-600 dark:text-slate-300 text-center">Pension</span>
+            </a>
+
+            <a th:href="@{/mobile/admin-user-management}"
+               class="idx-action-btn flex flex-col items-center gap-1.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-700/50 border border-slate-100 dark:border-slate-700">
+                <div class="w-10 h-10 rounded-xl bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-rose-600 dark:text-rose-400">manage_accounts</span>
+                </div>
+                <span class="text-[0.65rem] font-semibold text-slate-600 dark:text-slate-300 text-center">User Mgmt</span>
+            </a>
+
+            <a th:href="@{/mobile/kpi-admin}"
+               class="idx-action-btn flex flex-col items-center gap-1.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-700/50 border border-slate-100 dark:border-slate-700">
+                <div class="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-purple-600 dark:text-purple-400">monitoring</span>
+                </div>
+                <span class="text-[0.65rem] font-semibold text-slate-600 dark:text-slate-300 text-center">KPI Admin</span>
+            </a>
+
+            <a th:href="@{/mobile/payroll-admin}"
+               class="idx-action-btn flex flex-col items-center gap-1.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-700/50 border border-slate-100 dark:border-slate-700">
+                <div class="w-10 h-10 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-green-600 dark:text-green-400">payments</span>
+                </div>
+                <span class="text-[0.65rem] font-semibold text-slate-600 dark:text-slate-300 text-center">Payroll Admin</span>
+            </a>
+
+            <a th:href="@{/mobile/finance}"
+               class="idx-action-btn flex flex-col items-center gap-1.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-700/50 border border-slate-100 dark:border-slate-700">
+                <div class="w-10 h-10 rounded-xl bg-cyan-100 dark:bg-cyan-900/30 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-cyan-600 dark:text-cyan-400">account_balance</span>
+                </div>
+                <span class="text-[0.65rem] font-semibold text-slate-600 dark:text-slate-300 text-center">Finance</span>
+            </a>
+
+            <a th:href="@{/mobile/leave-admin}"
+               class="idx-action-btn flex flex-col items-center gap-1.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-700/50 border border-slate-100 dark:border-slate-700">
+                <div class="w-10 h-10 rounded-xl bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-orange-600 dark:text-orange-400">event_available</span>
+                </div>
+                <span class="text-[0.65rem] font-semibold text-slate-600 dark:text-slate-300 text-center">Leave Admin</span>
+            </a>
+
+            <a th:href="@{/mobile/request-admin}"
+               class="idx-action-btn flex flex-col items-center gap-1.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-700/50 border border-slate-100 dark:border-slate-700">
+                <div class="w-10 h-10 rounded-xl bg-pink-100 dark:bg-pink-900/30 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-pink-600 dark:text-pink-400">inbox</span>
+                </div>
+                <span class="text-[0.65rem] font-semibold text-slate-600 dark:text-slate-300 text-center">Requests</span>
+            </a>
+        </div>
+    </div>
+
+
+    <!-- ===== REQUIRED ACTIONS ===== -->
+    <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200 dark:border-slate-700">
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary">task_alt</span>
+                <h3 class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Required Actions</h3>
+            </div>
+            <a href="#" class="text-primary text-xs font-semibold">View All</a>
+        </div>
+
+        <div class="space-y-0">
+            <!-- Sarah Jenkins - Leave Request -->
+            <div class="idx-list-item flex items-start gap-3 py-3 border-b border-slate-100 dark:border-slate-700">
+                <div class="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
+                    <span class="text-blue-600 dark:text-blue-400 text-xs font-bold">SJ</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold truncate">Sarah Jenkins</p>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Leave · Annual PTO (5 days)</p>
+                    <p class="text-[0.6rem] text-slate-400 mt-0.5">Requested: Dec 15, 2023</p>
+                    <div class="flex gap-2 mt-2">
+                        <button class="px-3 py-1 text-[0.65rem] font-semibold rounded-lg border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300">Deny</button>
+                        <button class="px-3 py-1 text-[0.65rem] font-semibold rounded-lg bg-primary text-white">Approve</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mike Ross - Document Verification -->
+            <div class="idx-list-item flex items-start gap-3 py-3">
+                <div class="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center shrink-0">
+                    <span class="text-purple-600 dark:text-purple-400 text-xs font-bold">MR</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold truncate">Mike Ross</p>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Document Verification · I-9 Documents</p>
+                    <p class="text-[0.6rem] text-slate-400 mt-0.5">Submitted: Dec 14, 2023</p>
+                    <button class="mt-2 px-3 py-1 text-[0.65rem] font-semibold rounded-lg border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 flex items-center gap-1">
+                        <span class="material-symbols-outlined text-[0.75rem]">visibility</span> Review
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ===== PRIORITY ALERTS ===== -->
+    <div class="bg-red-50 dark:bg-red-950/20 rounded-2xl p-5 border border-red-100 dark:border-red-900/30">
+        <div class="flex items-center gap-2 mb-4">
+            <span class="material-symbols-outlined text-red-600 dark:text-red-400">report_problem</span>
+            <h3 class="text-xs font-semibold text-red-700 dark:text-red-400 uppercase tracking-wider">Priority Alerts</h3>
+        </div>
+
+        <div class="space-y-3">
+            <div class="bg-white dark:bg-slate-800 p-3 rounded-xl border border-red-200 dark:border-red-900/30">
+                <div class="flex justify-between items-start mb-1.5">
+                    <span class="text-[0.6rem] font-bold text-red-600 dark:text-red-400 uppercase tracking-wider">Compliance</span>
+                    <span class="text-[0.6rem] text-slate-500">Due Today</span>
+                </div>
+                <p class="text-sm font-semibold mb-2">3 Employees missing I-9 documents</p>
+                <a href="#" class="text-xs text-primary font-semibold flex items-center gap-1">
+                    Resolve Now <span class="material-symbols-outlined text-sm">arrow_forward</span>
+                </a>
+            </div>
+
+            <div class="bg-white dark:bg-slate-800 p-3 rounded-xl border border-orange-200 dark:border-orange-900/30">
+                <div class="flex justify-between items-start mb-1.5">
+                    <span class="text-[0.6rem] font-bold text-orange-600 dark:text-orange-400 uppercase tracking-wider">Performance</span>
+                    <span class="text-[0.6rem] text-slate-500">In 2 days</span>
+                </div>
+                <p class="text-sm font-semibold mb-2">Annual review for Mike Ross due</p>
+                <a href="#" class="text-xs text-primary font-semibold flex items-center gap-1">
+                    Schedule <span class="material-symbols-outlined text-sm">arrow_forward</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ===== RECENT NEW HIRES ===== -->
+    <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200 dark:border-slate-700">
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary">person_add</span>
+                <h3 class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Recent New Hires</h3>
+            </div>
+            <div class="flex gap-1">
+                <button class="w-7 h-7 rounded-lg border border-slate-200 dark:border-slate-600 flex items-center justify-center text-slate-500">
+                    <span class="material-symbols-outlined text-[0.9rem]">filter_list</span>
+                </button>
+                <button class="w-7 h-7 rounded-lg border border-slate-200 dark:border-slate-600 flex items-center justify-center text-slate-500">
+                    <span class="material-symbols-outlined text-[0.9rem]">download</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="space-y-0">
+            <!-- John Doe -->
+            <div class="idx-list-item flex items-center gap-3 py-3 border-b border-slate-100 dark:border-slate-700">
+                <div class="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center text-xs font-bold shrink-0">JD</div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold truncate">John Doe</p>
+                    <p class="text-[0.65rem] text-slate-500 dark:text-slate-400">Software Engineer · L3 · Engineering</p>
+                    <p class="text-[0.55rem] text-slate-400 mt-0.5">Started: Dec 10, 2023</p>
+                </div>
+                <span class="idx-badge idx-badge-success">Onboarded</span>
+            </div>
+
+            <!-- Sophia Miller -->
+            <div class="idx-list-item flex items-center gap-3 py-3">
+                <div class="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 flex items-center justify-center text-xs font-bold shrink-0">SM</div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold truncate">Sophia Miller</p>
+                    <p class="text-[0.65rem] text-slate-500 dark:text-slate-400">UI Designer · L2 · Product</p>
+                    <p class="text-[0.55rem] text-slate-400 mt-0.5">Started: Dec 5, 2023</p>
+                </div>
+                <span class="idx-badge idx-badge-warning">Probation</span>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ===== QUICK TOOLS ===== -->
+    <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200 dark:border-slate-700">
+        <div class="flex items-center gap-2 mb-4">
+            <span class="material-symbols-outlined text-primary">handyman</span>
+            <h3 class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Quick Tools</h3>
+        </div>
+        <div class="grid grid-cols-4 gap-2">
+            <button class="idx-action-btn flex flex-col items-center gap-1.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-700/50 border border-slate-100 dark:border-slate-700">
+                <span class="material-symbols-outlined text-primary">person_add</span>
+                <span class="text-[0.6rem] font-semibold text-slate-600 dark:text-slate-300">Add Hire</span>
+            </button>
+            <button class="idx-action-btn flex flex-col items-center gap-1.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-700/50 border border-slate-100 dark:border-slate-700">
+                <span class="material-symbols-outlined text-primary">payments</span>
+                <span class="text-[0.6rem] font-semibold text-slate-600 dark:text-slate-300">Payroll</span>
+            </button>
+            <button class="idx-action-btn flex flex-col items-center gap-1.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-700/50 border border-slate-100 dark:border-slate-700">
+                <span class="material-symbols-outlined text-primary">description</span>
+                <span class="text-[0.6rem] font-semibold text-slate-600 dark:text-slate-300">Policies</span>
+            </button>
+            <button class="idx-action-btn flex flex-col items-center gap-1.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-700/50 border border-slate-100 dark:border-slate-700">
+                <span class="material-symbols-outlined text-primary">insights</span>
+                <span class="text-[0.6rem] font-semibold text-slate-600 dark:text-slate-300">Insights</span>
+            </button>
+        </div>
+    </div>
+
+
+    <!-- ===== RECENT ACTIVITY ===== -->
+    <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200 dark:border-slate-700">
+        <div class="flex items-center gap-2 mb-4">
+            <span class="material-symbols-outlined text-primary">timeline</span>
+            <h3 class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Recent Activity</h3>
+        </div>
+
+        <div class="relative space-y-4 before:absolute before:left-5 before:top-2 before:h-[calc(100%-16px)] before:w-px before:bg-slate-200 dark:before:bg-slate-700">
+            <div class="relative flex gap-4">
+                <div class="z-10 w-10 h-10 rounded-full bg-white dark:bg-slate-800 border-2 border-primary flex items-center justify-center shrink-0">
+                    <span class="material-symbols-outlined text-primary" style="font-size:17px;">payments</span>
+                </div>
+                <div class="pt-1 flex-1 min-w-0">
+                    <div class="flex justify-between items-start">
+                        <p class="text-sm font-semibold">Payroll Processed</p>
+                        <span class="text-[0.6rem] text-slate-500 shrink-0 ml-2">2h ago</span>
+                    </div>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">July Cycle 02 finalized and sent for approval.</p>
+                </div>
+            </div>
+
+            <div class="relative flex gap-4">
+                <div class="z-10 w-10 h-10 rounded-full bg-white dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-600 flex items-center justify-center shrink-0">
+                    <span class="material-symbols-outlined text-slate-400" style="font-size:17px;">description</span>
+                </div>
+                <div class="pt-1 flex-1 min-w-0">
+                    <div class="flex justify-between items-start">
+                        <p class="text-sm font-semibold">New Policy Published</p>
+                        <span class="text-[0.6rem] text-slate-500 shrink-0 ml-2">5h ago</span>
+                    </div>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Remote Work Guidelines v2.4 uploaded to Portal.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- footer -->
+    <div class="text-center text-[0.55rem] text-slate-400 dark:text-slate-500 py-2">
+        <span class="material-symbols-outlined text-[0.6rem] align-middle">lock</span> JustHR · HR Command
+    </div>
+
+</main>
+</body>
+</html>

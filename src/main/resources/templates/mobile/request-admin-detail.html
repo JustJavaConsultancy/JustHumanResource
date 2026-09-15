@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/mobileEmployeeLayout}">
+<head>
+    <title>Request Detail</title>
+    <style>
+        .rd-card { background:#fff; border:1px solid #e5e7eb; border-radius:14px; margin-bottom:10px; }
+        .rd-head { padding:12px 14px; border-bottom:1px solid #f3f4f6; display:flex; align-items:center; gap:8px; }
+        .rd-body { padding:14px; }
+        .rd-kv { display:grid; grid-template-columns:120px 1fr; gap:8px 12px; font-size:0.8rem; }
+        .rd-kv b { color:#6b7280; font-weight:600; }
+        .rd-badge { display:inline-flex; align-items:center; padding:2px 8px; border-radius:999px; font-size:10px; font-weight:700; text-transform:uppercase; }
+        .rd-badge-success { background:#dcfce7; color:#166534; }
+        .rd-badge-error   { background:#fee2e2; color:#991b1b; }
+        .rd-badge-warning { background:#fef3c7; color:#92400e; }
+        .rd-badge-info    { background:#dbeafe; color:#1e40af; }
+        .rd-badge-neutral { background:#f1f5f9; color:#475569; }
+        .rd-tl-item { background:#f8fafc; border:1px solid #e5e7eb; border-radius:10px; padding:10px; margin-bottom:6px; font-size:0.78rem; }
+        .rd-input { width:100%; border:1px solid #d1d5db; background:#fff; border-radius:10px; padding:10px 12px; font-size:14px; outline:none; }
+        .rd-input:focus { border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,.12); }
+        .rd-sheet-backdrop { position:fixed; inset:0; background:rgba(15,23,42,.5); z-index:60; display:none; }
+        .rd-sheet-backdrop.open { display:block; }
+        .rd-sheet { position:fixed; left:0; right:0; bottom:0; background:#fff; border-radius:20px 20px 0 0; z-index:70; max-height:92vh; overflow-y:auto; transform:translateY(100%); transition:transform .3s; padding-bottom:env(safe-area-inset-bottom); }
+        .rd-sheet.open { transform:translateY(0); }
+    </style>
+</head>
+<body>
+<section layout:fragment="content">
+
+    <!-- Back -->
+    <a href="/mobile/requests" class="flex items-center gap-1 text-blue-600 text-sm font-semibold mb-3">
+        <span class="material-symbols-outlined text-base">arrow_back</span> All Requests
+    </a>
+
+    <!-- Title -->
+    <div class="rd-card mb-4">
+        <div class="rd-body">
+            <h1 id="requestTitle" class="font-bold text-base text-gray-900">Loading…</h1>
+            <p id="requestMeta" class="text-xs text-gray-500 mt-1"></p>
+        </div>
+    </div>
+
+    <!-- Primary actions (approve/reject/return/close/submit/cancel) -->
+    <div id="primaryActions" class="flex flex-wrap gap-2 mb-4"></div>
+
+    <!-- Summary -->
+    <div class="rd-card mb-2">
+        <div class="rd-head">
+            <span class="material-symbols-outlined text-blue-600 text-base">summarize</span>
+            <span class="font-semibold text-sm">Summary</span>
+        </div>
+        <div id="summary" class="rd-body rd-kv"></div>
+    </div>
+
+    <!-- Type Details -->
+    <div class="rd-card mb-2">
+        <div class="rd-head">
+            <span class="material-symbols-outlined text-blue-600 text-base">category</span>
+            <span class="font-semibold text-sm">Type Details</span>
+        </div>
+        <div id="typeDetails" class="rd-body text-sm"></div>
+    </div>
+
+    <!-- Items -->
+    <div class="rd-card mb-2">
+        <div class="rd-head">
+            <span class="material-symbols-outlined text-blue-600 text-base">inventory_2</span>
+            <span class="font-semibold text-sm">Items</span>
+        </div>
+        <div id="items" class="rd-body text-sm"></div>
+    </div>
+
+    <!-- Attachments -->
+    <div class="rd-card mb-2">
+        <div class="rd-head">
+            <span class="material-symbols-outlined text-blue-600 text-base">attach_file</span>
+            <span class="font-semibold text-sm">Attachments</span>
+        </div>
+        <div class="rd-body">
+            <form id="attachmentForm" class="hidden space-y-2 mb-3">
+                <input id="attachmentFile" type="file" class="text-sm w-full">
+                <select id="attachmentType" class="rd-input">
+                    <option>SUPPORTING_DOCUMENT</option><option>RECEIPT</option><option>QUOTE</option>
+                    <option>APPROVAL_DOCUMENT</option><option>POLICY_DOCUMENT</option>
+                    <option>IDENTIFICATION</option><option>OTHER</option>
+                </select>
+                <button class="w-full py-2.5 bg-blue-900 text-white rounded-xl text-sm font-bold">Upload</button>
+            </form>
+            <div id="attachments" class="text-sm"></div>
+        </div>
+    </div>
+
+    <!-- Approval Timeline -->
+    <div class="rd-card mb-2">
+        <div class="rd-head">
+            <span class="material-symbols-outlined text-blue-600 text-base">timeline</span>
+            <span class="font-semibold text-sm">Approval Timeline</span>
+        </div>
+        <div class="rd-body">
+            <div id="approvalSteps"></div>
+            <div id="freeRouteEvents"></div>
+        </div>
+    </div>
+
+    <!-- Comments -->
+    <div class="rd-card mb-2">
+        <div class="rd-head">
+            <span class="material-symbols-outlined text-blue-600 text-base">comment</span>
+            <span class="font-semibold text-sm">Comments</span>
+        </div>
+        <div class="rd-body">
+            <form id="commentForm" class="space-y-2 mb-3">
+                <textarea id="commentText" rows="3" placeholder="Add a comment" class="rd-input"></textarea>
+                <label id="internalLabel" class="flex items-center gap-2 text-sm hidden">
+                    <input id="internalComment" type="checkbox"> Internal only
+                </label>
+                <button class="w-full py-2.5 bg-blue-900 text-white rounded-xl text-sm font-bold">Add Comment</button>
+            </form>
+            <ul id="comments" class="text-sm space-y-2"></ul>
+        </div>
+    </div>
+
+    <!-- Activity -->
+    <div class="rd-card mb-4">
+        <div class="rd-head">
+            <span class="material-symbols-outlined text-blue-600 text-base">history</span>
+            <span class="font-semibold text-sm">Activity</span>
+        </div>
+        <div class="rd-body">
+            <ul id="activity" class="text-sm space-y-2"></ul>
+        </div>
+    </div>
+
+    <!-- Close confirmation sheet -->
+    <div id="closeBackdrop" class="rd-sheet-backdrop" onclick="hideCloseSheet()"></div>
+    <div id="closeSheet" class="rd-sheet">
+        <div class="p-4 border-b border-gray-100 flex items-center justify-between">
+            <p class="font-bold text-sm">Close this request?</p>
+            <button onclick="hideCloseSheet()" class="text-gray-400"><span class="material-symbols-outlined">close</span></button>
+        </div>
+        <div class="p-4">
+            <p class="text-sm text-gray-600 mb-4">This marks the request as closed. This cannot be undone from here.</p>
+            <div class="flex gap-3">
+                <button onclick="hideCloseSheet()" class="flex-1 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold">Cancel</button>
+                <button onclick="confirmCloseRequest()" class="flex-1 py-2.5 bg-blue-900 text-white rounded-xl text-sm font-bold">Close Request</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const api = '/api/requests';
+        const requestId = Number(location.pathname.split('/').pop());
+        let detail = null, context = null, tasks = [], employeeNames = {};
+
+        function text(v) { return v == null || v === '' ? '—' : v; }
+        function fmt(v)  { return (v || '').replaceAll('_',' '); }
+        function empName(id) { return id == null ? '—' : (employeeNames[id] || `Employee #${id}`); }
+        function isOwner()  { return detail && context && detail.request.requesterEmployeeId === context.employeeId; }
+        function canEditAttachments() { return isOwner() && ['DRAFT','SUBMITTED','RETURNED_FOR_CORRECTION'].includes(detail.request.status); }
+        function canRemoveAttachments() { return isOwner() && ['DRAFT','RETURNED_FOR_CORRECTION'].includes(detail.request.status); }
+        function badgeCls(s) {
+            return s === 'APPROVED' ? 'rd-badge-success' :
+                   s === 'REJECTED' || s === 'CANCELLED' ? 'rd-badge-error' :
+                   s === 'RETURNED_FOR_CORRECTION' ? 'rd-badge-warning' :
+                   s === 'IN_APPROVAL' ? 'rd-badge-info' : 'rd-badge-neutral';
+        }
+
+        async function json(url, opts) {
+            const r = await fetch(url, opts);
+            if (!r.ok) throw new Error(await r.text());
+            const ct = r.headers.get('content-type') || '';
+            return ct.includes('application/json') ? r.json() : null;
+        }
+
+        async function load() {
+            try {
+                [detail, context, tasks] = await Promise.all([
+                    json(`${api}/${requestId}`),
+                    json(`${api}/context`),
+                    json(`${api}/approvals/tasks`)
+                ]);
+                await loadEmployeeNames();
+                render();
+            } catch (e) {
+                document.querySelector('section').innerHTML = `<div class="text-red-600 text-sm p-4 bg-red-50 rounded-xl">${e.message}</div>`;
+            }
+        }
+
+        async function loadEmployeeNames() {
+            const ids = new Set();
+            if (detail.request.requesterEmployeeId != null) ids.add(detail.request.requesterEmployeeId);
+            (detail.approvalSteps || []).forEach(s => { if (s.approverEmployeeId != null) ids.add(s.approverEmployeeId); });
+            if (!ids.size) { employeeNames = {}; return; }
+            try { employeeNames = await json(`${api}/employees/names?ids=${[...ids].join(',')}`); }
+            catch { employeeNames = {}; }
+        }
+
+        function render() {
+            const r = detail.request;
+            document.getElementById('requestTitle').textContent = `${r.requestNumber}: ${r.title}`;
+            document.getElementById('requestMeta').innerHTML =
+                `${fmt(r.requestType)} &nbsp;|&nbsp; ${r.priority} &nbsp;|&nbsp; <span class="rd-badge ${badgeCls(r.status)}">${fmt(r.status)}</span>`;
+            document.getElementById('summary').innerHTML = `
+                <b>Description</b><span>${text(r.description)}</span>
+                <b>Requester</b><span>${empName(r.requesterEmployeeId)}</span>
+                <b>Department</b><span>${text(r.departmentId)}</span>
+                <b>Submitted</b><span>${text(r.submittedAt)}</span>`;
+            renderTypeDetails();
+            renderItems();
+            renderAttachments();
+            renderApprovals();
+            renderComments();
+            renderActivity();
+            renderActions();
+            document.getElementById('attachmentForm').classList.toggle('hidden', !canEditAttachments());
+            if (context.hrAdmin) document.getElementById('internalLabel').classList.remove('hidden');
+        }
+
+        function renderTypeDetails() {
+            const d = detail.typeDetails;
+            if (!d) { document.getElementById('typeDetails').innerHTML = '<p class="text-gray-400">No additional details.</p>'; return; }
+            if (detail.request.requestType === 'EXPENSE_REIMBURSEMENT') {
+                const rows = d.expenseItems || [];
+                document.getElementById('typeDetails').innerHTML = `
+                    <div class="space-y-1 mb-3">${Object.entries(d).filter(([k]) => k !== 'expenseItems').map(([k,v]) => `<p><b class="text-gray-500">${fmt(k)}:</b> ${text(v)}</p>`).join('')}</div>
+                    <div class="overflow-x-auto text-xs">
+                        <table class="w-full min-w-[480px]">
+                            <thead class="bg-gray-50"><tr>
+                                <th class="px-2 py-1 text-left text-gray-500">Date</th>
+                                <th class="px-2 py-1 text-left text-gray-500">Category</th>
+                                <th class="px-2 py-1 text-left text-gray-500">Description</th>
+                                <th class="px-2 py-1 text-left text-gray-500">Vendor</th>
+                                <th class="px-2 py-1 text-left text-gray-500">Amount</th>
+                            </tr></thead>
+                            <tbody>${rows.map(x => `<tr class="border-b border-gray-100">
+                                <td class="px-2 py-1">${text(x.expenseDate)}</td>
+                                <td class="px-2 py-1">${text(x.expenseCategoryLabel)}</td>
+                                <td class="px-2 py-1">${text(x.description)}</td>
+                                <td class="px-2 py-1">${text(x.vendorName)}</td>
+                                <td class="px-2 py-1">${text(x.amount)} ${text(x.currency)}</td>
+                            </tr>`).join('')}</tbody>
+                        </table>
+                    </div>`;
+                return;
+            }
+            document.getElementById('typeDetails').innerHTML = Object.entries(d)
+                .filter(([k]) => !['id','createdAt','updatedAt','version','workflowRequestId'].includes(k))
+                .map(([k,v]) => `<p><b class="text-gray-500">${fmt(k)}:</b> ${text(v)}</p>`).join('');
+        }
+
+        function renderItems() {
+            const rows = detail.items || [];
+            document.getElementById('items').innerHTML = rows.length ? `
+                <div class="overflow-x-auto text-xs">
+                    <table class="w-full min-w-[480px]">
+                        <thead class="bg-gray-50"><tr>
+                            <th class="px-2 py-1 text-left text-gray-500">Item</th>
+                            <th class="px-2 py-1 text-left text-gray-500">Qty</th>
+                            <th class="px-2 py-1 text-left text-gray-500">Unit Cost</th>
+                            <th class="px-2 py-1 text-left text-gray-500">Total</th>
+                        </tr></thead>
+                        <tbody>${rows.map(x => `<tr class="border-b border-gray-100">
+                            <td class="px-2 py-1">${x.itemName}</td>
+                            <td class="px-2 py-1">${x.quantity} ${text(x.unitOfMeasure)}</td>
+                            <td class="px-2 py-1">${text(x.estimatedUnitCost)} ${text(x.currency)}</td>
+                            <td class="px-2 py-1">${text(x.estimatedTotalCost)} ${text(x.currency)}</td>
+                        </tr>`).join('')}</tbody>
+                    </table>
+                </div>` : '<p class="text-gray-400">No items.</p>';
+        }
+
+        function renderAttachments() {
+            const rows = detail.attachments || [];
+            document.getElementById('attachments').innerHTML = rows.length ? rows.map(a => `
+                <div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+                    <a class="text-blue-600 text-sm" href="${api}/${requestId}/attachments/${a.id}">${a.originalFilename}</a>
+                    ${canRemoveAttachments() ? `<button onclick="removeAttachment(${a.id})" class="text-xs text-red-600 border border-red-200 rounded px-2 py-0.5">Remove</button>` : ''}
+                </div>`).join('') : '<p class="text-gray-400">No attachments.</p>';
+        }
+
+        function escapeHtml(v) {
+            return (v||'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
+        }
+
+        function renderApprovals() {
+            const rows = detail.approvalSteps || [];
+            document.getElementById('approvalSteps').innerHTML = rows.length ? rows.map(s => `
+                <div class="rd-tl-item">
+                    <p class="font-semibold">Level ${s.sequenceNo} — ${fmt(s.decision)}</p>
+                    <p class="text-gray-500">Approver: ${empName(s.approverEmployeeId)}</p>
+                    <p class="text-gray-500">Comment: ${text(s.comments)}</p>
+                </div>`).join('') : '<p class="text-gray-400 text-sm">Not submitted.</p>';
+            const sent = (detail.freeRouteEvents || []).find(ev => ev.eventType === 'SENT' && ev.comment && ev.comment.trim());
+            document.getElementById('freeRouteEvents').innerHTML = sent ? `
+                <div class="rd-tl-item mt-2">
+                    <p class="font-semibold text-gray-600">Requester comment</p>
+                    <p class="text-gray-600 mt-1">${escapeHtml(sent.comment)}</p>
+                </div>` : '';
+        }
+
+        function renderComments() {
+            const rows = detail.comments || [];
+            document.getElementById('comments').innerHTML = rows.length
+                ? rows.map(c => `<li class="bg-gray-50 rounded-lg p-3 text-sm">${c.comment}</li>`).join('')
+                : '<li class="text-gray-400">No comments.</li>';
+        }
+
+        function renderActivity() {
+            const rows = detail.activities || [];
+            document.getElementById('activity').innerHTML = rows.length
+                ? rows.map(a => `<li class="border-b border-gray-100 pb-2 last:border-0"><b>${fmt(a.activityType)}</b><br><span class="text-gray-500">${text(a.description)}</span></li>`).join('')
+                : '<li class="text-gray-400">No activity.</li>';
+        }
+
+        function renderActions() {
+            const r = detail.request;
+            const task = (tasks || []).find(t => t.variables && Number(t.variables.workflowRequestId) === requestId);
+            const actions = [];
+            if (isOwner() && ['DRAFT','RETURNED_FOR_CORRECTION'].includes(r.status))
+                actions.push(`<button onclick="submitRequest()" class="flex-1 py-2.5 bg-blue-900 text-white rounded-xl text-sm font-bold">Submit</button>`);
+            if (isOwner() && !['APPROVED','REJECTED','CANCELLED','CLOSED'].includes(r.status))
+                actions.push(`<button onclick="cancelRequest()" class="flex-1 py-2.5 border border-red-300 text-red-600 rounded-xl text-sm font-semibold">Cancel</button>`);
+            if (context.hrAdmin && r.status === 'APPROVED')
+                actions.push(`<button onclick="showCloseSheet()" class="flex-1 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold">Close</button>`);
+            if (task) {
+                actions.push(`<button onclick="approval('${task.taskId}','approve')" class="flex-1 py-2.5 bg-green-600 text-white rounded-xl text-sm font-bold">Approve</button>`);
+                actions.push(`<button onclick="approval('${task.taskId}','reject')"  class="flex-1 py-2.5 bg-red-600 text-white rounded-xl text-sm font-bold">Reject</button>`);
+                actions.push(`<button onclick="approval('${task.taskId}','return')"  class="flex-1 py-2.5 bg-amber-500 text-white rounded-xl text-sm font-bold">Return</button>`);
+            }
+            document.getElementById('primaryActions').innerHTML = actions.join('');
+        }
+
+        async function submitRequest() { await mutate(`${api}/${requestId}/submit`, 'POST'); }
+        async function cancelRequest() { if (confirm('Cancel this request?')) await mutate(`${api}/${requestId}/cancel`, 'POST'); }
+        function showCloseSheet()  { document.getElementById('closeSheet').classList.add('open'); document.getElementById('closeBackdrop').classList.add('open'); }
+        function hideCloseSheet()  { document.getElementById('closeSheet').classList.remove('open'); document.getElementById('closeBackdrop').classList.remove('open'); }
+        async function confirmCloseRequest() { hideCloseSheet(); await mutate(`${api}/${requestId}/close`, 'POST'); }
+        async function mutate(url, method) {
+            try { await json(url, {method}); await load(); } catch (e) { alert(e.message); }
+        }
+        async function approval(taskId, action) {
+            const comment = prompt(action === 'approve' ? 'Optional comment:' : 'Comment is required:') || '';
+            if (action !== 'approve' && !comment.trim()) return alert('A comment is required.');
+            try {
+                await json(`${api}/approvals/${action}`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({taskId, comment})});
+                await load();
+            } catch (e) { alert(e.message); }
+        }
+        async function removeAttachment(id) {
+            if (!confirm('Remove this attachment?')) return;
+            const r = await fetch(`${api}/${requestId}/attachments/${id}`, {method:'DELETE'});
+            if (!r.ok) return alert(await r.text());
+            await load();
+        }
+
+        document.getElementById('attachmentForm').addEventListener('submit', async ev => {
+            ev.preventDefault();
+            const file = document.getElementById('attachmentFile').files[0];
+            if (!file) return alert('Choose a file.');
+            const form = new FormData();
+            form.append('file', file);
+            form.append('attachmentType', document.getElementById('attachmentType').value);
+            const r = await fetch(`${api}/${requestId}/attachments`, {method:'POST', body: form});
+            if (!r.ok) return alert(await r.text());
+            ev.target.reset();
+            await load();
+        });
+
+        document.getElementById('commentForm').addEventListener('submit', async ev => {
+            ev.preventDefault();
+            try {
+                await json(`${api}/${requestId}/comments`, {
+                    method:'POST', headers:{'Content-Type':'application/json'},
+                    body: JSON.stringify({comment: document.getElementById('commentText').value, internalOnly: document.getElementById('internalComment').checked})
+                });
+                ev.target.reset();
+                await load();
+            } catch (e) { alert(e.message); }
+        });
+
+        document.addEventListener('DOMContentLoaded', load);
+    </script>
+
+</section>
+</body>
+</html>

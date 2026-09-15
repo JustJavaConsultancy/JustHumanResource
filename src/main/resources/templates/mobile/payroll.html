@@ -289,6 +289,31 @@
         </div>
     </div>
 
+    <!-- scheduled allowances -->
+    <div th:if="${futureAllowances != null and not #lists.isEmpty(futureAllowances)}"
+         class="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/50 rounded-2xl p-4 mb-4">
+        <div class="flex items-center gap-2 mb-3">
+            <span class="material-symbols-outlined text-amber-600 dark:text-amber-400">history_toggle_off</span>
+            <h3 class="text-xs font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wider">Scheduled Allowances</h3>
+        </div>
+        <div class="space-y-3">
+            <div th:each="fa : ${futureAllowances}"
+                 class="flex flex-col border-b border-amber-200/60 dark:border-amber-800/50 last:border-0 pb-2 last:pb-0">
+                <div class="flex justify-between items-center">
+                    <span class="text-sm font-semibold text-gray-800 dark:text-gray-200" th:text="${fa.allowanceName}">Allowance</span>
+                    <span class="text-sm font-bold text-amber-700 dark:text-amber-500">
+                        ₦<span th:text="${#numbers.formatDecimal(fa.amount, 0, 'COMMA', 2, 'POINT')}">0.00</span>
+                    </span>
+                </div>
+                <div class="flex items-center text-[11px] text-amber-600/80 dark:text-amber-500/80 mt-1">
+                    <span class="material-symbols-outlined text-[14px] mr-1">calendar_month</span>
+                    Starts:
+                    <span class="ml-1 font-medium" th:text="${#temporals.format(fa.effectiveFrom, 'MMMM yyyy')}">May 2026</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- payslip history (flat) -->
     <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200 dark:border-slate-700">
         <div class="flex items-center justify-between mb-3">

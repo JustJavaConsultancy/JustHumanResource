@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/mobileEmployeeLayout}">
+<head>
+    <title>Payroll Reporting</title>
+    <style>
+        .pr-stat { background:#fff; border-radius:12px; border:1px solid #e5e7eb; padding:14px; }
+        .pr-card { background:#fff; border-radius:12px; border:1px solid #e5e7eb; padding:14px; margin-bottom:10px; }
+        .pr-row { display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid #f3f4f6; font-size:0.8rem; }
+        .pr-row:last-child { border-bottom:none; }
+        .pr-bar { height:6px; border-radius:3px; background:#e5e7eb; overflow:hidden; margin-top:4px; }
+        .pr-bar-fill { height:100%; border-radius:3px; }
+        .pr-entry { background:#fff; border-radius:12px; border:1px solid #e5e7eb; padding:12px; margin-bottom:8px; }
+    </style>
+</head>
+<body>
+<section layout:fragment="content">
+
+    <!-- Header -->
+    <div class="bg-blue-900 rounded-xl p-4 mb-4 text-white">
+        <p class="text-xs text-blue-300 uppercase font-semibold">Payroll Reporting Dashboard</p>
+        <p class="text-sm text-blue-200 mt-1"
+           th:text="'Jan 1 – Dec 31, ' + ${reportYear}">2026</p>
+    </div>
+
+    <!-- 4 Summary Stats -->
+    <div class="grid grid-cols-2 gap-3 mb-4">
+        <div class="pr-stat">
+            <p class="text-xs text-gray-500">Total Gross Pay</p>
+            <p class="text-base font-bold text-blue-900"
+               th:text="'₦' + ${#numbers.formatDecimal(grandTotalGross,1,'COMMA',0,'POINT')}">₦0</p>
+            <p class="text-xs text-gray-400 mt-1" th:text="${totalEmployees} + ' employees'">0 employees</p>
+        </div>
+        <div class="pr-stat">
+            <p class="text-xs text-gray-500">Total Net Pay</p>
+            <p class="text-base font-bold text-green-600"
+               th:text="'₦' + ${#numbers.formatDecimal(grandTotalNet,1,'COMMA',0,'POINT')}">₦0</p>
+            <p class="text-xs text-gray-400 mt-1">Current cycle</p>
+        </div>
+        <div class="pr-stat">
+            <p class="text-xs text-gray-500">PAYE Remittance</p>
+            <p class="text-base font-bold text-amber-600"
+               th:text="'₦' + ${#numbers.formatDecimal(grandTotalPaye,1,'COMMA',0,'POINT')}">₦0</p>
+            <p class="text-xs text-gray-400 mt-1">Tax</p>
+        </div>
+        <div class="pr-stat">
+            <p class="text-xs text-gray-500">Pension Fund</p>
+            <p class="text-base font-bold text-rose-600"
+               th:text="'₦' + ${#numbers.formatDecimal(grandTotalPension,1,'COMMA',0,'POINT')}">₦0</p>
+            <p class="text-xs text-gray-400 mt-1" th:text="${pensionEmployeeCount} + ' employees'">0 employees</p>
+        </div>
+    </div>
+
+    <!-- Component Trend -->
+    <div class="pr-card mb-4">
+        <div class="flex items-center justify-between mb-3">
+            <p class="font-semibold text-sm">Component Trend</p>
+            <div class="flex gap-1 flex-wrap justify-end">
+                <span th:each="code, cIdx : ${trendCodes}"
+                      class="flex items-center gap-1 text-xs font-semibold text-gray-500 px-2 py-0.5 bg-gray-100 rounded">
+                    <span class="w-2 h-2 rounded-full inline-block"
+                          th:classappend="${cIdx.index == 0} ? 'bg-blue-700' : (${cIdx.index == 1} ? 'bg-blue-400' : 'bg-indigo-400')"></span>
+                    <span th:text="${code}">CODE</span>
+                </span>
+            </div>
+        </div>
+
+        <div th:if="${componentTrend == null or #lists.isEmpty(componentTrend)}"
+             class="text-xs text-gray-400 text-center py-4">No trend data available.</div>
+
+        <div th:if="${componentTrend != null and !#lists.isEmpty(componentTrend)}"
+             class="flex items-end gap-1 h-24 overflow-x-auto pb-5 relative">
+            <div th:each="period : ${trendPeriods}"
+                 class="flex flex-col items-center gap-0.5 flex-shrink-0 h-full justify-end"
+                 style="min-width:28px;">
+                <div class="flex gap-0.5 items-end h-full">
+                    <div th:each="code, cIdx : ${trendCodes}"
+                         class="w-2 rounded-t"
+                         th:classappend="${cIdx.index == 0} ? 'bg-blue-700' : (${cIdx.index == 1} ? 'bg-blue-400' : 'bg-indigo-400')"
+                         style="min-height:2px; height:30%;">
+                    </div>
+                </div>
+                <span class="text-gray-400 font-bold absolute bottom-0"
+                      style="font-size:8px;"
+                      th:text="${#strings.length(period) >= 7 ? period.substring(5,7) : period}">MO</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Earnings Breakdown -->
+    <div class="pr-card mb-3">
+        <p class="font-semibold text-sm mb-3">Earnings Breakdown</p>
+        <div th:if="${earningsBreakdown == null or #lists.isEmpty(earningsBreakdown)}"
+             class="text-xs text-gray-400 text-center py-2">No earnings data.</div>
+        <div th:each="item : ${earningsBreakdown}" class="mb-3">
+            <div class="flex justify-between text-xs mb-1">
+                <span class="font-medium text-gray-700 uppercase"
+                      th:text="${item.componentName != null ? item.componentName : item.componentCode}">Component</span>
+                <span class="font-semibold text-blue-900"
+                      th:text="${item.totalAmount != null ? '₦' + #numbers.formatDecimal(item.totalAmount,1,'COMMA',0,'POINT') : '—'}">₦0</span>
+            </div>
+            <div class="pr-bar">
+                <div class="pr-bar-fill bg-blue-600"
+                     th:style="${item.totalAmount != null and maxEarning != null and maxEarning > 0}
+                                ? 'width:' + ${#numbers.formatDecimal(item.totalAmount.doubleValue() / maxEarning.doubleValue() * 100,1,0)} + '%'
+                                : 'width:0%'"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Deductions Breakdown -->
+    <div class="pr-card mb-3">
+        <p class="font-semibold text-sm mb-3">Deductions Breakdown</p>
+        <div th:if="${deductionBreakdown == null or #lists.isEmpty(deductionBreakdown)}"
+             class="text-xs text-gray-400 text-center py-2">No deductions data.</div>
+        <div th:each="item : ${deductionBreakdown}" class="mb-3">
+            <div class="flex justify-between text-xs mb-1">
+                <span class="font-medium text-gray-700 uppercase"
+                      th:text="${item.componentName != null ? item.componentName : item.componentCode}">Component</span>
+                <span class="font-semibold text-red-600"
+                      th:text="${item.totalAmount != null ? '-₦' + #numbers.formatDecimal(item.totalAmount,1,'COMMA',0,'POINT') : '—'}">₦0</span>
+            </div>
+            <div class="pr-bar">
+                <div class="pr-bar-fill bg-red-500"
+                     th:style="${item.totalAmount != null and maxDeduction != null and maxDeduction > 0}
+                                ? 'width:' + ${#numbers.formatDecimal(item.totalAmount.doubleValue() / maxDeduction.doubleValue() * 100,1,0)} + '%'
+                                : 'width:0%'"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Group Focus -->
+    <div class="rounded-xl bg-blue-900 p-4 mb-4 text-white">
+        <p class="font-bold text-sm mb-1">Group Focus</p>
+        <p class="text-blue-200 text-xs mb-3">Gross pay by department</p>
+        <div th:if="${payrollSummary == null or #lists.isEmpty(payrollSummary)}"
+             class="text-blue-200 text-xs">No group data available.</div>
+        <div th:each="grp : ${payrollSummary}" class="mb-3">
+            <div class="flex justify-between text-xs mb-1">
+                <span class="font-semibold opacity-80"
+                      th:text="${grp.groupName != null ? grp.groupName : 'Unknown'}">Group</span>
+                <span class="font-bold"
+                      th:text="${grp.totalGross != null ? '₦' + #numbers.formatDecimal(grp.totalGross,1,'COMMA',0,'POINT') : '—'}">₦0</span>
+            </div>
+            <div class="h-1.5 bg-white/20 rounded-full overflow-hidden">
+                <div class="h-full bg-white rounded-full"
+                     th:style="${grp.totalGross != null and maxGroupGross != null and maxGroupGross > 0}
+                                ? 'width:' + ${#numbers.formatDecimal(grp.totalGross.doubleValue() / maxGroupGross.doubleValue() * 100,1,0)} + '%'
+                                : 'width:0%'"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Payroll Entries -->
+    <div class="pr-card mb-4">
+        <div class="flex items-center justify-between mb-3">
+            <p class="font-semibold text-sm">Recent Payroll Entries</p>
+            <a th:href="@{/paye-report}" class="text-blue-600 text-xs font-semibold">View All</a>
+        </div>
+
+        <div th:if="${recentEntries == null or #lists.isEmpty(recentEntries)}"
+             class="text-center py-6">
+            <span class="material-symbols-outlined text-gray-300" style="font-size:36px">receipt_long</span>
+            <p class="text-xs text-gray-400 mt-1">No payroll entries found.</p>
+        </div>
+
+        <div th:each="entry, eStat : ${recentEntries}" class="pr-entry"
+             th:with="safeName=${entry.employeeName != null ? entry.employeeName : 'Unknown'}">
+            <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs"
+                         th:text="${safeName.substring(0,1).toUpperCase()}">A</div>
+                    <div>
+                        <p class="font-semibold text-sm" th:text="${safeName}">Name</p>
+                        <p class="text-xs text-gray-400" th:text="'EMP-' + (entry.employeeId != null ? entry.employeeId : '???')">EMP-001</p>
+                    </div>
+                </div>
+                <span th:if="${entry.paye != null}"
+                      class="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">PAID</span>
+                <span th:if="${entry.paye == null}"
+                      class="text-xs font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-400">PENDING</span>
+            </div>
+            <div class="grid grid-cols-3 gap-2 text-xs text-center">
+                <div class="bg-gray-50 rounded p-1.5">
+                    <p class="text-gray-400">Taxable</p>
+                    <p class="font-semibold"
+                       th:text="${entry.taxableIncome != null ? '₦' + #numbers.formatDecimal(entry.taxableIncome,1,'COMMA',0,'POINT') : '—'}">—</p>
+                </div>
+                <div class="bg-red-50 rounded p-1.5">
+                    <p class="text-gray-400">PAYE</p>
+                    <p class="font-semibold text-red-600"
+                       th:text="${entry.paye != null ? '₦' + #numbers.formatDecimal(entry.paye,1,'COMMA',0,'POINT') : '—'}">—</p>
+                </div>
+                <div class="bg-amber-50 rounded p-1.5">
+                    <p class="text-gray-400">YTD</p>
+                    <p class="font-semibold text-amber-600"
+                       th:text="${entry.ytdPaye != null ? '₦' + #numbers.formatDecimal(entry.ytdPaye,1,'COMMA',0,'POINT') : '—'}">—</p>
+                </div>
+            </div>
+        </div>
+
+        <div th:if="${recentEntries != null and !#lists.isEmpty(recentEntries)}"
+             class="text-xs text-gray-400 text-center mt-2"
+             th:text="'Showing ' + ${#lists.size(recentEntries)} + ' of ' + ${totalEmployees} + ' employees'">
+            Showing 0 of 0
+        </div>
+    </div>
+
+    <!-- Compliance Links -->
+    <div class="pr-card">
+        <p class="font-semibold text-sm mb-3">Compliance Reports</p>
+        <a th:href="@{/paye-report}" class="flex items-center justify-between p-2 bg-gray-50 rounded-lg mb-2 text-sm">
+            <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-blue-600" style="font-size:18px">description</span>
+                <div>
+                    <p class="font-semibold text-sm">PAYE Tax Report</p>
+                    <p class="text-xs text-gray-400" th:text="${reportYear} + ' · ' + ${totalEmployees} + ' employees'">2026</p>
+                </div>
+            </div>
+            <span class="material-symbols-outlined text-gray-400" style="font-size:16px">chevron_right</span>
+        </a>
+        <a th:href="@{/pension-report}" class="flex items-center justify-between p-2 bg-gray-50 rounded-lg text-sm">
+            <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-green-600" style="font-size:18px">security</span>
+                <div>
+                    <p class="font-semibold text-sm">Pension Contribution</p>
+                    <p class="text-xs text-gray-400" th:text="${reportYear} + ' · ' + ${pensionEmployeeCount} + ' employees'">2026</p>
+                </div>
+            </div>
+            <span class="material-symbols-outlined text-gray-400" style="font-size:16px">chevron_right</span>
+        </a>
+    </div>
+
+</section>
+</body>
+</html>

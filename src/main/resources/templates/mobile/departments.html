@@ -1,0 +1,1265 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/mobileEmployeeLayout}">
+<head>
+    <meta charset="UTF-8">
+    <title>Organogram</title>
+    <style>
+        /* ── dept-* prefixed styles to avoid collision ── */
+        .dept-card { background:#fff; border:1px solid #e5e7eb; border-radius:14px; }
+        .dark .dept-card { background:#1f2937; border-color:#374151; }
+
+        .dept-stat { padding:12px; }
+        .dept-badge { display:inline-flex; align-items:center; padding:2px 8px; border-radius:999px; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.02em; }
+        .dept-badge-success { background:#dcfce7; color:#166534; }
+        .dept-badge-error { background:#fee2e2; color:#991b1b; }
+        .dept-badge-warning { background:#fef3c7; color:#92400e; }
+        .dept-badge-info { background:#dbeafe; color:#1e40af; }
+        .dept-badge-neutral { background:#f1f5f9; color:#475569; }
+        .dark .dept-badge-neutral { background:#374151; color:#d1d5db; }
+
+        .dept-input { width:100%; border:1px solid #d1d5db; background:#fff; border-radius:10px; padding:10px 12px; font-size:14px; outline:none; }
+        .dark .dept-input { border-color:#374151; background:#0f172a; color:#e5e7eb; }
+        .dept-input:focus { border-color:#2463eb; box-shadow:0 0 0 3px rgba(37,99,235,.15); }
+        .dept-input:disabled { background:#f1f5f9; color:#64748b; cursor:not-allowed; }
+        .dark .dept-input:disabled { background:#1e293b; color:#64748b; }
+
+        .dept-primary { background:#2463eb; color:#fff; padding:10px 16px; border-radius:12px; font-weight:600; font-size:14px; }
+        .dept-secondary { background:#f1f5f9; color:#0f172a; padding:10px 16px; border-radius:12px; font-weight:600; font-size:14px; border:1px solid #e5e7eb; }
+        .dark .dept-secondary { background:#1e293b; color:#e5e7eb; border-color:#334155; }
+        .dept-danger { background:#dc2626; color:#fff; padding:10px 16px; border-radius:12px; font-weight:600; font-size:14px; }
+        .dept-warn { background:#ea580c; color:#fff; padding:10px 16px; border-radius:12px; font-weight:600; font-size:14px; }
+
+        .dept-sheet-backdrop { position:fixed; inset:0; background:rgba(15,23,42,.5); z-index:60; }
+        .dept-sheet { position:fixed; left:0; right:0; bottom:0; background:#fff; border-radius:20px 20px 0 0; z-index:70; max-height:92vh; display:flex; flex-direction:column; }
+        .dark .dept-sheet { background:#0f172a; }
+        .dept-sheet-head { padding:14px 18px; border-bottom:1px solid #e5e7eb; display:flex; justify-content:space-between; align-items:center; }
+        .dark .dept-sheet-head { border-bottom-color:#334155; }
+        .dept-sheet-body { padding:16px 18px; overflow-y:auto; flex:1; }
+        .dept-sheet-foot { padding:12px 18px; border-top:1px solid #e5e7eb; display:flex; gap:8px; justify-content:flex-end; }
+        .dark .dept-sheet-foot { border-top-color:#334155; }
+
+        .dept-field-label { font-size:11px; font-weight:600; color:#475569; text-transform:uppercase; letter-spacing:.03em; margin-bottom:4px; display:block; }
+        .dark .dept-field-label { color:#94a3b8; }
+
+        .dept-toast { position:fixed; left:50%; transform:translateX(-50%); bottom:100px; z-index:100; background:#111827; color:#fff; padding:10px 16px; border-radius:12px; font-size:13px; font-weight:600; box-shadow:0 8px 20px -4px rgba(0,0,0,.4); animation:dept-toast-in .2s ease; }
+        .dept-toast.dept-toast-error { background:#dc2626; }
+        .dept-toast.dept-toast-info { background:#2463eb; }
+        @keyframes dept-toast-in { from { opacity:0; transform:translateX(-50%) translateY(6px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
+
+        .dept-error { background:#fef2f2; border:1px solid #fca5a5; color:#b91c1c; border-radius:8px; padding:8px 12px; font-size:12px; }
+
+        .dept-code-tag { font-family:'DM Mono',ui-monospace,monospace; font-size:10px; background:#f1f5f9; padding:2px 6px; border-radius:4px; color:#475569; }
+        .dark .dept-code-tag { background:#334155; color:#94a3b8; }
+
+        /* Tree nodes */
+        .dept-tree-node { border:1px solid #e5e7eb; border-radius:12px; padding:12px; background:#fff; }
+        .dark .dept-tree-node { background:#1f2937; border-color:#374151; }
+        .dept-tree-node.dept-tree-root { border-color:#2463eb; background:linear-gradient(135deg, rgba(36,99,235,.08), rgba(36,99,235,.02)); }
+        .dept-tree-children { margin-left:14px; padding-left:12px; border-left:2px dashed #cbd5e1; margin-top:8px; }
+        .dark .dept-tree-children { border-left-color:#475569; }
+        .dept-tree-toggle { transition:transform .15s ease; }
+        .dept-tree-toggle.dept-open { transform:rotate(90deg); }
+
+        .dept-rep-node { border-left:2px solid #2463eb; padding-left:10px; margin-left:6px; margin-top:6px; }
+        .dept-rep-root { border-left:none; padding-left:0; margin-left:0; }
+
+        .dept-tab-btn { padding:8px 12px; font-size:12px; font-weight:600; border-radius:10px; border:1px solid transparent; color:#64748b; }
+        .dept-tab-btn.dept-active { background:#2463eb; color:#fff; }
+
+        .dept-skeleton { background:linear-gradient(90deg,#e2e8f0 25%,#f1f5f9 50%,#e2e8f0 75%); background-size:200%; animation:dept-shimmer 1.4s infinite; border-radius:8px; height:20px; }
+        @keyframes dept-shimmer { from{background-position:200% 0;} to{background-position:-200% 0;} }
+
+        .dept-fab { position:fixed; right:16px; bottom:88px; z-index:40; width:56px; height:56px; border-radius:50%; background:#2463eb; color:#fff; display:flex; align-items:center; justify-content:center; box-shadow:0 10px 25px -8px rgba(37,99,235,.5); }
+
+        .dept-action-btn { display:flex; align-items:center; gap:10px; width:100%; padding:12px; border-radius:12px; border:1px solid #e5e7eb; background:#fff; font-size:13px; font-weight:600; text-align:left; }
+        .dark .dept-action-btn { background:#1f2937; border-color:#374151; color:#e5e7eb; }
+        .dept-action-icon { width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; color:#fff; }
+
+        .dept-company-item { display:flex; align-items:center; gap:10px; padding:8px; border-radius:10px; }
+        .dept-company-child { margin-left:14px; padding-left:10px; border-left:2px solid #e5e7eb; margin-top:4px; }
+        .dark .dept-company-child { border-left-color:#334155; }
+    </style>
+</head>
+<body>
+<main layout:fragment="content" class="px-4 pb-24 pt-2 space-y-4">
+
+    <!-- Header -->
+    <div class="flex items-start justify-between">
+        <div>
+            <h2 class="text-xl font-bold">Company Organogram</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Departments, reporting lines &amp; hierarchy</p>
+        </div>
+        <span id="deptLiveBadge" class="dept-badge dept-badge-info">Loading</span>
+    </div>
+
+    <!-- Stat cards -->
+    <div class="grid grid-cols-2 gap-3">
+        <div class="dept-card dept-stat">
+            <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Companies</p>
+            <p id="deptStatCompanies" class="mt-1 text-2xl font-bold">—</p>
+            <p id="deptStatCompanySub" class="text-[10px] text-slate-400 mt-0.5">Loading…</p>
+        </div>
+        <div class="dept-card dept-stat">
+            <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Departments</p>
+            <p id="deptStatDepts" class="mt-1 text-2xl font-bold">—</p>
+            <p id="deptStatDeptSub" class="text-[10px] text-slate-400 mt-0.5">Loading…</p>
+        </div>
+        <div class="dept-card dept-stat">
+            <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Employees Mapped</p>
+            <p id="deptStatEmps" class="mt-1 text-2xl font-bold">—</p>
+            <p class="text-[10px] text-slate-400 mt-0.5">From dept tree</p>
+        </div>
+        <div class="dept-card dept-stat">
+            <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Reporting Lines</p>
+            <p id="deptStatLines" class="mt-1 text-2xl font-bold">—</p>
+            <p class="text-[10px] text-slate-400 mt-0.5">Primary + matrix</p>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="dept-card p-3">
+        <p class="text-xs font-bold text-slate-700 dark:text-slate-200 mb-3 flex items-center gap-1">
+            <span class="material-symbols-outlined text-primary text-base">bolt</span>Quick Actions
+        </p>
+        <div class="grid grid-cols-2 gap-2">
+            <button type="button" onclick="deptOpenSheet('deptSheetCreate')" class="dept-action-btn">
+                <span class="dept-action-icon" style="background:#2463eb"><span class="material-symbols-outlined text-lg">add_circle</span></span>
+                <span>New Department</span>
+            </button>
+            <button type="button" onclick="deptOpenSheet('deptSheetMove')" class="dept-action-btn">
+                <span class="dept-action-icon" style="background:#ea580c"><span class="material-symbols-outlined text-lg">swap_horiz</span></span>
+                <span>Move Dept</span>
+            </button>
+            <button type="button" onclick="deptOpenSheet('deptSheetAssign')" class="dept-action-btn">
+                <span class="dept-action-icon" style="background:#16a34a"><span class="material-symbols-outlined text-lg">supervisor_account</span></span>
+                <span>Assign Manager</span>
+            </button>
+            <button type="button" onclick="deptOpenSheet('deptSheetRemove')" class="dept-action-btn">
+                <span class="dept-action-icon" style="background:#dc2626"><span class="material-symbols-outlined text-lg">person_remove</span></span>
+                <span>Remove Manager</span>
+            </button>
+            <button type="button" onclick="deptOpenSheet('deptSheetCompany')" class="dept-action-btn">
+                <span class="dept-action-icon" style="background:#7c3aed"><span class="material-symbols-outlined text-lg">business</span></span>
+                <span>New Company</span>
+            </button>
+            <button type="button" onclick="deptOpenSheet('deptSheetRepTree')" class="dept-action-btn">
+                <span class="dept-action-icon" style="background:#0891b2"><span class="material-symbols-outlined text-lg">account_tree</span></span>
+                <span>Reporting Tree</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- View Tabs -->
+    <div class="flex gap-2 border-b border-slate-200 dark:border-slate-700 overflow-x-auto no-scrollbar">
+        <button id="deptTabTree" onclick="deptSwitchTab('tree')" class="px-3 py-2 text-sm font-semibold border-b-2 border-primary text-primary whitespace-nowrap">Departments</button>
+        <button id="deptTabList" onclick="deptSwitchTab('list')" class="px-3 py-2 text-sm font-semibold border-b-2 border-transparent text-slate-500 whitespace-nowrap">List View</button>
+        <button id="deptTabCompanies" onclick="deptSwitchTab('companies')" class="px-3 py-2 text-sm font-semibold border-b-2 border-transparent text-slate-500 whitespace-nowrap">Companies</button>
+    </div>
+
+    <!-- Department Tree View (collapsible cards) -->
+    <div id="deptViewTree" class="space-y-2">
+        <div class="dept-card p-4">
+            <div class="dept-skeleton mb-2 w-3/4"></div>
+            <div class="dept-skeleton mb-2 w-2/3 ml-4"></div>
+            <div class="dept-skeleton w-2/3 ml-4"></div>
+        </div>
+    </div>
+
+    <!-- List View -->
+    <div id="deptViewList" class="space-y-2 hidden"></div>
+
+    <!-- Companies View -->
+    <div id="deptViewCompanies" class="space-y-2 hidden">
+        <div class="dept-card p-4">
+            <div class="dept-skeleton mb-2"></div>
+            <div class="dept-skeleton w-2/3"></div>
+        </div>
+    </div>
+
+    <!-- FAB -->
+    <button type="button" onclick="deptOpenSheet('deptSheetCreate')" class="dept-fab" title="Create department">
+        <span class="material-symbols-outlined">add</span>
+    </button>
+
+    <!-- ── Detail Sheet ── -->
+    <div id="deptSheetDetailBackdrop" class="dept-sheet-backdrop hidden" onclick="deptCloseSheet('deptSheetDetail')"></div>
+    <div id="deptSheetDetail" class="dept-sheet hidden">
+        <div class="dept-sheet-head">
+            <div>
+                <p id="deptDetailName" class="text-base font-bold">Department</p>
+                <p id="deptDetailMeta" class="text-[11px] text-slate-500">—</p>
+            </div>
+            <button type="button" onclick="deptCloseSheet('deptSheetDetail')"><span class="material-symbols-outlined text-slate-500">close</span></button>
+        </div>
+        <div class="dept-sheet-body space-y-4">
+            <div class="grid grid-cols-3 gap-2">
+                <div class="dept-card p-2 text-center">
+                    <p class="text-lg font-bold text-primary" id="deptDetailEmp">—</p>
+                    <p class="text-[10px] text-slate-500">Employees</p>
+                </div>
+                <div class="dept-card p-2 text-center">
+                    <p class="text-lg font-bold text-primary" id="deptDetailSub">—</p>
+                    <p class="text-[10px] text-slate-500">Sub-depts</p>
+                </div>
+                <div class="dept-card p-2 text-center">
+                    <p class="text-xs font-bold text-primary" id="deptDetailCode">—</p>
+                    <p class="text-[10px] text-slate-500">Code</p>
+                </div>
+            </div>
+            <button type="button" id="deptDetailEditBtn" class="dept-primary w-full flex items-center justify-center gap-2">
+                <span class="material-symbols-outlined text-base">edit</span>Edit Department
+            </button>
+        </div>
+    </div>
+
+    <!-- ── Create Department Sheet ── -->
+    <div id="deptSheetCreateBackdrop" class="dept-sheet-backdrop hidden" onclick="deptCloseSheet('deptSheetCreate')"></div>
+    <div id="deptSheetCreate" class="dept-sheet hidden">
+        <div class="dept-sheet-head">
+            <div>
+                <p class="text-base font-bold">Create Department</p>
+                <p class="text-[11px] text-slate-500">Add a department to the organisation</p>
+            </div>
+            <button type="button" onclick="deptCloseSheet('deptSheetCreate')"><span class="material-symbols-outlined text-slate-500">close</span></button>
+        </div>
+        <div class="dept-sheet-body space-y-3">
+            <div><label class="dept-field-label">Department Name *</label><input id="deptName" class="dept-input" placeholder="e.g. Human Resources"></div>
+            <div><label class="dept-field-label">Department Code *</label><input id="deptCode" class="dept-input" placeholder="e.g. 100001" style="font-family:ui-monospace,monospace"></div>
+            <div><label class="dept-field-label">Company *</label><select id="deptCompanyId" class="dept-input"><option value="">Select a company</option></select></div>
+            <div><label class="dept-field-label">Department Head (optional)</label><select id="deptHeadId" class="dept-input"><option value="">— None —</option></select></div>
+            <div><label class="dept-field-label">Parent Department (optional)</label><select id="deptParentId" class="dept-input"><option value="">— None (top-level) —</option></select></div>
+            <div><label class="dept-field-label">Effective From *</label><input id="deptEffectiveFrom" type="date" class="dept-input"></div>
+            <div id="deptError" class="dept-error hidden"></div>
+        </div>
+        <div class="dept-sheet-foot">
+            <button type="button" onclick="deptCloseSheet('deptSheetCreate')" class="dept-secondary">Cancel</button>
+            <button type="button" id="deptSaveBtn" onclick="deptSaveDept()" class="dept-primary">Create</button>
+        </div>
+    </div>
+
+    <!-- ── Edit Department Sheet ── -->
+    <div id="deptSheetEditBackdrop" class="dept-sheet-backdrop hidden" onclick="deptCloseSheet('deptSheetEdit')"></div>
+    <div id="deptSheetEdit" class="dept-sheet hidden">
+        <div class="dept-sheet-head">
+            <div>
+                <p class="text-base font-bold">Edit Department</p>
+                <p class="text-[11px] text-slate-500">Update department attributes</p>
+            </div>
+            <button type="button" onclick="deptCloseSheet('deptSheetEdit')"><span class="material-symbols-outlined text-slate-500">close</span></button>
+        </div>
+        <div class="dept-sheet-body space-y-3">
+            <input type="hidden" id="editDeptId">
+            <div><label class="dept-field-label">Department Name *</label><input id="editDeptName" class="dept-input"></div>
+            <div><label class="dept-field-label">Department Code (not editable)</label><input id="editDeptCode" class="dept-input" disabled readonly style="font-family:ui-monospace,monospace"></div>
+            <div><label class="dept-field-label">Company *</label><select id="editDeptCompanyId" class="dept-input"><option value="">Select a company</option></select></div>
+            <div><label class="dept-field-label">Department Head (optional)</label><select id="editDeptHeadId" class="dept-input"><option value="">— None —</option></select></div>
+            <div><label class="dept-field-label">Parent Department (optional)</label><select id="editDeptParentId" class="dept-input"><option value="">— None (top-level) —</option></select></div>
+            <div><label class="dept-field-label">Effective From *</label><input id="editDeptEffectiveFrom" type="date" class="dept-input"></div>
+            <div id="editDeptError" class="dept-error hidden"></div>
+        </div>
+        <div class="dept-sheet-foot">
+            <button type="button" onclick="deptCloseSheet('deptSheetEdit')" class="dept-secondary">Cancel</button>
+            <button type="button" id="saveEditDeptBtn" onclick="deptSaveEditDept()" class="dept-primary">Save Changes</button>
+        </div>
+    </div>
+
+    <!-- ── Move Department Sheet ── -->
+    <div id="deptSheetMoveBackdrop" class="dept-sheet-backdrop hidden" onclick="deptCloseSheet('deptSheetMove')"></div>
+    <div id="deptSheetMove" class="dept-sheet hidden">
+        <div class="dept-sheet-head">
+            <div>
+                <p class="text-base font-bold">Move Department</p>
+                <p class="text-[11px] text-slate-500">Reparent an existing department</p>
+            </div>
+            <button type="button" onclick="deptCloseSheet('deptSheetMove')"><span class="material-symbols-outlined text-slate-500">close</span></button>
+        </div>
+        <div class="dept-sheet-body space-y-3">
+            <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-700">
+                <span class="material-symbols-outlined text-sm align-middle mr-1">info</span>
+                Moving a department will update its position in the hierarchy.
+            </div>
+            <div><label class="dept-field-label">Department to Move *</label><select id="moveDeptId" class="dept-input"><option value="">Select a department</option></select></div>
+            <div><label class="dept-field-label">New Parent Department *</label><select id="moveNewParentId" class="dept-input"><option value="">Select a new parent</option></select></div>
+            <div id="moveError" class="dept-error hidden"></div>
+        </div>
+        <div class="dept-sheet-foot">
+            <button type="button" onclick="deptCloseSheet('deptSheetMove')" class="dept-secondary">Cancel</button>
+            <button type="button" id="saveMoveBtn" onclick="deptSaveMove()" class="dept-warn">Move</button>
+        </div>
+    </div>
+
+    <!-- ── Assign Reporting Line Sheet ── -->
+    <div id="deptSheetAssignBackdrop" class="dept-sheet-backdrop hidden" onclick="deptCloseSheet('deptSheetAssign')"></div>
+    <div id="deptSheetAssign" class="dept-sheet hidden">
+        <div class="dept-sheet-head">
+            <div>
+                <p class="text-base font-bold">Assign Reporting Line</p>
+                <p class="text-[11px] text-slate-500">Set who reports to whom</p>
+            </div>
+            <button type="button" onclick="deptCloseSheet('deptSheetAssign')"><span class="material-symbols-outlined text-slate-500">close</span></button>
+        </div>
+        <div class="dept-sheet-body space-y-3">
+            <div><label class="dept-field-label">Employee *</label><select id="reportEmpId" class="dept-input"><option value="">Select an employee</option></select></div>
+            <div><label class="dept-field-label">Manager *</label><select id="reportMgrId" class="dept-input"><option value="">Select a manager</option></select></div>
+            <div><label class="dept-field-label">Reporting Type *</label>
+                <select id="reportType" class="dept-input">
+                    <option value="PRIMARY">PRIMARY</option>
+                    <option value="MATRIX">MATRIX</option>
+                </select>
+            </div>
+            <div><label class="dept-field-label">Effective From *</label><input id="reportEffectiveFrom" type="date" class="dept-input"></div>
+            <div id="reportError" class="dept-error hidden"></div>
+        </div>
+        <div class="dept-sheet-foot">
+            <button type="button" onclick="deptCloseSheet('deptSheetAssign')" class="dept-secondary">Cancel</button>
+            <button type="button" id="saveReportBtn" onclick="deptSaveReport()" class="dept-primary" style="background:#16a34a">Assign Manager</button>
+        </div>
+    </div>
+
+    <!-- ── Remove Reporting Line Sheet ── -->
+    <div id="deptSheetRemoveBackdrop" class="dept-sheet-backdrop hidden" onclick="deptCloseSheet('deptSheetRemove')"></div>
+    <div id="deptSheetRemove" class="dept-sheet hidden">
+        <div class="dept-sheet-head">
+            <div>
+                <p class="text-base font-bold">Remove Reporting Line</p>
+                <p class="text-[11px] text-slate-500">End an active manager assignment</p>
+            </div>
+            <button type="button" onclick="deptCloseSheet('deptSheetRemove')"><span class="material-symbols-outlined text-slate-500">close</span></button>
+        </div>
+        <div class="dept-sheet-body space-y-3">
+            <div class="bg-red-50 border border-red-200 rounded-lg p-3 text-xs text-red-700">
+                <span class="material-symbols-outlined text-sm align-middle mr-1">warning</span>
+                This will end the active reporting line — it is not permanently deleted.
+            </div>
+            <div><label class="dept-field-label">Employee *</label><select id="removeEmpId" class="dept-input"><option value="">Select an employee</option></select></div>
+            <div><label class="dept-field-label">Reporting Type *</label>
+                <select id="removeType" class="dept-input">
+                    <option value="PRIMARY">PRIMARY</option>
+                    <option value="MATRIX">MATRIX</option>
+                </select>
+            </div>
+            <div><label class="dept-field-label">Effective To *</label><input id="removeEffectiveTo" type="date" class="dept-input"></div>
+            <div id="removeError" class="dept-error hidden"></div>
+        </div>
+        <div class="dept-sheet-foot">
+            <button type="button" onclick="deptCloseSheet('deptSheetRemove')" class="dept-secondary">Cancel</button>
+            <button type="button" id="saveRemoveBtn" onclick="deptSaveRemove()" class="dept-danger">Remove Manager</button>
+        </div>
+    </div>
+
+    <!-- ── Add Company Sheet ── -->
+    <div id="deptSheetCompanyBackdrop" class="dept-sheet-backdrop hidden" onclick="deptCloseSheet('deptSheetCompany')"></div>
+    <div id="deptSheetCompany" class="dept-sheet hidden">
+        <div class="dept-sheet-head">
+            <div>
+                <p class="text-base font-bold">Add Company</p>
+                <p class="text-[11px] text-slate-500">Register a parent company or subsidiary</p>
+            </div>
+            <button type="button" onclick="deptCloseSheet('deptSheetCompany')"><span class="material-symbols-outlined text-slate-500">close</span></button>
+        </div>
+        <div class="dept-sheet-body space-y-3">
+            <div>
+                <label class="dept-field-label">Company Type *</label>
+                <div class="flex gap-2">
+                    <button type="button" id="typeBtnParent" onclick="deptSetCompanyType('parent')" class="dept-tab-btn dept-active flex-1">Parent</button>
+                    <button type="button" id="typeBtnSub" onclick="deptSetCompanyType('subsidiary')" class="dept-tab-btn flex-1">Subsidiary</button>
+                </div>
+            </div>
+            <div id="parentCompanyField" class="hidden">
+                <label class="dept-field-label">Parent Company *</label>
+                <select id="compParentId" class="dept-input"><option value="">Select a parent company</option></select>
+            </div>
+            <div><label class="dept-field-label">Company Name *</label><input id="compName" class="dept-input" placeholder="e.g. JustJava Holdings"></div>
+            <div><label class="dept-field-label">Company Code *</label><input id="compCode" class="dept-input" maxlength="10" placeholder="e.g. JJH" style="font-family:ui-monospace,monospace;text-transform:uppercase"></div>
+            <div>
+                <label class="dept-field-label">Logo (PNG/JPG, max 2MB)</label>
+                <div class="flex items-center gap-2">
+                    <img id="logoPreview" src="" alt="" class="hidden w-10 h-10 object-contain rounded-lg border border-slate-200">
+                    <input type="file" id="compLogo" accept="image/png,image/jpeg" class="dept-input text-xs">
+                    <button type="button" id="clearLogoBtn" onclick="deptClearLogo()" class="hidden text-red-500"><span class="material-symbols-outlined text-lg">cancel</span></button>
+                </div>
+            </div>
+            <div id="companyError" class="dept-error hidden"></div>
+        </div>
+        <div class="dept-sheet-foot">
+            <button type="button" onclick="deptCloseSheet('deptSheetCompany')" class="dept-secondary">Cancel</button>
+            <button type="button" id="saveCompanyBtn" onclick="deptSaveCompany()" class="dept-primary">Create Company</button>
+        </div>
+    </div>
+
+    <!-- ── Edit Company Sheet ── -->
+    <div id="deptSheetEditCompanyBackdrop" class="dept-sheet-backdrop hidden" onclick="deptCloseSheet('deptSheetEditCompany')"></div>
+    <div id="deptSheetEditCompany" class="dept-sheet hidden">
+        <div class="dept-sheet-head">
+            <div>
+                <p class="text-base font-bold">Edit Company</p>
+                <p class="text-[11px] text-slate-500">Update company details</p>
+            </div>
+            <button type="button" onclick="deptCloseSheet('deptSheetEditCompany')"><span class="material-symbols-outlined text-slate-500">close</span></button>
+        </div>
+        <div class="dept-sheet-body space-y-3">
+            <input type="hidden" id="editCompId">
+            <div><label class="dept-field-label">Company Name *</label><input id="editCompName" class="dept-input"></div>
+            <div><label class="dept-field-label">Company Code *</label><input id="editCompCode" class="dept-input" maxlength="10" style="font-family:ui-monospace,monospace;text-transform:uppercase"></div>
+            <div>
+                <label class="dept-field-label">Logo (leave blank to keep)</label>
+                <div class="flex items-center gap-2">
+                    <img id="editLogoPreview" src="" alt="" class="hidden w-10 h-10 object-contain rounded-lg border border-slate-200">
+                    <input type="file" id="editCompLogo" accept="image/png,image/jpeg" class="dept-input text-xs">
+                    <button type="button" id="editClearLogoBtn" onclick="deptClearEditLogo()" class="hidden text-red-500"><span class="material-symbols-outlined text-lg">cancel</span></button>
+                </div>
+            </div>
+            <div id="editCompanyError" class="dept-error hidden"></div>
+        </div>
+        <div class="dept-sheet-foot">
+            <button type="button" onclick="deptCloseSheet('deptSheetEditCompany')" class="dept-secondary">Cancel</button>
+            <button type="button" id="saveEditCompanyBtn" onclick="deptSaveEditCompany()" class="dept-primary">Save Changes</button>
+        </div>
+    </div>
+
+    <!-- ── Reporting Tree Explorer Sheet ── -->
+    <div id="deptSheetRepTreeBackdrop" class="dept-sheet-backdrop hidden" onclick="deptCloseSheet('deptSheetRepTree')"></div>
+    <div id="deptSheetRepTree" class="dept-sheet hidden">
+        <div class="dept-sheet-head">
+            <div>
+                <p class="text-base font-bold">Reporting Tree Explorer</p>
+                <p class="text-[11px] text-slate-500">View hierarchy for an employee</p>
+            </div>
+            <button type="button" onclick="deptCloseSheet('deptSheetRepTree')"><span class="material-symbols-outlined text-slate-500">close</span></button>
+        </div>
+        <div class="dept-sheet-body space-y-3">
+            <div><label class="dept-field-label">Employee *</label><select id="repTreeEmpId" class="dept-input"><option value="">Select an employee</option></select></div>
+            <div>
+                <label class="dept-field-label">Reporting Type</label>
+                <div class="flex gap-2">
+                    <button type="button" id="typePrimary" onclick="deptSetRepType('PRIMARY')" class="dept-tab-btn dept-active flex-1">PRIMARY</button>
+                    <button type="button" id="typeMatrix" onclick="deptSetRepType('MATRIX')" class="dept-tab-btn flex-1">MATRIX</button>
+                </div>
+                <input type="hidden" id="repTreeType" value="PRIMARY">
+            </div>
+            <div><label class="dept-field-label">As-of Date *</label><input id="repTreeDate" type="date" class="dept-input"></div>
+            <button type="button" id="fetchRepBtn" onclick="deptFetchReportingTree()" class="dept-primary w-full flex items-center justify-center gap-2">
+                <span class="material-symbols-outlined text-base">search</span>Fetch Reporting Tree
+            </button>
+            <div>
+                <p class="text-[11px] font-bold text-slate-500 uppercase tracking-wide mt-3 mb-2">Result</p>
+                <div id="repTreeResult" class="dept-card p-3">
+                    <span class="text-xs text-slate-400">Select an employee and click Fetch.</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            const DEPT_API = '/api/organogram';
+
+            let companyTree = [];
+            let deptTree = [];
+            let employees = [];
+            let departmentHeads = [];
+            let companyType = 'parent';
+            let currentDetailNodeId = null;
+            const deptNodeMap = {};
+
+            function esc(s) {
+                if (s == null) return '';
+                return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+            }
+
+            function deptToast(msg, type) {
+                const el = document.createElement('div');
+                el.className = 'dept-toast' + (type === 'error' ? ' dept-toast-error' : type === 'info' ? ' dept-toast-info' : '');
+                el.textContent = msg;
+                document.body.appendChild(el);
+                setTimeout(() => el.remove(), 2600);
+            }
+            window.deptToast = deptToast;
+
+            function showErr(id, msg) {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.textContent = msg;
+                el.classList.remove('hidden');
+            }
+            function hideErr(id) {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.classList.add('hidden');
+                el.textContent = '';
+            }
+            function setBtnLoading(id, loading) {
+                const b = document.getElementById(id);
+                if (!b) return;
+                b.disabled = loading;
+                b.style.opacity = loading ? '0.7' : '1';
+            }
+
+            function friendlyError(status, serverMsg) {
+                if (status === 400) return serverMsg || 'The request was invalid.';
+                if (status === 401) return 'You are not authorised.';
+                if (status === 403) return 'You do not have permission.';
+                if (status === 404) return 'Record not found.';
+                if (status === 409) return 'Conflict — record may already exist.';
+                if (status >= 500) return 'Server error. Please try again later.';
+                return 'Unexpected error.';
+            }
+
+            async function apiFetch(path, options) {
+                options = options || {};
+                const res = await fetch(DEPT_API + path, {
+                    headers: Object.assign({'Content-Type': 'application/json'}, options.headers || {}),
+                    method: options.method || 'GET',
+                    body: options.body || undefined
+                });
+                if (!res.ok) {
+                    let serverMsg = '';
+                    try { const err = await res.json(); serverMsg = err.message || err.error || err.detail || ''; } catch (_) {}
+                    throw new Error(friendlyError(res.status, serverMsg));
+                }
+                if (res.status === 204) return null;
+                const text = await res.text();
+                return text ? JSON.parse(text) : null;
+            }
+
+            // ── Flatten helpers ──
+            function flattenCompanies(nodes) {
+                const out = [];
+                (function walk(arr) {
+                    arr.forEach(c => {
+                        const id = c.id || c.companyId;
+                        if (id) out.push({id, name: c.name, code: c.code});
+                        if (c.subsidiaries) walk(c.subsidiaries);
+                    });
+                })(nodes);
+                return out;
+            }
+            function flattenDepartments(nodes) {
+                const out = [];
+                (function walk(arr) {
+                    arr.forEach(d => {
+                        const id = d.id || d.departmentId;
+                        if (id) out.push({id, name: d.name, code: d.code});
+                        const kids = d.children || d.subDepartments;
+                        if (kids) walk(kids);
+                    });
+                })(nodes);
+                return out;
+            }
+            function flattenDepts(nodes, parent, acc) {
+                parent = parent || '—';
+                acc = acc || [];
+                nodes.forEach(n => {
+                    acc.push(Object.assign({}, n, {_parent: parent}));
+                    const kids = n.children || n.subDepartments || [];
+                    if (kids.length) flattenDepts(kids, n.name, acc);
+                });
+                return acc;
+            }
+
+            function populateSelect(selectId, items, blankLabel) {
+                const sel = document.getElementById(selectId);
+                if (!sel) return;
+                sel.innerHTML = '';
+                if (blankLabel) {
+                    const b = document.createElement('option');
+                    b.value = '';
+                    b.textContent = blankLabel;
+                    sel.appendChild(b);
+                }
+                items.forEach(i => {
+                    const o = document.createElement('option');
+                    o.value = i.id;
+                    o.textContent = i.code ? i.name + ' (' + i.code + ')' : i.name;
+                    sel.appendChild(o);
+                });
+            }
+            function populateCompanyDropdown(id) { populateSelect(id, flattenCompanies(companyTree), 'Select a company'); }
+            function populateDepartmentDropdown(id) {
+                const blank = (id === 'deptParentId' || id === 'editDeptParentId') ? '— None (top-level) —' : 'Select a department';
+                populateSelect(id, flattenDepartments(deptTree), blank);
+            }
+            function populateEmployeeDropdown(id) {
+                populateSelect(id, employees.map(e => ({id: e.id, name: e.firstName + ' ' + e.lastName})), 'Select an employee');
+            }
+            function populateDepartmentHeadDropdown(id) {
+                populateSelect(id, departmentHeads.map(e => ({id: e.id, name: e.firstName + ' ' + e.lastName})), '— None —');
+            }
+
+            // ── Sheet open/close ──
+            window.deptOpenSheet = function (id) {
+                document.getElementById(id + 'Backdrop').classList.remove('hidden');
+                document.getElementById(id).classList.remove('hidden');
+                // Populate dropdowns on open
+                if (id === 'deptSheetCreate') {
+                    populateCompanyDropdown('deptCompanyId');
+                    populateDepartmentDropdown('deptParentId');
+                    populateDepartmentHeadDropdown('deptHeadId');
+                } else if (id === 'deptSheetMove') {
+                    populateDepartmentDropdown('moveDeptId');
+                    populateDepartmentDropdown('moveNewParentId');
+                } else if (id === 'deptSheetAssign') {
+                    populateEmployeeDropdown('reportEmpId');
+                    populateEmployeeDropdown('reportMgrId');
+                } else if (id === 'deptSheetRemove') {
+                    populateEmployeeDropdown('removeEmpId');
+                } else if (id === 'deptSheetCompany') {
+                    populateCompanyDropdown('compParentId');
+                } else if (id === 'deptSheetRepTree') {
+                    populateEmployeeDropdown('repTreeEmpId');
+                }
+            };
+            window.deptCloseSheet = function (id) {
+                document.getElementById(id + 'Backdrop').classList.add('hidden');
+                document.getElementById(id).classList.add('hidden');
+            };
+
+            // ── Tab switching ──
+            window.deptSwitchTab = function (t) {
+                const map = {tree: 'deptViewTree', list: 'deptViewList', companies: 'deptViewCompanies'};
+                const tabs = {tree: 'deptTabTree', list: 'deptTabList', companies: 'deptTabCompanies'};
+                Object.keys(map).forEach(k => {
+                    document.getElementById(map[k]).classList.toggle('hidden', k !== t);
+                    const btn = document.getElementById(tabs[k]);
+                    if (k === t) { btn.classList.add('text-primary','border-primary'); btn.classList.remove('text-slate-500','border-transparent'); }
+                    else { btn.classList.remove('text-primary','border-primary'); btn.classList.add('text-slate-500','border-transparent'); }
+                });
+            };
+
+            // ── Tree render (collapsible) ──
+            function renderDeptTree() {
+                const wrap = document.getElementById('deptViewTree');
+                wrap.innerHTML = '';
+                if (!deptTree.length) {
+                    wrap.innerHTML = '<div class="dept-card p-6 text-center text-slate-400"><span class="material-symbols-outlined text-3xl">account_tree</span><p class="mt-2 text-sm">No departments yet. Tap "New Department".</p></div>';
+                    return;
+                }
+                deptTree.forEach(root => wrap.appendChild(buildTreeNode(root, 0)));
+            }
+
+            function buildTreeNode(node, depth) {
+                const nodeId = node.id || node.departmentId;
+                if (nodeId) deptNodeMap[nodeId] = node;
+                const kids = node.children || node.subDepartments || [];
+                const hasKids = kids.length > 0;
+
+                const container = document.createElement('div');
+                container.className = 'space-y-1';
+
+                const card = document.createElement('div');
+                card.className = 'dept-tree-node' + (depth === 0 ? ' dept-tree-root' : '');
+
+                const empBadge = node.employeeCount != null
+                    ? '<span class="dept-badge dept-badge-info">' + node.employeeCount + ' emp</span>'
+                    : '';
+                const codeTag = node.code ? '<span class="dept-code-tag">' + esc(node.code) + '</span>' : '';
+                const chev = hasKids
+                    ? '<span class="material-symbols-outlined text-slate-500 dept-tree-toggle" data-toggle>chevron_right</span>'
+                    : '<span class="w-6"></span>';
+
+                card.innerHTML =
+                    '<div class="flex items-center gap-2">' +
+                        chev +
+                        '<div class="min-w-0 flex-1 cursor-pointer" data-detail>' +
+                            '<p class="font-semibold text-sm truncate">' + esc(node.name || '—') + '</p>' +
+                            '<p class="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">' + codeTag + (empBadge ? ' ' + empBadge : '') + '</p>' +
+                        '</div>' +
+                        '<button type="button" class="text-primary p-1" data-edit><span class="material-symbols-outlined text-base">edit</span></button>' +
+                    '</div>';
+
+                container.appendChild(card);
+
+                let childWrap = null;
+                if (hasKids) {
+                    childWrap = document.createElement('div');
+                    childWrap.className = 'dept-tree-children hidden';
+                    kids.forEach(c => childWrap.appendChild(buildTreeNode(c, depth + 1)));
+                    container.appendChild(childWrap);
+                }
+
+                // Wire events
+                const toggleEl = card.querySelector('[data-toggle]');
+                if (toggleEl && childWrap) {
+                    const doToggle = (e) => {
+                        e.stopPropagation();
+                        const open = !childWrap.classList.contains('hidden');
+                        childWrap.classList.toggle('hidden', open);
+                        toggleEl.classList.toggle('dept-open', !open);
+                    };
+                    toggleEl.addEventListener('click', doToggle);
+                }
+                card.querySelector('[data-detail]').addEventListener('click', () => showDetail(node));
+                card.querySelector('[data-edit]').addEventListener('click', (e) => { e.stopPropagation(); openEditDept(nodeId); });
+
+                return container;
+            }
+
+            // ── List View render ──
+            function renderDeptList() {
+                const wrap = document.getElementById('deptViewList');
+                wrap.innerHTML = '';
+                const flat = flattenDepts(deptTree);
+                if (!flat.length) {
+                    wrap.innerHTML = '<div class="dept-card p-6 text-center text-slate-400 text-sm">No departments available.</div>';
+                    return;
+                }
+                flat.forEach(n => {
+                    const nid = n.id || n.departmentId;
+                    if (nid) deptNodeMap[nid] = n;
+                    const card = document.createElement('div');
+                    card.className = 'dept-card p-3 flex items-center gap-2';
+                    card.innerHTML =
+                        '<div class="min-w-0 flex-1">' +
+                            '<p class="text-sm font-semibold truncate">' + esc(n.name || '—') + '</p>' +
+                            '<p class="text-[11px] text-slate-500 mt-0.5">Parent: ' + esc(n._parent) + '</p>' +
+                            '<div class="flex gap-1 mt-1">' +
+                                '<span class="dept-code-tag">' + esc(n.code || '—') + '</span>' +
+                                '<span class="dept-badge dept-badge-success">Active</span>' +
+                            '</div>' +
+                        '</div>' +
+                        '<button type="button" class="text-primary text-xs font-semibold" data-view>View</button>' +
+                        '<button type="button" class="text-primary text-xs font-semibold" data-edit>Edit</button>';
+                    card.querySelector('[data-view]').addEventListener('click', () => showDetail(n));
+                    card.querySelector('[data-edit]').addEventListener('click', () => openEditDept(nid));
+                    wrap.appendChild(card);
+                });
+            }
+
+            // ── Companies View render ──
+            function renderCompanies() {
+                const panel = document.getElementById('deptViewCompanies');
+                panel.innerHTML = '';
+                if (!companyTree.length) {
+                    panel.innerHTML = '<div class="dept-card p-6 text-center text-slate-400 text-sm">No companies. Tap "New Company".</div>';
+                    return;
+                }
+                function renderCompany(company, depth) {
+                    const initials = (company.code || company.name || 'CO').substring(0, 3).toUpperCase();
+                    const subs = (company.subsidiaries || []);
+                    const badge = depth === 0
+                        ? '<span class="dept-badge dept-badge-info">' + subs.length + ' subs</span>'
+                        : '<span class="dept-badge dept-badge-success">Sub</span>';
+                    const avatar = company.logoBase64
+                        ? '<img src="data:' + esc(company.logoContentType || 'image/png') + ';base64,' + company.logoBase64 + '" class="w-9 h-9 rounded-lg object-contain border border-slate-200 bg-white flex-shrink-0">'
+                        : '<div class="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold flex-shrink-0">' + esc(initials) + '</div>';
+                    const wrap = document.createElement('div');
+                    wrap.className = depth === 0 ? 'dept-card p-3' : 'dept-company-child';
+                    const row = document.createElement('div');
+                    row.className = 'dept-company-item';
+                    row.innerHTML =
+                        avatar +
+                        '<div class="min-w-0 flex-1">' +
+                            '<p class="font-semibold text-sm truncate">' + esc(company.name || '—') + '</p>' +
+                            '<p class="text-[10px] text-slate-500">' + (depth === 0 ? 'Parent' : 'Subsidiary') + ' · ' + esc(company.code || '—') + '</p>' +
+                        '</div>' +
+                        badge +
+                        '<button type="button" class="p-1 text-slate-400 hover:text-primary" data-edit-company ' +
+                          'data-id="' + (company.companyId || company.id) + '" ' +
+                          'data-name="' + esc(company.name || '') + '" ' +
+                          'data-code="' + esc(company.code || '') + '" ' +
+                          'data-logo="' + (company.logoBase64 ? esc(company.logoBase64) : '') + '" ' +
+                          'data-logotype="' + esc(company.logoContentType || '') + '">' +
+                            '<span class="material-symbols-outlined text-base">edit</span>' +
+                        '</button>';
+                    wrap.appendChild(row);
+                    if (depth === 0) {
+                        panel.appendChild(wrap);
+                        if (subs.length) {
+                            const subWrap = document.createElement('div');
+                            subWrap.className = 'mt-1';
+                            subs.forEach(sub => {
+                                const inner = renderCompanyInner(sub, 1);
+                                subWrap.appendChild(inner);
+                            });
+                            wrap.appendChild(subWrap);
+                        }
+                    }
+                }
+                function renderCompanyInner(company, depth) {
+                    const initials = (company.code || company.name || 'CO').substring(0, 3).toUpperCase();
+                    const subs = (company.subsidiaries || []);
+                    const avatar = company.logoBase64
+                        ? '<img src="data:' + esc(company.logoContentType || 'image/png') + ';base64,' + company.logoBase64 + '" class="w-8 h-8 rounded-lg object-contain border border-slate-200 bg-white flex-shrink-0">'
+                        : '<div class="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold flex-shrink-0">' + esc(initials) + '</div>';
+                    const wrap = document.createElement('div');
+                    wrap.className = 'dept-company-child';
+                    wrap.innerHTML =
+                        '<div class="dept-company-item">' +
+                            avatar +
+                            '<div class="min-w-0 flex-1">' +
+                                '<p class="font-semibold text-sm truncate">' + esc(company.name || '—') + '</p>' +
+                                '<p class="text-[10px] text-slate-500">Subsidiary · ' + esc(company.code || '—') + '</p>' +
+                            '</div>' +
+                            '<span class="dept-badge dept-badge-success">Sub</span>' +
+                            '<button type="button" class="p-1 text-slate-400 hover:text-primary" data-edit-company ' +
+                              'data-id="' + (company.companyId || company.id) + '" ' +
+                              'data-name="' + esc(company.name || '') + '" ' +
+                              'data-code="' + esc(company.code || '') + '" ' +
+                              'data-logo="' + (company.logoBase64 ? esc(company.logoBase64) : '') + '" ' +
+                              'data-logotype="' + esc(company.logoContentType || '') + '">' +
+                                '<span class="material-symbols-outlined text-base">edit</span>' +
+                            '</button>' +
+                        '</div>';
+                    subs.forEach(s => wrap.appendChild(renderCompanyInner(s, depth + 1)));
+                    return wrap;
+                }
+                companyTree.forEach(c => renderCompany(c, 0));
+
+                // Delegated edit handler
+                panel.querySelectorAll('[data-edit-company]').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        openEditCompany(
+                            btn.dataset.id,
+                            btn.dataset.name,
+                            btn.dataset.code,
+                            btn.dataset.logo,
+                            btn.dataset.logotype
+                        );
+                    });
+                });
+            }
+
+            // ── Show detail ──
+            function showDetail(node) {
+                currentDetailNodeId = node.id || node.departmentId || null;
+                document.getElementById('deptDetailName').textContent = node.name || '—';
+                document.getElementById('deptDetailMeta').textContent = node.code ? 'Code: ' + node.code : (node.departmentId || '—');
+                document.getElementById('deptDetailEmp').textContent = node.employeeCount != null ? node.employeeCount : '—';
+                document.getElementById('deptDetailSub').textContent = (node.children || node.subDepartments || []).length;
+                document.getElementById('deptDetailCode').textContent = node.code || '—';
+                document.getElementById('deptDetailEditBtn').onclick = function () {
+                    deptCloseSheet('deptSheetDetail');
+                    openEditDept(currentDetailNodeId);
+                };
+                deptOpenSheet('deptSheetDetail');
+            }
+
+            // ── Reporting tree render ──
+            function renderRepTree(node, container, depth) {
+                depth = depth || 0;
+                const div = document.createElement('div');
+                div.className = depth === 0 ? 'dept-rep-root' : 'dept-rep-node';
+                const empId = node.employeeId || node.id;
+                const emp = employees.find(e => String(e.id) === String(empId));
+                let displayName = emp ? (emp.firstName + ' ' + emp.lastName)
+                    : (node.employeeName || node.name || 'Employee ' + (empId || ''));
+                const initials = displayName.split(' ').map(w => w[0] || '').join('').substring(0, 2).toUpperCase();
+                const avatarClass = depth === 0 ? 'bg-primary text-white' : 'bg-slate-200 text-slate-700';
+                const typeTag = node.reportingType ? ' · <span class="dept-badge dept-badge-info">' + esc(node.reportingType) + '</span>' : '';
+                div.innerHTML =
+                    '<div class="flex items-center gap-2 py-1">' +
+                        '<div class="w-7 h-7 rounded-full ' + avatarClass + ' flex items-center justify-center text-[10px] font-bold">' + esc(initials) + '</div>' +
+                        '<div class="min-w-0">' +
+                            '<p class="text-sm font-medium truncate">' + esc(displayName) + '</p>' +
+                            '<p class="text-[10px] text-slate-500">' + esc(node.role || node.designation || '') + typeTag + '</p>' +
+                        '</div>' +
+                    '</div>';
+                container.appendChild(div);
+                (node.directReports || node.children || []).forEach(c => renderRepTree(c, div, depth + 1));
+            }
+
+            // ── Rep tree fetch ──
+            window.deptSetRepType = function (type) {
+                document.getElementById('repTreeType').value = type;
+                document.getElementById('typePrimary').classList.toggle('dept-active', type === 'PRIMARY');
+                document.getElementById('typeMatrix').classList.toggle('dept-active', type === 'MATRIX');
+            };
+            window.deptFetchReportingTree = async function () {
+                const empId = document.getElementById('repTreeEmpId').value;
+                const type = document.getElementById('repTreeType').value;
+                const date = document.getElementById('repTreeDate').value;
+                const result = document.getElementById('repTreeResult');
+                if (!empId) { result.innerHTML = '<div class="dept-error">Please select an employee.</div>'; return; }
+                if (!date)  { result.innerHTML = '<div class="dept-error">An as-of date is required.</div>'; return; }
+                result.innerHTML = '<div class="flex items-center gap-2 text-slate-400 text-xs"><span class="material-symbols-outlined animate-spin text-base">refresh</span>Fetching tree…</div>';
+                setBtnLoading('fetchRepBtn', true);
+                try {
+                    const data = await apiFetch('/reporting/tree/' + empId + '?type=' + type + '&date=' + date);
+                    if (!data || (Array.isArray(data) && !data.length)) {
+                        result.innerHTML = '<span class="text-xs text-slate-400">No reporting data found for this employee.</span>';
+                        return;
+                    }
+                    result.innerHTML = '';
+                    const nodes = Array.isArray(data) ? data : [data];
+                    nodes.forEach(n => renderRepTree(n, result, 0));
+                } catch (e) {
+                    result.innerHTML = '<div class="dept-error">' + esc(e.message) + '</div>';
+                } finally {
+                    setBtnLoading('fetchRepBtn', false);
+                }
+            };
+
+            // ── Fetchers ──
+            async function fetchCompanyTree() {
+                try {
+                    const data = await apiFetch('/companies/tree');
+                    companyTree = Array.isArray(data) ? data : (data ? [data] : []);
+                    renderCompanies();
+                    let total = 0;
+                    (function count(arr) { arr.forEach(c => { total++; count(c.subsidiaries || []); }); })(companyTree);
+                    document.getElementById('deptStatCompanies').textContent = total || '0';
+                    const roots = companyTree.length;
+                    document.getElementById('deptStatCompanySub').textContent = total === 0
+                        ? 'No companies'
+                        : roots + ' Parent · ' + (total - roots) + ' Subs';
+                } catch (e) {
+                    document.getElementById('deptViewCompanies').innerHTML = '<div class="dept-error">Could not load company data.</div>';
+                    document.getElementById('deptStatCompanies').textContent = '—';
+                    document.getElementById('deptStatCompanySub').textContent = 'Unavailable';
+                }
+            }
+
+            async function fetchDeptTree() {
+                const badge = document.getElementById('deptLiveBadge');
+                badge.textContent = 'Loading';
+                badge.className = 'dept-badge dept-badge-warning';
+                try {
+                    const data = await apiFetch('/departments/tree');
+                    deptTree = Array.isArray(data) ? data : (data ? [data] : []);
+                    renderDeptTree();
+                    renderDeptList();
+                    if (deptTree.length === 0) {
+                        document.getElementById('deptStatDepts').textContent = '0';
+                        document.getElementById('deptStatDeptSub').textContent = '0 active departments';
+                        document.getElementById('deptStatEmps').textContent = '0';
+                    } else {
+                        const flat = flattenDepts(deptTree);
+                        const empTotal = flat.reduce((s, n) => s + (n.employeeCount || 0), 0);
+                        document.getElementById('deptStatDepts').textContent = flat.length;
+                        document.getElementById('deptStatDeptSub').textContent = flat.length + ' active departments';
+                        document.getElementById('deptStatEmps').textContent = empTotal;
+                    }
+                    badge.textContent = 'Live';
+                    badge.className = 'dept-badge dept-badge-success';
+                } catch (e) {
+                    document.getElementById('deptViewTree').innerHTML = '<div class="dept-error">Could not load department data.</div>';
+                    document.getElementById('deptStatDepts').textContent = '—';
+                    document.getElementById('deptStatDeptSub').textContent = 'Unavailable';
+                    badge.textContent = 'Error';
+                    badge.className = 'dept-badge dept-badge-error';
+                }
+            }
+
+            async function fetchEmployees() {
+                try { employees = await apiFetch('/employees/list') || []; }
+                catch (e) { employees = []; }
+            }
+            async function fetchDepartmentHeads() {
+                try { departmentHeads = await apiFetch('/employees/department-heads') || []; }
+                catch (e) { departmentHeads = []; }
+            }
+            async function fetchReportingLinesCount() {
+                try {
+                    const data = await apiFetch('/reporting/lines');
+                    if (Array.isArray(data)) document.getElementById('deptStatLines').textContent = data.length;
+                    else if (data && typeof data === 'object' && data.count !== undefined) document.getElementById('deptStatLines').textContent = data.count;
+                    else document.getElementById('deptStatLines').textContent = '—';
+                } catch (e) { document.getElementById('deptStatLines').textContent = '—'; }
+            }
+
+            // ── Logo handling (Add Company) ──
+            let _logoBase64 = null, _logoContentType = null;
+            document.getElementById('compLogo').addEventListener('change', function () {
+                const file = this.files[0];
+                if (!file) return;
+                if (!['image/png', 'image/jpeg'].includes(file.type)) { this.value = ''; showErr('companyError', 'Only PNG and JPG are accepted.'); return; }
+                if (file.size > 2 * 1024 * 1024) { this.value = ''; showErr('companyError', 'Logo must be 2 MB or smaller.'); return; }
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    _logoBase64 = e.target.result;
+                    _logoContentType = file.type;
+                    document.getElementById('logoPreview').src = _logoBase64;
+                    document.getElementById('logoPreview').classList.remove('hidden');
+                    document.getElementById('clearLogoBtn').classList.remove('hidden');
+                };
+                reader.readAsDataURL(file);
+            });
+            window.deptClearLogo = function () {
+                _logoBase64 = _logoContentType = null;
+                document.getElementById('compLogo').value = '';
+                document.getElementById('logoPreview').src = '';
+                document.getElementById('logoPreview').classList.add('hidden');
+                document.getElementById('clearLogoBtn').classList.add('hidden');
+            };
+
+            // ── Logo handling (Edit Company) ──
+            let _editLogoBase64 = null, _editLogoContentType = null, _editLogoChanged = false;
+            document.getElementById('editCompLogo').addEventListener('change', function () {
+                const file = this.files[0];
+                if (!file) return;
+                if (!['image/png', 'image/jpeg'].includes(file.type)) { this.value = ''; showErr('editCompanyError', 'Only PNG and JPG are accepted.'); return; }
+                if (file.size > 2 * 1024 * 1024) { this.value = ''; showErr('editCompanyError', 'Logo must be 2 MB or smaller.'); return; }
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    _editLogoBase64 = e.target.result;
+                    _editLogoContentType = file.type;
+                    _editLogoChanged = true;
+                    document.getElementById('editLogoPreview').src = _editLogoBase64;
+                    document.getElementById('editLogoPreview').classList.remove('hidden');
+                    document.getElementById('editClearLogoBtn').classList.remove('hidden');
+                };
+                reader.readAsDataURL(file);
+            });
+            window.deptClearEditLogo = function () {
+                _editLogoBase64 = '';
+                _editLogoContentType = null;
+                _editLogoChanged = true;
+                document.getElementById('editCompLogo').value = '';
+                document.getElementById('editLogoPreview').src = '';
+                document.getElementById('editLogoPreview').classList.add('hidden');
+                document.getElementById('editClearLogoBtn').classList.add('hidden');
+            };
+
+            // ── Company type toggle ──
+            window.deptSetCompanyType = function (type) {
+                companyType = type;
+                const isParent = type === 'parent';
+                document.getElementById('typeBtnParent').classList.toggle('dept-active', isParent);
+                document.getElementById('typeBtnSub').classList.toggle('dept-active', !isParent);
+                document.getElementById('parentCompanyField').classList.toggle('hidden', isParent);
+            };
+
+            // ── Save actions ──
+            window.deptSaveCompany = async function () {
+                hideErr('companyError');
+                const name = document.getElementById('compName').value.trim();
+                const code = document.getElementById('compCode').value.trim();
+                if (!name || !code) { showErr('companyError', 'Company name and code are required.'); return; }
+                let path;
+                if (companyType === 'parent') { path = '/companies'; }
+                else {
+                    const parentId = document.getElementById('compParentId').value;
+                    if (!parentId || isNaN(parseInt(parentId, 10))) { showErr('companyError', 'Please select a valid parent company.'); return; }
+                    path = '/companies/' + parentId + '/subsidiaries';
+                }
+                setBtnLoading('saveCompanyBtn', true);
+                try {
+                    const body = {name, code};
+                    if (_logoBase64) body.logoBase64 = _logoBase64;
+                    if (_logoContentType) body.logoContentType = _logoContentType;
+                    await apiFetch(path, {method: 'POST', body: JSON.stringify(body)});
+                    deptCloseSheet('deptSheetCompany');
+                    deptToast('Company "' + name + '" created');
+                    document.getElementById('compName').value = '';
+                    document.getElementById('compCode').value = '';
+                    deptClearLogo();
+                    fetchCompanyTree();
+                } catch (e) { showErr('companyError', e.message); }
+                finally { setBtnLoading('saveCompanyBtn', false); }
+            };
+
+            window.openEditCompany = function (id, name, code, logoBase64, logoContentType) {
+                _editLogoBase64 = null; _editLogoContentType = null; _editLogoChanged = false;
+                document.getElementById('editCompId').value = id;
+                document.getElementById('editCompName').value = name;
+                document.getElementById('editCompCode').value = code;
+                document.getElementById('editCompLogo').value = '';
+                hideErr('editCompanyError');
+                const preview = document.getElementById('editLogoPreview');
+                const clearBtn = document.getElementById('editClearLogoBtn');
+                if (logoBase64) {
+                    preview.src = 'data:' + (logoContentType || 'image/png') + ';base64,' + logoBase64;
+                    preview.classList.remove('hidden');
+                    clearBtn.classList.remove('hidden');
+                } else {
+                    preview.src = '';
+                    preview.classList.add('hidden');
+                    clearBtn.classList.add('hidden');
+                }
+                deptOpenSheet('deptSheetEditCompany');
+            };
+
+            window.deptSaveEditCompany = async function () {
+                hideErr('editCompanyError');
+                const id = document.getElementById('editCompId').value;
+                const name = document.getElementById('editCompName').value.trim();
+                const code = document.getElementById('editCompCode').value.trim();
+                if (!name || !code) { showErr('editCompanyError', 'Company name and code are required.'); return; }
+                const body = {name, code};
+                if (_editLogoChanged) {
+                    body.logoBase64 = _editLogoBase64 || '';
+                    body.logoContentType = _editLogoContentType || null;
+                }
+                setBtnLoading('saveEditCompanyBtn', true);
+                try {
+                    await apiFetch('/companies/' + id, {method: 'PUT', body: JSON.stringify(body)});
+                    deptCloseSheet('deptSheetEditCompany');
+                    deptToast('Company "' + name + '" updated');
+                    fetchCompanyTree();
+                } catch (e) { showErr('editCompanyError', e.message); }
+                finally { setBtnLoading('saveEditCompanyBtn', false); }
+            };
+
+            window.deptSaveDept = async function () {
+                hideErr('deptError');
+                const name = document.getElementById('deptName').value.trim();
+                const code = document.getElementById('deptCode').value.trim();
+                const companyId = document.getElementById('deptCompanyId').value;
+                const headId = document.getElementById('deptHeadId').value;
+                const parentDeptId = document.getElementById('deptParentId').value;
+                const effectiveFrom = document.getElementById('deptEffectiveFrom').value;
+                if (!name || !code || !companyId || !effectiveFrom) {
+                    showErr('deptError', 'Name, code, company, and effective-from date are required.'); return;
+                }
+                const body = {
+                    name, code,
+                    companyId: parseInt(companyId, 10),
+                    departmentHeadId: headId ? parseInt(headId, 10) : null,
+                    parentDepartmentId: parentDeptId ? parseInt(parentDeptId, 10) : null,
+                    effectiveFrom
+                };
+                setBtnLoading('deptSaveBtn', true);
+                try {
+                    await apiFetch('/departments', {method: 'POST', body: JSON.stringify(body)});
+                    deptCloseSheet('deptSheetCreate');
+                    deptToast('Department "' + name + '" created');
+                    document.getElementById('deptName').value = '';
+                    document.getElementById('deptCode').value = '';
+                    fetchDeptTree();
+                } catch (e) { showErr('deptError', e.message); }
+                finally { setBtnLoading('deptSaveBtn', false); }
+            };
+
+            window.openEditDept = async function (id) {
+                if (!id) return;
+                hideErr('editDeptError');
+                try {
+                    const dept = await apiFetch('/departments/' + id);
+                    populateCompanyDropdown('editDeptCompanyId');
+                    populateDepartmentDropdown('editDeptParentId');
+                    populateDepartmentHeadDropdown('editDeptHeadId');
+                    document.getElementById('editDeptId').value = dept.id;
+                    document.getElementById('editDeptName').value = dept.name || '';
+                    document.getElementById('editDeptCode').value = dept.code || '';
+                    document.getElementById('editDeptCompanyId').value = dept.companyId || '';
+                    document.getElementById('editDeptHeadId').value = dept.departmentHeadId || '';
+                    document.getElementById('editDeptParentId').value = dept.parentDepartmentId || '';
+                    document.getElementById('editDeptEffectiveFrom').value = dept.effectiveFrom || '';
+                    document.getElementById('deptSheetEditBackdrop').classList.remove('hidden');
+                    document.getElementById('deptSheetEdit').classList.remove('hidden');
+                } catch (e) { deptToast('Could not load department', 'error'); }
+            };
+
+            window.deptSaveEditDept = async function () {
+                hideErr('editDeptError');
+                const id = document.getElementById('editDeptId').value;
+                const name = document.getElementById('editDeptName').value.trim();
+                const companyId = document.getElementById('editDeptCompanyId').value;
+                const headId = document.getElementById('editDeptHeadId').value;
+                const parentDeptId = document.getElementById('editDeptParentId').value;
+                const effectiveFrom = document.getElementById('editDeptEffectiveFrom').value;
+                if (!name || !companyId || !effectiveFrom) {
+                    showErr('editDeptError', 'Name, company, and effective-from date are required.'); return;
+                }
+                if (parentDeptId && parseInt(parentDeptId, 10) === parseInt(id, 10)) {
+                    showErr('editDeptError', 'A department cannot be its own parent.'); return;
+                }
+                const body = {
+                    name,
+                    companyId: parseInt(companyId, 10),
+                    departmentHeadId: headId ? parseInt(headId, 10) : null,
+                    parentDepartmentId: parentDeptId ? parseInt(parentDeptId, 10) : null,
+                    effectiveFrom
+                };
+                setBtnLoading('saveEditDeptBtn', true);
+                try {
+                    await apiFetch('/departments/' + id, {method: 'PUT', body: JSON.stringify(body)});
+                    deptCloseSheet('deptSheetEdit');
+                    deptToast('Department "' + name + '" updated');
+                    fetchDeptTree();
+                } catch (e) { showErr('editDeptError', e.message); }
+                finally { setBtnLoading('saveEditDeptBtn', false); }
+            };
+
+            window.deptSaveMove = async function () {
+                hideErr('moveError');
+                const deptId = document.getElementById('moveDeptId').value;
+                const newParentId = document.getElementById('moveNewParentId').value;
+                if (!deptId || !newParentId) { showErr('moveError', 'Please select both a department and a new parent.'); return; }
+                if (deptId === newParentId) { showErr('moveError', 'A department cannot be moved to itself.'); return; }
+                setBtnLoading('saveMoveBtn', true);
+                try {
+                    await apiFetch('/departments/' + deptId + '/move/' + newParentId, {method: 'PUT'});
+                    deptCloseSheet('deptSheetMove');
+                    deptToast('Department moved');
+                    document.getElementById('moveDeptId').value = '';
+                    document.getElementById('moveNewParentId').value = '';
+                    fetchDeptTree();
+                } catch (e) { showErr('moveError', e.message); }
+                finally { setBtnLoading('saveMoveBtn', false); }
+            };
+
+            window.deptSaveReport = async function () {
+                hideErr('reportError');
+                const employeeId = document.getElementById('reportEmpId').value;
+                const managerId = document.getElementById('reportMgrId').value;
+                const reportingType = document.getElementById('reportType').value;
+                const effectiveFrom = document.getElementById('reportEffectiveFrom').value;
+                if (!employeeId || !managerId || !effectiveFrom) { showErr('reportError', 'Employee, manager and effective-from date are required.'); return; }
+                if (employeeId === managerId) { showErr('reportError', 'An employee cannot report to themselves.'); return; }
+                const body = {
+                    employeeId: parseInt(employeeId, 10),
+                    managerId: parseInt(managerId, 10),
+                    reportingType, effectiveFrom
+                };
+                setBtnLoading('saveReportBtn', true);
+                try {
+                    await apiFetch('/reporting/assign', {method: 'POST', body: JSON.stringify(body)});
+                    deptCloseSheet('deptSheetAssign');
+                    deptToast('Manager assigned');
+                    document.getElementById('reportEmpId').value = '';
+                    document.getElementById('reportMgrId').value = '';
+                    document.getElementById('reportEffectiveFrom').value = todayStr;
+                    fetchReportingLinesCount();
+                } catch (e) { showErr('reportError', e.message); }
+                finally { setBtnLoading('saveReportBtn', false); }
+            };
+
+            window.deptSaveRemove = async function () {
+                hideErr('removeError');
+                const employeeId = document.getElementById('removeEmpId').value;
+                const reportingType = document.getElementById('removeType').value;
+                const effectiveTo = document.getElementById('removeEffectiveTo').value;
+                if (!employeeId || !effectiveTo) { showErr('removeError', 'Please select an employee and an end date.'); return; }
+                const body = {
+                    employeeId: parseInt(employeeId, 10),
+                    reportingType, effectiveTo
+                };
+                setBtnLoading('saveRemoveBtn', true);
+                try {
+                    await apiFetch('/reporting/remove', {method: 'PUT', body: JSON.stringify(body)});
+                    deptCloseSheet('deptSheetRemove');
+                    deptToast('Reporting line removed', 'info');
+                    document.getElementById('removeEmpId').value = '';
+                    document.getElementById('removeEffectiveTo').value = eoyStr;
+                    fetchReportingLinesCount();
+                } catch (e) { showErr('removeError', e.message); }
+                finally { setBtnLoading('saveRemoveBtn', false); }
+            };
+
+            // ── Date defaults ──
+            const todayStr = new Date().toISOString().split('T')[0];
+            const eoyDate = new Date(); eoyDate.setMonth(11); eoyDate.setDate(31);
+            const eoyStr = eoyDate.toISOString().split('T')[0];
+            ['deptEffectiveFrom', 'reportEffectiveFrom', 'repTreeDate'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = todayStr;
+            });
+            const removeEl = document.getElementById('removeEffectiveTo');
+            if (removeEl) removeEl.value = eoyStr;
+
+            // ── Boot ──
+            fetchCompanyTree();
+            fetchDeptTree();
+            fetchEmployees();
+            fetchDepartmentHeads();
+            fetchReportingLinesCount();
+        })();
+    </script>
+</main>
+</body>
+</html>

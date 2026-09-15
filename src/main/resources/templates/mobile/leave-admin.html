@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/mobileEmployeeLayout}">
+<head>
+    <title>Leave Management</title>
+    <style>
+        .lv-tab { padding: 10px 14px; font-size: 0.8rem; font-weight: 500; color: #6b7280; white-space: nowrap; border-bottom: 3px solid transparent; transition: all 0.2s; }
+        .lv-tab.active { color: #3b82f6; border-bottom-color: #3b82f6; }
+        .lv-card { background: #fff; border-radius: 12px; border: 1px solid #e5e7eb; padding: 14px; margin-bottom: 10px; }
+        .lv-badge { padding: 2px 8px; border-radius: 9999px; font-size: 0.7rem; font-weight: 500; }
+        .lv-approved { background: #dcfce7; color: #16a34a; }
+        .lv-rejected { background: #fee2e2; color: #dc2626; }
+        .lv-pending { background: #fef3c7; color: #d97706; }
+        .lv-submitted { background: #dbeafe; color: #2563eb; }
+        .lv-sheet { position: fixed; bottom: 0; left: 0; right: 0; z-index: 1000; background: #fff; border-radius: 20px 20px 0 0; max-height: 92vh; overflow-y: auto; transform: translateY(100%); transition: transform 0.3s ease; padding-bottom: env(safe-area-inset-bottom); }
+        .lv-sheet.open { transform: translateY(0); }
+        .lv-backdrop { position: fixed; inset: 0; z-index: 999; background: rgba(0,0,0,0.5); display: none; }
+        .lv-backdrop.open { display: block; }
+        .lv-handle { width: 40px; height: 4px; background: #d1d5db; border-radius: 2px; margin: 10px auto; }
+        .lv-input { width: 100%; padding: 10px 12px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 0.875rem; outline: none; box-sizing: border-box; }
+        .lv-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,0.1); }
+        .lv-label { display: block; font-size: 0.8rem; font-weight: 500; color: #374151; margin-bottom: 4px; }
+        .lv-btn-primary { background: #3b82f6; color: #fff; border: none; padding: 10px 18px; border-radius: 8px; font-size: 0.875rem; font-weight: 500; cursor: pointer; }
+        .lv-btn-secondary { background: transparent; color: #6b7280; border: 1px solid #e5e7eb; padding: 10px 18px; border-radius: 8px; font-size: 0.875rem; cursor: pointer; }
+        .lv-step { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; border-bottom: 1px solid #f3f4f6; }
+        .lv-step:last-child { border-bottom: none; }
+        .lv-step-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
+    </style>
+</head>
+<body>
+<section layout:fragment="content">
+
+    <!-- Summary Stats -->
+    <div class="grid grid-cols-2 gap-3 mb-4">
+        <div style="background:#fff;border-radius:12px;border:1px solid #e5e7eb;padding:14px;">
+            <div class="flex items-center justify-between mb-2">
+                <span class="material-symbols-outlined text-blue-500" style="font-size:20px">event_note</span>
+                <span class="lv-badge lv-submitted">My Requests</span>
+            </div>
+            <p class="text-xl font-bold" id="lvMyCount">—</p>
+            <p class="text-xs text-gray-500 mt-0.5">My Leave Requests</p>
+        </div>
+        <div style="background:#fff;border-radius:12px;border:1px solid #e5e7eb;padding:14px;">
+            <div class="flex items-center justify-between mb-2">
+                <span class="material-symbols-outlined text-yellow-500" style="font-size:20px">pending_actions</span>
+                <span class="lv-badge lv-pending">Pending</span>
+            </div>
+            <p class="text-xl font-bold" id="lvPendingCount">—</p>
+            <p class="text-xs text-gray-500 mt-0.5">Pending Approvals</p>
+        </div>
+    </div>
+
+    <!-- New Request Button -->
+    <div class="flex justify-end mb-3">
+        <button onclick="lvOpenNew()" class="lv-btn-primary flex items-center gap-1">
+            <span class="material-symbols-outlined" style="font-size:18px">add</span>New Request
+        </button>
+    </div>
+
+    <!-- Tabs -->
+    <div class="overflow-x-auto mb-4" style="border-bottom:1px solid #e5e7eb;">
+        <div class="flex min-w-max">
+            <button id="lv-tab-mine" class="lv-tab active" onclick="lvSwitchTab('mine')">My Requests</button>
+            <button id="lv-tab-approvals" class="lv-tab" onclick="lvSwitchTab('approvals')">Pending Approvals</button>
+        </div>
+    </div>
+
+    <!-- My Requests Tab -->
+    <div id="lv-content-mine">
+        <div class="flex items-center justify-between mb-2">
+            <p class="text-xs font-semibold text-gray-500 uppercase">Leave Requests</p>
+            <button onclick="lvLoadMine()" class="text-xs text-blue-600 flex items-center gap-1">
+                <span class="material-symbols-outlined" style="font-size:14px">refresh</span>Refresh
+            </button>
+        </div>
+        <div id="lvMineList"><p class="text-sm text-gray-400 text-center py-8">Loading…</p></div>
+    </div>
+
+    <!-- Pending Approvals Tab -->
+    <div id="lv-content-approvals" class="hidden">
+        <div class="flex items-center justify-between mb-2">
+            <p class="text-xs font-semibold text-gray-500 uppercase">Tasks Awaiting Your Action</p>
+            <button onclick="lvLoadApprovals()" class="text-xs text-blue-600 flex items-center gap-1">
+                <span class="material-symbols-outlined" style="font-size:14px">refresh</span>Refresh
+            </button>
+        </div>
+        <div id="lvApprovalList"><p class="text-sm text-gray-400 text-center py-8">Loading…</p></div>
+    </div>
+
+    <!-- Backdrop -->
+    <div class="lv-backdrop" id="lvBackdrop" onclick="lvCloseAll()"></div>
+
+    <!-- New Request Sheet -->
+    <div class="lv-sheet" id="lvNewSheet">
+        <div class="lv-handle"></div>
+        <div class="px-4 pb-6">
+            <div class="flex items-center justify-between mb-4">
+                <p class="font-semibold">New Leave Request</p>
+                <button onclick="lvCloseAll()" class="text-gray-400"><span class="material-symbols-outlined">close</span></button>
+            </div>
+            <form id="lvNewForm" onsubmit="lvSubmitRequest(event)" class="space-y-3">
+                <div>
+                    <label class="lv-label">Leave Type *</label>
+                    <select id="lvLeaveType" class="lv-input" required>
+                        <option value="">Select type</option>
+                        <option value="ANNUAL">Annual Leave</option>
+                        <option value="SICK">Sick Leave</option>
+                        <option value="MATERNITY">Maternity Leave</option>
+                        <option value="PATERNITY">Paternity Leave</option>
+                        <option value="COMPASSIONATE">Compassionate Leave</option>
+                        <option value="UNPAID">Unpaid Leave</option>
+                        <option value="STUDY">Study Leave</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="lv-label">Start Date *</label>
+                        <input type="date" id="lvStartDate" class="lv-input" required>
+                    </div>
+                    <div>
+                        <label class="lv-label">End Date *</label>
+                        <input type="date" id="lvEndDate" class="lv-input" required>
+                    </div>
+                </div>
+                <div>
+                    <label class="lv-label">Reason</label>
+                    <textarea id="lvReason" class="lv-input" rows="3" placeholder="Brief reason for leave…"></textarea>
+                </div>
+                <div>
+                    <label class="lv-label">Stand-in Employee</label>
+                    <select id="lvStandIn" class="lv-input">
+                        <option value="">None / Loading…</option>
+                    </select>
+                </div>
+                <div class="flex gap-3 pt-2">
+                    <button type="button" onclick="lvCloseAll()" class="lv-btn-secondary flex-1">Cancel</button>
+                    <button type="submit" id="lvNewSubmitBtn" class="lv-btn-primary flex-1">Submit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Detail / Steps Sheet -->
+    <div class="lv-sheet" id="lvDetailSheet">
+        <div class="lv-handle"></div>
+        <div class="px-4 pb-6">
+            <div class="flex items-center justify-between mb-4">
+                <p class="font-semibold">Leave Details</p>
+                <button onclick="lvCloseAll()" class="text-gray-400"><span class="material-symbols-outlined">close</span></button>
+            </div>
+            <div id="lvDetailContent"></div>
+        </div>
+    </div>
+
+    <!-- Approval Action Sheet -->
+    <div class="lv-sheet" id="lvActionSheet">
+        <div class="lv-handle"></div>
+        <div class="px-4 pb-6">
+            <div class="flex items-center justify-between mb-4">
+                <p class="font-semibold" id="lvActionTitle">Process Task</p>
+                <button onclick="lvCloseAll()" class="text-gray-400"><span class="material-symbols-outlined">close</span></button>
+            </div>
+            <div id="lvActionInfo" class="lv-card mb-3 text-sm"></div>
+            <div>
+                <label class="lv-label">Comment</label>
+                <textarea id="lvActionComment" class="lv-input" rows="3" placeholder="Optional comment…"></textarea>
+            </div>
+            <input type="hidden" id="lvActionTaskId">
+            <div class="flex gap-3 mt-4">
+                <button onclick="lvCloseAll()" class="lv-btn-secondary flex-1">Cancel</button>
+                <button onclick="lvDoReject()" class="flex-1 bg-red-600 text-white border-none rounded-lg py-2 font-medium cursor-pointer">Reject</button>
+                <button onclick="lvDoApprove()" class="lv-btn-primary flex-1">Approve</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ─── Helpers ──────────────────────────────────────────────────
+        function lvStatusBadge(status) {
+            const s = (status || '').toUpperCase();
+            const map = {
+                APPROVED: 'lv-approved', REJECTED: 'lv-rejected',
+                PENDING: 'lv-pending', IN_APPROVAL: 'lv-submitted', SUBMITTED: 'lv-submitted'
+            };
+            return `<span class="lv-badge ${map[s]||'lv-pending'}">${s}</span>`;
+        }
+
+        async function lvFetch(url, opts) {
+            const res = await fetch(url, opts);
+            const ct = (res.headers.get('content-type') || '').toLowerCase();
+            if (!res.ok) {
+                const t = await res.text();
+                throw new Error(t || 'Request failed (' + res.status + ')');
+            }
+            if (!ct.includes('application/json')) throw new Error('Expected JSON response');
+            return res.json();
+        }
+
+        // ─── Sheet Management ─────────────────────────────────────────
+        function lvOpenSheet(id) {
+            document.getElementById(id).classList.add('open');
+            document.getElementById('lvBackdrop').classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function lvCloseAll() {
+            document.querySelectorAll('.lv-sheet').forEach(s => s.classList.remove('open'));
+            document.getElementById('lvBackdrop').classList.remove('open');
+            document.body.style.overflow = '';
+        }
+
+        // ─── Tab Management ───────────────────────────────────────────
+        function lvSwitchTab(tab) {
+            ['mine','approvals'].forEach(t => {
+                document.getElementById('lv-content-' + t).classList.toggle('hidden', t !== tab);
+                document.getElementById('lv-tab-' + t).classList.toggle('active', t === tab);
+            });
+        }
+
+        // ─── Load My Requests ─────────────────────────────────────────
+        async function lvLoadMine() {
+            const el = document.getElementById('lvMineList');
+            el.innerHTML = '<p class="text-sm text-gray-400 text-center py-8">Loading…</p>';
+            try {
+                const data = await lvFetch('/leave/requests/me');
+                document.getElementById('lvMyCount').textContent = data.length;
+                if (!data.length) {
+                    el.innerHTML = '<p class="text-sm text-gray-400 text-center py-8">No leave requests found.</p>';
+                    return;
+                }
+                el.innerHTML = data.map(r => `
+                    <div class="lv-card">
+                        <div class="flex items-start justify-between mb-1">
+                            <p class="font-medium text-sm">${r.leaveType || ''}</p>
+                            ${lvStatusBadge(r.status)}
+                        </div>
+                        <p class="text-xs text-gray-500">${r.startDate || ''} → ${r.endDate || ''}</p>
+                        <p class="text-xs text-gray-400 mt-0.5">${r.totalDays || ''} day(s)</p>
+                        ${r.id ? `<button onclick="lvViewSteps(${r.id})" class="text-xs text-blue-600 mt-2 flex items-center gap-1"><span class="material-symbols-outlined" style="font-size:14px">timeline</span>View steps</button>` : ''}
+                    </div>`).join('');
+            } catch (e) {
+                el.innerHTML = `<p class="text-sm text-red-600 text-center py-4">${e.message}</p>`;
+            }
+        }
+
+        // ─── Load Pending Approvals ───────────────────────────────────
+        async function lvLoadApprovals() {
+            const el = document.getElementById('lvApprovalList');
+            el.innerHTML = '<p class="text-sm text-gray-400 text-center py-8">Loading…</p>';
+            try {
+                const data = await lvFetch('/leave/approvals/tasks');
+                document.getElementById('lvPendingCount').textContent = data.length;
+                if (!data.length) {
+                    el.innerHTML = '<p class="text-sm text-gray-400 text-center py-8">No pending approval tasks.</p>';
+                    return;
+                }
+                el.innerHTML = data.map(t => {
+                    const reqId = (t.variables && t.variables.leaveRequestId) ? t.variables.leaveRequestId : '-';
+                    return `<div class="lv-card">
+                        <div class="flex items-start justify-between mb-1">
+                            <p class="font-medium text-sm">Leave #${reqId}</p>
+                            <span class="lv-badge lv-pending">Pending</span>
+                        </div>
+                        <p class="text-xs text-gray-500">${t.taskName || t.taskDefinitionKey || ''}</p>
+                        <p class="text-xs text-gray-400 mt-0.5">${(t.createdTime||'').replace('T',' ')}</p>
+                        <button onclick="lvOpenAction('${t.id}', 'Leave #${reqId}', '${t.taskName||''}', '${(t.createdTime||'').replace('T',' ')}')"
+                                class="lv-btn-primary mt-3 w-full flex items-center justify-center gap-1" style="padding:8px;">
+                            <span class="material-symbols-outlined" style="font-size:16px">rule</span>Process
+                        </button>
+                    </div>`;
+                }).join('');
+            } catch (e) {
+                el.innerHTML = `<p class="text-sm text-red-600 text-center py-4">${e.message}</p>`;
+            }
+        }
+
+        // ─── View Approval Steps ──────────────────────────────────────
+        async function lvViewSteps(id) {
+            document.getElementById('lvDetailContent').innerHTML = '<p class="text-sm text-gray-400 text-center py-4">Loading…</p>';
+            lvOpenSheet('lvDetailSheet');
+            try {
+                const steps = await lvFetch('/leave/requests/' + id + '/steps');
+                if (!steps.length) {
+                    document.getElementById('lvDetailContent').innerHTML = '<p class="text-sm text-gray-400 text-center py-4">No approval steps found.</p>';
+                    return;
+                }
+                document.getElementById('lvDetailContent').innerHTML = `
+                    <p class="text-xs font-semibold text-gray-500 uppercase mb-3">Approval Steps</p>
+                    ${steps.map(s => `
+                        <div class="lv-step">
+                            <div class="lv-step-dot ${s.decision==='APPROVED'?'bg-green-500':s.decision==='REJECTED'?'bg-red-500':'bg-gray-300'}"></div>
+                            <div class="flex-1">
+                                <p class="text-sm font-medium">${s.approverName || 'Approver'}</p>
+                                <p class="text-xs text-gray-500">${s.decision || 'Pending'}</p>
+                                ${s.comment ? `<p class="text-xs text-gray-400 italic mt-0.5">"${s.comment}"</p>` : ''}
+                                ${s.decidedAt ? `<p class="text-xs text-gray-400">${(s.decidedAt||'').replace('T',' ')}</p>` : ''}
+                            </div>
+                        </div>`).join('')}`;
+            } catch (e) {
+                document.getElementById('lvDetailContent').innerHTML = `<p class="text-sm text-red-600 text-center py-4">${e.message}</p>`;
+            }
+        }
+
+        // ─── Open Action Sheet ────────────────────────────────────────
+        function lvOpenAction(taskId, label, taskName, created) {
+            document.getElementById('lvActionTaskId').value = taskId;
+            document.getElementById('lvActionTitle').textContent = 'Process: ' + label;
+            document.getElementById('lvActionInfo').innerHTML = `
+                <p class="font-medium text-sm">${label}</p>
+                <p class="text-xs text-gray-500">${taskName}</p>
+                <p class="text-xs text-gray-400">${created}</p>`;
+            document.getElementById('lvActionComment').value = '';
+            lvOpenSheet('lvActionSheet');
+        }
+
+        // ─── Approve/Reject ───────────────────────────────────────────
+        async function lvDoAction(endpoint) {
+            const taskId = document.getElementById('lvActionTaskId').value;
+            const comment = document.getElementById('lvActionComment').value;
+            try {
+                await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({taskId, comment})
+                });
+                lvCloseAll();
+                lvLoadApprovals();
+            } catch (e) {
+                alert('Action failed: ' + e.message);
+            }
+        }
+
+        function lvDoApprove() { lvDoAction('/leave/approvals/approve'); }
+        function lvDoReject() { lvDoAction('/leave/approvals/reject'); }
+
+        // ─── New Request ──────────────────────────────────────────────
+        async function lvOpenNew() {
+            document.getElementById('lvNewForm').reset();
+            lvOpenSheet('lvNewSheet');
+            // load stand-in options
+            try {
+                const emps = await lvFetch('/leave/stand-in-options');
+                const sel = document.getElementById('lvStandIn');
+                sel.innerHTML = '<option value="">None</option>' + emps.map(e => `<option value="${e.id}">${e.firstName} ${e.lastName}</option>`).join('');
+            } catch (_) {}
+        }
+
+        async function lvSubmitRequest(e) {
+            e.preventDefault();
+            const btn = document.getElementById('lvNewSubmitBtn');
+            btn.disabled = true; btn.textContent = 'Submitting…';
+            const body = {
+                leaveType: document.getElementById('lvLeaveType').value,
+                startDate: document.getElementById('lvStartDate').value,
+                endDate: document.getElementById('lvEndDate').value,
+                reason: document.getElementById('lvReason').value,
+                standInEmployeeId: document.getElementById('lvStandIn').value ? parseInt(document.getElementById('lvStandIn').value) : null
+            };
+            try {
+                await fetch('/leave/requests', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(body)
+                });
+                lvCloseAll();
+                lvLoadMine();
+            } catch (err) {
+                alert('Failed: ' + err.message);
+            } finally {
+                btn.disabled = false; btn.textContent = 'Submit';
+            }
+        }
+
+        // ─── Init ─────────────────────────────────────────────────────
+        document.addEventListener('DOMContentLoaded', () => {
+            lvLoadMine();
+            lvLoadApprovals();
+        });
+    </script>
+</section>
+</body>
+</html>

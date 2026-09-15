@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/mobileEmployeeLayout}">
+<head>
+    <title>Requests</title>
+    <style>
+        .ra-card { background:#fff; border:1px solid #e5e7eb; border-radius:14px; padding:14px; margin-bottom:10px; }
+        .ra-row { display:flex; justify-content:space-between; align-items:flex-start; padding:10px 0; border-bottom:1px solid #f3f4f6; }
+        .ra-row:last-child { border-bottom:none; }
+        .ra-badge { display:inline-flex; align-items:center; padding:2px 8px; border-radius:999px; font-size:10px; font-weight:700; text-transform:uppercase; }
+        .ra-badge-success { background:#dcfce7; color:#166534; }
+        .ra-badge-error   { background:#fee2e2; color:#991b1b; }
+        .ra-badge-warning { background:#fef3c7; color:#92400e; }
+        .ra-badge-info    { background:#dbeafe; color:#1e40af; }
+        .ra-badge-neutral { background:#f1f5f9; color:#475569; }
+        .ra-input { width:100%; border:1px solid #d1d5db; background:#fff; border-radius:10px; padding:10px 12px; font-size:14px; outline:none; }
+        .ra-input:focus { border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,.12); }
+        .ra-select { width:100%; border:1px solid #d1d5db; background:#fff; border-radius:10px; padding:10px 12px; font-size:13px; outline:none; }
+        .ra-sheet-backdrop { position:fixed; inset:0; background:rgba(15,23,42,.5); z-index:60; display:none; }
+        .ra-sheet-backdrop.open { display:block; }
+        .ra-sheet { position:fixed; left:0; right:0; bottom:0; background:#fff; border-radius:20px 20px 0 0; z-index:70; max-height:92vh; overflow-y:auto; transform:translateY(100%); transition:transform .3s; padding-bottom:env(safe-area-inset-bottom); }
+        .ra-sheet.open { transform:translateY(0); }
+    </style>
+</head>
+<body>
+<section layout:fragment="content">
+
+    <!-- Header -->
+    <div class="bg-blue-900 rounded-xl p-4 mb-4 text-white">
+        <p class="text-xs text-blue-300 uppercase font-semibold">Requests</p>
+        <p class="text-sm text-blue-200 mt-1">Organisation-wide request desk</p>
+    </div>
+
+    <!-- Stat cards -->
+    <div class="grid grid-cols-3 gap-3 mb-4">
+        <div class="ra-card !p-3 text-center">
+            <p class="text-2xl font-bold text-blue-900" id="openCount">0</p>
+            <p class="text-xs text-gray-500 mt-1">Open</p>
+        </div>
+        <div class="ra-card !p-3 text-center">
+            <p class="text-2xl font-bold text-green-600" id="approvedCount">0</p>
+            <p class="text-xs text-gray-500 mt-1">Approved</p>
+        </div>
+        <div class="ra-card !p-3 text-center">
+            <p class="text-2xl font-bold text-red-500" id="exceptionCount">0</p>
+            <p class="text-xs text-gray-500 mt-1">Returned/Rejected</p>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="ra-card mb-4 space-y-2">
+        <input id="searchInput" class="ra-input" placeholder="Search number or title…">
+        <div class="grid grid-cols-2 gap-2">
+            <select id="statusFilter" class="ra-select">
+                <option value="">All statuses</option>
+                <option>DRAFT</option>
+                <option>IN_APPROVAL</option>
+                <option>RETURNED_FOR_CORRECTION</option>
+                <option>APPROVED</option>
+                <option>REJECTED</option>
+                <option>CANCELLED</option>
+                <option>CLOSED</option>
+            </select>
+            <select id="typeFilter" class="ra-select">
+                <option value="">All types</option>
+            </select>
+        </div>
+        <select id="priorityFilter" class="ra-select">
+            <option value="">All priorities</option>
+            <option>LOW</option><option>NORMAL</option><option>HIGH</option><option>URGENT</option>
+        </select>
+    </div>
+
+    <!-- Request list -->
+    <div id="requestList" class="ra-card mb-4"></div>
+
+    <!-- Approval Paths (collapsible) -->
+    <div class="ra-card mb-4">
+        <button onclick="togglePaths()" class="w-full flex items-center justify-between">
+            <span class="font-semibold text-sm">Approval Paths</span>
+            <span id="pathsChevron" class="material-symbols-outlined text-gray-400 transition-transform">expand_more</span>
+        </button>
+        <div id="pathsSection" class="hidden mt-4 space-y-4">
+            <!-- Saved paths -->
+            <div>
+                <p class="text-xs font-bold uppercase text-gray-400 mb-2">Saved Paths</p>
+                <div id="approvalPathRows"></div>
+            </div>
+            <!-- Type routing -->
+            <div>
+                <p class="text-xs font-bold uppercase text-gray-400 mb-2">Request Type Routing</p>
+                <div id="requestTypeRouteRows"></div>
+            </div>
+            <!-- New/Edit path -->
+            <div>
+                <p class="text-xs font-bold uppercase text-gray-400 mb-2">New / Edit Path</p>
+                <form id="approvalPathForm" class="space-y-3">
+                    <input id="approvalPathId" type="hidden">
+                    <input id="approvalPathName" class="ra-input" placeholder="Path name" required>
+                    <textarea id="approvalPathDescription" class="ra-input" rows="2" placeholder="Description (optional)"></textarea>
+                    <label class="flex items-center gap-2 text-sm"><input id="approvalPathEnabled" type="checkbox" checked class="rounded"> Enabled</label>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium">Approvers</span>
+                        <button type="button" onclick="addApprovalStepRow()"
+                                class="text-xs px-3 py-1.5 border border-gray-300 rounded-lg font-semibold">+ Add</button>
+                    </div>
+                    <div id="approvalStepRows" class="space-y-2"></div>
+                    <div class="flex gap-2">
+                        <button type="button" onclick="resetApprovalPathForm()"
+                                class="flex-1 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold">Clear</button>
+                        <button type="submit"
+                                class="flex-1 py-2.5 bg-blue-900 text-white rounded-xl text-sm font-bold">Save Path</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- User guide link -->
+    <a href="/mobile/requests/userGuide"
+       class="ra-card mb-4 flex items-center gap-3 no-underline">
+        <span class="material-symbols-outlined text-blue-600">help</span>
+        <span class="text-sm font-semibold text-blue-700">Request Workflow User Guide</span>
+        <span class="material-symbols-outlined text-gray-400 ml-auto">chevron_right</span>
+    </a>
+
+    <script>
+        const api = '/api/requests';
+        let requests = [], types = [], approvalPaths = [], approverOptions = [];
+
+        function fmt(v) { return (v || '').replaceAll('_',' '); }
+        function badge(status) {
+            const c = status === 'APPROVED' ? 'ra-badge-success' :
+                      status === 'REJECTED' || status === 'CANCELLED' ? 'ra-badge-error' :
+                      status === 'RETURNED_FOR_CORRECTION' ? 'ra-badge-warning' :
+                      status === 'IN_APPROVAL' ? 'ra-badge-info' : 'ra-badge-neutral';
+            return `<span class="ra-badge ${c}">${fmt(status)}</span>`;
+        }
+        async function json(url, opts) {
+            const r = await fetch(url, opts);
+            if (!r.ok) throw new Error(await r.text());
+            const ct = r.headers.get('content-type') || '';
+            if (!ct.includes('application/json')) return [];
+            const d = await r.json();
+            return d === null ? [] : d;
+        }
+
+        async function loadData() {
+            try {
+                [requests, types, approvalPaths, approverOptions] = await Promise.all([
+                    json(api + '/visible'),
+                    json(api + '/types'),
+                    json('/api/approval-paths'),
+                    json('/api/approval-paths/approvers')
+                ]);
+                requests = requests || []; types = types || [];
+                approvalPaths = approvalPaths || []; approverOptions = approverOptions || [];
+                renderTypeFilterOptions();
+                renderRequestList();
+                renderStats();
+                renderApprovalPathRows();
+                renderRequestTypeRoutes();
+            } catch (e) { console.error(e); }
+        }
+
+        function renderTypeFilterOptions() {
+            const sel = document.getElementById('typeFilter');
+            sel.innerHTML = '<option value="">All types</option>' +
+                types.map(t => `<option value="${t.code}">${t.name}</option>`).join('');
+        }
+
+        function renderStats() {
+            document.getElementById('openCount').textContent =
+                requests.filter(r => ['DRAFT','SUBMITTED','IN_APPROVAL','RETURNED_FOR_CORRECTION'].includes(r.status)).length;
+            document.getElementById('approvedCount').textContent =
+                requests.filter(r => r.status === 'APPROVED').length;
+            document.getElementById('exceptionCount').textContent =
+                requests.filter(r => ['RETURNED_FOR_CORRECTION','REJECTED'].includes(r.status)).length;
+        }
+
+        function renderRequestList() {
+            const type     = document.getElementById('typeFilter').value;
+            const status   = document.getElementById('statusFilter').value;
+            const priority = document.getElementById('priorityFilter').value;
+            const search   = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = requests.filter(r =>
+                (!type     || r.requestType === type) &&
+                (!status   || r.status === status) &&
+                (!priority || r.priority === priority) &&
+                (!search   || (r.requestNumber||'').toLowerCase().includes(search) || (r.title||'').toLowerCase().includes(search))
+            );
+            const el = document.getElementById('requestList');
+            if (!filtered.length) {
+                el.innerHTML = '<div class="text-center py-6 text-gray-400 text-sm"><span class="material-symbols-outlined block text-3xl mb-2">inbox</span>No requests found.</div>';
+                return;
+            }
+            el.innerHTML = filtered.map(r => `
+                <div class="ra-row">
+                    <div class="flex-1 min-w-0 pr-2">
+                        <p class="font-semibold text-sm truncate">${r.requestNumber || ''}: ${r.title || ''}</p>
+                        <p class="text-xs text-gray-400 mt-0.5">${fmt(r.requestType)} · ${r.priority || ''}</p>
+                        <div class="mt-1">${badge(r.status)}</div>
+                    </div>
+                    <a href="/mobile/requests/${r.id}" class="shrink-0 text-blue-600 text-xs font-semibold py-1 px-3 border border-blue-200 rounded-lg">Open</a>
+                </div>`).join('');
+        }
+
+        function renderApprovalPathRows() {
+            const el = document.getElementById('approvalPathRows');
+            el.innerHTML = approvalPaths.length ? approvalPaths.map(p => `
+                <div class="border border-gray-200 rounded-xl p-3 mb-2">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="font-semibold text-sm">${p.name}</p>
+                            <p class="text-xs text-gray-400">${p.enabled ? 'Enabled' : 'Disabled'} · ${(p.steps||[]).length} approver(s)</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="editApprovalPath(${p.id})" class="text-xs px-2 py-1 border border-gray-300 rounded-lg">Edit</button>
+                            <button onclick="toggleApprovalPath(${p.id},${!p.enabled})" class="text-xs px-2 py-1 border border-gray-300 rounded-lg">${p.enabled?'Disable':'Enable'}</button>
+                        </div>
+                    </div>
+                </div>`).join('') : '<p class="text-xs text-gray-400">No custom paths yet.</p>';
+        }
+
+        function renderRequestTypeRoutes() {
+            const el = document.getElementById('requestTypeRouteRows');
+            el.innerHTML = types.length ? types.map(t => `
+                <div class="border border-gray-200 rounded-xl p-3 mb-2 space-y-2">
+                    <div>
+                        <p class="font-semibold text-sm">${t.name}</p>
+                        <p class="text-xs text-gray-400">${t.code}</p>
+                    </div>
+                    <div class="grid grid-cols-[1fr_1fr_auto] gap-2 items-center">
+                        <select data-route-type="${t.code}" class="ra-select text-xs" onchange="syncRoutePathState('${t.code}')">
+                            <option value="LINE_MANAGER" ${t.approvalRouteType!=='CUSTOM'?'selected':''}>Line Manager</option>
+                            <option value="CUSTOM"       ${t.approvalRouteType==='CUSTOM'?'selected':''}>Custom</option>
+                        </select>
+                        <select data-route-path="${t.code}" class="ra-select text-xs">
+                            <option value="">Select path</option>
+                            ${approvalPaths.filter(p=>p.enabled).map(p=>`<option value="${p.id}" ${t.customApprovalPathId===p.id?'selected':''}>${p.name}</option>`).join('')}
+                        </select>
+                        <button onclick="saveRequestTypeRoute('${t.code}')" class="text-xs px-3 py-2 bg-blue-900 text-white rounded-lg font-bold">Save</button>
+                    </div>
+                </div>`).join('') : '<p class="text-xs text-gray-400">No request types configured.</p>';
+            types.forEach(t => syncRoutePathState(t.code));
+        }
+
+        function syncRoutePathState(code) {
+            const rt  = document.querySelector(`[data-route-type="${code}"]`);
+            const rp  = document.querySelector(`[data-route-path="${code}"]`);
+            if (rt && rp) rp.disabled = rt.value !== 'CUSTOM';
+        }
+
+        function addApprovalStepRow(value = '') {
+            const row = document.createElement('div');
+            row.className = 'grid grid-cols-[1fr_auto] gap-2';
+            row.innerHTML = `
+                <select data-approval-step class="ra-select text-xs" required>
+                    <option value="">Select approver</option>
+                    ${approverOptions.map(o => `<option value="${o.value}" ${String(o.value)===String(value)?'selected':''}>${o.label}</option>`).join('')}
+                </select>
+                <button type="button" onclick="this.closest('div').remove()" class="px-3 py-2 border border-red-200 text-red-600 rounded-lg text-xs">✕</button>`;
+            document.getElementById('approvalStepRows').appendChild(row);
+        }
+
+        function editApprovalPath(id) {
+            const p = approvalPaths.find(x => x.id === id);
+            if (!p) return;
+            document.getElementById('approvalPathId').value = p.id;
+            document.getElementById('approvalPathName').value = p.name || '';
+            document.getElementById('approvalPathDescription').value = p.description || '';
+            document.getElementById('approvalPathEnabled').checked = !!p.enabled;
+            document.getElementById('approvalStepRows').innerHTML = '';
+            (p.steps || []).forEach(s => addApprovalStepRow(s.approverEmployeeId));
+            if (document.getElementById('pathsSection').classList.contains('hidden')) togglePaths();
+            document.getElementById('approvalPathForm').scrollIntoView({behavior:'smooth'});
+        }
+
+        function resetApprovalPathForm() {
+            document.getElementById('approvalPathForm').reset();
+            document.getElementById('approvalPathId').value = '';
+            document.getElementById('approvalPathEnabled').checked = true;
+            document.getElementById('approvalStepRows').innerHTML = '';
+            addApprovalStepRow();
+        }
+
+        async function toggleApprovalPath(id, enabled) {
+            try { await json(`/api/approval-paths/${id}/${enabled?'enable':'disable'}`, {method:'POST'}); await loadData(); }
+            catch (e) { alert(e.message); }
+        }
+
+        async function saveRequestTypeRoute(code) {
+            const routeType = document.querySelector(`[data-route-type="${code}"]`).value;
+            const pathId    = document.querySelector(`[data-route-path="${code}"]`).value;
+            if (routeType === 'CUSTOM' && !pathId) return alert('Select a custom approval path.');
+            try {
+                await json(`/api/approval-paths/request-types/${code}`, {
+                    method:'PUT', headers:{'Content-Type':'application/json'},
+                    body: JSON.stringify({approvalRouteType: routeType, customApprovalPathId: pathId ? Number(pathId) : null})
+                });
+                await loadData();
+            } catch (e) { alert(e.message); }
+        }
+
+        document.getElementById('approvalPathForm').addEventListener('submit', async ev => {
+            ev.preventDefault();
+            const id = document.getElementById('approvalPathId').value;
+            const steps = [...document.querySelectorAll('[data-approval-step]')]
+                .map(s => Number(s.value)).filter(v => v);
+            if (!steps.length) return alert('Add at least one approver.');
+            try {
+                await json(id ? `/api/approval-paths/${id}` : '/api/approval-paths', {
+                    method: id ? 'PUT' : 'POST',
+                    headers:{'Content-Type':'application/json'},
+                    body: JSON.stringify({
+                        name: document.getElementById('approvalPathName').value,
+                        description: document.getElementById('approvalPathDescription').value,
+                        enabled: document.getElementById('approvalPathEnabled').checked,
+                        steps: steps.map(approverEmployeeId => ({approverEmployeeId}))
+                    })
+                });
+                resetApprovalPathForm();
+                await loadData();
+            } catch (e) { alert(e.message); }
+        });
+
+        function togglePaths() {
+            const sec = document.getElementById('pathsSection');
+            const ch  = document.getElementById('pathsChevron');
+            sec.classList.toggle('hidden');
+            ch.style.transform = sec.classList.contains('hidden') ? '' : 'rotate(180deg)';
+        }
+
+        ['searchInput','statusFilter','typeFilter','priorityFilter']
+            .forEach(id => document.getElementById(id).addEventListener('input', renderRequestList));
+        document.addEventListener('DOMContentLoaded', loadData);
+    </script>
+
+</section>
+</body>
+</html>

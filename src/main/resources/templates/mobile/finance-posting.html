@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/mobileEmployeeLayout}">
+<head>
+    <title>Journal Postings</title>
+    <style>
+        .jp-card { background:#fff; border-radius:12px; border:1px solid #e5e7eb; padding:14px; margin-bottom:10px; }
+        .jp-row { display:flex; justify-content:space-between; align-items:flex-start; padding:6px 0; border-bottom:1px solid #f3f4f6; font-size:0.8rem; }
+        .jp-row:last-child { border-bottom:none; }
+        .jp-pill { font-family:monospace; background:#dbeafe; color:#1e40af; padding:1px 8px; border-radius:999px; font-size:0.72rem; }
+    </style>
+</head>
+<body>
+<section layout:fragment="content">
+
+    <!-- Data island (same pattern as web version) -->
+    <script id="journal-data" type="application/json">
+        [
+            <th:block th:each="entry, iterStat : ${journalEntries}">
+            {
+                "id":              <th:block th:text="${entry.id}">0</th:block>,
+                "payrollPeriodId": <th:block th:text="${entry.payrollPeriodId}">0</th:block>,
+                "periodStart":     "<th:block th:text="${entry.periodStart}">-</th:block>",
+                "periodEnd":       "<th:block th:text="${entry.periodEnd}">-</th:block>",
+                "accountCode":     "<th:block th:text="${entry.accountCode}">-</th:block>",
+                "accountName":     "<th:block th:text="${entry.accountName}">-</th:block>",
+                "debitAmount":     <th:block th:text="${entry.debitAmount}">0</th:block>,
+                "creditAmount":    <th:block th:text="${entry.creditAmount}">0</th:block>,
+                "description":     "<th:block th:text="${entry.description}">-</th:block>",
+                "exported":        <th:block th:text="${entry.exported}">false</th:block>
+            }<th:block th:if="${!iterStat.last}">,</th:block>
+            </th:block>
+        ]
+    </script>
+
+    <!-- Header -->
+    <div class="bg-blue-900 rounded-xl p-4 mb-4 text-white">
+        <p class="text-xs text-blue-300 uppercase font-semibold">Journal Postings</p>
+        <p class="text-sm text-blue-200 mt-1">Payroll accounting entries by period</p>
+    </div>
+
+    <!-- Summary stats -->
+    <div class="grid grid-cols-2 gap-3 mb-4">
+        <div class="jp-card">
+            <p class="text-xs text-gray-500">Periods</p>
+            <p class="text-2xl font-bold text-blue-900" id="jp-periods">—</p>
+            <p class="text-xs text-gray-400 mt-1">Grouped by month</p>
+        </div>
+        <div class="jp-card">
+            <p class="text-xs text-gray-500">Total Entries</p>
+            <p class="text-2xl font-bold text-blue-900" id="jp-entries">—</p>
+            <p class="text-xs text-gray-400 mt-1">Journal lines</p>
+        </div>
+        <div class="jp-card">
+            <p class="text-xs text-gray-500">Total Debits</p>
+            <p class="text-lg font-bold text-blue-600" id="jp-debits">—</p>
+        </div>
+        <div class="jp-card">
+            <p class="text-xs text-gray-500">Balanced</p>
+            <p class="text-2xl font-bold text-green-600" id="jp-balanced">—</p>
+            <p class="text-xs text-gray-400 mt-1">Periods</p>
+        </div>
+    </div>
+
+    <!-- Dynamic content mount -->
+    <div id="jp-mount">
+        <div class="jp-card animate-pulse">
+            <div class="h-4 bg-gray-200 rounded w-1/2 mb-3"></div>
+            <div class="h-3 bg-gray-100 rounded w-full mb-2"></div>
+            <div class="h-3 bg-gray-100 rounded w-5/6 mb-2"></div>
+            <div class="h-3 bg-gray-100 rounded w-4/6"></div>
+        </div>
+    </div>
+
+    <script>
+    (function () {
+        'use strict';
+
+        function fmtMoney(n) {
+            return Number(n) === 0 ? '—'
+                : '₦' + Number(n).toLocaleString('en-NG', {minimumFractionDigits:2,maximumFractionDigits:2});
+        }
+        function fmtRaw(n) { return Number(n).toFixed(2); }
+        function monthYear(dateStr) {
+            const [y, m] = dateStr.split('-');
+            return new Date(Number(y), Number(m)-1, 1)
+                .toLocaleDateString('en-GB', {month:'long', year:'numeric'});
+        }
+        function fmtDate(dateStr) {
+            const [y, m, d] = dateStr.split('-');
+            return new Date(Number(y), Number(m)-1, Number(d))
+                .toLocaleDateString('en-GB', {day:'2-digit', month:'short', year:'numeric'});
+        }
+        function esc(s) {
+            return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        }
+        function escCsv(v) {
+            const s = String(v);
+            return s.includes(',') || s.includes('"') || s.includes('\n')
+                ? '"' + s.replace(/"/g,'""') + '"' : s;
+        }
+
+        let entries = [];
+        try {
+            entries = JSON.parse(document.getElementById('journal-data').textContent.trim());
+        } catch (e) {
+            document.getElementById('jp-mount').innerHTML =
+                '<div class="jp-card text-red-500 text-sm">Failed to parse journal data.</div>';
+            return;
+        }
+
+        if (!entries.length) {
+            document.getElementById('jp-mount').innerHTML =
+                '<div class="jp-card text-center py-8">' +
+                '<span class="material-symbols-outlined text-gray-300 block" style="font-size:48px">inbox</span>' +
+                '<p class="text-sm text-gray-500 mt-2">No journal entries found.</p></div>';
+            return;
+        }
+
+        /* group by period */
+        const groupMap = new Map();
+        entries.forEach(e => {
+            const key = e.periodStart + '|' + e.periodEnd;
+            if (!groupMap.has(key)) groupMap.set(key, []);
+            groupMap.get(key).push(e);
+        });
+        const groups = Array.from(groupMap.entries());
+
+        /* summary stats */
+        const totalDebits = entries.reduce((s, e) => s + Number(e.debitAmount), 0);
+        let balancedCount = 0;
+        groupMap.forEach(rows => {
+            const d = rows.reduce((s,r) => s + Number(r.debitAmount), 0);
+            const c = rows.reduce((s,r) => s + Number(r.creditAmount), 0);
+            if (Math.abs(d - c) < 0.005) balancedCount++;
+        });
+        document.getElementById('jp-periods').textContent   = groups.length;
+        document.getElementById('jp-entries').textContent   = entries.length;
+        document.getElementById('jp-debits').textContent    = '₦' + totalDebits.toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2});
+        document.getElementById('jp-balanced').textContent  = balancedCount;
+
+        /* CSV download per group */
+        window.jpDownloadCsv = function(key) {
+            const rows = groupMap.get(key);
+            if (!rows) return;
+            const header = ['ID','Period Start','Period End','Account Code','Account Name','Debit (₦)','Credit (₦)','Description','Exported'];
+            const lines = [header.join(',')];
+            rows.forEach(r => lines.push([
+                r.id, r.periodStart, r.periodEnd,
+                r.accountCode, escCsv(r.accountName),
+                fmtRaw(r.debitAmount), fmtRaw(r.creditAmount),
+                escCsv(r.description), r.exported
+            ].join(',')));
+            const d = rows.reduce((s,r) => s + Number(r.debitAmount), 0);
+            const c = rows.reduce((s,r) => s + Number(r.creditAmount), 0);
+            lines.push(['','','','','TOTAL',fmtRaw(d),fmtRaw(c),'',''].join(','));
+
+            const blob = new Blob([lines.join('\n')], {type:'text/csv;charset=utf-8;'});
+            const url  = URL.createObjectURL(blob);
+            const a    = Object.assign(document.createElement('a'), {
+                href: url,
+                download: 'journal_' + key.replace('|','_to_') + '.csv'
+            });
+            document.body.appendChild(a); a.click();
+            document.body.removeChild(a); URL.revokeObjectURL(url);
+        };
+
+        /* toggle entry list */
+        window.jpToggle = function(id) {
+            const el = document.getElementById('jp-entries-' + id);
+            if (!el) return;
+            const icon = document.getElementById('jp-toggle-icon-' + id);
+            const hidden = el.style.display === 'none' || el.style.display === '';
+            el.style.display = hidden ? 'block' : 'none';
+            if (icon) icon.textContent = hidden ? 'expand_less' : 'expand_more';
+        };
+
+        /* render all groups */
+        let html = '';
+        groups.forEach(([key, rows], groupIdx) => {
+            const [ps, pe] = key.split('|');
+            const totD = rows.reduce((s,r) => s + Number(r.debitAmount), 0);
+            const totC = rows.reduce((s,r) => s + Number(r.creditAmount), 0);
+            const balanced = Math.abs(totD - totC) < 0.005;
+            const allExported = rows.every(r => r.exported);
+            const isCurrent = groupIdx === 0;
+
+            const entryRows = rows.map(r => {
+                const hasD = Number(r.debitAmount) > 0;
+                const hasC = Number(r.creditAmount) > 0;
+                return `<div class="jp-row">
+                    <div class="flex-1 min-w-0 pr-2">
+                        <div class="flex items-center gap-1 mb-0.5">
+                            <span class="jp-pill">${esc(r.accountCode)}</span>
+                            ${r.exported
+                                ? '<span class="text-xs font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700">exported</span>'
+                                : '<span class="text-xs font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700">pending</span>'}
+                        </div>
+                        <p class="text-xs font-medium text-gray-800 truncate">${esc(r.accountName)}</p>
+                        <p class="text-xs text-gray-400 truncate">${esc(r.description)}</p>
+                    </div>
+                    <div class="text-right flex-shrink-0">
+                        ${hasD ? `<p class="text-xs font-bold text-blue-600">${fmtMoney(r.debitAmount)}</p><p class="text-xs text-gray-400">Dr</p>` : ''}
+                        ${hasC ? `<p class="text-xs font-bold text-green-600">${fmtMoney(r.creditAmount)}</p><p class="text-xs text-gray-400">Cr</p>` : ''}
+                    </div>
+                </div>`;
+            }).join('');
+
+            html += `<div class="jp-card mb-3">
+                <!-- Period header -->
+                <div class="flex items-center justify-between mb-2" onclick="jpToggle(${groupIdx})" style="cursor:pointer">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <span class="material-symbols-outlined text-blue-600" style="font-size:16px">receipt</span>
+                        </div>
+                        <div>
+                            <p class="font-bold text-sm">${esc(monthYear(ps))}</p>
+                            <p class="text-xs text-gray-400">${esc(fmtDate(ps))} → ${esc(fmtDate(pe))}</p>
+                        </div>
+                    </div>
+                    <span class="material-symbols-outlined text-gray-400" id="jp-toggle-icon-${groupIdx}">expand_more</span>
+                </div>
+
+                <!-- Badges -->
+                <div class="flex flex-wrap gap-1 mb-2">
+                    ${isCurrent ? '<span class="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">current</span>' : '<span class="text-xs font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">previous</span>'}
+                    <span class="text-xs font-bold px-2 py-0.5 rounded-full ${balanced ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}">${balanced ? 'balanced' : 'unbalanced'}</span>
+                    ${allExported ? '<span class="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">all exported</span>' : ''}
+                </div>
+
+                <!-- Totals summary row -->
+                <div class="flex items-center justify-between text-xs text-gray-500 mb-2 border-t border-gray-100 pt-2">
+                    <span>${rows.length} entr${rows.length===1?'y':'ies'} · Run #${rows[0].payrollPeriodId}</span>
+                    <div class="flex items-center gap-3">
+                        <span class="font-semibold text-blue-600">Dr ${fmtMoney(totD)}</span>
+                        <span class="font-semibold text-green-600">Cr ${fmtMoney(totC)}</span>
+                        <button onclick="event.stopPropagation();jpDownloadCsv('${key}')"
+                                class="flex items-center gap-0.5 text-blue-600 border border-blue-200 rounded-lg px-2 py-0.5 text-xs">
+                            <span class="material-symbols-outlined" style="font-size:12px">download</span> CSV
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Entry rows (collapsed by default) -->
+                <div id="jp-entries-${groupIdx}" style="display:none">
+                    ${entryRows}
+                    <!-- Totals footer -->
+                    <div class="flex justify-between pt-2 mt-1 border-t border-gray-200 text-xs font-bold">
+                        <span>Period Totals</span>
+                        <div class="flex gap-4">
+                            <span class="text-blue-600">${fmtMoney(totD)} Dr</span>
+                            <span class="text-green-600">${fmtMoney(totC)} Cr</span>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+        });
+
+        document.getElementById('jp-mount').innerHTML = html;
+    })();
+    </script>
+
+</section>
+</body>
+</html>
