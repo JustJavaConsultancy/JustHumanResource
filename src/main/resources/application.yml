@@ -25,6 +25,17 @@ spring:
     multipart:
       max-file-size: 20MB
       max-request-size: 20MB
+  mail:
+    host: ${SMTP_HOST:localhost}
+    port: ${SMTP_PORT:587}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${SMTP_AUTH:true}
+          starttls:
+            enable: ${SMTP_STARTTLS:true}
   ai:
     openai:
       api-key: ${openaiAPI_KEY}
@@ -100,6 +111,8 @@ paystack:
     key: pk_test_9cb18abce49813849f0720e1eb9faafe13ffccf4
 
 app:
+  mail:
+    from: ${MAIL_FROM:no-reply@yourdomain.com}
   kpi:
     max-kpi-weight: ${MAX_KPI_WEIGHT:1.0}
 
@@ -112,8 +125,3 @@ fam:
     timeout: ${FAM_API_TIMEOUT:5s}
     mode: ${FAM_MODE:SELF}
 
-
-#resend
-resend:
-  api-key: ${RESEND_API_KEY:}
-  default-from: ${RESEND_FROM:}
