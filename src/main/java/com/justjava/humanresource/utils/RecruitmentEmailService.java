@@ -36,7 +36,7 @@ public class RecruitmentEmailService {
     private static final String DEFAULT_COMPANY_NAME = "Human Resources";
     private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern("dd MMM uuuu, HH:mm");
 
-    private final ResendService resendService;
+    private final EmailService emailService;
     private final CandidateRepository candidateRepository;
     private final JobApplicationRepository applicationRepository;
     private final JobOpeningRepository openingRepository;
@@ -372,7 +372,7 @@ public class RecruitmentEmailService {
         }
         try {
             trace("SEND", context + " to=" + email.trim() + " subject=" + subject);
-            String resendEmailId = resendService.sendEmail(email.trim(), subject, html, text);
+            String resendEmailId = emailService.sendEmail(email.trim(), subject, html, text);
             trace("SENT", context + " to=" + email.trim() + " resendEmailId=" + resendEmailId);
         } catch (Exception e) {
             trace("ERROR", context + " to=" + email.trim() + " errorClass=" + e.getClass().getName()

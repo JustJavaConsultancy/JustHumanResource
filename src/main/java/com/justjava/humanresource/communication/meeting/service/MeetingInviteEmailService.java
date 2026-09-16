@@ -2,7 +2,7 @@ package com.justjava.humanresource.communication.meeting.service;
 
 import com.justjava.humanresource.communication.meeting.entity.HrMeeting;
 import com.justjava.humanresource.communication.meeting.entity.HrMeetingParticipant;
-import com.justjava.humanresource.utils.ResendService;
+import com.justjava.humanresource.utils.EmailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -12,7 +12,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class MeetingInviteEmailService {
 
-    private final ResendService resendService;
+    private final EmailService emailService;
     private final MeetingInviteMessageBuilder messageBuilder;
 
     public String sendInvite(HrMeeting meeting, HrMeetingParticipant participant) {
@@ -21,7 +21,7 @@ public class MeetingInviteEmailService {
             throw new IllegalStateException("Participant has no email address.");
         }
         try {
-            return resendService.sendEmail(
+            return emailService.sendEmail(
                     email.trim(),
                     "Meeting invite: " + meeting.getSubject(),
                     messageBuilder.html(meeting),
