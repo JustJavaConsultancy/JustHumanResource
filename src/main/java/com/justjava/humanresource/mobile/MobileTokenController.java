@@ -62,7 +62,7 @@ public class MobileTokenController {
         );
 
         if (client == null || client.getAccessToken() == null) {
-            throw new IllegalStateException("No mobile OAuth2 client tokens available.");
+            return null;
         }
 
         TokenResponse response = new TokenResponse();

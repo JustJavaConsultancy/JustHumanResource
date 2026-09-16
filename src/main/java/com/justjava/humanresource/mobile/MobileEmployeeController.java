@@ -48,7 +48,9 @@ import com.justjava.humanresource.payroll.report.dto.PensionReportDTO;
 import com.justjava.humanresource.payroll.report.dto.PayrollSummaryDTO;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -157,76 +159,43 @@ public class MobileEmployeeController {
     @GetMapping("/employee/dashboard")
     public String getMobileEmployeeDashboard(Model model) {
         String email = (String) authenticationManager.get("email");
-        // implement your own logic
         Employee loginEmployee = employeeService.getByEmail(email);
         Employee employee = employeeService.getEmployeeWithBankDetails(loginEmployee.getId());
-        PaySlipDTO latestPaySlip = paySlipService.getCurrentPeriodPaySlipForEmployee(1l,loginEmployee.getId());
-        System.out.println("Latest Pay Slip: " + latestPaySlip);
-        System.out.println("Logged in employee: " + loginEmployee);
+        PaySlipDTO latestPaySlip = paySlipService.getCurrentPeriodPaySlipForEmployee(1L, loginEmployee.getId());
         List<PaySlipDTO> previousPaySlip = paySlipService.getPaySlipsByEmployee(loginEmployee.getId());
-        // 🔹 COMPLETED PROCESSES
-        List<HistoricProcessInstance> completedProcesses =
-                flowableTaskService.getCompletedProcessInstancesForAssignee(
-                        "employeeAppraisalProcess"
-                );
-
-        // 🔹 ACTIVE TASKS
-        List<FlowableTaskDTO> tasks =
-                flowableTaskService.getTasksForAssignee(
-                        String.valueOf(loginEmployee.getId()),
-                        "employeeAppraisalProcess"
-                );
-        List<AppraisalTaskViewDTO> enrichedAppraisals = new ArrayList<>();
-
-        for (FlowableTaskDTO task : tasks) {
-
-            Map<String, Object> variables = task.getVariables();
-
-            if (variables.containsKey("appraisalId")) {
-
-                Long appraisalId =
-                        Long.valueOf(variables.get("appraisalId").toString());
-
-                Optional<EmployeeAppraisal> appraisalOpt =
-                        appraisalService.findAppraisalById(appraisalId);
-                if (appraisalOpt.isEmpty()) {
-                    System.out.println("Skipping orphaned task, appraisalId not found: " + appraisalId);
-                    continue;
-                }
-                enrichedAppraisals.add(
-                        new AppraisalTaskViewDTO(task, appraisalOpt.get())
-                );
-            }
-        }
-        enrichedAppraisals.forEach(
-                appraisal -> System.out.println("Task: " + appraisal.getTask()+ ", Appraisal: " + appraisal.getAppraisal())
-        );
-        List<EmployeeAppraisal> employeeAppraisals = appraisalService.findAppraisalByEmployeeID(loginEmployee.getId());
-
-        EmployeeAppraisal latestAppraisal = employeeAppraisals.stream()
-                .max(java.util.Comparator.comparing(EmployeeAppraisal::getId))
-                .orElse(null);
 
         List<FutureEmployeeAllowanceDTO> futureAllowances = List.of();
         try {
             futureAllowances = payrollSetupService.getFutureAllowancesForEmployee(loginEmployee.getId());
         } catch (Exception ignored) {}
 
-        // existing
-        model.addAttribute("tasks", tasks);
-        model.addAttribute("employeeAppraisals", employeeAppraisals);
+        // Build recent activity from real payslip and allowance data
+        List<Map<String, String>> recentActivity = new ArrayList<>();
+        DateTimeFormatter labelFmt = DateTimeFormatter.ofPattern("MMMM yyyy");
+        DateTimeFormatter dateFmt  = DateTimeFormatter.ofPattern("d MMM yyyy");
 
-// add this
-        model.addAttribute("appraisalMap",
-                employeeAppraisals.stream()
-                        .collect(Collectors.toMap(EmployeeAppraisal::getId, ea -> ea))
-        );
+        if (previousPaySlip != null) {
+            previousPaySlip.stream().limit(3).forEach(slip -> {
+                Map<String, String> item = new LinkedHashMap<>();
+                item.put("icon", "account_balance_wallet");
+                item.put("description", "Payslip for " + slip.getPayDate().format(labelFmt) + " processed");
+                item.put("timeAgo", slip.getPayDate().format(dateFmt));
+                recentActivity.add(item);
+            });
+        }
+        for (FutureEmployeeAllowanceDTO fa : futureAllowances) {
+            Map<String, String> item = new LinkedHashMap<>();
+            item.put("icon", "history_toggle_off");
+            item.put("description", fa.getAllowanceName() + " scheduled to start");
+            item.put("timeAgo", "From " + fa.getEffectiveFrom().format(labelFmt));
+            recentActivity.add(item);
+        }
+
         model.addAttribute("previousPaySlips", previousPaySlip);
-        model.addAttribute("previousPaySlip", previousPaySlip);
-        model.addAttribute("latestAppraisal", latestAppraisal);
         model.addAttribute("futureAllowances", futureAllowances);
         model.addAttribute("employee", employee);
         model.addAttribute("latestPaySlip", latestPaySlip);
+        model.addAttribute("recentActivity", recentActivity);
         model.addAttribute("title", "Dashboard");
         model.addAttribute("subTitle", "Your personal overview");
         return "mobile/dashboard";

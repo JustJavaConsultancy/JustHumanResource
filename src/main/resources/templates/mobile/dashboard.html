@@ -87,42 +87,6 @@
                th:text="${latestPaySlip != null ? #temporals.format(latestPaySlip.payDate, 'MMMM yyyy') : ''}">Feb 2026</p>
         </div>
 
-        <!-- KPI Score -->
-        <div class="flex-none w-40 p-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-            <div class="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center mb-3">
-                <span class="material-symbols-outlined text-amber-600 dark:text-amber-400">monitoring</span>
-            </div>
-            <p class="text-[0.65rem] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">KPI Score</p>
-            <p class="text-lg font-bold mt-0.5 text-slate-900 dark:text-white">
-                <th:block th:if="${latestAppraisal != null and latestAppraisal.kpiScore != null}"
-                          th:text="${#numbers.formatDecimal(latestAppraisal.kpiScore, 1, 2)}">—</th:block>
-                <th:block th:unless="${latestAppraisal != null and latestAppraisal.kpiScore != null}">—</th:block>
-            </p>
-            <p class="text-[0.6rem] text-slate-400 mt-0.5"
-               th:text="${latestAppraisal != null and latestAppraisal.cycle != null ? latestAppraisal.cycle.name : 'No cycle'}">Q1 2026</p>
-        </div>
-
-        <!-- Pending Tasks -->
-        <div class="flex-none w-40 p-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-            <div class="w-9 h-9 rounded-xl bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center mb-3">
-                <span class="material-symbols-outlined text-orange-600 dark:text-orange-400">pending_actions</span>
-            </div>
-            <p class="text-[0.65rem] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Pending</p>
-            <p class="text-lg font-bold mt-0.5 text-slate-900 dark:text-white"
-               th:text="${tasks != null ? tasks.size() : 0}">0</p>
-            <p class="text-[0.6rem] text-slate-400 mt-0.5">task(s) to action</p>
-        </div>
-
-        <!-- Appraisal History -->
-        <div class="flex-none w-40 p-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-            <div class="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center mb-3">
-                <span class="material-symbols-outlined text-blue-600 dark:text-blue-400">assignment_turned_in</span>
-            </div>
-            <p class="text-[0.65rem] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Appraisals</p>
-            <p class="text-lg font-bold mt-0.5 text-slate-900 dark:text-white"
-               th:text="${employeeAppraisals != null ? employeeAppraisals.size() : 0}">0</p>
-            <p class="text-[0.6rem] text-slate-400 mt-0.5">total records</p>
-        </div>
     </div>
 
 
@@ -167,80 +131,6 @@
     </div>
 
 
-    <!-- ===== PENDING APPRAISAL TASKS ===== -->
-
-    <!-- Empty state -->
-    <div th:if="${tasks == null or tasks.isEmpty()}"
-         class="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200 dark:border-slate-700">
-        <div class="flex items-center gap-2 mb-4">
-            <span class="material-symbols-outlined text-slate-400">pending_actions</span>
-            <h3 class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Pending Tasks</h3>
-        </div>
-        <div class="flex flex-col items-center py-6 text-center">
-            <div class="w-14 h-14 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center mb-3">
-                <span class="material-symbols-outlined text-2xl text-slate-400">check_circle</span>
-            </div>
-            <p class="text-sm font-semibold text-slate-700 dark:text-slate-200">All caught up!</p>
-            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">No pending tasks right now.</p>
-        </div>
-    </div>
-
-    <!-- Task list -->
-    <div th:if="${tasks != null and !tasks.isEmpty()}"
-         class="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200 dark:border-slate-700">
-        <div class="flex items-center justify-between mb-4">
-            <div class="flex items-center gap-2">
-                <span class="material-symbols-outlined text-orange-500">pending_actions</span>
-                <h3 class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Pending Tasks</h3>
-                <span class="badge badge-orange" th:text="${tasks.size()} + ' pending'">1 pending</span>
-            </div>
-            <a th:href="@{mobile/employee/performance}" class="text-primary text-xs font-semibold">View All</a>
-        </div>
-
-        <div class="space-y-0">
-            <div th:each="task, taskStat : ${tasks}"
-                 th:if="${taskStat.index < 3}"
-                 th:with="selfComplete=${task.variables['selfComplete']},
-                           appraisal=${appraisalMap != null ? appraisalMap[task.variables['appraisalId']] : null}"
-                 class="history-item flex items-center gap-4 py-3.5 border-b border-slate-100 dark:border-slate-700 last:border-b-0 cursor-pointer">
-
-                <!-- icon -->
-                <div th:class="${selfComplete}
-                       ? 'w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center shrink-0'
-                       : 'w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center shrink-0'">
-                    <span th:class="${selfComplete}
-                            ? 'material-symbols-outlined text-green-600 dark:text-green-400'
-                            : 'material-symbols-outlined text-orange-600 dark:text-orange-400'"
-                          th:text="${selfComplete} ? 'hourglass_top' : 'edit_note'">edit_note</span>
-                </div>
-
-                <div class="flex-1 min-w-0">
-                    <p class="text-sm font-semibold truncate" th:text="${task.taskName}">Self Appraisal</p>
-                    <p class="text-xs text-slate-500 dark:text-slate-400">
-                        <span th:text="${appraisal != null and appraisal.cycle != null ? appraisal.cycle.name : task.businessKey}">Q1 2026</span>
-                        &nbsp;·&nbsp;
-                        <span th:if="${selfComplete}" class="text-orange-500 font-medium">Awaiting manager</span>
-                        <span th:unless="${selfComplete}" class="text-orange-600 font-medium">Self-review needed</span>
-                    </p>
-                </div>
-
-                <a th:href="@{mobile/employee/performance}"
-                   th:class="${selfComplete}
-                     ? 'px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
-                     : 'px-3 py-1.5 text-xs font-semibold rounded-lg bg-primary text-white'">
-                    <span th:text="${selfComplete} ? 'Track' : 'Review'">Review</span>
-                </a>
-            </div>
-        </div>
-
-        <!-- show "and X more" if more than 3 -->
-        <div th:if="${tasks.size() > 3}"
-             class="pt-3 text-center">
-            <a th:href="@{mobile/employee/performance}" class="text-xs text-primary font-semibold">
-                + <span th:text="${tasks.size() - 3}">0</span> more task(s) →
-            </a>
-        </div>
-    </div>
 
 
     <!-- ===== PAYROLL SNAPSHOT ===== -->
@@ -285,48 +175,6 @@
     </div>
 
 
-    <!-- ===== APPRAISAL HISTORY SNAPSHOT ===== -->
-    <div th:if="${employeeAppraisals != null and !employeeAppraisals.isEmpty()}"
-         class="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200 dark:border-slate-700">
-        <div class="flex items-center justify-between mb-4">
-            <div class="flex items-center gap-2">
-                <span class="material-symbols-outlined text-primary">history</span>
-                <h3 class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Recent Appraisals</h3>
-                <span class="badge badge-info" th:text="${employeeAppraisals.size()} + ' total'">0 total</span>
-            </div>
-            <a th:href="@{mobile/employee/performance}" class="text-primary text-xs font-semibold">View All</a>
-        </div>
-
-        <div class="space-y-0">
-            <div th:each="appraisal, stat : ${employeeAppraisals}"
-                 th:if="${stat.index < 3}"
-                 th:with="isComplete=${appraisal.managerScore != null}"
-                 class="history-item flex items-center justify-between py-3 border-b border-slate-100 dark:border-slate-700 last:border-b-0">
-                <div>
-                    <div class="flex items-center gap-2 mb-0.5">
-                        <span class="text-sm font-semibold"
-                              th:text="${appraisal.cycle != null ? appraisal.cycle.name : 'Appraisal #' + appraisal.id}">Q1 2026</span>
-                        <span th:if="${appraisal.status != null}" th:switch="${appraisal.status.name()}">
-                            <span th:case="'COMPLETED'"   class="badge badge-success text-[0.55rem]" th:text="${appraisal.status}"></span>
-                            <span th:case="'IN_PROGRESS'" class="badge badge-warning text-[0.55rem]" th:text="${appraisal.status}"></span>
-                            <span th:case="'PENDING'"     class="badge badge-neutral text-[0.55rem]" th:text="${appraisal.status}"></span>
-                            <span th:case="*"             class="badge badge-neutral text-[0.55rem]" th:text="${appraisal.status}"></span>
-                        </span>
-                    </div>
-                    <div class="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
-                        <span>KPI: <span class="font-medium text-slate-700 dark:text-slate-200"
-                                         th:text="${appraisal.kpiScore != null ? #numbers.formatDecimal(appraisal.kpiScore,1,2) : '—'}">—</span></span>
-                        <span th:if="${isComplete and appraisal.finalScore != null}"
-                              class="text-primary font-medium">
-                            Final: <span th:text="${#numbers.formatDecimal(appraisal.finalScore,1,2)}">—</span>
-                        </span>
-                        <span th:unless="${isComplete}" class="badge badge-orange text-[0.5rem]">Awaiting</span>
-                    </div>
-                </div>
-                <span class="material-symbols-outlined text-slate-400">chevron_right</span>
-            </div>
-        </div>
-    </div>
 
 
     <!-- ===== QUICK LINKS ===== -->
@@ -350,20 +198,19 @@
                 </div>
                 <span class="text-[0.65rem] font-semibold text-slate-600 dark:text-slate-300">Payroll</span>
             </a>
-            <a th:href="@{mobile/employee/performance}"
+            <a th:href="@{/mobile/employee/leave}"
                class="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-700/50 border border-slate-100 dark:border-slate-700 active:scale-95 transition-transform">
                 <div class="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                    <span class="material-symbols-outlined text-purple-600 dark:text-purple-400">assignment_turned_in</span>
+                    <span class="material-symbols-outlined text-purple-600 dark:text-purple-400">event_available</span>
                 </div>
-                <span class="text-[0.65rem] font-semibold text-slate-600 dark:text-slate-300">Appraisals</span>
+                <span class="text-[0.65rem] font-semibold text-slate-600 dark:text-slate-300">Leave</span>
             </a>
         </div>
     </div>
 
 
     <!-- ===== RECENT ACTIVITY ===== -->
-    <div th:if="${recentActivity != null and !recentActivity.isEmpty()}"
-         class="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200 dark:border-slate-700">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200 dark:border-slate-700">
         <div class="flex items-center gap-2 mb-4">
             <span class="material-symbols-outlined text-primary">timeline</span>
             <h3 class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Recent Activity</h3>
