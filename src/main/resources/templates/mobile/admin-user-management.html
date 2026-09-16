@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/mobileEmployeeLayout}">
+<head>
+    <meta charset="UTF-8">
+    <title>User Management</title>
+    <style>
+        .um-card { background:#fff; border:1px solid #e5e7eb; border-radius:14px; }
+        .dark .um-card { background:#1f2937; border-color:#374151; }
+        .um-stat { padding:12px; }
+        .um-badge { display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:999px; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.02em; }
+        .um-badge-active { background:#dcfce7; color:#166534; }
+        .um-badge-inactive { background:#f1f5f9; color:#475569; }
+        .dark .um-badge-inactive { background:#374151; color:#d1d5db; }
+        .um-chip { display:inline-flex; align-items:center; gap:4px; background:rgba(37,99,235,.08); color:#2463eb; font-size:10px; font-weight:600; padding:3px 8px; border-radius:999px; border:1px solid rgba(37,99,235,.15); }
+        .dark .um-chip { background:rgba(37,99,235,.18); color:#93c5fd; }
+        .um-input { width:100%; border:1px solid #d1d5db; background:#fff; border-radius:10px; padding:10px 12px; font-size:14px; outline:none; }
+        .dark .um-input { border-color:#374151; background:#0f172a; color:#e5e7eb; }
+        .um-input:focus { border-color:#2463eb; box-shadow:0 0 0 3px rgba(37,99,235,.15); }
+        .um-input-error { border-color:#dc2626 !important; box-shadow:0 0 0 3px rgba(220,38,38,.15) !important; }
+        .um-primary { background:#2463eb; color:#fff; padding:10px 16px; border-radius:12px; font-weight:600; font-size:14px; }
+        .um-primary:disabled { opacity:.6; }
+        .um-secondary { background:#f1f5f9; color:#0f172a; padding:10px 16px; border-radius:12px; font-weight:600; font-size:14px; border:1px solid #e5e7eb; }
+        .dark .um-secondary { background:#1e293b; color:#e5e7eb; border-color:#334155; }
+        .um-danger { background:#dc2626; color:#fff; padding:10px 16px; border-radius:12px; font-weight:600; font-size:14px; }
+        .um-sheet-backdrop { position:fixed; inset:0; background:rgba(15,23,42,.5); z-index:60; }
+        .um-sheet { position:fixed; left:0; right:0; bottom:0; background:#fff; border-radius:20px 20px 0 0; z-index:70; max-height:88vh; display:flex; flex-direction:column; }
+        .dark .um-sheet { background:#0f172a; }
+        .um-sheet-head { padding:14px 18px; border-bottom:1px solid #e5e7eb; display:flex; justify-content:space-between; align-items:center; gap:8px; }
+        .dark .um-sheet-head { border-bottom-color:#334155; }
+        .um-sheet-body { padding:16px 18px; overflow-y:auto; flex:1; }
+        .um-sheet-foot { padding:12px 18px; border-top:1px solid #e5e7eb; display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap; }
+        .dark .um-sheet-foot { border-top-color:#334155; }
+        .um-field-label { font-size:11px; font-weight:600; color:#475569; text-transform:uppercase; letter-spacing:.03em; margin-bottom:4px; display:block; }
+        .dark .um-field-label { color:#94a3b8; }
+        .um-fab { position:fixed; right:16px; bottom:88px; z-index:40; width:56px; height:56px; border-radius:50%; background:#2463eb; color:#fff; display:flex; align-items:center; justify-content:center; box-shadow:0 10px 25px -8px rgba(37,99,235,.5); }
+        .um-toast { position:fixed; left:50%; transform:translateX(-50%); bottom:100px; z-index:100; background:#111827; color:#fff; padding:10px 16px; border-radius:12px; font-size:13px; font-weight:600; box-shadow:0 8px 20px -4px rgba(0,0,0,.4); max-width:90%; }
+        .um-toast-error { background:#991b1b; }
+        .um-empty { padding:32px 16px; text-align:center; color:#94a3b8; }
+        .um-step-dot { width:6px; height:6px; border-radius:99px; background:#c3c6d7; }
+        .um-step-dot.um-active { background:#2463eb; transform:scale(1.4); }
+        .um-form-section { display:none; }
+        .um-form-section.um-active { display:block; }
+        .um-tab-btn { font-size:12px; font-weight:600; padding:6px 12px; border-radius:8px; color:#475569; background:transparent; border:none; flex:1; }
+        .um-tab-btn.um-active { background:#2463eb; color:#fff; }
+        .dark .um-tab-btn { color:#cbd5e1; }
+        .um-strength-bar { height:3px; border-radius:99px; background:#cbd5e1; flex:1; }
+        .um-avatar { width:44px; height:44px; border-radius:50%; background:linear-gradient(135deg, rgba(37,99,235,.35), rgba(96,165,250,.55)); color:#1e3a8a; font-weight:700; font-size:14px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+        .dark .um-avatar { color:#dbeafe; }
+    </style>
+</head>
+<body>
+<main layout:fragment="content" class="px-4 pb-24 pt-2 space-y-4">
+
+    <!-- Flash message hidden inputs -->
+    <div th:if="${successMessage}" id="umSuccessFlash" th:attr="data-msg=${successMessage}" hidden></div>
+    <div th:if="${errorMessage}"   id="umErrorFlash"   th:attr="data-msg=${errorMessage}" hidden></div>
+
+    <!-- Header -->
+    <div class="flex items-start justify-between">
+        <div>
+            <h2 class="text-xl font-bold">User Manager</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                Manage users &amp; groups
+                <span class="um-chip" th:text="${realmName}">realm</span>
+            </p>
+        </div>
+        <div class="flex items-center gap-2">
+            <button type="button" onclick="umOpenGroupsSheet()"
+                    class="flex size-9 items-center justify-center rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                    title="Manage groups">
+                <span class="material-symbols-outlined text-slate-600 dark:text-slate-300 text-lg">folder_shared</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Stat cards -->
+    <div class="grid grid-cols-2 gap-3">
+        <div class="um-card um-stat">
+            <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Total Users</p>
+            <p class="mt-1 text-2xl font-bold" th:text="${totalUsers}">0</p>
+        </div>
+        <div class="um-card um-stat">
+            <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Active</p>
+            <p class="mt-1 text-2xl font-bold" th:text="${totalActive}">0</p>
+        </div>
+        <div class="um-card um-stat">
+            <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Inactive</p>
+            <p class="mt-1 text-2xl font-bold" th:text="${totalUsers - totalActive}">0</p>
+        </div>
+        <div class="um-card um-stat">
+            <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Realm Groups</p>
+            <p class="mt-1 text-2xl font-bold" th:text="${groups.size()}">0</p>
+        </div>
+    </div>
+
+    <!-- Search + refresh -->
+    <form th:action="@{/mobile/admin/users}" method="get" class="um-card p-3 space-y-2">
+        <input type="hidden" name="page" value="0"/>
+        <div class="relative">
+            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
+            <input type="text" name="search" th:value="${search}" placeholder="Search by name, email or username" class="um-input" style="padding-left:36px;">
+        </div>
+        <div class="flex gap-2">
+            <button type="submit" class="um-primary flex-1 flex items-center justify-center gap-1">
+                <span class="material-symbols-outlined text-base">search</span> Search
+            </button>
+            <a th:href="@{/mobile/admin/users}" class="um-secondary flex items-center justify-center" title="Reset/refresh">
+                <span class="material-symbols-outlined text-base">refresh</span>
+            </a>
+        </div>
+        <div th:if="${search != null and !search.isBlank()}" class="flex items-center gap-2 text-xs text-slate-500">
+            <span class="um-chip">
+                <span class="material-symbols-outlined text-[12px]">search</span>
+                <span th:text="'&quot;' + ${search} + '&quot;'"></span>
+            </span>
+            <a th:href="@{/mobile/admin/users}" class="text-red-500 flex items-center">
+                <span class="material-symbols-outlined text-sm">close</span> Clear
+            </a>
+        </div>
+    </form>
+
+    <!-- Directory heading -->
+    <div class="flex items-center gap-2 pt-1">
+        <h3 class="text-sm font-bold">Directory</h3>
+        <span class="um-chip" th:text="${totalUsers} + ' users'">0 users</span>
+    </div>
+
+    <!-- User cards list -->
+    <div class="space-y-2">
+        <div th:each="user : ${users}" class="um-card p-3">
+            <div class="flex items-start gap-3">
+                <div class="um-avatar"
+                     th:text="${(user.firstName != null and !#strings.isEmpty(user.firstName) ? #strings.toUpperCase(#strings.substring(user.firstName,0,1)) : #strings.toUpperCase(#strings.substring(user.username,0,1))) + (user.lastName != null and !#strings.isEmpty(user.lastName) ? #strings.toUpperCase(#strings.substring(user.lastName,0,1)) : '')}">??</div>
+                <div class="min-w-0 flex-1">
+                    <div class="flex items-start justify-between gap-2">
+                        <div class="min-w-0">
+                            <p class="text-sm font-semibold truncate"
+                               th:text="${(user.firstName != null ? user.firstName : '') + ' ' + (user.lastName != null ? user.lastName : '')}">Full Name</p>
+                            <p class="text-[11px] text-slate-500 truncate" th:text="${user.email != null ? user.email : '—'}">email</p>
+                        </div>
+                        <span th:if="${user.enabled == true}" class="um-badge um-badge-active">
+                            <span class="w-1.5 h-1.5 rounded-full bg-green-600"></span> Active
+                        </span>
+                        <span th:unless="${user.enabled == true}" class="um-badge um-badge-inactive">
+                            <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> Inactive
+                        </span>
+                    </div>
+                    <div class="flex items-center justify-between mt-1.5 gap-2">
+                        <span class="text-[10px] font-mono bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded" th:text="'@' + ${user.username}">@user</span>
+                        <button type="button"
+                                th:attr="data-user-id=${user.id},data-username=${user.username},data-email=${user.email != null ? user.email : ''},data-firstname=${user.firstName != null ? user.firstName : ''},data-lastname=${user.lastName != null ? user.lastName : ''},data-enabled=${user.enabled == true}"
+                                onclick="umOpenManageSheet(this)"
+                                class="text-primary text-xs font-semibold flex items-center gap-1">
+                            Manage <span class="material-symbols-outlined text-sm">chevron_right</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div th:if="${#lists.isEmpty(users)}" class="um-empty um-card">
+            <span class="material-symbols-outlined text-3xl">manage_search</span>
+            <p class="mt-2 text-sm font-semibold"
+               th:text="${search != null and !search.isBlank() ? 'No users found for &quot;' + search + '&quot;' : 'No users provisioned yet'}">No users</p>
+            <p class="text-xs mt-1"
+               th:text="${search != null and !search.isBlank() ? 'Try a different search term.' : 'Tap + to create a user.'}">—</p>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    <div th:if="${totalPages > 1 or totalUsers > 0}" class="flex items-center justify-between text-xs pt-2">
+        <p class="text-slate-500 font-medium" th:text="'Showing ' + ${fromIndex} + '–' + ${toIndex} + ' of ' + ${totalUsers}">Showing …</p>
+        <div class="flex items-center gap-2">
+            <a th:if="${currentPage > 0}" th:href="@{/mobile/admin/users(page=${currentPage - 1}, search=${search}, size=${pageSize})}"
+               class="um-secondary text-xs flex items-center gap-1" style="padding:6px 10px;">
+                <span class="material-symbols-outlined text-sm">chevron_left</span> Prev
+            </a>
+            <span class="font-semibold text-slate-500" th:text="(${currentPage} + 1) + ' / ' + ${totalPages}">1 / 1</span>
+            <a th:if="${currentPage + 1 < totalPages}" th:href="@{/mobile/admin/users(page=${currentPage + 1}, search=${search}, size=${pageSize})}"
+               class="um-secondary text-xs flex items-center gap-1" style="padding:6px 10px;">
+                Next <span class="material-symbols-outlined text-sm">chevron_right</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- FAB: create user -->
+    <button type="button" onclick="umOpenCreateSheet()" class="um-fab" title="Create user">
+        <span class="material-symbols-outlined">person_add</span>
+    </button>
+
+    <!-- ═══════════ CREATE USER SHEET ═══════════ -->
+    <div id="umCreateBackdrop" class="um-sheet-backdrop hidden" onclick="umCloseCreateSheet()"></div>
+    <div id="umCreateSheet" class="um-sheet hidden">
+        <div class="um-sheet-head">
+            <div class="flex items-center gap-3 min-w-0">
+                <div class="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                    <span class="material-symbols-outlined text-lg">person_add</span>
+                </div>
+                <div class="min-w-0">
+                    <p class="text-base font-bold truncate">Create New User</p>
+                    <p id="umCuStepLabel" class="text-[11px] text-slate-500">Step 1 of 3 — Identity</p>
+                </div>
+            </div>
+            <button type="button" onclick="umCloseCreateSheet()"><span class="material-symbols-outlined text-slate-500">close</span></button>
+        </div>
+        <div class="px-5 pt-2 pb-1 shrink-0 flex items-center gap-1.5">
+            <div id="umCuDot1" class="um-step-dot um-active"></div>
+            <div id="umCuDot2" class="um-step-dot"></div>
+            <div id="umCuDot3" class="um-step-dot"></div>
+        </div>
+        <form id="umCreateForm" th:action="@{/admin/create-user}" method="post" class="um-sheet-body space-y-4">
+            <input type="hidden" name="realm" th:value="${realmName}"/>
+
+            <!-- Step 1: Identity -->
+            <div id="umCuStep1" class="um-form-section um-active space-y-3">
+                <div>
+                    <label class="um-field-label">First Name *</label>
+                    <input type="text" id="umCuFirstName" name="firstName" required placeholder="e.g. Marcus" class="um-input" autocomplete="off">
+                </div>
+                <div>
+                    <label class="um-field-label">Last Name *</label>
+                    <input type="text" id="umCuLastName" name="lastName" required placeholder="e.g. Chen" class="um-input" autocomplete="off">
+                </div>
+                <div>
+                    <label class="um-field-label">Username *</label>
+                    <input type="text" id="umCuUsername" name="username" required placeholder="e.g. marcus.chen" autocomplete="off" class="um-input">
+                    <p class="text-[10px] text-slate-500 mt-1">Lowercase, numbers, dots and underscores.</p>
+                </div>
+                <div>
+                    <label class="um-field-label">Email *</label>
+                    <input type="email" id="umCuEmail" name="email" required placeholder="e.g. marcus@company.com" autocomplete="off" class="um-input">
+                </div>
+            </div>
+
+            <!-- Step 2: Security -->
+            <div id="umCuStep2" class="um-form-section space-y-3">
+                <div>
+                    <label class="um-field-label">Password *</label>
+                    <div class="relative">
+                        <input type="password" id="umCuPassword" name="password" required placeholder="Min. 8 characters" class="um-input pr-10" oninput="umCuEvalStrength(this.value)">
+                        <button type="button" onclick="umCuTogglePwd('umCuPassword','umCuPwdIcon')"
+                                class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500">
+                            <span id="umCuPwdIcon" class="material-symbols-outlined text-base">visibility</span>
+                        </button>
+                    </div>
+                    <div class="mt-2 flex gap-1">
+                        <div id="umCuBar1" class="um-strength-bar"></div>
+                        <div id="umCuBar2" class="um-strength-bar"></div>
+                        <div id="umCuBar3" class="um-strength-bar"></div>
+                        <div id="umCuBar4" class="um-strength-bar"></div>
+                    </div>
+                    <p id="umCuStrengthLabel" class="text-[10px] text-slate-500 mt-1">Enter a password to check its strength</p>
+                </div>
+                <div>
+                    <label class="um-field-label">Confirm Password *</label>
+                    <div class="relative">
+                        <input type="password" id="umCuConfirm" placeholder="Repeat password" class="um-input pr-10" oninput="umCuCheckMatch()">
+                        <button type="button" onclick="umCuTogglePwd('umCuConfirm','umCuCPwdIcon')"
+                                class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500">
+                            <span id="umCuCPwdIcon" class="material-symbols-outlined text-base">visibility</span>
+                        </button>
+                    </div>
+                    <p id="umCuMatchMsg" class="text-[10px] mt-1 hidden"></p>
+                </div>
+                <div class="rounded-xl bg-primary/5 border border-primary/10 p-3 flex gap-2">
+                    <span class="material-symbols-outlined text-primary text-base shrink-0">info</span>
+                    <p class="text-[11px] text-slate-600 leading-relaxed">Min. <strong>8 chars</strong>, one uppercase, one number, one special character.</p>
+                </div>
+            </div>
+
+            <!-- Step 3: Attributes -->
+            <div id="umCuStep3" class="um-form-section space-y-3">
+                <div class="rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-3">
+                    <p class="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed"><span class="font-semibold">Optional:</span> Add key-value attributes that map to Keycloak user attributes.</p>
+                </div>
+                <div>
+                    <label class="um-field-label">Add Attribute</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="umCuAttrKey" placeholder="Key" class="um-input flex-1 text-sm">
+                        <input type="text" id="umCuAttrVal" placeholder="Value" class="um-input flex-1 text-sm"
+                               onkeydown="if(event.key==='Enter'){event.preventDefault();umCuAddAttr();}">
+                        <button type="button" onclick="umCuAddAttr()" class="shrink-0 px-3 rounded-xl bg-primary/10 text-primary font-semibold flex items-center">
+                            <span class="material-symbols-outlined text-base">add</span>
+                        </button>
+                    </div>
+                </div>
+                <div id="umCuAttrHidden"></div>
+                <div id="umCuAttrChips" class="flex flex-wrap gap-2 min-h-[44px] rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800/50 p-3">
+                    <span class="text-xs text-slate-400 self-center">No attributes added yet</span>
+                </div>
+            </div>
+
+            <div id="umCuError" class="hidden text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2"></div>
+        </form>
+        <div class="um-sheet-foot">
+            <button type="button" id="umCuBack" onclick="umCuGoBack()" class="um-secondary hidden items-center gap-1">
+                <span class="material-symbols-outlined text-base">arrow_back</span> Back
+            </button>
+            <button type="button" id="umCuCancel" onclick="umCloseCreateSheet()" class="um-secondary">Cancel</button>
+            <button type="button" id="umCuNext" onclick="umCuGoNext()" class="um-primary ml-auto flex items-center gap-1">
+                Next <span class="material-symbols-outlined text-base">arrow_forward</span>
+            </button>
+            <button type="submit" id="umCuSubmit" form="umCreateForm" class="um-primary ml-auto hidden items-center gap-1"
+                    style="background:#059669;">
+                <span class="material-symbols-outlined text-base">check_circle</span> Create User
+            </button>
+        </div>
+    </div>
+
+    <!-- ═══════════ MANAGE GROUPS SHEET ═══════════ -->
+    <div id="umGroupsBackdrop" class="um-sheet-backdrop hidden" onclick="umCloseGroupsSheet()"></div>
+    <div id="umGroupsSheet" class="um-sheet hidden">
+        <div class="um-sheet-head">
+            <div class="flex items-center gap-3 min-w-0">
+                <div class="w-9 h-9 rounded-xl bg-slate-200 dark:bg-slate-700 flex items-center justify-center shrink-0">
+                    <span class="material-symbols-outlined text-lg">folder_shared</span>
+                </div>
+                <div class="min-w-0">
+                    <p class="text-base font-bold">Manage Groups</p>
+                    <p class="text-[11px] text-slate-500">Create and view realm groups</p>
+                </div>
+            </div>
+            <button type="button" onclick="umCloseGroupsSheet()"><span class="material-symbols-outlined text-slate-500">close</span></button>
+        </div>
+        <div class="um-sheet-body space-y-5">
+            <!-- Create group -->
+            <div class="space-y-2">
+                <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Create New Group</p>
+                <form th:action="@{/admin/create-group}" method="post" class="space-y-2">
+                    <input type="text" name="groupName" required placeholder="Group name…" class="um-input">
+                    <div>
+                        <label class="um-field-label">Parent Group (optional)</label>
+                        <select name="parentGroupId" class="um-input">
+                            <option value="">— No parent (top-level) —</option>
+                            <option th:each="g : ${groups}" th:value="${g.id}" th:text="${g.name}">Group</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="um-primary w-full flex items-center justify-center gap-1">
+                        <span class="material-symbols-outlined text-base">add</span> Create Group
+                    </button>
+                </form>
+            </div>
+            <!-- Existing groups -->
+            <div class="space-y-2">
+                <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Existing Groups
+                    <span class="font-normal text-slate-400" th:text="'(' + ${groups.size()} + ')'"></span>
+                </p>
+                <div th:if="${#lists.isEmpty(groups)}" class="rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-3 text-xs text-slate-500 text-center">
+                    No groups in this realm yet.
+                </div>
+                <div th:unless="${#lists.isEmpty(groups)}" class="flex flex-wrap gap-2">
+                    <span th:each="g : ${groups}" class="um-chip">
+                        <span class="material-symbols-outlined text-[12px]">folder_shared</span>
+                        <span th:text="${g.name}">Group</span>
+                        <span class="opacity-40 text-[10px] font-mono ml-0.5" th:text="'#' + ${#strings.substring(g.id,0,6)}"></span>
+                    </span>
+                </div>
+            </div>
+        </div>
+        <div class="um-sheet-foot">
+            <button type="button" onclick="umCloseGroupsSheet()" class="um-secondary">Close</button>
+        </div>
+    </div>
+
+    <!-- ═══════════ MANAGE USER SHEET ═══════════ -->
+    <div id="umManageBackdrop" class="um-sheet-backdrop hidden" onclick="umCloseManageSheet()"></div>
+    <div id="umManageSheet" class="um-sheet hidden">
+        <div class="um-sheet-head">
+            <div class="flex items-center gap-3 min-w-0">
+                <div class="um-avatar" id="umMgInitials">??</div>
+                <div class="min-w-0">
+                    <p id="umMgTitle" class="text-base font-bold truncate">User Name</p>
+                    <p id="umMgUsername" class="text-[11px] font-mono text-slate-500 truncate">@username</p>
+                    <p id="umMgEmail" class="text-[11px] text-slate-500 truncate">email</p>
+                </div>
+            </div>
+            <button type="button" onclick="umCloseManageSheet()"><span class="material-symbols-outlined text-slate-500">close</span></button>
+        </div>
+        <div class="px-5 pt-2 pb-3 shrink-0 space-y-2">
+            <div id="umMgStatusActive" class="hidden items-center gap-2 um-badge um-badge-active w-fit">
+                <span class="w-1.5 h-1.5 rounded-full bg-green-600"></span> Account Active
+            </div>
+            <div id="umMgStatusInactive" class="hidden items-center gap-2 um-badge um-badge-inactive w-fit">
+                <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> Account Inactive
+            </div>
+            <div class="flex gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+                <button type="button" class="um-tab-btn um-active" onclick="umMgTab('overview', this)">Overview</button>
+                <button type="button" class="um-tab-btn" onclick="umMgTab('access', this)">Access</button>
+                <button type="button" class="um-tab-btn" onclick="umMgTab('danger', this)">Danger</button>
+            </div>
+        </div>
+        <div class="um-sheet-body space-y-4">
+            <!-- OVERVIEW -->
+            <div id="umMgTabOverview" class="space-y-3">
+                <div class="rounded-xl bg-slate-50 dark:bg-slate-800 p-3 flex items-center gap-3">
+                    <span class="material-symbols-outlined text-slate-500 text-lg">fingerprint</span>
+                    <div class="min-w-0">
+                        <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">User ID</p>
+                        <p id="umMgIdDisplay" class="text-[11px] font-mono break-all">—</p>
+                    </div>
+                </div>
+                <div class="rounded-xl border border-slate-200 dark:border-slate-700 p-3 space-y-2">
+                    <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Account Control</p>
+                    <div class="flex gap-2">
+                        <form th:action="@{/admin/enable-user}" method="post" class="flex-1">
+                            <input type="hidden" name="userId" id="umMgUserIdEnable"/>
+                            <button type="submit" class="w-full py-2 rounded-xl text-xs font-semibold text-green-700 bg-green-100 border border-green-200 flex items-center justify-center gap-1">
+                                <span class="material-symbols-outlined text-sm">check_circle</span> Enable
+                            </button>
+                        </form>
+                        <form th:action="@{/admin/disable-user}" method="post" class="flex-1">
+                            <input type="hidden" name="userId" id="umMgUserIdDisable"/>
+                            <button type="submit" class="w-full py-2 rounded-xl text-xs font-semibold text-slate-700 bg-slate-100 border border-slate-200 flex items-center justify-center gap-1">
+                                <span class="material-symbols-outlined text-sm">block</span> Disable
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                <div class="rounded-xl border border-slate-200 dark:border-slate-700 p-3 space-y-2">
+                    <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Password</p>
+                    <form th:action="@{/admin/reset-password-email}" method="post">
+                        <input type="hidden" name="userId" id="umMgUserIdReset"/>
+                        <button type="submit" class="w-full py-2.5 rounded-xl text-xs font-semibold text-primary bg-primary/10 border border-primary/20 flex items-center justify-center gap-2">
+                            <span class="material-symbols-outlined text-sm">mark_email_read</span> Send Password Reset Email
+                        </button>
+                    </form>
+                </div>
+            </div>
+            <!-- ACCESS -->
+            <div id="umMgTabAccess" class="hidden space-y-3">
+                <div class="rounded-xl border border-slate-200 dark:border-slate-700 p-3 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Groups</p>
+                        <span id="umMgGroupsLoader" class="text-[10px] text-slate-400 hidden">Loading…</span>
+                    </div>
+                    <div id="umMgGroupsList" class="flex flex-wrap gap-2 min-h-[32px]">
+                        <span class="text-xs text-slate-400">Open this tab to load groups.</span>
+                    </div>
+                    <form th:action="@{/admin/add/group}" method="post" class="flex gap-2 mt-2">
+                        <input type="hidden" name="userId" id="umMgUserIdAddGroup"/>
+                        <select name="groupName" required class="um-input flex-1 text-xs" style="padding:8px 10px;">
+                            <option value="">Select a group…</option>
+                            <option th:each="g : ${groups}" th:value="${g.name}" th:text="${g.name}">Group</option>
+                        </select>
+                        <button type="submit" class="um-primary text-xs flex items-center gap-1" style="padding:8px 12px;">
+                            <span class="material-symbols-outlined text-sm">add</span> Add
+                        </button>
+                    </form>
+                </div>
+            </div>
+            <!-- DANGER -->
+            <div id="umMgTabDanger" class="hidden space-y-3">
+                <div class="rounded-xl border border-red-200 bg-red-50 p-3 space-y-2">
+                    <div class="flex items-center gap-2 text-red-700">
+                        <span class="material-symbols-outlined text-lg">warning</span>
+                        <p class="text-sm font-bold">Danger Zone</p>
+                    </div>
+                    <p class="text-[11px] text-slate-600 leading-relaxed">Deleting this user is <strong>permanent and irreversible</strong>. All sessions, credentials, and group memberships will be removed from Keycloak immediately.</p>
+                    <form th:action="@{/admin/delete-user}" method="post" onsubmit="return umConfirmDelete(event)">
+                        <input type="hidden" name="userId" id="umMgUserIdDelete"/>
+                        <button type="submit" class="um-danger w-full flex items-center justify-center gap-2">
+                            <span class="material-symbols-outlined text-sm">delete_forever</span> Delete User Account
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* ─────────── Toast ─────────── */
+        function umShowToast(msg, type) {
+            const el = document.createElement('div');
+            el.className = 'um-toast' + (type === 'error' ? ' um-toast-error' : '');
+            el.textContent = msg;
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 3500);
+        }
+        function umEsc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+        function umToggle(id, show) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.classList.toggle('hidden', !show);
+            document.body.style.overflow = show ? 'hidden' : '';
+        }
+        document.addEventListener('DOMContentLoaded', () => {
+            const ok = document.getElementById('umSuccessFlash');
+            const err = document.getElementById('umErrorFlash');
+            if (ok) umShowToast(ok.dataset.msg, 'success');
+            if (err) umShowToast(err.dataset.msg, 'error');
+        });
+
+        /* ─────────── Create user sheet ─────────── */
+        let umCuStep = 1;
+        const umCuTotal = 3;
+        const umCuLabels = ['Step 1 of 3 — Identity', 'Step 2 of 3 — Security', 'Step 3 of 3 — Attributes'];
+        const umCuAttrs = {};
+
+        function umOpenCreateSheet() {
+            umCuStep = 1;
+            umCuRenderStep();
+            umToggle('umCreateBackdrop', true);
+            umToggle('umCreateSheet', true);
+            setTimeout(() => document.getElementById('umCuFirstName')?.focus(), 250);
+        }
+        function umCloseCreateSheet() {
+            umToggle('umCreateBackdrop', false);
+            umToggle('umCreateSheet', false);
+            document.getElementById('umCreateForm')?.reset();
+            for (const k in umCuAttrs) delete umCuAttrs[k];
+            umCuRenderAttrs();
+            document.getElementById('umCuError').classList.add('hidden');
+            umCuStep = 1;
+            umCuRenderStep();
+        }
+        function umCuRenderStep() {
+            for (let i = 1; i <= umCuTotal; i++) {
+                document.getElementById(`umCuStep${i}`).classList.toggle('um-active', i === umCuStep);
+                document.getElementById(`umCuDot${i}`).classList.toggle('um-active', i === umCuStep);
+            }
+            document.getElementById('umCuStepLabel').textContent = umCuLabels[umCuStep - 1];
+            const back = document.getElementById('umCuBack');
+            const cancel = document.getElementById('umCuCancel');
+            const next = document.getElementById('umCuNext');
+            const submit = document.getElementById('umCuSubmit');
+            back.classList.toggle('hidden', umCuStep === 1);
+            back.classList.toggle('flex', umCuStep > 1);
+            cancel.classList.toggle('hidden', umCuStep > 1);
+            next.classList.toggle('hidden', umCuStep === umCuTotal);
+            next.classList.toggle('flex', umCuStep < umCuTotal);
+            submit.classList.toggle('hidden', umCuStep !== umCuTotal);
+            submit.classList.toggle('flex', umCuStep === umCuTotal);
+        }
+        function umCuGoNext() { if (umCuValidate(umCuStep)) { umCuStep = Math.min(umCuStep + 1, umCuTotal); umCuRenderStep(); } }
+        function umCuGoBack() { umCuStep = Math.max(1, umCuStep - 1); umCuRenderStep(); }
+
+        function umVal(id) { return document.getElementById(id)?.value?.trim() || ''; }
+        function umCuHighlight(id) {
+            const el = document.getElementById(id);
+            el.classList.add('um-input-error');
+            el.focus();
+            setTimeout(() => el.classList.remove('um-input-error'), 2500);
+        }
+        function umCuValidate(step) {
+            if (step === 1) {
+                const fn = umVal('umCuFirstName'), ln = umVal('umCuLastName'),
+                      un = umVal('umCuUsername'), em = umVal('umCuEmail');
+                if (!fn) { umCuHighlight('umCuFirstName'); return false; }
+                if (!ln) { umCuHighlight('umCuLastName'); return false; }
+                if (!un || !/^[a-z0-9._]+$/.test(un)) { umCuHighlight('umCuUsername'); return false; }
+                if (!em || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) { umCuHighlight('umCuEmail'); return false; }
+            }
+            if (step === 2) {
+                const pwd = umVal('umCuPassword'), cpwd = umVal('umCuConfirm');
+                if (pwd.length < 8) { umCuHighlight('umCuPassword'); return false; }
+                if (pwd !== cpwd) { umCuHighlight('umCuConfirm'); return false; }
+            }
+            return true;
+        }
+        // Auto-suggest username from first/last name
+        ['umCuFirstName', 'umCuLastName'].forEach(id => {
+            document.getElementById(id)?.addEventListener('blur', () => {
+                const un = document.getElementById('umCuUsername');
+                if (un.value) return;
+                const fn = umVal('umCuFirstName').toLowerCase().replace(/\s+/g, '.');
+                const ln = umVal('umCuLastName').toLowerCase().replace(/\s+/g, '.');
+                if (fn && ln) un.value = `${fn}.${ln}`;
+            });
+        });
+        function umCuTogglePwd(inputId, iconId) {
+            const i = document.getElementById(inputId), ic = document.getElementById(iconId);
+            const show = i.type === 'password';
+            i.type = show ? 'text' : 'password';
+            ic.textContent = show ? 'visibility_off' : 'visibility';
+        }
+        function umCuEvalStrength(val) {
+            let s = 0;
+            if (val.length >= 8) s++;
+            if (/[A-Z]/.test(val)) s++;
+            if (/[0-9]/.test(val)) s++;
+            if (/[^A-Za-z0-9]/.test(val)) s++;
+            const colors = ['', '#dc2626', '#f59e0b', '#0284c7', '#059669'];
+            const labels = ['Enter a password to check its strength', 'Weak', 'Fair', 'Good', 'Strong'];
+            [1,2,3,4].forEach(i => {
+                const bar = document.getElementById(`umCuBar${i}`);
+                bar.style.background = i <= s ? colors[s] : '#cbd5e1';
+            });
+            const lbl = document.getElementById('umCuStrengthLabel');
+            lbl.textContent = val ? labels[s] : labels[0];
+            lbl.style.color = s > 0 ? colors[s] : '';
+        }
+        function umCuCheckMatch() {
+            const pwd = umVal('umCuPassword'), cpwd = umVal('umCuConfirm');
+            const msg = document.getElementById('umCuMatchMsg');
+            if (!cpwd) { msg.classList.add('hidden'); return; }
+            msg.classList.remove('hidden');
+            if (pwd === cpwd) { msg.textContent = '✓ Passwords match'; msg.style.color = '#059669'; }
+            else { msg.textContent = '✗ Passwords do not match'; msg.style.color = '#dc2626'; }
+        }
+        function umCuAddAttr() {
+            const k = document.getElementById('umCuAttrKey').value.trim();
+            const vl = document.getElementById('umCuAttrVal').value.trim();
+            if (!k || !vl) return;
+            if (!umCuAttrs[k]) umCuAttrs[k] = [];
+            umCuAttrs[k].push(vl);
+            document.getElementById('umCuAttrKey').value = '';
+            document.getElementById('umCuAttrVal').value = '';
+            document.getElementById('umCuAttrKey').focus();
+            umCuRenderAttrs();
+        }
+        function umCuRemoveAttr(k, idx) {
+            umCuAttrs[k].splice(idx, 1);
+            if (!umCuAttrs[k].length) delete umCuAttrs[k];
+            umCuRenderAttrs();
+        }
+        function umCuRenderAttrs() {
+            const chips = document.getElementById('umCuAttrChips');
+            const hidden = document.getElementById('umCuAttrHidden');
+            chips.innerHTML = '';
+            hidden.innerHTML = '';
+            const entries = Object.entries(umCuAttrs);
+            if (!entries.length) {
+                chips.innerHTML = '<span class="text-xs text-slate-400 self-center">No attributes added yet</span>';
+                return;
+            }
+            entries.forEach(([k, vals]) => vals.forEach((vl, idx) => {
+                const chip = document.createElement('span');
+                chip.className = 'um-chip';
+                chip.innerHTML = `<span class="material-symbols-outlined text-[12px]">key</span>${umEsc(k)}<span class="opacity-40 mx-0.5">→</span>${umEsc(vl)}<button type="button" onclick="umCuRemoveAttr('${umEsc(k)}',${idx})" class="ml-1 opacity-60"><span class="material-symbols-outlined text-[12px]">close</span></button>`;
+                chips.appendChild(chip);
+                const inp = document.createElement('input');
+                inp.type = 'hidden';
+                inp.name = `attribute[${k}][${idx}]`;
+                inp.value = vl;
+                hidden.appendChild(inp);
+            }));
+        }
+
+        /* ─────────── Groups sheet ─────────── */
+        function umOpenGroupsSheet() {
+            umToggle('umGroupsBackdrop', true);
+            umToggle('umGroupsSheet', true);
+        }
+        function umCloseGroupsSheet() {
+            umToggle('umGroupsBackdrop', false);
+            umToggle('umGroupsSheet', false);
+        }
+
+        /* ─────────── Manage user sheet ─────────── */
+        let umMgCurrentUserId = null;
+        let umMgAccessLoaded = false;
+
+        function umOpenManageSheet(btn) {
+            const d = btn.dataset;
+            umMgCurrentUserId = d.userId;
+            umMgAccessLoaded = false;
+            const fn = d.firstname || '', ln = d.lastname || '', un = d.username || '';
+            const initials = (fn ? fn[0].toUpperCase() : (un[0] ? un[0].toUpperCase() : '?'))
+                           + (ln ? ln[0].toUpperCase() : '');
+            document.getElementById('umMgInitials').textContent = initials;
+            document.getElementById('umMgTitle').textContent = (fn + ' ' + ln).trim() || un;
+            document.getElementById('umMgUsername').textContent = '@' + un;
+            document.getElementById('umMgEmail').textContent = d.email || '—';
+            document.getElementById('umMgIdDisplay').textContent = d.userId;
+            const active = d.enabled === 'true';
+            const sa = document.getElementById('umMgStatusActive');
+            const si = document.getElementById('umMgStatusInactive');
+            sa.classList.toggle('hidden', !active);
+            sa.classList.toggle('inline-flex', active);
+            si.classList.toggle('hidden', active);
+            si.classList.toggle('inline-flex', !active);
+            ['Enable', 'Disable', 'Reset', 'AddGroup', 'Delete'].forEach(s => {
+                const el = document.getElementById(`umMgUserId${s}`);
+                if (el) el.value = d.userId;
+            });
+            umMgTab('overview', document.querySelector('#umManageSheet .um-tab-btn'));
+            umToggle('umManageBackdrop', true);
+            umToggle('umManageSheet', true);
+        }
+        function umCloseManageSheet() {
+            umToggle('umManageBackdrop', false);
+            umToggle('umManageSheet', false);
+            umMgCurrentUserId = null;
+        }
+        function umMgTab(name, btn) {
+            document.getElementById('umMgTabOverview').classList.toggle('hidden', name !== 'overview');
+            document.getElementById('umMgTabAccess').classList.toggle('hidden', name !== 'access');
+            document.getElementById('umMgTabDanger').classList.toggle('hidden', name !== 'danger');
+            document.querySelectorAll('#umManageSheet .um-tab-btn').forEach(b => b.classList.remove('um-active'));
+            if (btn) btn.classList.add('um-active');
+            if (name === 'access' && umMgCurrentUserId && !umMgAccessLoaded) {
+                umMgLoadAccess(umMgCurrentUserId);
+                umMgAccessLoaded = true;
+            }
+        }
+        async function umMgLoadAccess(userId) {
+            document.getElementById('umMgGroupsLoader').classList.remove('hidden');
+            try {
+                const res = await fetch(`/admin/user/${userId}/groups`);
+                const groups = await res.json();
+                umMgRenderGroupChips(groups, userId);
+            } catch (e) {
+                document.getElementById('umMgGroupsList').innerHTML = '<span class="text-xs text-red-500">Failed to load groups.</span>';
+            } finally {
+                document.getElementById('umMgGroupsLoader').classList.add('hidden');
+            }
+        }
+        function umMgRenderGroupChips(items, userId) {
+            const el = document.getElementById('umMgGroupsList');
+            if (!items || !items.length) {
+                el.innerHTML = '<span class="text-xs text-slate-400">No groups assigned.</span>';
+                return;
+            }
+            el.innerHTML = '';
+            items.forEach(item => {
+                const span = document.createElement('span');
+                span.className = 'um-chip';
+                span.innerHTML = `<span class="material-symbols-outlined text-[12px]">folder_shared</span>${umEsc(item)}<form action="/admin/remove/group" method="post" class="inline" onsubmit="return confirm('Remove from group &quot;${umEsc(item)}&quot;?')"><input type="hidden" name="userId" value="${umEsc(userId)}"><input type="hidden" name="groupName" value="${umEsc(item)}"><button type="submit" class="ml-1 opacity-60 hover:opacity-100"><span class="material-symbols-outlined text-[12px]">close</span></button></form>`;
+                el.appendChild(span);
+            });
+        }
+        function umConfirmDelete(e) {
+            const name = document.getElementById('umMgTitle').textContent;
+            if (!confirm(`Permanently delete "${name}"?\n\nThis action cannot be undone.`)) {
+                e.preventDefault();
+                return false;
+            }
+            return true;
+        }
+
+        /* ─────────── ESC key closes any open sheet ─────────── */
+        document.addEventListener('keydown', e => {
+            if (e.key !== 'Escape') return;
+            if (!document.getElementById('umCreateSheet').classList.contains('hidden')) umCloseCreateSheet();
+            else if (!document.getElementById('umManageSheet').classList.contains('hidden')) umCloseManageSheet();
+            else if (!document.getElementById('umGroupsSheet').classList.contains('hidden')) umCloseGroupsSheet();
+        });
+    </script>
+</main>
+</body>
+</html>

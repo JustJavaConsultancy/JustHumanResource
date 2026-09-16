@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/mobileEmployeeLayout}">
+<head>
+    <title>Promotion Management</title>
+    <style>
+        .promo-tab { padding: 10px 14px; font-size: 0.8rem; font-weight: 500; color: #6b7280; white-space: nowrap; border-bottom: 3px solid transparent; transition: all 0.2s; }
+        .promo-tab.active { color: #3b82f6; border-bottom-color: #3b82f6; }
+        .promo-stat { background: #fff; border-radius: 12px; border: 1px solid #e5e7eb; padding: 14px; }
+        .promo-card { background: #fff; border-radius: 12px; border: 1px solid #e5e7eb; padding: 14px; margin-bottom: 10px; }
+        .promo-badge { padding: 2px 8px; border-radius: 9999px; font-size: 0.7rem; font-weight: 500; }
+        .promo-pending { background: #fef3c7; color: #d97706; }
+        .promo-approved { background: #dcfce7; color: #16a34a; }
+        .promo-rejected { background: #fee2e2; color: #dc2626; }
+        .promo-in-review { background: #dbeafe; color: #2563eb; }
+        .promo-completed { background: #f3e8ff; color: #9333ea; }
+        .promo-grade { padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: 600; }
+        .promo-g5 { background: #dbeafe; color: #1e40af; }
+        .promo-g6 { background: #e0e7ff; color: #3730a3; }
+        .promo-g7 { background: #ede9fe; color: #5b21b6; }
+        .promo-g8 { background: #f3e8ff; color: #7e22ce; }
+        .promo-level { background: #f1f5f9; color: #475569; padding: 2px 6px; border-radius: 10px; font-size: 0.7rem; }
+        .promo-salary-pos { background: #dcfce7; color: #16a34a; padding: 2px 8px; border-radius: 10px; font-size: 0.8rem; }
+        .promo-salary-neg { background: #fee2e2; color: #dc2626; padding: 2px 8px; border-radius: 10px; font-size: 0.8rem; }
+        .promo-sheet { position: fixed; bottom: 0; left: 0; right: 0; z-index: 1000; background: #fff; border-radius: 20px 20px 0 0; max-height: 92vh; overflow-y: auto; transform: translateY(100%); transition: transform 0.3s ease; padding-bottom: env(safe-area-inset-bottom); }
+        .promo-sheet.open { transform: translateY(0); }
+        .promo-backdrop { position: fixed; inset: 0; z-index: 999; background: rgba(0,0,0,0.5); display: none; }
+        .promo-backdrop.open { display: block; }
+        .promo-handle { width: 40px; height: 4px; background: #d1d5db; border-radius: 2px; margin: 10px auto; }
+        .promo-progress { height: 6px; border-radius: 3px; background: #e5e7eb; overflow: hidden; }
+        .promo-progress-fill { height: 100%; border-radius: 3px; }
+        .promo-input { width: 100%; padding: 10px 12px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 0.875rem; outline: none; }
+        .promo-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,0.1); }
+        .promo-label { display: block; font-size: 0.8rem; font-weight: 500; color: #374151; margin-bottom: 4px; }
+        .promo-btn-primary { background: #3b82f6; color: #fff; border: none; padding: 10px 18px; border-radius: 8px; font-size: 0.875rem; font-weight: 500; cursor: pointer; }
+        .promo-btn-secondary { background: transparent; color: #6b7280; border: 1px solid #e5e7eb; padding: 10px 18px; border-radius: 8px; font-size: 0.875rem; cursor: pointer; }
+        .promo-arrow { font-size: 1.2rem; color: #9ca3af; }
+        .promo-avatar { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.95rem; flex-shrink: 0; }
+    </style>
+</head>
+<body>
+<section layout:fragment="content">
+
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-2 gap-3 mb-4">
+        <div class="promo-stat">
+            <div class="flex items-center justify-between mb-2">
+                <span class="material-symbols-outlined text-yellow-500" style="font-size:20px">pending_actions</span>
+                <span class="promo-badge promo-pending">Action</span>
+            </div>
+            <p class="text-xl font-bold" id="pendingCount">8</p>
+            <p class="text-xs text-gray-500 mt-0.5">Pending Approvals</p>
+        </div>
+        <div class="promo-stat">
+            <div class="flex items-center justify-between mb-2">
+                <span class="material-symbols-outlined text-green-500" style="font-size:20px">check_circle</span>
+                <span class="text-xs text-green-600 font-medium">+25%</span>
+            </div>
+            <p class="text-xl font-bold" id="approvedCount">24</p>
+            <p class="text-xs text-gray-500 mt-0.5">Approved This Month</p>
+        </div>
+        <div class="promo-stat">
+            <div class="flex items-center justify-between mb-2">
+                <span class="material-symbols-outlined text-blue-500" style="font-size:20px">star</span>
+                <span class="text-xs text-gray-400">Avg</span>
+            </div>
+            <p class="text-xl font-bold">86.4</p>
+            <p class="text-xs text-gray-500 mt-0.5">Appraisal Score</p>
+        </div>
+        <div class="promo-stat">
+            <div class="flex items-center justify-between mb-2">
+                <span class="material-symbols-outlined text-purple-500" style="font-size:20px">payments</span>
+                <span class="promo-badge promo-completed">Financial</span>
+            </div>
+            <p class="text-xl font-bold">₦124.5k</p>
+            <p class="text-xs text-gray-500 mt-0.5">Monthly Impact</p>
+        </div>
+    </div>
+
+    <!-- Add Button -->
+    <div class="flex justify-end mb-3">
+        <button onclick="promoOpenSheet('promoNewSheet')" class="promo-btn-primary flex items-center gap-1">
+            <span class="material-symbols-outlined" style="font-size:18px">add</span>New Promotion
+        </button>
+    </div>
+
+    <!-- Tabs -->
+    <div class="overflow-x-auto mb-4" style="border-bottom:1px solid #e5e7eb;">
+        <div class="flex min-w-max">
+            <button id="promo-tab-pending" class="promo-tab active" onclick="promoSwitchTab('pending')">Pending</button>
+            <button id="promo-tab-approved" class="promo-tab" onclick="promoSwitchTab('approved')">Approved</button>
+            <button id="promo-tab-all" class="promo-tab" onclick="promoSwitchTab('all')">All Requests</button>
+            <button id="promo-tab-reports" class="promo-tab" onclick="promoSwitchTab('reports')">Reports</button>
+        </div>
+    </div>
+
+    <!-- Pending Tab -->
+    <div id="promo-content-pending">
+        <p class="text-xs font-semibold text-gray-500 uppercase mb-2">Required Actions</p>
+        <div id="promoUrgentList"></div>
+        <p class="text-xs font-semibold text-gray-500 uppercase mb-2 mt-4">All Pending</p>
+        <div id="promoPendingList"></div>
+    </div>
+
+    <!-- Approved Tab -->
+    <div id="promo-content-approved" class="hidden">
+        <p class="text-xs font-semibold text-gray-500 uppercase mb-2">Recently Approved</p>
+        <div id="promoApprovedList"></div>
+    </div>
+
+    <!-- All Tab -->
+    <div id="promo-content-all" class="hidden">
+        <input type="text" id="promoSearch" class="promo-input mb-3" placeholder="Search requests…" oninput="promoFilterAll()">
+        <div id="promoAllList"></div>
+        <div id="promoAllPagination" class="flex items-center justify-between mt-3">
+            <button onclick="promoPage(-1)" class="promo-btn-secondary" style="padding:6px 12px;">
+                <span class="material-symbols-outlined" style="font-size:16px">chevron_left</span>
+            </button>
+            <span id="promoPageInfo" class="text-xs text-gray-500"></span>
+            <button onclick="promoPage(1)" class="promo-btn-secondary" style="padding:6px 12px;">
+                <span class="material-symbols-outlined" style="font-size:16px">chevron_right</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Reports Tab -->
+    <div id="promo-content-reports" class="hidden">
+        <!-- Stats summary -->
+        <div class="promo-card mb-3">
+            <p class="text-sm font-semibold mb-3">Promotion Statistics</p>
+            <div class="space-y-3">
+                <div>
+                    <div class="flex justify-between text-xs mb-1"><span>Approval Rate</span><span class="font-semibold">80%</span></div>
+                    <div class="promo-progress"><div class="promo-progress-fill bg-green-500" style="width:80%"></div></div>
+                </div>
+                <div>
+                    <div class="flex justify-between text-xs mb-1"><span>On-time Processing</span><span class="font-semibold">72%</span></div>
+                    <div class="promo-progress"><div class="promo-progress-fill bg-blue-500" style="width:72%"></div></div>
+                </div>
+                <div>
+                    <div class="flex justify-between text-xs mb-1"><span>Avg Score Threshold</span><span class="font-semibold">85%</span></div>
+                    <div class="promo-progress"><div class="promo-progress-fill bg-purple-500" style="width:85%"></div></div>
+                </div>
+            </div>
+        </div>
+        <!-- Quick actions -->
+        <div class="promo-card">
+            <p class="text-sm font-semibold mb-3">Quick Actions</p>
+            <button onclick="promoOpenSheet('promoReportSheet')" class="flex items-center justify-between w-full p-3 border border-gray-200 rounded-lg mb-2 text-sm">
+                <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-blue-500" style="font-size:18px">description</span>
+                    Generate Promotion Report
+                </div>
+                <span class="material-symbols-outlined text-gray-400" style="font-size:16px">chevron_right</span>
+            </button>
+            <button onclick="promoExport()" class="flex items-center justify-between w-full p-3 border border-gray-200 rounded-lg mb-2 text-sm">
+                <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-green-500" style="font-size:18px">download</span>
+                    Export to Excel
+                </div>
+                <span class="material-symbols-outlined text-gray-400" style="font-size:16px">chevron_right</span>
+            </button>
+            <button onclick="window.print()" class="flex items-center justify-between w-full p-3 border border-gray-200 rounded-lg text-sm">
+                <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-gray-500" style="font-size:18px">print</span>
+                    Print Report
+                </div>
+                <span class="material-symbols-outlined text-gray-400" style="font-size:16px">chevron_right</span>
+            </button>
+        </div>
+        <!-- Dept chart placeholder -->
+        <div class="promo-card mt-3">
+            <p class="text-sm font-semibold mb-3">Promotions by Department</p>
+            <div id="promoDeptStats"></div>
+        </div>
+    </div>
+
+    <!-- Backdrop -->
+    <div class="promo-backdrop" id="promoBackdrop" onclick="promoCloseAll()"></div>
+
+    <!-- New Promotion Sheet -->
+    <div class="promo-sheet" id="promoNewSheet">
+        <div class="promo-handle"></div>
+        <div class="px-4 pb-6">
+            <div class="flex items-center justify-between mb-4">
+                <p class="font-semibold">New Promotion Request</p>
+                <button onclick="promoCloseAll()" class="text-gray-400"><span class="material-symbols-outlined">close</span></button>
+            </div>
+            <form id="promoForm" class="space-y-3" onsubmit="promoSave(event)">
+                <input type="hidden" id="promoId">
+                <input type="hidden" id="promoProcessId">
+                <div>
+                    <label class="promo-label">Employee *</label>
+                    <select id="promoEmployee" class="promo-input" required></select>
+                </div>
+                <div>
+                    <label class="promo-label">Current Role *</label>
+                    <select id="promoCurrentRole" class="promo-input" required></select>
+                </div>
+                <div>
+                    <label class="promo-label">Proposed Role *</label>
+                    <select id="promoProposedRole" class="promo-input" required></select>
+                </div>
+                <div>
+                    <label class="promo-label">Appraisal Score (0–100) *</label>
+                    <input type="number" id="promoAppraisalScore" class="promo-input" min="0" max="100" step="0.1" required>
+                </div>
+                <div>
+                    <label class="promo-label">Effective Date *</label>
+                    <input type="date" id="promoEffectiveDate" class="promo-input" required>
+                </div>
+                <div>
+                    <label class="promo-label">Justification *</label>
+                    <textarea id="promoJustification" class="promo-input" rows="3" required></textarea>
+                </div>
+                <div>
+                    <label class="promo-label">Status</label>
+                    <select id="promoStatus" class="promo-input">
+                        <option value="PENDING">Pending</option>
+                        <option value="IN_REVIEW">In Review</option>
+                        <option value="APPROVED">Approved</option>
+                        <option value="REJECTED">Rejected</option>
+                    </select>
+                </div>
+                <div class="flex gap-3 pt-2">
+                    <button type="button" onclick="promoCloseAll()" class="promo-btn-secondary flex-1">Cancel</button>
+                    <button type="submit" class="promo-btn-primary flex-1">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- View Detail Sheet -->
+    <div class="promo-sheet" id="promoDetailSheet">
+        <div class="promo-handle"></div>
+        <div class="px-4 pb-6">
+            <div class="flex items-center justify-between mb-4">
+                <p class="font-semibold">Promotion Details</p>
+                <button onclick="promoCloseAll()" class="text-gray-400"><span class="material-symbols-outlined">close</span></button>
+            </div>
+            <div id="promoDetailContent"></div>
+            <div id="promoDetailActions" class="flex gap-3 mt-4"></div>
+        </div>
+    </div>
+
+    <!-- Generate Report Sheet -->
+    <div class="promo-sheet" id="promoReportSheet">
+        <div class="promo-handle"></div>
+        <div class="px-4 pb-6">
+            <div class="flex items-center justify-between mb-4">
+                <p class="font-semibold">Generate Report</p>
+                <button onclick="promoCloseAll()" class="text-gray-400"><span class="material-symbols-outlined">close</span></button>
+            </div>
+            <form class="space-y-3" onsubmit="promoGenReport(event)">
+                <div>
+                    <label class="promo-label">Report Type</label>
+                    <select class="promo-input">
+                        <option value="">Select Type</option>
+                        <option value="MONTHLY">Monthly</option>
+                        <option value="QUARTERLY">Quarterly</option>
+                        <option value="YEARLY">Annual</option>
+                        <option value="DEPARTMENT">Department-wise</option>
+                        <option value="GRADE">Grade Analysis</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="promo-label">Start Date</label>
+                        <input type="date" class="promo-input">
+                    </div>
+                    <div>
+                        <label class="promo-label">End Date</label>
+                        <input type="date" class="promo-input">
+                    </div>
+                </div>
+                <div>
+                    <label class="promo-label">Format</label>
+                    <div class="flex gap-4 mt-1">
+                        <label class="flex items-center gap-1 text-sm"><input type="radio" name="rptFmt" value="PDF" checked> PDF</label>
+                        <label class="flex items-center gap-1 text-sm"><input type="radio" name="rptFmt" value="EXCEL"> Excel</label>
+                        <label class="flex items-center gap-1 text-sm"><input type="radio" name="rptFmt" value="CSV"> CSV</label>
+                    </div>
+                </div>
+                <div>
+                    <label class="promo-label">Include</label>
+                    <div class="space-y-1 mt-1">
+                        <label class="flex items-center gap-2 text-sm"><input type="checkbox" checked> Employee Details</label>
+                        <label class="flex items-center gap-2 text-sm"><input type="checkbox" checked> Salary Changes</label>
+                        <label class="flex items-center gap-2 text-sm"><input type="checkbox"> Performance Scores</label>
+                        <label class="flex items-center gap-2 text-sm"><input type="checkbox" checked> Timeline Data</label>
+                    </div>
+                </div>
+                <div class="flex gap-3 pt-2">
+                    <button type="button" onclick="promoCloseAll()" class="promo-btn-secondary flex-1">Cancel</button>
+                    <button type="submit" class="promo-btn-primary flex-1">Generate</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Delete Confirm Sheet -->
+    <div class="promo-sheet" id="promoDeleteSheet">
+        <div class="promo-handle"></div>
+        <div class="px-4 pb-6">
+            <div class="text-center py-4">
+                <span class="material-symbols-outlined text-red-500" style="font-size:48px">warning</span>
+                <p class="font-semibold mt-2">Delete Promotion Request?</p>
+                <p class="text-sm text-gray-500 mt-1" id="promoDeleteName">This action cannot be undone.</p>
+            </div>
+            <div class="flex gap-3 mt-4">
+                <button onclick="promoCloseAll()" class="promo-btn-secondary flex-1">Cancel</button>
+                <button onclick="promoConfirmDelete()" class="flex-1 bg-red-600 text-white border-none rounded-lg py-2 font-medium cursor-pointer">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ─── Mock Data ────────────────────────────────────────────────
+        let promotionRequests = [
+            { id:1, processInstanceId:"PR-2024-001", employee:{id:1,name:"Mike Ross",department:"Engineering",currentSalary:4500}, currentRole:{id:1,name:"Senior Software Engineer",grade:5,level:3}, proposedRole:{id:2,name:"Lead Software Engineer",grade:6,level:1}, justification:"Exceptional performance in leading the migration project. Consistently exceeds expectations and demonstrates strong leadership qualities. Has mentored 3 junior developers.", appraisalScore:92.5, status:"PENDING", effectiveDate:"2024-02-01", requestedAt:"2024-01-15T10:30:00", approvedAt:null },
+            { id:2, processInstanceId:"PR-2024-002", employee:{id:2,name:"Sarah Johnson",department:"Sales",currentSalary:5200}, currentRole:{id:3,name:"Sales Manager",grade:6,level:2}, proposedRole:{id:4,name:"Senior Sales Manager",grade:7,level:1}, justification:"Achieved 150% of sales target for 3 consecutive quarters. Developed new sales strategy that increased team performance by 30%.", appraisalScore:88.0, status:"IN_REVIEW", effectiveDate:"2024-02-15", requestedAt:"2024-01-18T14:20:00", approvedAt:null },
+            { id:3, processInstanceId:"PR-2024-003", employee:{id:3,name:"David Chen",department:"Product",currentSalary:5800}, currentRole:{id:5,name:"Product Manager",grade:7,level:1}, proposedRole:{id:6,name:"Senior Product Manager",grade:8,level:1}, justification:"Successfully launched Product X which achieved ₦2M in revenue in first quarter. Strong cross-functional leadership.", appraisalScore:94.5, status:"APPROVED", effectiveDate:"2024-01-20", requestedAt:"2024-01-10T09:15:00", approvedAt:"2024-01-18T16:45:00" },
+            { id:4, processInstanceId:"PR-2024-004", employee:{id:4,name:"Lisa Wang",department:"Marketing",currentSalary:4200}, currentRole:{id:7,name:"Marketing Specialist",grade:5,level:2}, proposedRole:{id:8,name:"Marketing Manager",grade:6,level:1}, justification:"Led successful campaign that increased brand awareness by 40%. Excellent project management.", appraisalScore:86.0, status:"REJECTED", effectiveDate:"2024-02-01", requestedAt:"2024-01-12T11:45:00", approvedAt:"2024-01-20T10:30:00" },
+            { id:5, processInstanceId:"PR-2024-005", employee:{id:5,name:"James Wilson",department:"Operations",currentSalary:3900}, currentRole:{id:9,name:"Operations Analyst",grade:4,level:3}, proposedRole:{id:10,name:"Senior Operations Analyst",grade:5,level:1}, justification:"Implemented process improvements that reduced operational costs by 15%. Consistently high performance scores.", appraisalScore:89.5, status:"PENDING", effectiveDate:"2024-03-01", requestedAt:"2024-01-20T13:30:00", approvedAt:null }
+        ];
+
+        let employees = [
+            {id:1,name:"Mike Ross",department:"Engineering",currentSalary:4500,jobRole:"Senior Software Engineer"},
+            {id:2,name:"Sarah Johnson",department:"Sales",currentSalary:5200,jobRole:"Sales Manager"},
+            {id:3,name:"David Chen",department:"Product",currentSalary:5800,jobRole:"Product Manager"},
+            {id:4,name:"Lisa Wang",department:"Marketing",currentSalary:4200,jobRole:"Marketing Specialist"},
+            {id:5,name:"James Wilson",department:"Operations",currentSalary:3900,jobRole:"Operations Analyst"},
+            {id:6,name:"Emma Thompson",department:"HR",currentSalary:4700,jobRole:"HR Business Partner"},
+            {id:7,name:"Robert Brown",department:"Finance",currentSalary:5500,jobRole:"Financial Analyst"}
+        ];
+
+        let jobRoles = [
+            {id:1,name:"Senior Software Engineer",grade:5,level:3,salaryRange:"4500-5500"},
+            {id:2,name:"Lead Software Engineer",grade:6,level:1,salaryRange:"5500-6500"},
+            {id:3,name:"Sales Manager",grade:6,level:2,salaryRange:"5200-6200"},
+            {id:4,name:"Senior Sales Manager",grade:7,level:1,salaryRange:"6200-7500"},
+            {id:5,name:"Product Manager",grade:7,level:1,salaryRange:"5800-6800"},
+            {id:6,name:"Senior Product Manager",grade:8,level:1,salaryRange:"6800-8000"},
+            {id:7,name:"Marketing Specialist",grade:5,level:2,salaryRange:"4200-5000"},
+            {id:8,name:"Marketing Manager",grade:6,level:1,salaryRange:"5000-6000"},
+            {id:9,name:"Operations Analyst",grade:4,level:3,salaryRange:"3900-4700"},
+            {id:10,name:"Senior Operations Analyst",grade:5,level:1,salaryRange:"4700-5500"}
+        ];
+
+        let promoDeleteTarget = null;
+        let promoCurrentPage = 1;
+        const promoPageSize = 5;
+
+        // ─── Helpers ─────────────────────────────────────────────────
+        function promoFmtDate(d) {
+            if (!d) return '—';
+            return new Date(d).toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'});
+        }
+
+        function promoStatusBadge(status) {
+            const map = {PENDING:'promo-pending',IN_REVIEW:'promo-in-review',APPROVED:'promo-approved',REJECTED:'promo-rejected',COMPLETED:'promo-completed'};
+            const labels = {PENDING:'Pending',IN_REVIEW:'In Review',APPROVED:'Approved',REJECTED:'Rejected',COMPLETED:'Completed'};
+            return `<span class="promo-badge ${map[status]||''}">${labels[status]||status}</span>`;
+        }
+
+        function promoGradeBadge(grade) {
+            return `<span class="promo-grade promo-g${grade}">G${grade}</span>`;
+        }
+
+        function promoScoreBar(score) {
+            const color = score >= 90 ? 'bg-green-500' : score >= 75 ? 'bg-blue-500' : 'bg-yellow-500';
+            return `<div class="promo-progress" style="width:70px;display:inline-block;vertical-align:middle;margin-right:4px"><div class="promo-progress-fill ${color}" style="width:${score}%"></div></div><span class="text-xs">${score}</span>`;
+        }
+
+        function promoCalcSalaryChange(req) {
+            const cur = parseInt((req.currentRole.salaryRange||'0').split('-')[0])||req.employee.currentSalary;
+            const prop = parseInt((req.proposedRole.salaryRange||'0').split('-')[0])||cur;
+            return cur > 0 ? Math.round(((prop - cur) / cur) * 1000) / 10 : 0;
+        }
+
+        // ─── Sheet Management ─────────────────────────────────────────
+        function promoOpenSheet(id) {
+            document.getElementById(id).classList.add('open');
+            document.getElementById('promoBackdrop').classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function promoCloseAll() {
+            document.querySelectorAll('.promo-sheet').forEach(s => s.classList.remove('open'));
+            document.getElementById('promoBackdrop').classList.remove('open');
+            document.body.style.overflow = '';
+        }
+
+        // ─── Tab Management ───────────────────────────────────────────
+        function promoSwitchTab(tab) {
+            ['pending','approved','all','reports'].forEach(t => {
+                document.getElementById('promo-content-' + t).classList.toggle('hidden', t !== tab);
+                document.getElementById('promo-tab-' + t).classList.toggle('active', t === tab);
+            });
+            if (tab === 'pending') promoLoadPending();
+            else if (tab === 'approved') promoLoadApproved();
+            else if (tab === 'all') promoLoadAll();
+            else if (tab === 'reports') promoLoadReports();
+        }
+
+        // ─── Render Functions ─────────────────────────────────────────
+        function promoLoadPending() {
+            const pending = promotionRequests.filter(r => r.status === 'PENDING' || r.status === 'IN_REVIEW');
+            document.getElementById('pendingCount').textContent = pending.length;
+
+            // Urgent (first 3)
+            const urgEl = document.getElementById('promoUrgentList');
+            urgEl.innerHTML = pending.slice(0,3).map(r => `
+                <div class="promo-card">
+                    <div class="flex items-start gap-3 mb-3">
+                        <div class="promo-avatar bg-blue-100 text-blue-700">${r.employee.name.charAt(0)}</div>
+                        <div class="flex-1 min-w-0">
+                            <p class="font-medium text-sm">${r.employee.name}</p>
+                            <p class="text-xs text-gray-500 truncate">${r.currentRole.name} → ${r.proposedRole.name}</p>
+                        </div>
+                        ${promoStatusBadge(r.status)}
+                    </div>
+                    <div class="flex items-center justify-between text-xs text-gray-500 mb-3">
+                        <span>${promoGradeBadge(r.currentRole.grade)} L${r.currentRole.level} → ${promoGradeBadge(r.proposedRole.grade)} L${r.proposedRole.level}</span>
+                        <span>Score: ${r.appraisalScore}</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="promoViewDetail(${r.id})" class="promo-btn-secondary flex-1" style="padding:8px;">Review</button>
+                        <button onclick="promoApprove(${r.id})" class="promo-btn-primary flex-1" style="padding:8px;">Process</button>
+                    </div>
+                </div>`).join('') || '<p class="text-sm text-gray-400 text-center py-4">No urgent actions</p>';
+
+            // All pending
+            const allEl = document.getElementById('promoPendingList');
+            allEl.innerHTML = pending.map(r => `
+                <div class="promo-card flex items-center gap-3">
+                    <div class="promo-avatar bg-blue-100 text-blue-700">${r.employee.name.charAt(0)}</div>
+                    <div class="flex-1 min-w-0">
+                        <p class="font-medium text-sm">${r.employee.name}</p>
+                        <p class="text-xs text-gray-500">${r.employee.department} · ${promoFmtDate(r.requestedAt)}</p>
+                        <div class="flex items-center gap-1 mt-1">${promoScoreBar(r.appraisalScore)}</div>
+                    </div>
+                    <div class="flex flex-col items-end gap-1">
+                        ${promoStatusBadge(r.status)}
+                        <div class="flex gap-2 mt-1">
+                            <button onclick="promoViewDetail(${r.id})" class="text-blue-600" title="View"><span class="material-symbols-outlined" style="font-size:18px">visibility</span></button>
+                            <button onclick="promoApprove(${r.id})" class="text-green-600" title="Approve"><span class="material-symbols-outlined" style="font-size:18px">check</span></button>
+                            <button onclick="promoReject(${r.id})" class="text-red-600" title="Reject"><span class="material-symbols-outlined" style="font-size:18px">close</span></button>
+                        </div>
+                    </div>
+                </div>`).join('') || '<p class="text-sm text-gray-400 text-center py-4">No pending requests</p>';
+        }
+
+        function promoLoadApproved() {
+            const approved = promotionRequests.filter(r => r.status === 'APPROVED');
+            document.getElementById('approvedCount').textContent = approved.length;
+            const el = document.getElementById('promoApprovedList');
+            el.innerHTML = approved.map(r => {
+                const chg = promoCalcSalaryChange(r);
+                return `<div class="promo-card">
+                    <div class="flex items-start gap-3 mb-2">
+                        <div class="promo-avatar bg-green-100 text-green-700">${r.employee.name.charAt(0)}</div>
+                        <div class="flex-1 min-w-0">
+                            <p class="font-medium text-sm">${r.employee.name}</p>
+                            <p class="text-xs text-gray-500">${r.employee.department}</p>
+                        </div>
+                        <span class="${chg >= 0 ? 'promo-salary-pos' : 'promo-salary-neg'}">${chg >= 0 ? '+' : ''}${chg}%</span>
+                    </div>
+                    <div class="flex items-center gap-2 text-xs text-gray-600 mb-1">
+                        <span>${r.currentRole.name}</span>
+                        <span class="material-symbols-outlined" style="font-size:14px">arrow_forward</span>
+                        <span class="font-medium">${r.proposedRole.name}</span>
+                    </div>
+                    <div class="flex items-center gap-2 text-xs">
+                        ${promoGradeBadge(r.currentRole.grade)}<span class="promo-level">L${r.currentRole.level}</span>
+                        <span>→</span>
+                        ${promoGradeBadge(r.proposedRole.grade)}<span class="promo-level">L${r.proposedRole.level}</span>
+                        <span class="ml-auto text-gray-500">Eff: ${promoFmtDate(r.effectiveDate)}</span>
+                    </div>
+                </div>`;
+            }).join('') || '<p class="text-sm text-gray-400 text-center py-4">No approved promotions</p>';
+        }
+
+        let promoAllFiltered = [...promotionRequests];
+
+        function promoFilterAll() {
+            const q = document.getElementById('promoSearch').value.toLowerCase();
+            promoAllFiltered = promotionRequests.filter(r =>
+                r.employee.name.toLowerCase().includes(q) ||
+                r.processInstanceId.toLowerCase().includes(q) ||
+                r.currentRole.name.toLowerCase().includes(q) ||
+                r.proposedRole.name.toLowerCase().includes(q)
+            );
+            promoCurrentPage = 1;
+            promoRenderAll();
+        }
+
+        function promoPage(dir) {
+            const total = Math.ceil(promoAllFiltered.length / promoPageSize);
+            promoCurrentPage = Math.max(1, Math.min(total, promoCurrentPage + dir));
+            promoRenderAll();
+        }
+
+        function promoRenderAll() {
+            const start = (promoCurrentPage - 1) * promoPageSize;
+            const page = promoAllFiltered.slice(start, start + promoPageSize);
+            const el = document.getElementById('promoAllList');
+            el.innerHTML = page.map(r => `
+                <div class="promo-card flex items-center gap-3">
+                    <div class="promo-avatar ${r.status==='APPROVED'?'bg-green-100 text-green-700':r.status==='REJECTED'?'bg-red-100 text-red-700':'bg-blue-100 text-blue-700'}">${r.employee.name.charAt(0)}</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2">
+                            <p class="font-medium text-sm">${r.employee.name}</p>
+                            ${promoStatusBadge(r.status)}
+                        </div>
+                        <p class="text-xs text-gray-500">${r.currentRole.name} → ${r.proposedRole.name}</p>
+                        <p class="text-xs text-gray-400">${r.processInstanceId} · ${promoFmtDate(r.requestedAt)}</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="promoViewDetail(${r.id})" class="text-blue-600"><span class="material-symbols-outlined" style="font-size:18px">visibility</span></button>
+                        <button onclick="promoEdit(${r.id})" class="text-indigo-600"><span class="material-symbols-outlined" style="font-size:18px">edit</span></button>
+                        <button onclick="promoDelete(${r.id})" class="text-red-600"><span class="material-symbols-outlined" style="font-size:18px">delete</span></button>
+                    </div>
+                </div>`).join('') || '<p class="text-sm text-gray-400 text-center py-4">No results</p>';
+            const total = Math.ceil(promoAllFiltered.length / promoPageSize);
+            document.getElementById('promoPageInfo').textContent = `Page ${promoCurrentPage} of ${total||1}`;
+        }
+
+        function promoLoadAll() {
+            promoAllFiltered = [...promotionRequests];
+            promoCurrentPage = 1;
+            promoRenderAll();
+        }
+
+        function promoLoadReports() {
+            const depts = {};
+            promotionRequests.forEach(r => {
+                depts[r.employee.department] = (depts[r.employee.department]||0) + 1;
+            });
+            const max = Math.max(...Object.values(depts), 1);
+            const el = document.getElementById('promoDeptStats');
+            el.innerHTML = Object.entries(depts).map(([dept,cnt]) => `
+                <div class="mb-2">
+                    <div class="flex justify-between text-xs mb-1"><span>${dept}</span><span class="font-semibold">${cnt}</span></div>
+                    <div class="promo-progress"><div class="promo-progress-fill bg-blue-500" style="width:${Math.round(cnt/max*100)}%"></div></div>
+                </div>`).join('');
+        }
+
+        // ─── Actions ──────────────────────────────────────────────────
+        function promoViewDetail(id) {
+            const r = promotionRequests.find(x => x.id === id);
+            if (!r) return;
+            const chg = promoCalcSalaryChange(r);
+            document.getElementById('promoDetailContent').innerHTML = `
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="promo-avatar bg-blue-100 text-blue-700" style="width:48px;height:48px;font-size:1.2rem">${r.employee.name.charAt(0)}</div>
+                    <div>
+                        <p class="font-semibold">${r.employee.name}</p>
+                        <p class="text-xs text-gray-500">${r.processInstanceId}</p>
+                    </div>
+                    ${promoStatusBadge(r.status)}
+                </div>
+                <div class="grid grid-cols-2 gap-3 mb-3">
+                    <div class="bg-gray-50 rounded-lg p-3">
+                        <p class="text-xs text-gray-500 mb-1">Current Role</p>
+                        <p class="text-sm font-medium">${r.currentRole.name}</p>
+                        <div class="flex gap-1 mt-1">${promoGradeBadge(r.currentRole.grade)} <span class="promo-level">L${r.currentRole.level}</span></div>
+                    </div>
+                    <div class="bg-blue-50 rounded-lg p-3">
+                        <p class="text-xs text-gray-500 mb-1">Proposed Role</p>
+                        <p class="text-sm font-medium">${r.proposedRole.name}</p>
+                        <div class="flex gap-1 mt-1">${promoGradeBadge(r.proposedRole.grade)} <span class="promo-level">L${r.proposedRole.level}</span></div>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between bg-gray-50 rounded-lg p-3 mb-3">
+                    <span class="text-sm text-gray-500">Salary Change</span>
+                    <span class="${chg >= 0 ? 'promo-salary-pos' : 'promo-salary-neg'}">${chg >= 0 ? '+' : ''}${chg}%</span>
+                </div>
+                <div class="mb-3">
+                    <p class="text-xs text-gray-500 mb-1">Appraisal Score</p>
+                    ${promoScoreBar(r.appraisalScore)}
+                </div>
+                <div class="mb-3">
+                    <p class="text-xs text-gray-500 mb-1">Justification</p>
+                    <p class="text-sm bg-gray-50 rounded-lg p-3">${r.justification}</p>
+                </div>
+                <div class="grid grid-cols-2 gap-3 text-xs text-gray-500">
+                    <div><p>Effective Date</p><p class="font-medium text-gray-700">${promoFmtDate(r.effectiveDate)}</p></div>
+                    <div><p>Requested</p><p class="font-medium text-gray-700">${promoFmtDate(r.requestedAt)}</p></div>
+                </div>`;
+
+            const actEl = document.getElementById('promoDetailActions');
+            if (r.status === 'PENDING' || r.status === 'IN_REVIEW') {
+                actEl.innerHTML = `
+                    <button onclick="promoApprove(${r.id});promoCloseAll()" class="promo-btn-primary flex-1">Approve</button>
+                    <button onclick="promoReject(${r.id});promoCloseAll()" class="flex-1 bg-red-600 text-white border-none rounded-lg py-2 font-medium cursor-pointer">Reject</button>`;
+            } else {
+                actEl.innerHTML = `<button onclick="promoEdit(${r.id})" class="promo-btn-secondary flex-1">Edit</button>`;
+            }
+            promoOpenSheet('promoDetailSheet');
+        }
+
+        function promoApprove(id) {
+            const r = promotionRequests.find(x => x.id === id);
+            if (!r) return;
+            r.status = 'APPROVED';
+            r.approvedAt = new Date().toISOString();
+            promoToast('Promotion approved');
+            promoSwitchTab('pending');
+        }
+
+        function promoReject(id) {
+            const r = promotionRequests.find(x => x.id === id);
+            if (!r) return;
+            r.status = 'REJECTED';
+            promoToast('Promotion rejected');
+            promoSwitchTab('pending');
+        }
+
+        function promoEdit(id) {
+            const r = promotionRequests.find(x => x.id === id);
+            if (!r) return;
+            promoLoadFormOptions();
+            document.getElementById('promoId').value = r.id;
+            document.getElementById('promoProcessId').value = r.processInstanceId;
+            document.getElementById('promoEmployee').value = r.employee.id;
+            document.getElementById('promoCurrentRole').value = r.currentRole.id;
+            document.getElementById('promoProposedRole').value = r.proposedRole.id;
+            document.getElementById('promoAppraisalScore').value = r.appraisalScore;
+            document.getElementById('promoEffectiveDate').value = r.effectiveDate;
+            document.getElementById('promoJustification').value = r.justification;
+            document.getElementById('promoStatus').value = r.status;
+            promoCloseAll();
+            promoOpenSheet('promoNewSheet');
+        }
+
+        function promoDelete(id) {
+            promoDeleteTarget = id;
+            const r = promotionRequests.find(x => x.id === id);
+            document.getElementById('promoDeleteName').textContent = r ? `Delete request for ${r.employee.name}?` : 'This cannot be undone.';
+            promoOpenSheet('promoDeleteSheet');
+        }
+
+        function promoConfirmDelete() {
+            if (!promoDeleteTarget) return;
+            promotionRequests = promotionRequests.filter(r => r.id !== promoDeleteTarget);
+            promoDeleteTarget = null;
+            promoToast('Request deleted');
+            promoCloseAll();
+            promoLoadAll();
+        }
+
+        function promoSave(e) {
+            e.preventDefault();
+            const id = document.getElementById('promoId').value;
+            const employeeId = parseInt(document.getElementById('promoEmployee').value);
+            const currentRoleId = parseInt(document.getElementById('promoCurrentRole').value);
+            const proposedRoleId = parseInt(document.getElementById('promoProposedRole').value);
+            const emp = employees.find(x => x.id === employeeId);
+            const cur = jobRoles.find(x => x.id === currentRoleId);
+            const prop = jobRoles.find(x => x.id === proposedRoleId);
+            if (!emp || !cur || !prop) return;
+
+            const data = {
+                id: id ? parseInt(id) : (promotionRequests.length + 1),
+                processInstanceId: document.getElementById('promoProcessId').value || 'PR-' + new Date().getFullYear() + '-' + String(promotionRequests.length+1).padStart(3,'0'),
+                employee: emp,
+                currentRole: cur,
+                proposedRole: prop,
+                appraisalScore: parseFloat(document.getElementById('promoAppraisalScore').value),
+                effectiveDate: document.getElementById('promoEffectiveDate').value,
+                justification: document.getElementById('promoJustification').value,
+                status: document.getElementById('promoStatus').value,
+                requestedAt: new Date().toISOString(),
+                approvedAt: null
+            };
+
+            if (id) {
+                const idx = promotionRequests.findIndex(r => r.id === parseInt(id));
+                if (idx > -1) promotionRequests[idx] = data;
+                promoToast('Promotion updated');
+            } else {
+                promotionRequests.push(data);
+                promoToast('Promotion request created');
+            }
+            promoCloseAll();
+            promoSwitchTab('pending');
+        }
+
+        function promoLoadFormOptions() {
+            const empSel = document.getElementById('promoEmployee');
+            empSel.innerHTML = '<option value="">Select Employee</option>' + employees.map(e => `<option value="${e.id}">${e.name} — ${e.department}</option>`).join('');
+            const roleSel1 = document.getElementById('promoCurrentRole');
+            const roleSel2 = document.getElementById('promoProposedRole');
+            const roleOpts = '<option value="">Select Role</option>' + jobRoles.map(r => `<option value="${r.id}">${r.name} (G${r.grade}, L${r.level})</option>`).join('');
+            roleSel1.innerHTML = roleOpts;
+            roleSel2.innerHTML = roleOpts;
+        }
+
+        function promoGenReport(e) {
+            e.preventDefault();
+            promoToast('Report generated');
+            promoCloseAll();
+        }
+
+        function promoExport() {
+            const rows = [['ID','Employee','Department','Current Role','Proposed Role','Score','Status','Date']];
+            promotionRequests.forEach(r => rows.push([r.processInstanceId,r.employee.name,r.employee.department,r.currentRole.name,r.proposedRole.name,r.appraisalScore,r.status,promoFmtDate(r.requestedAt)]));
+            const csv = rows.map(r => r.join(',')).join('\n');
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
+            a.download = 'promotions.csv';
+            a.click();
+        }
+
+        function promoToast(msg) {
+            const t = document.createElement('div');
+            t.textContent = msg;
+            t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1f2937;color:#fff;padding:10px 20px;border-radius:8px;font-size:0.875rem;z-index:2000;';
+            document.body.appendChild(t);
+            setTimeout(() => t.remove(), 2500);
+        }
+
+        // Open new form helper
+        document.querySelector('[onclick="promoOpenSheet(\'promoNewSheet\')"]')?.addEventListener('click', () => {
+            promoLoadFormOptions();
+            document.getElementById('promoForm').reset();
+            document.getElementById('promoId').value = '';
+            document.getElementById('promoProcessId').value = 'PR-' + new Date().getFullYear() + '-' + String(promotionRequests.length+1).padStart(3,'0');
+            document.getElementById('promoEffectiveDate').valueAsDate = new Date();
+        });
+
+        // ─── Init ─────────────────────────────────────────────────────
+        promoLoadPending();
+    </script>
+</section>
+</body>
+</html>

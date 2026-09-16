@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/mobileEmployeeLayout}">
+<head>
+    <title>Pension Schemes</title>
+    <style>
+        .pen-stat { background: #fff; border-radius: 12px; border: 1px solid #e5e7eb; padding: 14px; }
+        .pen-card { background: #fff; border-radius: 12px; border: 1px solid #e5e7eb; padding: 14px; margin-bottom: 10px; }
+        .pen-badge { padding: 2px 8px; border-radius: 9999px; font-size: 0.7rem; font-weight: 500; }
+        .pen-active { background: #dcfce7; color: #16a34a; }
+        .pen-inactive { background: #fee2e2; color: #dc2626; }
+        .pen-pending { background: #fef3c7; color: #d97706; }
+        .pen-sheet { position: fixed; bottom: 0; left: 0; right: 0; z-index: 1000; background: #fff; border-radius: 20px 20px 0 0; max-height: 92vh; overflow-y: auto; transform: translateY(100%); transition: transform 0.3s ease; padding-bottom: env(safe-area-inset-bottom); }
+        .pen-sheet.open { transform: translateY(0); }
+        .pen-backdrop { position: fixed; inset: 0; z-index: 999; background: rgba(0,0,0,0.5); display: none; }
+        .pen-backdrop.open { display: block; }
+        .pen-handle { width: 40px; height: 4px; background: #d1d5db; border-radius: 2px; margin: 10px auto; }
+        .pen-input { width: 100%; padding: 10px 12px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 0.875rem; outline: none; box-sizing: border-box; }
+        .pen-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,0.1); }
+        .pen-label { display: block; font-size: 0.8rem; font-weight: 500; color: #374151; margin-bottom: 4px; }
+        .pen-btn-primary { background: #3b82f6; color: #fff; border: none; padding: 10px 18px; border-radius: 8px; font-size: 0.875rem; font-weight: 500; cursor: pointer; }
+        .pen-btn-secondary { background: transparent; color: #6b7280; border: 1px solid #e5e7eb; padding: 10px 18px; border-radius: 8px; font-size: 0.875rem; cursor: pointer; }
+        .pen-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #f3f4f6; font-size: 0.8rem; }
+        .pen-row:last-child { border-bottom: none; }
+    </style>
+</head>
+<body>
+<section layout:fragment="content">
+
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-2 gap-3 mb-4">
+        <div class="pen-stat">
+            <div class="flex items-center justify-between mb-2">
+                <span class="material-symbols-outlined text-blue-500" style="font-size:20px">savings</span>
+                <span class="pen-badge pen-active">ACTIVE</span>
+            </div>
+            <p class="text-xl font-bold" th:text="${#lists.size(schemes)}">0</p>
+            <p class="text-xs text-gray-500 mt-0.5">Active Schemes</p>
+        </div>
+        <div class="pen-stat">
+            <div class="flex items-center justify-between mb-2">
+                <span class="material-symbols-outlined text-purple-500" style="font-size:20px">trending_up</span>
+                <span class="text-xs text-gray-400">Employee</span>
+            </div>
+            <p class="text-xl font-bold" th:text="${avgEmployeeRate + '%'}">0%</p>
+            <p class="text-xs text-gray-500 mt-0.5">Avg Employee Rate</p>
+            <p class="text-xs text-gray-400 mt-0.5" th:text="'min ' + ${minEmployeeRate} + '% · max ' + ${maxEmployeeRate} + '%'"></p>
+        </div>
+        <div class="pen-stat">
+            <div class="flex items-center justify-between mb-2">
+                <span class="material-symbols-outlined text-green-500" style="font-size:20px">business_center</span>
+                <span class="pen-badge pen-active">Employer</span>
+            </div>
+            <p class="text-xl font-bold" th:text="${avgEmployerRate + '%'}">0%</p>
+            <p class="text-xs text-gray-500 mt-0.5">Avg Employer Rate</p>
+            <p class="text-xs text-gray-400 mt-0.5" th:text="'total avg ' + ${totalAvgRate} + '%'"></p>
+        </div>
+        <div class="pen-stat">
+            <div class="flex items-center justify-between mb-2">
+                <span class="material-symbols-outlined text-amber-500" style="font-size:20px">account_balance</span>
+                <span class="pen-badge" style="background:#f1f5f9;color:#475569">Cap</span>
+            </div>
+            <p class="text-xl font-bold" th:text="${schemesWithCap}">0</p>
+            <p class="text-xs text-gray-500 mt-0.5">Schemes with Cap</p>
+            <p class="text-xs text-gray-400 mt-0.5"
+               th:if="${avgCap != null}" th:text="'avg ₦' + ${#numbers.formatDecimal(avgCap,1,'COMMA',0,'POINT')}"></p>
+            <p class="text-xs text-gray-400 mt-0.5" th:if="${avgCap == null}">no caps set</p>
+        </div>
+    </div>
+
+    <!-- Add Button -->
+    <div class="flex justify-end mb-3">
+        <button onclick="penOpenNew()" class="pen-btn-primary flex items-center gap-1">
+            <span class="material-symbols-outlined" style="font-size:18px">add</span>New Scheme
+        </button>
+    </div>
+
+    <!-- Scheme Cards -->
+    <div th:if="${not #lists.isEmpty(schemes)}">
+        <div th:each="scheme : ${schemes}" class="pen-card"
+             th:attr="data-id=${scheme.id}, data-code=${scheme.code}, data-name=${scheme.name},
+                      data-emp-rate=${scheme.employeeRate}, data-er-rate=${scheme.employerRate},
+                      data-basic-only=${scheme.pensionableOnBasicOnly},
+                      data-cap=${scheme.pensionableCap != null ? scheme.pensionableCap : ''},
+                      data-from=${scheme.effectiveFrom},
+                      data-to=${scheme.effectiveTo != null ? scheme.effectiveTo : ''},
+                      data-status=${scheme.status}">
+            <div class="flex items-start justify-between mb-2">
+                <div>
+                    <p class="font-semibold text-sm" th:text="${scheme.name}">Scheme Name</p>
+                    <p class="text-xs text-gray-500 font-mono" th:text="${scheme.code}">PEN-STD</p>
+                </div>
+                <span class="pen-badge"
+                      th:classappend="${scheme.status == 'ACTIVE'} ? ' pen-active' : (${scheme.status == 'INACTIVE'} ? ' pen-inactive' : ' pen-pending')"
+                      th:text="${scheme.status}">ACTIVE</span>
+            </div>
+            <div class="grid grid-cols-2 gap-2 mb-2 text-xs">
+                <div class="bg-gray-50 rounded-lg p-2">
+                    <p class="text-gray-500">Employee Rate</p>
+                    <p class="font-semibold text-blue-600" th:text="${scheme.employeeRate + '%'}">5%</p>
+                </div>
+                <div class="bg-gray-50 rounded-lg p-2">
+                    <p class="text-gray-500">Employer Rate</p>
+                    <p class="font-semibold text-green-600" th:text="${scheme.employerRate + '%'}">3%</p>
+                </div>
+            </div>
+            <div class="flex items-center justify-between text-xs text-gray-500 mb-2">
+                <span th:if="${scheme.pensionableOnBasicOnly}" class="flex items-center gap-1">
+                    <span class="material-symbols-outlined text-blue-500" style="font-size:14px">check_circle</span>Basic only
+                </span>
+                <span th:unless="${scheme.pensionableOnBasicOnly}" class="flex items-center gap-1">
+                    <span class="material-symbols-outlined text-gray-400" style="font-size:14px">indeterminate_check_box</span>Gross earnings
+                </span>
+                <span th:if="${scheme.pensionableCap != null}" class="text-amber-600" th:text="'Cap: ₦' + ${scheme.pensionableCap}"></span>
+                <span th:if="${scheme.pensionableCap == null}" class="text-gray-400">No cap</span>
+            </div>
+            <div class="flex items-center justify-between text-xs text-gray-400">
+                <span>From: <span th:text="${scheme.effectiveFrom}" class="text-gray-600"></span></span>
+                <span th:if="${scheme.effectiveTo == null}">To: Indefinite</span>
+                <span th:if="${scheme.effectiveTo != null}">To: <span th:text="${scheme.effectiveTo}" class="text-gray-600"></span></span>
+                <button onclick="penOpenEdit(this.closest('[data-id]'))" class="text-blue-600 flex items-center gap-1">
+                    <span class="material-symbols-outlined" style="font-size:16px">edit</span>Edit
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Empty state -->
+    <div th:if="${#lists.isEmpty(schemes)}" class="text-center py-12">
+        <span class="material-symbols-outlined text-gray-300" style="font-size:48px">inbox</span>
+        <p class="text-gray-500 text-sm mt-2">No pension schemes found.</p>
+        <p class="text-gray-400 text-xs">Tap "New Scheme" to create one.</p>
+    </div>
+
+    <!-- Rate Summary Card -->
+    <div class="pen-card mt-4">
+        <p class="font-semibold text-sm mb-3">Contribution Rate Summary</p>
+        <div class="pen-row">
+            <span class="text-gray-500">Avg Employee Rate</span>
+            <span class="font-bold" th:text="${avgEmployeeRate + '%'}">0%</span>
+        </div>
+        <div class="pen-row">
+            <span class="text-gray-500">Avg Employer Rate</span>
+            <span class="font-bold" th:text="${avgEmployerRate + '%'}">0%</span>
+        </div>
+        <div class="pen-row">
+            <span class="text-gray-500">Total Avg Contribution</span>
+            <span class="font-bold" th:text="${totalAvgRate + '%'}">0%</span>
+        </div>
+    </div>
+
+    <!-- Compliance Card -->
+    <div class="pen-card mt-3">
+        <p class="font-semibold text-sm mb-3">Scheme Compliance</p>
+        <div class="flex items-center justify-between p-2 bg-blue-50 rounded-lg mb-2">
+            <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-blue-500" style="font-size:18px">verified</span>
+                <div>
+                    <p class="text-xs font-medium">Unique code constraint</p>
+                    <p class="text-xs text-gray-500" th:text="${#lists.size(schemes) + ' code(s) are distinct'}"></p>
+                </div>
+            </div>
+            <span class="pen-badge pen-active">enforced</span>
+        </div>
+        <div class="flex items-center justify-between p-2 bg-purple-50 rounded-lg mb-2">
+            <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-purple-500" style="font-size:18px">account_balance</span>
+                <div>
+                    <p class="text-xs font-medium">Schemes with pensionable cap</p>
+                    <p class="text-xs text-gray-500" th:text="${schemesWithCap + ' of ' + #lists.size(schemes) + ' have a cap'}"></p>
+                </div>
+            </div>
+            <span class="pen-badge" style="background:#dbeafe;color:#2563eb"
+                  th:text="${avgCap != null ? 'avg ₦' + #numbers.formatDecimal(avgCap,1,'COMMA',0,'POINT') : 'no caps'}"></span>
+        </div>
+        <div class="flex items-center justify-between p-2 bg-amber-50 rounded-lg">
+            <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-amber-500" style="font-size:18px">date_range</span>
+                <div>
+                    <p class="text-xs font-medium">Next effective end date</p>
+                    <p class="text-xs text-gray-500"
+                       th:text="${nextEndDate != null ? 'Ends ' + nextEndDate : 'No upcoming end dates'}"></p>
+                </div>
+            </div>
+            <span class="material-symbols-outlined"
+                  th:classappend="${nextEndDate != null} ? 'text-amber-500' : 'text-green-600'"
+                  style="font-size:18px">event</span>
+        </div>
+    </div>
+
+    <!-- Backdrop -->
+    <div class="pen-backdrop" id="penBackdrop" onclick="penCloseAll()"></div>
+
+    <!-- New Scheme Sheet -->
+    <div class="pen-sheet" id="penNewSheet">
+        <div class="pen-handle"></div>
+        <div class="px-4 pb-6">
+            <div class="flex items-center justify-between mb-4">
+                <p class="font-semibold">New Pension Scheme</p>
+                <button onclick="penCloseAll()" class="text-gray-400"><span class="material-symbols-outlined">close</span></button>
+            </div>
+            <form th:action="@{/setup/pension-scheme}" method="post" onsubmit="penDisableSubmit(this)" class="space-y-3">
+                <div>
+                    <label class="pen-label">Code * <span class="text-gray-400 font-normal">(unique)</span></label>
+                    <input readonly name="code" type="text" id="penNewCode" required maxlength="20" placeholder="e.g. PEN-STD" class="pen-input">
+                </div>
+                <div>
+                    <label class="pen-label">Name *</label>
+                    <input name="name" type="text" required placeholder="e.g. Standard Auto-Enrolment" class="pen-input">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="pen-label">Employee Rate (%) *</label>
+                        <input name="employeeRate" type="number" step="0.01" min="0" max="100" required class="pen-input">
+                    </div>
+                    <div>
+                        <label class="pen-label">Employer Rate (%) *</label>
+                        <input name="employerRate" type="number" step="0.01" min="0" max="100" required class="pen-input">
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <input name="pensionableOnBasicOnly" type="checkbox" id="penNewBasic" checked class="w-4 h-4 text-blue-600">
+                    <label for="penNewBasic" class="text-sm text-gray-700">Pensionable on basic only</label>
+                </div>
+                <div>
+                    <label class="pen-label">Pensionable Cap (optional)</label>
+                    <input name="pensionableCap" type="number" step="0.01" min="0" placeholder="e.g. 50000.00" class="pen-input">
+                    <p class="text-xs text-gray-400 mt-1">Leave empty for no cap</p>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="pen-label">Effective From *</label>
+                        <input name="effectiveFrom" type="date" required class="pen-input">
+                    </div>
+                    <div>
+                        <label class="pen-label">Effective To</label>
+                        <input name="effectiveTo" type="date" class="pen-input">
+                        <p class="text-xs text-gray-400 mt-1">Empty = indefinite</p>
+                    </div>
+                </div>
+                <div>
+                    <label class="pen-label">Status *</label>
+                    <select name="status" required class="pen-input">
+                        <option value="ACTIVE">ACTIVE</option>
+                        <option value="INACTIVE">INACTIVE</option>
+                        <option value="PENDING">PENDING</option>
+                    </select>
+                </div>
+                <div class="flex gap-3 pt-2">
+                    <button type="button" onclick="penCloseAll()" class="pen-btn-secondary flex-1">Cancel</button>
+                    <button type="submit" class="pen-btn-primary flex-1">Save Scheme</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Scheme Sheet -->
+    <div class="pen-sheet" id="penEditSheet">
+        <div class="pen-handle"></div>
+        <div class="px-4 pb-6">
+            <div class="flex items-center justify-between mb-4">
+                <p class="font-semibold">Edit Pension Scheme</p>
+                <button onclick="penCloseAll()" class="text-gray-400"><span class="material-symbols-outlined">close</span></button>
+            </div>
+            <form id="penEditForm" onsubmit="penSubmitEdit(event)" class="space-y-3">
+                <input type="hidden" id="penEditId">
+                <div>
+                    <label class="pen-label">Code *</label>
+                    <input name="code" type="text" id="penEditCode" required maxlength="20" class="pen-input">
+                </div>
+                <div>
+                    <label class="pen-label">Name *</label>
+                    <input name="name" type="text" id="penEditName" required class="pen-input">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="pen-label">Employee Rate (%) *</label>
+                        <input name="employeeRate" type="number" step="0.01" min="0" max="100" id="penEditEmpRate" required class="pen-input">
+                    </div>
+                    <div>
+                        <label class="pen-label">Employer Rate (%) *</label>
+                        <input name="employerRate" type="number" step="0.01" min="0" max="100" id="penEditErRate" required class="pen-input">
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" id="penEditBasic" class="w-4 h-4 text-blue-600">
+                    <label for="penEditBasic" class="text-sm text-gray-700">Pensionable on basic only</label>
+                </div>
+                <div>
+                    <label class="pen-label">Pensionable Cap</label>
+                    <input name="pensionableCap" type="number" step="0.01" min="0" id="penEditCap" class="pen-input">
+                    <p class="text-xs text-gray-400 mt-1">Leave empty for no cap</p>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="pen-label">Effective From *</label>
+                        <input name="effectiveFrom" type="date" id="penEditFrom" required class="pen-input">
+                    </div>
+                    <div>
+                        <label class="pen-label">Effective To</label>
+                        <input name="effectiveTo" type="date" id="penEditTo" class="pen-input">
+                    </div>
+                </div>
+                <div>
+                    <label class="pen-label">Status *</label>
+                    <select name="status" id="penEditStatus" required class="pen-input">
+                        <option value="ACTIVE">ACTIVE</option>
+                        <option value="INACTIVE">INACTIVE</option>
+                        <option value="PENDING">PENDING</option>
+                    </select>
+                </div>
+                <div class="flex gap-3 pt-2">
+                    <button type="button" onclick="penCloseAll()" class="pen-btn-secondary flex-1">Cancel</button>
+                    <button type="submit" id="penEditSubmitBtn" class="pen-btn-primary flex-1">Update Scheme</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function penRandCode() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let s = '';
+            for (let i = 0; i < 4; i++) s += chars[Math.floor(Math.random() * chars.length)];
+            return 'PEN-' + s;
+        }
+
+        function penOpenNew() {
+            document.getElementById('penNewCode').value = penRandCode();
+            document.getElementById('penNewSheet').classList.add('open');
+            document.getElementById('penBackdrop').classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function penOpenEdit(card) {
+            document.getElementById('penEditId').value = card.dataset.id;
+            document.getElementById('penEditCode').value = card.dataset.code;
+            document.getElementById('penEditName').value = card.dataset.name;
+            document.getElementById('penEditEmpRate').value = card.dataset.empRate;
+            document.getElementById('penEditErRate').value = card.dataset.erRate;
+            document.getElementById('penEditBasic').checked = card.dataset.basicOnly === 'true';
+            document.getElementById('penEditCap').value = card.dataset.cap || '';
+            document.getElementById('penEditFrom').value = card.dataset.from;
+            document.getElementById('penEditTo').value = card.dataset.to || '';
+            document.getElementById('penEditStatus').value = card.dataset.status;
+            document.getElementById('penEditSheet').classList.add('open');
+            document.getElementById('penBackdrop').classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function penCloseAll() {
+            document.querySelectorAll('.pen-sheet').forEach(s => s.classList.remove('open'));
+            document.getElementById('penBackdrop').classList.remove('open');
+            document.body.style.overflow = '';
+            const btn = document.getElementById('penEditSubmitBtn');
+            if (btn) { btn.disabled = false; btn.textContent = 'Update Scheme'; }
+        }
+
+        function penDisableSubmit(form) {
+            const btn = form.querySelector('button[type="submit"]');
+            if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+            return true;
+        }
+
+        function penSubmitEdit(e) {
+            e.preventDefault();
+            const btn = document.getElementById('penEditSubmitBtn');
+            btn.disabled = true;
+            btn.textContent = 'Updating…';
+            const id = document.getElementById('penEditId').value;
+            const body = {
+                code: document.getElementById('penEditCode').value,
+                name: document.getElementById('penEditName').value,
+                employeeRate: parseFloat(document.getElementById('penEditEmpRate').value),
+                employerRate: parseFloat(document.getElementById('penEditErRate').value),
+                pensionableOnBasicOnly: document.getElementById('penEditBasic').checked,
+                pensionableCap: document.getElementById('penEditCap').value ? parseFloat(document.getElementById('penEditCap').value) : null,
+                effectiveFrom: document.getElementById('penEditFrom').value,
+                effectiveTo: document.getElementById('penEditTo').value || null,
+                status: document.getElementById('penEditStatus').value
+            };
+            fetch('/update/pension-scheme/' + id, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(body)
+            }).then(r => {
+                if (!r.ok) return r.text().then(t => { throw new Error(t || 'Update failed'); });
+                return r.text();
+            }).then(() => {
+                penCloseAll();
+                window.location.reload();
+            }).catch(err => {
+                alert('Failed to update: ' + err.message);
+                btn.disabled = false;
+                btn.textContent = 'Update Scheme';
+            });
+        }
+    </script>
+</section>
+</body>
+</html>

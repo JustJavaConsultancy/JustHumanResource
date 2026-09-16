@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/mobileEmployeeLayout}">
+<head>
+    <title>Employee Scorecard</title>
+    <style>
+        .es-card { background:#fff; border-radius:12px; border:1px solid #e5e7eb; padding:14px; margin-bottom:10px; }
+        .es-stat { background:#fff; border-radius:12px; border:1px solid #e5e7eb; padding:12px; }
+        .es-bar { height:5px; border-radius:99px; background:#f1f5f9; overflow:hidden; }
+        .es-bar-fill { height:100%; border-radius:99px; }
+    </style>
+</head>
+<body>
+<section layout:fragment="content">
+
+    <a th:href="@{/mobile/kpi-scorecard}" class="flex items-center gap-1 text-blue-600 text-sm mb-4">
+        <span class="material-symbols-outlined" style="font-size:16px">arrow_back</span>Back to Scorecard
+    </a>
+
+    <!-- Hero -->
+    <div class="bg-blue-900 rounded-xl p-4 mb-4 text-white">
+        <p class="text-xs text-blue-300 uppercase font-semibold mb-1">Employee Scorecard</p>
+        <p class="text-lg font-bold" th:text="${employeeName}">Employee Name</p>
+        <p class="text-sm text-blue-200" th:text="${periodLabel}">Month Year</p>
+    </div>
+
+    <!-- Summary -->
+    <div class="grid grid-cols-3 gap-2 mb-4">
+        <div class="es-stat text-center">
+            <p class="text-xl font-extrabold text-blue-900" th:text="${kpiCount}">0</p>
+            <p class="text-xs text-gray-500">KPIs</p>
+        </div>
+        <div class="es-stat text-center">
+            <p class="text-xl font-extrabold text-blue-900"
+               th:text="${#numbers.formatDecimal(totalWeight,1,2)} + '%'">0%</p>
+            <p class="text-xs text-gray-500">Total Weight</p>
+        </div>
+        <div class="es-stat text-center">
+            <p class="text-xl font-extrabold"
+               th:classappend="${totalWeightedScore != null and totalWeightedScore.doubleValue() >= 70} ? 'text-emerald-600' : 'text-amber-600'"
+               th:text="${#numbers.formatDecimal(totalWeightedScore,1,2)}">0.00</p>
+            <p class="text-xs text-gray-500">Weighted Score</p>
+        </div>
+    </div>
+
+    <!-- Empty state -->
+    <div th:if="${scorecardLines == null or #lists.isEmpty(scorecardLines)}" class="text-center py-12">
+        <span class="material-symbols-outlined text-gray-300" style="font-size:48px">assignment</span>
+        <p class="text-sm text-gray-500 mt-2">No scorecard data for this employee.</p>
+    </div>
+
+    <!-- KPI Lines -->
+    <div th:each="line : ${scorecardLines}" class="es-card">
+        <div class="flex items-start justify-between mb-1">
+            <p class="font-semibold text-sm" th:text="${line.kpiName != null ? line.kpiName : '—'}">KPI Name</p>
+            <span class="font-bold text-blue-700 text-sm"
+                  th:text="${line.weightedScore != null ? #numbers.formatDecimal(line.weightedScore,1,2) : '—'}">—</span>
+        </div>
+        <span th:if="${line.kpiCode != null}" class="inline-block px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded mb-2"
+              th:text="${line.kpiCode}">CODE</span>
+        <div class="grid grid-cols-4 gap-2 text-center text-xs mb-2">
+            <div class="bg-gray-50 rounded p-1">
+                <p class="text-gray-400">Target</p>
+                <p class="font-semibold" th:text="${line.targetValue != null ? #numbers.formatDecimal(line.targetValue,1,2) : '—'}">—</p>
+            </div>
+            <div class="bg-gray-50 rounded p-1">
+                <p class="text-gray-400">Actual</p>
+                <p class="font-semibold" th:text="${line.actualValue != null ? #numbers.formatDecimal(line.actualValue,1,2) : '—'}">—</p>
+            </div>
+            <div class="bg-gray-50 rounded p-1">
+                <p class="text-gray-400">Score</p>
+                <p class="font-semibold" th:text="${line.score != null ? #numbers.formatDecimal(line.score,1,2) : '—'}">—</p>
+            </div>
+            <div class="bg-gray-50 rounded p-1">
+                <p class="text-gray-400">Weight</p>
+                <p class="font-semibold" th:text="${line.weight != null ? #numbers.formatDecimal(line.weight,1,2) + '%' : '—'}">—</p>
+            </div>
+        </div>
+        <div th:if="${line.actualValue != null and line.targetValue != null and line.targetValue.doubleValue() > 0}"
+             th:with="pct=${line.actualValue.doubleValue() * 100 / line.targetValue.doubleValue()}">
+            <div class="es-bar">
+                <div class="es-bar-fill"
+                     th:classappend="${pct >= 100} ? 'bg-emerald-500' : (${pct >= 70} ? 'bg-blue-500' : 'bg-amber-400')"
+                     th:style="'width:' + ${#numbers.formatDecimal(pct > 100 ? 100 : pct, 1, 0)} + '%'"></div>
+            </div>
+            <p class="text-xs text-gray-400 mt-0.5"
+               th:text="${#numbers.formatDecimal(pct,1,1)} + '% of target'"></p>
+        </div>
+    </div>
+
+    <!-- Total row -->
+    <div th:if="${scorecardLines != null and !#lists.isEmpty(scorecardLines)}"
+         class="es-card bg-blue-50 flex items-center justify-between">
+        <div>
+            <p class="font-bold text-sm">Total</p>
+            <p class="text-xs text-gray-500" th:text="${kpiCount} + ' KPIs'"></p>
+        </div>
+        <div class="text-right">
+            <p class="text-xs text-gray-500">Weight: <span th:text="${#numbers.formatDecimal(totalWeight,1,2)} + '%'">0%</span></p>
+            <p class="font-extrabold text-blue-900"
+               th:text="${#numbers.formatDecimal(totalWeightedScore,1,2)}">0.00</p>
+        </div>
+    </div>
+
+</section>
+</body>
+</html>

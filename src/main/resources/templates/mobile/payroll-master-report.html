@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/mobileEmployeeLayout}">
+<head>
+    <title>Master Payroll Report</title>
+    <style>
+        .mr-stat { background:#fff; border-radius:12px; border:1px solid #e5e7eb; padding:14px; }
+        .mr-card { background:#fff; border-radius:12px; border:1px solid #e5e7eb; padding:14px; margin-bottom:10px; }
+        .mr-row { display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid #f3f4f6; font-size:0.8rem; }
+        .mr-row:last-child { border-bottom:none; }
+        .mr-bar { height:6px; border-radius:3px; background:#e5e7eb; overflow:hidden; }
+        .mr-bar-fill { height:100%; border-radius:3px; background:#3b82f6; }
+    </style>
+</head>
+<body>
+<section layout:fragment="content">
+
+    <div class="bg-blue-900 rounded-xl p-4 mb-4 text-white">
+        <p class="text-xs text-blue-300 uppercase font-semibold">Master Payroll Report</p>
+        <p class="text-sm text-blue-200 mt-1" th:text="'Jan 1, ' + ${reportYear} + ' – Dec 31, ' + ${reportYear}">2026</p>
+    </div>
+
+    <!-- Grand Totals -->
+    <div class="grid grid-cols-3 gap-2 mb-4">
+        <div class="mr-stat text-center">
+            <p class="text-xs text-gray-500">Gross</p>
+            <p class="text-sm font-bold text-blue-900"
+               th:text="'₦' + ${#numbers.formatDecimal(grandTotalGross,1,'COMMA',0,'POINT')}">₦0</p>
+        </div>
+        <div class="mr-stat text-center">
+            <p class="text-xs text-gray-500">Deductions</p>
+            <p class="text-sm font-bold text-red-600"
+               th:text="'-₦' + ${#numbers.formatDecimal(grandTotalDeductions,1,'COMMA',0,'POINT')}">-₦0</p>
+        </div>
+        <div class="mr-stat text-center">
+            <p class="text-xs text-gray-500">Net Pay</p>
+            <p class="text-sm font-bold text-green-600"
+               th:text="'₦' + ${#numbers.formatDecimal(grandTotalNet,1,'COMMA',0,'POINT')}">₦0</p>
+        </div>
+    </div>
+
+    <!-- Pay Group Summary -->
+    <div class="mr-card mb-4">
+        <p class="font-semibold text-sm mb-3">Pay Group Summary</p>
+        <div th:if="${payrollSummary == null or #lists.isEmpty(payrollSummary)}" class="text-sm text-gray-400 text-center py-3">No data</div>
+        <div th:each="summary : ${payrollSummary}" class="mb-3 pb-3 border-b border-gray-100 last:border-none">
+            <p class="font-medium text-sm mb-1" th:text="${summary.groupName}">Group</p>
+            <div class="grid grid-cols-2 gap-2 text-xs">
+                <div><span class="text-gray-400">Gross: </span><span class="font-semibold"
+                    th:text="'₦' + ${#numbers.formatDecimal(summary.totalGross,1,'COMMA',0,'POINT')}">₦0</span></div>
+                <div><span class="text-gray-400">Deductions: </span><span class="font-semibold text-red-500"
+                    th:text="'-₦' + ${#numbers.formatDecimal(summary.totalDeductions,1,'COMMA',0,'POINT')}">₦0</span></div>
+                <div><span class="text-gray-400">Net: </span><span class="font-semibold text-green-600"
+                    th:text="'₦' + ${#numbers.formatDecimal(summary.totalNet,1,'COMMA',0,'POINT')}">₦0</span></div>
+                <div><span class="text-gray-400">PAYE: </span><span class="font-semibold"
+                    th:text="'₦' + ${#numbers.formatDecimal(summary.totalPaye,1,'COMMA',0,'POINT')}">₦0</span></div>
+            </div>
+        </div>
+        <!-- Totals row -->
+        <div th:if="${payrollSummary != null and !#lists.isEmpty(payrollSummary)}"
+             class="bg-gray-50 rounded p-2 text-xs flex justify-between">
+            <span class="font-semibold">Grand Total Gross:</span>
+            <span class="font-bold" th:text="'₦' + ${#numbers.formatDecimal(grandTotalGross,1,'COMMA',2,'POINT')}">₦0.00</span>
+        </div>
+    </div>
+
+    <!-- Earnings Breakdown -->
+    <div class="mr-card mb-3">
+        <p class="font-semibold text-sm mb-3">Earnings Breakdown</p>
+        <div th:if="${earningsBreakdown == null or #lists.isEmpty(earningsBreakdown)}" class="text-xs text-gray-400 text-center py-2">No data</div>
+        <div th:each="item : ${earningsBreakdown}" class="mr-row">
+            <span th:text="${item.componentName != null ? item.componentName : item.componentCode}">Component</span>
+            <span class="font-semibold"
+                  th:text="${item.totalAmount != null ? '₦' + #numbers.formatDecimal(item.totalAmount,1,'COMMA',2,'POINT') : '—'}">₦0.00</span>
+        </div>
+    </div>
+
+    <!-- Deductions Breakdown -->
+    <div class="mr-card mb-3">
+        <p class="font-semibold text-sm mb-3">Deductions Breakdown</p>
+        <div th:if="${deductionBreakdown == null or #lists.isEmpty(deductionBreakdown)}" class="text-xs text-gray-400 text-center py-2">No data</div>
+        <div th:each="item : ${deductionBreakdown}" class="mr-row">
+            <span th:text="${item.componentName != null ? item.componentName : item.componentCode}">Component</span>
+            <span class="font-semibold text-red-600"
+                  th:text="${item.totalAmount != null ? '-₦' + #numbers.formatDecimal(item.totalAmount,1,'COMMA',2,'POINT') : '—'}">₦0.00</span>
+        </div>
+    </div>
+
+    <!-- Navigation Links -->
+    <div class="mr-card">
+        <p class="font-semibold text-sm mb-3">Related Reports</p>
+        <a th:href="@{/paye-report}" class="flex items-center justify-between p-2 bg-gray-50 rounded-lg mb-2 text-sm">
+            <span>PAYE Report</span>
+            <span class="material-symbols-outlined text-gray-400" style="font-size:16px">chevron_right</span>
+        </a>
+        <a th:href="@{/pension-report}" class="flex items-center justify-between p-2 bg-gray-50 rounded-lg text-sm">
+            <span>Pension Report</span>
+            <span class="material-symbols-outlined text-gray-400" style="font-size:16px">chevron_right</span>
+        </a>
+    </div>
+
+</section>
+</body>
+</html>

@@ -6,6 +6,6 @@ public record PayslipEmailResult(
         String email,
         String status,
         String message,
-        String resendEmailId
+        String messageId
 ) {
 }

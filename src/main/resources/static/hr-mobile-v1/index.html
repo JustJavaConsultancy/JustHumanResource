@@ -229,7 +229,7 @@ async function captureSessionTokens() {
             credentials: "include"
         });
         if (!response.ok) return;
-        const tokens = await response.json();
+        const tokens = await response.json().catch(() => null);
         if (!tokens || !tokens.refreshToken) return;
         const storage = await getSecureStorage();
         if (tokens.accessToken) await secureSet(storage, "access_token", tokens.accessToken);

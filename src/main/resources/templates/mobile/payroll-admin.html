@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/mobileEmployeeLayout}">
+<head>
+    <title>Payroll Admin</title>
+    <style>
+        .pa-card { background:#fff; border-radius:12px; border:1px solid #e5e7eb; padding:14px; margin-bottom:10px; }
+        .pa-sheet { position:fixed; bottom:0; left:0; right:0; z-index:50; transform:translateY(100%); transition:transform .3s; background:#fff; border-radius:20px 20px 0 0; max-height:92vh; overflow-y:auto; padding-bottom:env(safe-area-inset-bottom); }
+        .pa-sheet.open { transform:translateY(0); }
+        .pa-backdrop { position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:49; display:none; }
+        .pa-backdrop.open { display:block; }
+    </style>
+</head>
+<body>
+<section layout:fragment="content">
+
+    <!-- Payroll Period Status Banner -->
+    <div th:if="${payrollStatus == null}"
+         class="rounded-xl border px-4 py-3 mb-4 flex items-center justify-between bg-red-50 border-red-200">
+        <div class="flex items-center gap-3">
+            <span class="material-symbols-outlined text-red-600" style="font-size:22px">lock</span>
+            <div>
+                <p class="font-semibold text-sm text-gray-800">No active payroll period</p>
+                <p class="text-xs text-gray-500">Open a period to start processing.</p>
+            </div>
+        </div>
+        <button onclick="openToggleSheet('activate')"
+                class="text-xs font-bold px-3 py-1.5 bg-blue-900 text-white rounded-lg">Open</button>
+    </div>
+
+    <div th:if="${payrollStatus != null}"
+         class="rounded-xl border px-4 py-3 mb-4 flex items-center justify-between bg-green-50 border-green-200">
+        <div class="flex items-center gap-3">
+            <span class="material-symbols-outlined text-green-600" style="font-size:22px">lock_open</span>
+            <div>
+                <p class="font-semibold text-sm text-gray-800" th:text="'Period ' + ${payrollStatus}">OPEN</p>
+                <p class="text-xs text-gray-500"
+                   th:if="${currentPayrollPeriod != null}"
+                   th:text="${#temporals.format(currentPayrollPeriod.periodStart,'dd MMM yyyy') + ' – ' + #temporals.format(currentPayrollPeriod.periodEnd,'dd MMM yyyy')}">Period range</p>
+            </div>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="openToggleSheet('extend')"
+                    class="text-xs font-bold px-2 py-1.5 bg-blue-900 text-white rounded-lg">Extend</button>
+            <button onclick="openToggleSheet('deactivate')"
+                    class="text-xs font-bold px-2 py-1.5 bg-amber-500 text-white rounded-lg">Close</button>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-3 gap-3 mb-4">
+        <div class="pa-card text-center">
+            <p class="text-xs text-gray-500">Allowances</p>
+            <p class="text-2xl font-bold text-blue-900" th:text="${allowances}">0</p>
+            <p class="text-xs text-green-600 mt-1" th:text="${taxableAllowances} + ' taxable'">0 taxable</p>
+        </div>
+        <div class="pa-card text-center">
+            <p class="text-xs text-gray-500">Deductions</p>
+            <p class="text-2xl font-bold text-red-600" th:text="${deductions}">0</p>
+            <p class="text-xs text-amber-600 mt-1" th:text="${saturatoryDeductions} + ' statutory'">0 statutory</p>
+        </div>
+        <div class="pa-card text-center">
+            <p class="text-xs text-gray-500">Pay Groups</p>
+            <p class="text-2xl font-bold text-blue-900" th:text="${payGroups}">0</p>
+            <p class="text-xs text-gray-400 mt-1" th:text="${employees} + ' emp'">0 emp</p>
+        </div>
+    </div>
+
+    <!-- Run Payroll Button -->
+    <button onclick="openSheet('runSheet')"
+            class="w-full py-3 bg-blue-900 text-white font-bold rounded-xl flex items-center justify-center gap-2 mb-4">
+        <span class="material-symbols-outlined" style="font-size:20px">play_circle</span>
+        Run Payroll
+    </button>
+
+    <!-- Quick Access -->
+    <p class="font-semibold text-sm text-gray-700 mb-3">Quick Access</p>
+    <div class="space-y-2 mb-4">
+        <a th:href="@{/payroll/items}" class="pa-card flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-lg bg-green-100 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-green-600" style="font-size:18px">list_alt</span>
+                </div>
+                <div>
+                    <p class="font-semibold text-sm">Payroll Items</p>
+                    <p class="text-xs text-gray-400">Allowances, deductions, tax settings</p>
+                </div>
+            </div>
+            <span class="material-symbols-outlined text-gray-400" style="font-size:16px">chevron_right</span>
+        </a>
+        <a th:href="@{/payroll/pay-group}" class="pa-card flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-blue-600" style="font-size:18px">group_work</span>
+                </div>
+                <div>
+                    <p class="font-semibold text-sm">Pay Groups</p>
+                    <p class="text-xs text-gray-400">Manage groups and assignments</p>
+                </div>
+            </div>
+            <span class="material-symbols-outlined text-gray-400" style="font-size:16px">chevron_right</span>
+        </a>
+        <a th:href="@{/payroll/employee-payroll}" class="pa-card flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-lg bg-purple-100 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-purple-600" style="font-size:18px">badge</span>
+                </div>
+                <div>
+                    <p class="font-semibold text-sm">Employee Payroll</p>
+                    <p class="text-xs text-gray-400">Individual payroll and grade settings</p>
+                </div>
+            </div>
+            <span class="material-symbols-outlined text-gray-400" style="font-size:16px">chevron_right</span>
+        </a>
+        <a th:href="@{/mobile/payroll/historical}" class="pa-card flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-lg bg-cyan-100 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-cyan-700" style="font-size:18px">manage_history</span>
+                </div>
+                <div>
+                    <p class="font-semibold text-sm">Historical Adjustments</p>
+                    <p class="text-xs text-gray-400">Versioned corrections for closed periods</p>
+                </div>
+            </div>
+            <span class="material-symbols-outlined text-gray-400" style="font-size:16px">chevron_right</span>
+        </a>
+    </div>
+
+    <!-- Reports -->
+    <p class="font-semibold text-sm text-gray-700 mb-3">Reports</p>
+    <div class="space-y-2">
+        <a th:href="@{/mobile/reporting}" class="pa-card flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-blue-600" style="font-size:18px">bar_chart</span>
+                <p class="font-semibold text-sm">Payroll Reporting</p>
+            </div>
+            <span class="material-symbols-outlined text-gray-400" style="font-size:16px">chevron_right</span>
+        </a>
+        <a th:href="@{/mobile/master-report}" class="pa-card flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-indigo-600" style="font-size:18px">summarize</span>
+                <p class="font-semibold text-sm">Master Report</p>
+            </div>
+            <span class="material-symbols-outlined text-gray-400" style="font-size:16px">chevron_right</span>
+        </a>
+        <a th:href="@{/mobile/variance-report}" class="pa-card flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-amber-600" style="font-size:18px">compare_arrows</span>
+                <p class="font-semibold text-sm">Variance Report</p>
+            </div>
+            <span class="material-symbols-outlined text-gray-400" style="font-size:16px">chevron_right</span>
+        </a>
+        <a th:href="@{/mobile/paye-report}" class="pa-card flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-red-600" style="font-size:18px">receipt_long</span>
+                <p class="font-semibold text-sm">PAYE Report</p>
+            </div>
+            <span class="material-symbols-outlined text-gray-400" style="font-size:16px">chevron_right</span>
+        </a>
+        <a th:href="@{/mobile/pension-report}" class="pa-card flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-green-600" style="font-size:18px">savings</span>
+                <p class="font-semibold text-sm">Pension Report</p>
+            </div>
+            <span class="material-symbols-outlined text-gray-400" style="font-size:16px">chevron_right</span>
+        </a>
+    </div>
+
+    <!-- Backdrop -->
+    <div id="paBackdrop" class="pa-backdrop" onclick="closeAllSheets()"></div>
+
+    <!-- Run Payroll Sheet -->
+    <div id="runSheet" class="pa-sheet">
+        <div class="p-4 border-b border-gray-100 flex items-center justify-between">
+            <p class="font-bold text-sm">Run Payroll</p>
+            <button onclick="closeSheet('runSheet')" class="text-gray-400">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="p-4 space-y-4">
+            <div>
+                <label class="text-xs font-semibold text-gray-500 uppercase">Period Start</label>
+                <input type="date" id="runPeriodStart"
+                       class="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"/>
+            </div>
+            <div>
+                <label class="text-xs font-semibold text-gray-500 uppercase">Period End</label>
+                <input type="date" id="runPeriodEnd"
+                       class="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"/>
+            </div>
+            <div>
+                <label class="text-xs font-semibold text-gray-500 uppercase">Payment Date</label>
+                <input type="date" id="runPaymentDate"
+                       class="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"/>
+            </div>
+            <div>
+                <label class="text-xs font-semibold text-gray-500 uppercase">Include</label>
+                <div class="mt-2 space-y-2">
+                    <label class="flex items-center gap-2 text-sm">
+                        <input type="checkbox" checked class="rounded"> All Employees
+                    </label>
+                    <label class="flex items-center gap-2 text-sm">
+                        <input type="checkbox" checked class="rounded"> Taxable Allowances
+                    </label>
+                    <label class="flex items-center gap-2 text-sm">
+                        <input type="checkbox" checked class="rounded"> Statutory Deductions
+                    </label>
+                    <label class="flex items-center gap-2 text-sm">
+                        <input type="checkbox" checked class="rounded"> Bonuses
+                    </label>
+                </div>
+            </div>
+            <div>
+                <label class="text-xs font-semibold text-gray-500 uppercase">Payment Method</label>
+                <select id="runPaymentMethod"
+                        class="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm">
+                    <option value="bank">Bank Transfer</option>
+                    <option value="check">Checks</option>
+                    <option value="cash">Cash</option>
+                </select>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="closeSheet('runSheet')"
+                        class="flex-1 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold">Cancel</button>
+                <button class="flex-1 py-2.5 bg-blue-900 text-white rounded-xl text-sm font-bold">Run Payroll</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toggle Period Sheet -->
+    <div id="toggleSheet" class="pa-sheet">
+        <div class="p-4 border-b border-gray-100 flex items-center justify-between">
+            <p id="toggleSheetTitle" class="font-bold text-sm">Confirm Action</p>
+            <button onclick="closeSheet('toggleSheet')" class="text-gray-400">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="p-4 space-y-4">
+            <p id="toggleSheetMessage" class="text-sm text-gray-600">Are you sure you want to change payroll status?</p>
+            <form id="togglePayrollForm" method="post" onsubmit="return disableSubmitButton(this);">
+                <div id="openPeriodFields" class="space-y-3 mb-4 hidden">
+                    <div>
+                        <label class="text-xs font-semibold text-gray-500 uppercase">Period Start</label>
+                        <input id="periodStartInput" name="periodStart" type="date"
+                               class="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm"/>
+                    </div>
+                    <div>
+                        <label class="text-xs font-semibold text-gray-500 uppercase">Period End</label>
+                        <input id="periodEndInput" name="periodEnd" type="date"
+                               class="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm"/>
+                    </div>
+                </div>
+                <div id="closePeriodFields" class="mb-4 hidden">
+                    <label class="text-xs font-semibold text-gray-500 uppercase">Close Period Through</label>
+                    <input id="actualPeriodEndInput" name="actualPeriodEnd" type="date"
+                           class="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm"/>
+                </div>
+                <div class="flex gap-3">
+                    <button type="button" onclick="closeSheet('toggleSheet')"
+                            class="flex-1 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold">Cancel</button>
+                    <button id="toggleConfirmBtn" type="submit"
+                            class="flex-1 py-2.5 bg-blue-900 text-white rounded-xl text-sm font-bold">Confirm</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script th:inline="javascript">
+        const currentPeriodStart = /*[[${currentPayrollPeriod != null ? currentPayrollPeriod.periodStart : null}]]*/ null;
+        const currentPeriodEnd   = /*[[${currentPayrollPeriod != null ? currentPayrollPeriod.periodEnd : null}]]*/ null;
+
+        function openSheet(id) {
+            document.getElementById(id).classList.add('open');
+            document.getElementById('paBackdrop').classList.add('open');
+        }
+        function closeSheet(id) {
+            document.getElementById(id).classList.remove('open');
+            document.getElementById('paBackdrop').classList.remove('open');
+        }
+        function closeAllSheets() {
+            document.querySelectorAll('.pa-sheet').forEach(s => s.classList.remove('open'));
+            document.getElementById('paBackdrop').classList.remove('open');
+        }
+
+        function openToggleSheet(action) {
+            const title   = document.getElementById('toggleSheetTitle');
+            const message = document.getElementById('toggleSheetMessage');
+            const btn     = document.getElementById('toggleConfirmBtn');
+            const form    = document.getElementById('togglePayrollForm');
+            const openF   = document.getElementById('openPeriodFields');
+            const closeF  = document.getElementById('closePeriodFields');
+            const pStart  = document.getElementById('periodStartInput');
+            const pEnd    = document.getElementById('periodEndInput');
+            const pActual = document.getElementById('actualPeriodEndInput');
+
+            openF.classList.add('hidden');
+            closeF.classList.add('hidden');
+            pStart.disabled = pEnd.disabled = pActual.disabled = true;
+
+            if (action === 'activate') {
+                title.textContent = 'Open Payroll Period';
+                message.textContent = 'Choose the period range to open.';
+                btn.textContent = 'Open Period';
+                btn.className = 'flex-1 py-2.5 bg-blue-900 text-white rounded-xl text-sm font-bold';
+                form.action = '/setup/payroll/open';
+                openF.classList.remove('hidden');
+                pStart.disabled = pEnd.disabled = false;
+                const now = new Date();
+                pStart.value = pStart.value || new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0,10);
+                pEnd.value   = pEnd.value   || new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0,10);
+            } else if (action === 'extend') {
+                title.textContent = 'Extend Payroll Period';
+                message.textContent = 'Choose the new final date for the open period.';
+                btn.textContent = 'Extend Period';
+                btn.className = 'flex-1 py-2.5 bg-blue-900 text-white rounded-xl text-sm font-bold';
+                form.action = '/setup/payroll/extend';
+                closeF.classList.remove('hidden');
+                pActual.disabled = false;
+                pActual.min = currentPeriodEnd || currentPeriodStart || '';
+                pActual.value = currentPeriodEnd || new Date().toISOString().slice(0,10);
+            } else {
+                title.textContent = 'Close Payroll Period';
+                message.textContent = 'Choose the final date for this payroll period.';
+                btn.textContent = 'Close Period';
+                btn.className = 'flex-1 py-2.5 bg-amber-500 text-white rounded-xl text-sm font-bold';
+                form.action = '/setup/payroll/close';
+                closeF.classList.remove('hidden');
+                pActual.disabled = false;
+                pActual.min = currentPeriodEnd || currentPeriodStart || '';
+                pActual.value = currentPeriodEnd || new Date().toISOString().slice(0,10);
+            }
+            openSheet('toggleSheet');
+        }
+
+        function disableSubmitButton(form) {
+            const btn = form.querySelector('button[type="submit"]');
+            if (btn) { btn.disabled = true; btn.textContent = 'Submitting…'; }
+            return true;
+        }
+
+        // Pre-fill run payroll dates
+        document.addEventListener('DOMContentLoaded', () => {
+            const now = new Date();
+            document.getElementById('runPeriodStart').value  = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0,10);
+            document.getElementById('runPeriodEnd').value    = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0,10);
+            document.getElementById('runPaymentDate').value  = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0,10);
+        });
+    </script>
+
+</section>
+</body>
+</html>

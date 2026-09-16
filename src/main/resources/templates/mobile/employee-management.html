@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/mobileEmployeeLayout}">
+<head>
+    <title>Employee Management</title>
+    <style>
+        .em-card { background:#fff; border:1px solid #e5e7eb; border-radius:14px; padding:14px; margin-bottom:10px; }
+        .em-row { display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid #f3f4f6; }
+        .em-row:last-child { border-bottom:none; }
+        .em-input { width:100%; border:1px solid #d1d5db; background:#fff; border-radius:10px; padding:10px 12px; font-size:14px; outline:none; }
+        .em-input:focus { border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,.12); }
+        .em-select { width:100%; border:1px solid #d1d5db; background:#fff; border-radius:10px; padding:10px 12px; font-size:13px; outline:none; }
+        .em-badge-active     { background:#dcfce7; color:#166534; border-radius:999px; padding:2px 8px; font-size:10px; font-weight:700; }
+        .em-badge-suspended  { background:#fee2e2; color:#991b1b; border-radius:999px; padding:2px 8px; font-size:10px; font-weight:700; }
+        .em-badge-onboarding { background:#fef3c7; color:#92400e; border-radius:999px; padding:2px 8px; font-size:10px; font-weight:700; }
+        .em-sheet-backdrop { position:fixed; inset:0; background:rgba(15,23,42,.5); z-index:60; display:none; }
+        .em-sheet-backdrop.open { display:block; }
+        .em-sheet { position:fixed; left:0; right:0; bottom:0; background:#fff; border-radius:20px 20px 0 0; z-index:70; max-height:92vh; overflow-y:auto; transform:translateY(100%); transition:transform .3s; padding-bottom:env(safe-area-inset-bottom); }
+        .em-sheet.open { transform:translateY(0); }
+        .em-avatar { width:36px; height:36px; border-radius:50%; background:#dbeafe; color:#1d4ed8; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; flex-shrink:0; }
+        .em-tab-bar { display:flex; overflow-x:auto; border-bottom:2px solid #e5e7eb; margin-bottom:14px; scrollbar-width:none; }
+        .em-tab-bar::-webkit-scrollbar { display:none; }
+        .em-tab { padding:8px 14px; font-size:12px; font-weight:600; color:#6b7280; border-bottom:2px solid transparent; margin-bottom:-2px; white-space:nowrap; cursor:pointer; background:transparent; border-top:none; border-left:none; border-right:none; }
+        .em-tab.active { color:#2563eb; border-bottom-color:#2563eb; }
+        .em-panel { display:none; } .em-panel.active { display:block; }
+    </style>
+</head>
+<body>
+
+<!-- Data islands -->
+<script id="dept-data"   type="application/json" th:inline="javascript">/*[[${departments}]]*/[]</script>
+<script id="grade-data"  type="application/json" th:inline="javascript">/*[[${jobGrades}]]*/[]</script>
+<script id="pg-data"     type="application/json" th:inline="javascript">/*[[${payGroups}]]*/[]</script>
+<script id="emp-data"    type="application/json" th:inline="javascript">/*[[${employees}]]*/[]</script>
+<script id="mgr-data"    type="application/json" th:inline="javascript">/*[[${managerMap}]]*/{}  </script>
+<script id="meta-data"   type="application/json"
+        th:inline="javascript">/*[[${{'creationAllowed': employeeCreationAllowed, 'blockedReason': employeeCreationBlockedReason}}]]*/{"creationAllowed":true,"blockedReason":null}</script>
+
+<section layout:fragment="content">
+
+    <!-- Header -->
+    <div class="bg-blue-900 rounded-xl p-4 mb-4 text-white">
+        <p class="text-xs text-blue-300 uppercase font-semibold">Employee Management</p>
+        <p class="text-sm text-blue-200 mt-1">Manage employees, pay items, and groups</p>
+    </div>
+
+    <!-- Stat cards -->
+    <div class="grid grid-cols-2 gap-3 mb-4">
+        <div class="em-card !p-3">
+            <p class="text-xs text-gray-500">Total Employees</p>
+            <p class="text-2xl font-bold text-blue-900" id="statTotal">—</p>
+        </div>
+        <div class="em-card !p-3">
+            <p class="text-xs text-gray-500">Active</p>
+            <p class="text-2xl font-bold text-green-600" id="statActive">—</p>
+        </div>
+        <div class="em-card !p-3">
+            <p class="text-xs text-gray-500">Departments</p>
+            <p class="text-2xl font-bold text-purple-600" id="statDepts">—</p>
+        </div>
+        <div class="em-card !p-3">
+            <p class="text-xs text-gray-500">Suspended</p>
+            <p class="text-2xl font-bold text-red-500" id="statSuspended">—</p>
+        </div>
+    </div>
+
+    <!-- Blocked reason -->
+    <div id="blockedBanner" class="hidden em-card mb-4 border-red-200">
+        <p class="text-xs font-semibold text-red-700" id="blockedMsg"></p>
+    </div>
+
+    <!-- Search & filters -->
+    <div class="em-card mb-4 space-y-2">
+        <div class="flex gap-2">
+            <input id="empSearch" class="em-input" placeholder="Search name or email…">
+            <button id="addEmpBtn" onclick="openAddSheet()"
+                    class="shrink-0 px-3 py-2 bg-blue-900 text-white rounded-xl text-sm font-bold flex items-center gap-1">
+                <span class="material-symbols-outlined text-base">person_add</span>
+            </button>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+            <select id="deptFilter"  class="em-select"><option value="">All Departments</option></select>
+            <select id="gradeFilter" class="em-select"><option value="">All Grades</option></select>
+        </div>
+        <select id="statusFilter" class="em-select">
+            <option value="">All statuses</option>
+            <option value="ACTIVE">Active</option>
+            <option value="SUSPENDED">Suspended</option>
+            <option value="ONBOARDING">Onboarding</option>
+        </select>
+    </div>
+
+    <!-- CSV Bulk Upload -->
+    <details class="em-card mb-4">
+        <summary class="font-semibold text-sm cursor-pointer flex items-center gap-2">
+            <span class="material-symbols-outlined text-green-600 text-base">upload_file</span>
+            Bulk CSV Upload
+        </summary>
+        <div class="mt-3 space-y-2">
+            <p class="text-xs text-gray-500">Header-driven CSV — column names must match field names (firstName, secondName, email, grade, gross…). New employees need all 5 core fields; existing emails are treated as edits.</p>
+            <input type="file" id="csvFileInput" accept=".csv" class="text-xs w-full">
+            <button onclick="uploadCsv()" class="w-full py-2.5 bg-green-600 text-white rounded-xl text-sm font-bold">Upload CSV</button>
+        </div>
+    </details>
+
+    <!-- Employee list -->
+    <div id="empList" class="em-card mb-4"></div>
+
+    <!-- ===== ADD / EDIT EMPLOYEE SHEET ===== -->
+    <div id="empSheetBackdrop" class="em-sheet-backdrop" onclick="closeEmpSheet()"></div>
+    <div id="empSheet" class="em-sheet">
+        <div class="p-4 border-b border-gray-100 flex items-center justify-between">
+            <p id="empSheetTitle" class="font-bold text-sm">Add Employee</p>
+            <button onclick="closeEmpSheet()" class="text-gray-400"><span class="material-symbols-outlined">close</span></button>
+        </div>
+        <div class="p-4">
+            <div class="em-tab-bar">
+                <button class="em-tab active" onclick="switchEmpTab('personal')">Personal</button>
+                <button class="em-tab" onclick="switchEmpTab('employment')">Employment</button>
+                <button class="em-tab" onclick="switchEmpTab('financial')">Financial</button>
+                <button class="em-tab" onclick="switchEmpTab('nok')">Next of Kin</button>
+                <button class="em-tab" onclick="switchEmpTab('guarantor')">Guarantor</button>
+            </div>
+
+            <form id="empForm" onsubmit="submitEmployee(event)">
+                <input type="hidden" id="empId">
+
+                <!-- Personal -->
+                <div id="panel-personal" class="em-panel active space-y-3">
+                    <div class="grid grid-cols-2 gap-2">
+                        <div><label class="block text-xs font-semibold text-gray-500 mb-1">First Name *</label><input id="efFirstName" class="em-input" required></div>
+                        <div><label class="block text-xs font-semibold text-gray-500 mb-1">Last Name *</label><input id="efLastName" class="em-input" required></div>
+                    </div>
+                    <div><label class="block text-xs font-semibold text-gray-500 mb-1">Email *</label><input id="efEmail" type="email" class="em-input" required></div>
+                    <div><label class="block text-xs font-semibold text-gray-500 mb-1">Phone</label><input id="efPhone" class="em-input"></div>
+                    <div><label class="block text-xs font-semibold text-gray-500 mb-1">NIN</label><input id="efNin" class="em-input"></div>
+                    <div><label class="block text-xs font-semibold text-gray-500 mb-1">BVN</label><input id="efBvn" class="em-input"></div>
+                    <div><label class="block text-xs font-semibold text-gray-500 mb-1">TIN</label><input id="efTin" class="em-input"></div>
+                </div>
+
+                <!-- Employment -->
+                <div id="panel-employment" class="em-panel space-y-3">
+                    <div><label class="block text-xs font-semibold text-gray-500 mb-1">Department *</label>
+                        <select id="efDept" class="em-input" required><option value="">Select…</option></select></div>
+                    <div><label class="block text-xs font-semibold text-gray-500 mb-1">Job Grade</label>
+                        <select id="efGrade" class="em-input" onchange="populateStepOptions()"><option value="">Select…</option></select></div>
+                    <div><label class="block text-xs font-semibold text-gray-500 mb-1">Job Step</label>
+                        <select id="efStep" class="em-input"><option value="">Select grade first</option></select></div>
+                    <div><label class="block text-xs font-semibold text-gray-500 mb-1">Pay Group</label>
+                        <select id="efPayGroup" class="em-input"><option value="">Select…</option></select></div>
+                    <div><label class="block text-xs font-semibold text-gray-500 mb-1">Manager</label>
+                        <select id="efManager" class="em-input"><option value="">None</option></select></div>
+                    <div><label class="block text-xs font-semibold text-gray-500 mb-1">Employment Status</label>
+                        <select id="efEmpStatus" class="em-input">
+                            <option value="ACTIVE">Active</option>
+                            <option value="ONBOARDING">Onboarding</option>
+                            <option value="PROBATION">Probation</option>
+                            <option value="ON_LEAVE">On Leave</option>
+                        </select>
+                    </div>
+                    <div><label class="block text-xs font-semibold text-gray-500 mb-1">Gross Salary *</label><input id="efGross" type="number" step="0.01" class="em-input" required></div>
+                </div>
+
+                <!-- Financial -->
+                <div id="panel-financial" class="em-panel space-y-3">
+                    <div><label class="block text-xs font-semibold text-gray-500 mb-1">RSA PIN</label><input id="efRsaPin" class="em-input"></div>
+                    <div><label class="block text-xs font-semibold text-gray-500 mb-1">PFA</label><input id="efPfa" class="em-input"></div>
+                    <div><label class="block text-xs font-semibold text-gray-500 mb-1">Bank Name</label><input id="efBankName" class="em-input"></div>
+                    <div><label class="block text-xs font-semibold text-gray-500 mb-1">Account Name</label><input id="efAccountName" class="em-input"></div>
+                    <div><label class="block text-xs font-semibold text-gray-500 mb-1">Account Number</label><input id="efAccountNumber" class="em-input"></div>
+                </div>
+
+                <!-- Next of Kin -->
+                <div id="panel-nok" class="em-panel space-y-3">
+                    <div><label class="block text-xs font-semibold text-gray-500 mb-1">Name</label><input id="efNokName" class="em-input"></div>
+                    <div><label class="block text-xs font-semibold text-gray-500 mb-1">Phone</label><input id="efNokPhone" class="em-input"></div>
+                    <div><label class="block text-xs font-semibold text-gray-500 mb-1">Email</label><input id="efNokEmail" type="email" class="em-input"></div>
+                    <div><label class="block text-xs font-semibold text-gray-500 mb-1">Address</label><textarea id="efNokAddress" rows="2" class="em-input"></textarea></div>
+                </div>
+
+                <!-- Guarantor -->
+                <div id="panel-guarantor" class="em-panel space-y-3">
+                    <div><label class="block text-xs font-semibold text-gray-500 mb-1">Name</label><input id="efGtorName" class="em-input"></div>
+                    <div><label class="block text-xs font-semibold text-gray-500 mb-1">Phone</label><input id="efGtorPhone" class="em-input"></div>
+                    <div><label class="block text-xs font-semibold text-gray-500 mb-1">Email</label><input id="efGtorEmail" type="email" class="em-input"></div>
+                    <div><label class="block text-xs font-semibold text-gray-500 mb-1">NIN</label><input id="efGtorNin" class="em-input"></div>
+                    <div><label class="block text-xs font-semibold text-gray-500 mb-1">Address</label><textarea id="efGtorAddress" rows="2" class="em-input"></textarea></div>
+                </div>
+
+                <div class="flex gap-3 mt-4">
+                    <button type="button" onclick="closeEmpSheet()"
+                            class="flex-1 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold">Cancel</button>
+                    <button type="submit"
+                            class="flex-1 py-2.5 bg-blue-900 text-white rounded-xl text-sm font-bold">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== PAY ITEMS SHEET ===== -->
+    <div id="piBackdrop" class="em-sheet-backdrop" onclick="closePiSheet()"></div>
+    <div id="piSheet" class="em-sheet">
+        <div class="p-4 border-b border-gray-100 flex items-center justify-between">
+            <div>
+                <p class="font-bold text-sm">Pay Items</p>
+                <p id="piEmployeeName" class="text-xs text-gray-400"></p>
+            </div>
+            <button onclick="closePiSheet()" class="text-gray-400"><span class="material-symbols-outlined">close</span></button>
+        </div>
+        <div class="p-4">
+            <div class="em-tab-bar">
+                <button class="em-tab active" onclick="switchPiTab('allowances')">Allowances</button>
+                <button class="em-tab" onclick="switchPiTab('deductions')">Deductions</button>
+                <button class="em-tab" onclick="switchPiTab('taxRelief')">Tax Relief</button>
+            </div>
+
+            <!-- Allowances -->
+            <div id="pi-panel-allowances" class="em-panel active">
+                <div id="piAllowanceList" class="space-y-2 mb-4"></div>
+                <form onsubmit="addPiItem(event,'allowance')" class="space-y-2 border-t border-dashed border-gray-200 pt-3">
+                    <select id="piAllowanceSelect" class="em-input"><option value="">Select allowance…</option></select>
+                    <label class="flex items-center gap-2 text-xs"><input type="checkbox" id="piAllowanceOverride"> Override amount</label>
+                    <input id="piAllowanceAmount" type="number" step="0.01" placeholder="Amount (if override)" class="em-input hidden">
+                    <button class="w-full py-2.5 bg-green-600 text-white rounded-xl text-sm font-bold">+ Add Allowance</button>
+                </form>
+            </div>
+
+            <!-- Deductions -->
+            <div id="pi-panel-deductions" class="em-panel">
+                <div id="piDeductionList" class="space-y-2 mb-4"></div>
+                <form onsubmit="addPiItem(event,'deduction')" class="space-y-2 border-t border-dashed border-gray-200 pt-3">
+                    <select id="piDeductionSelect" class="em-input"><option value="">Select deduction…</option></select>
+                    <label class="flex items-center gap-2 text-xs"><input type="checkbox" id="piDeductionOverride"> Override amount</label>
+                    <input id="piDeductionAmount" type="number" step="0.01" placeholder="Amount (if override)" class="em-input hidden">
+                    <button class="w-full py-2.5 bg-red-600 text-white rounded-xl text-sm font-bold">+ Add Deduction</button>
+                </form>
+            </div>
+
+            <!-- Tax Relief -->
+            <div id="pi-panel-taxRelief" class="em-panel">
+                <div id="piTaxReliefList" class="space-y-2 mb-4"></div>
+                <form onsubmit="addPiItem(event,'taxRelief')" class="space-y-2 border-t border-dashed border-gray-200 pt-3">
+                    <select id="piTaxReliefSelect" class="em-input"><option value="">Select tax relief…</option></select>
+                    <label class="flex items-center gap-2 text-xs"><input type="checkbox" id="piTaxReliefOverride"> Override amount</label>
+                    <input id="piTaxReliefAmount" type="number" step="0.01" placeholder="Amount (if override)" class="em-input hidden">
+                    <button class="w-full py-2.5 bg-amber-500 text-white rounded-xl text-sm font-bold">+ Add Tax Relief</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== CONFIRM ACTION SHEET ===== -->
+    <div id="confirmBackdrop" class="em-sheet-backdrop" onclick="closeConfirm()"></div>
+    <div id="confirmSheet" class="em-sheet">
+        <div class="p-4 border-b border-gray-100 flex items-center justify-between">
+            <p id="confirmTitle" class="font-bold text-sm">Confirm</p>
+            <button onclick="closeConfirm()" class="text-gray-400"><span class="material-symbols-outlined">close</span></button>
+        </div>
+        <div class="p-4">
+            <p id="confirmMsg" class="text-sm text-gray-600 mb-4"></p>
+            <div class="flex gap-3">
+                <button onclick="closeConfirm()" class="flex-1 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold">Cancel</button>
+                <button id="confirmOkBtn" class="flex-1 py-2.5 bg-red-600 text-white rounded-xl text-sm font-bold">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const DEPARTMENTS = JSON.parse(document.getElementById('dept-data').textContent || '[]');
+        const JOB_GRADES  = JSON.parse(document.getElementById('grade-data').textContent || '[]');
+        const PAY_GROUPS  = JSON.parse(document.getElementById('pg-data').textContent || '[]');
+        const EMPLOYEES   = JSON.parse(document.getElementById('emp-data').textContent || '[]');
+        const MGR_MAP     = JSON.parse(document.getElementById('mgr-data').textContent || '{}');
+        const META        = JSON.parse(document.getElementById('meta-data').textContent || '{"creationAllowed":true}');
+
+        let currentPiEmpId = null;
+        let piData = {};
+        let piCatalog = {};
+
+        // ── Init ──
+        window.addEventListener('DOMContentLoaded', () => {
+            renderStats();
+            populateFilterOptions();
+            populateEmpFormOptions();
+            renderEmployees();
+            if (!META.creationAllowed) {
+                document.getElementById('blockedBanner').classList.remove('hidden');
+                document.getElementById('blockedMsg').textContent = META.blockedReason || 'Employee creation is currently disabled.';
+                document.getElementById('addEmpBtn').disabled = true;
+                document.getElementById('addEmpBtn').classList.add('opacity-50');
+            }
+        });
+
+        function renderStats() {
+            document.getElementById('statTotal').textContent = EMPLOYEES.length;
+            document.getElementById('statActive').textContent = EMPLOYEES.filter(e => e.status !== 'SUSPENDED').length;
+            document.getElementById('statDepts').textContent = DEPARTMENTS.length;
+            document.getElementById('statSuspended').textContent = EMPLOYEES.filter(e => e.status === 'SUSPENDED').length;
+        }
+
+        function populateFilterOptions() {
+            const deptSel = document.getElementById('deptFilter');
+            DEPARTMENTS.forEach(d => deptSel.innerHTML += `<option value="${d.id}">${d.name}</option>`);
+            const gradeSel = document.getElementById('gradeFilter');
+            JOB_GRADES.forEach(g => gradeSel.innerHTML += `<option value="${g.id}">${g.name}</option>`);
+        }
+
+        function populateEmpFormOptions() {
+            const dSel = document.getElementById('efDept');
+            DEPARTMENTS.forEach(d => dSel.innerHTML += `<option value="${d.id}">${d.name}</option>`);
+            const gSel = document.getElementById('efGrade');
+            JOB_GRADES.forEach(g => gSel.innerHTML += `<option value="${g.id}">${g.name}</option>`);
+            const pgSel = document.getElementById('efPayGroup');
+            PAY_GROUPS.forEach(pg => pgSel.innerHTML += `<option value="${pg.id}">${pg.name}</option>`);
+            const mgrSel = document.getElementById('efManager');
+            EMPLOYEES.forEach(e => mgrSel.innerHTML += `<option value="${e.id}">${e.firstName} ${e.lastName}</option>`);
+        }
+
+        function populateStepOptions() {
+            const gradeId = Number(document.getElementById('efGrade').value);
+            const grade = JOB_GRADES.find(g => g.id === gradeId);
+            const stepSel = document.getElementById('efStep');
+            stepSel.innerHTML = '<option value="">Select step…</option>';
+            if (grade && grade.steps) grade.steps.forEach(s => stepSel.innerHTML += `<option value="${s.id}">${s.name}</option>`);
+        }
+
+        function renderEmployees() {
+            const search = document.getElementById('empSearch').value.toLowerCase();
+            const deptId = Number(document.getElementById('deptFilter').value) || null;
+            const gradeId = Number(document.getElementById('gradeFilter').value) || null;
+            const status = document.getElementById('statusFilter').value;
+            const filtered = EMPLOYEES.filter(e => {
+                const name = `${e.firstName} ${e.lastName}`.toLowerCase();
+                const email = (e.email || '').toLowerCase();
+                return (!search || name.includes(search) || email.includes(search)) &&
+                       (!deptId  || (e.department && e.department.id === deptId)) &&
+                       (!gradeId || (e.jobStep && e.jobStep.jobGrade && e.jobStep.jobGrade.id === gradeId)) &&
+                       (!status  || (e.status || 'ACTIVE') === status || (status === 'ACTIVE' && !e.status));
+            });
+            const el = document.getElementById('empList');
+            if (!filtered.length) {
+                el.innerHTML = '<div class="text-center py-6 text-gray-400 text-sm"><span class="material-symbols-outlined block text-3xl mb-2">people</span>No employees found.</div>';
+                return;
+            }
+            el.innerHTML = filtered.map(e => {
+                const initials = (e.firstName||'?').charAt(0) + (e.lastName||'?').charAt(0);
+                const statusCls = e.status === 'SUSPENDED' ? 'em-badge-suspended' : e.status === 'ONBOARDING' ? 'em-badge-onboarding' : 'em-badge-active';
+                const statusLabel = e.status === 'SUSPENDED' ? 'Suspended' : e.status === 'ONBOARDING' ? 'Onboarding' : 'Active';
+                const dept = e.department ? e.department.name : '—';
+                return `
+                    <div class="em-row">
+                        <div class="flex items-center gap-3 flex-1 min-w-0">
+                            <div class="em-avatar">${initials.toUpperCase()}</div>
+                            <div class="min-w-0">
+                                <p class="font-semibold text-sm truncate">${e.firstName} ${e.lastName}</p>
+                                <p class="text-xs text-gray-400 truncate">${e.email || ''}</p>
+                                <p class="text-xs text-gray-400">${dept}</p>
+                                <span class="${statusCls} mt-0.5 inline-block">${statusLabel}</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-1 shrink-0 ml-2">
+                            <button onclick="openEditSheet(${e.id})" class="p-2 text-green-600">
+                                <span class="material-symbols-outlined text-base">edit</span>
+                            </button>
+                            <button onclick="openPiSheet(${e.id})" class="p-2 text-blue-600">
+                                <span class="material-symbols-outlined text-base">payments</span>
+                            </button>
+                            <button onclick="${e.status==='SUSPENDED' ? `confirmUnsuspend(${e.id})` : `confirmSuspend(${e.id})`}"
+                                    class="p-2 ${e.status==='SUSPENDED' ? 'text-green-600' : 'text-red-500'}">
+                                <span class="material-symbols-outlined text-base">${e.status==='SUSPENDED' ? 'play_circle' : 'block'}</span>
+                            </button>
+                        </div>
+                    </div>`;
+            }).join('');
+        }
+
+        ['empSearch','deptFilter','gradeFilter','statusFilter'].forEach(id =>
+            document.getElementById(id).addEventListener('input', renderEmployees));
+
+        // ── Add/Edit Sheet ──
+        function openAddSheet() {
+            document.getElementById('empSheetTitle').textContent = 'Add Employee';
+            document.getElementById('empId').value = '';
+            document.getElementById('empForm').reset();
+            switchEmpTab('personal');
+            openSheet('empSheet', 'empSheetBackdrop');
+        }
+
+        function openEditSheet(empId) {
+            const e = EMPLOYEES.find(x => x.id === empId);
+            if (!e) return;
+            document.getElementById('empSheetTitle').textContent = 'Edit Employee';
+            document.getElementById('empId').value = e.id;
+            document.getElementById('efFirstName').value = e.firstName || '';
+            document.getElementById('efLastName').value  = e.lastName  || '';
+            document.getElementById('efEmail').value     = e.email     || '';
+            document.getElementById('efPhone').value     = e.phoneNumber || '';
+            document.getElementById('efNin').value       = e.ninNumber  || '';
+            document.getElementById('efBvn').value       = e.bvnNumber  || '';
+            document.getElementById('efTin').value       = e.tinNumber  || '';
+            document.getElementById('efDept').value      = e.department ? e.department.id : '';
+            document.getElementById('efGrade').value     = e.jobStep ? e.jobStep.jobGrade.id : '';
+            populateStepOptions();
+            document.getElementById('efStep').value      = e.jobStep ? e.jobStep.id : '';
+            document.getElementById('efPayGroup').value  = e.payGroup ? e.payGroup.id : '';
+            document.getElementById('efEmpStatus').value = e.employmentStatus || e.status || 'ACTIVE';
+            document.getElementById('efGross').value     = e.grossSalary || '';
+            document.getElementById('efRsaPin').value    = e.rsaPin || '';
+            document.getElementById('efPfa').value       = e.pfa    || '';
+            const bd = e.bankDetails && e.bankDetails.length ? e.bankDetails[0] : {};
+            document.getElementById('efBankName').value    = bd.bankName      || '';
+            document.getElementById('efAccountName').value = bd.accountName   || '';
+            document.getElementById('efAccountNumber').value = bd.accountNumber || '';
+            document.getElementById('efNokName').value    = e.nextOfKinName       || '';
+            document.getElementById('efNokPhone').value   = e.nextOfKinPhoneNumber || '';
+            document.getElementById('efNokEmail').value   = e.nextOfKinEmail      || '';
+            document.getElementById('efNokAddress').value = e.nextOfKinAddress    || '';
+            document.getElementById('efGtorName').value   = e.guarantorName           || '';
+            document.getElementById('efGtorPhone').value  = e.guarantorPhoneNumber    || '';
+            document.getElementById('efGtorEmail').value  = e.guarantorEmail          || '';
+            document.getElementById('efGtorNin').value    = e.guarantorNinNumber      || '';
+            document.getElementById('efGtorAddress').value = e.guarantorAddress       || '';
+            switchEmpTab('personal');
+            openSheet('empSheet', 'empSheetBackdrop');
+        }
+
+        function closeEmpSheet() { closeSheet('empSheet', 'empSheetBackdrop'); }
+
+        function switchEmpTab(tab) {
+            ['personal','employment','financial','nok','guarantor'].forEach(t => {
+                document.getElementById('panel-' + t).classList.toggle('active', t === tab);
+            });
+            document.querySelectorAll('.em-tab-bar .em-tab').forEach((btn, i) => {
+                const tabs = ['personal','employment','financial','nok','guarantor'];
+                btn.classList.toggle('active', tabs[i] === tab);
+            });
+        }
+
+        async function submitEmployee(ev) {
+            ev.preventDefault();
+            const id = document.getElementById('empId').value;
+            const payload = {
+                firstName: document.getElementById('efFirstName').value,
+                secondName: document.getElementById('efLastName').value,
+                email: document.getElementById('efEmail').value,
+                phoneNumber: document.getElementById('efPhone').value,
+                ninNumber: document.getElementById('efNin').value,
+                bvnNumber: document.getElementById('efBvn').value,
+                tinNumber: document.getElementById('efTin').value,
+                departmentId: Number(document.getElementById('efDept').value) || null,
+                jobStepId: Number(document.getElementById('efStep').value) || null,
+                payGroupId: Number(document.getElementById('efPayGroup').value) || null,
+                managerId: Number(document.getElementById('efManager').value) || null,
+                employmentStatus: document.getElementById('efEmpStatus').value,
+                gross: Number(document.getElementById('efGross').value) || null,
+                rsaPin: document.getElementById('efRsaPin').value,
+                pfa: document.getElementById('efPfa').value,
+                bankName: document.getElementById('efBankName').value,
+                accountName: document.getElementById('efAccountName').value,
+                accountNumber: document.getElementById('efAccountNumber').value,
+                nextOfKinName: document.getElementById('efNokName').value,
+                nextOfKinPhoneNumber: document.getElementById('efNokPhone').value,
+                nextOfKinEmail: document.getElementById('efNokEmail').value,
+                nextOfKinAddress: document.getElementById('efNokAddress').value,
+                guarantorName: document.getElementById('efGtorName').value,
+                guarantorPhoneNumber: document.getElementById('efGtorPhone').value,
+                guarantorEmail: document.getElementById('efGtorEmail').value,
+                guarantorNinNumber: document.getElementById('efGtorNin').value,
+                guarantorAddress: document.getElementById('efGtorAddress').value
+            };
+            try {
+                const url = id ? `/employees/${id}/update` : '/employees';
+                const r = await fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+                if (!r.ok) throw new Error(await r.text());
+                closeEmpSheet();
+                location.reload();
+            } catch(e) { alert(e.message); }
+        }
+
+        // ── Pay Items Sheet ──
+        async function openPiSheet(empId) {
+            currentPiEmpId = empId;
+            const e = EMPLOYEES.find(x => x.id === empId);
+            document.getElementById('piEmployeeName').textContent = e ? `${e.firstName} ${e.lastName}` : '';
+            switchPiTab('allowances');
+            openSheet('piSheet', 'piBackdrop');
+            await loadPiData(empId);
+        }
+
+        function closePiSheet() { closeSheet('piSheet', 'piBackdrop'); }
+
+        async function loadPiData(empId) {
+            try {
+                const r = await fetch(`/employees/${empId}/pay-items`);
+                if (!r.ok) throw new Error(await r.text());
+                piData = await r.json();
+                const cr = await fetch('/api/payroll-setup/pay-items');
+                if (!cr.ok) throw new Error(await cr.text());
+                piCatalog = await cr.json();
+                renderPiLists();
+                populatePiSelects();
+            } catch(e) { console.error(e); }
+        }
+
+        function renderPiLists() {
+            renderPiSection('piAllowanceList', piData.allowances || [], 'allowance');
+            renderPiSection('piDeductionList', piData.deductions || [], 'deduction');
+            renderPiSection('piTaxReliefList', piData.taxReliefs || [], 'taxRelief');
+        }
+
+        function renderPiSection(containerId, items, type) {
+            const el = document.getElementById(containerId);
+            if (!items.length) { el.innerHTML = '<p class="text-xs text-gray-400">None assigned.</p>'; return; }
+            const colors = {allowance:'text-green-600 bg-green-50', deduction:'text-red-600 bg-red-50', taxRelief:'text-amber-600 bg-amber-50'};
+            el.innerHTML = items.map(item => `
+                <div class="flex items-center justify-between border border-gray-200 rounded-lg p-2.5">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-bold px-2 py-0.5 rounded ${colors[type]}">${type.toUpperCase().charAt(0)}</span>
+                        <div>
+                            <p class="font-medium text-sm">${item.name || item.allowanceName || item.deductionName || item.taxReliefName || ''}</p>
+                            ${item.overrideAmount ? `<span class="text-xs text-amber-600">Override: ₦${Number(item.overrideAmount).toLocaleString()}</span>` : ''}
+                        </div>
+                    </div>
+                    <button onclick="removePiItem(${item.id || item.employeeAllowanceId || item.employeeDeductionId || item.employeeTaxReliefId},'${type}')"
+                            class="text-red-400 hover:text-red-600 p-1">
+                        <span class="material-symbols-outlined text-base">delete</span>
+                    </button>
+                </div>`).join('');
+        }
+
+        function populatePiSelects() {
+            const aSelect = document.getElementById('piAllowanceSelect');
+            const dSelect = document.getElementById('piDeductionSelect');
+            const tSelect = document.getElementById('piTaxReliefSelect');
+            aSelect.innerHTML = '<option value="">Select allowance…</option>';
+            dSelect.innerHTML = '<option value="">Select deduction…</option>';
+            tSelect.innerHTML = '<option value="">Select tax relief…</option>';
+            (piCatalog.allowances || []).forEach(a => aSelect.innerHTML += `<option value="${a.id}">${a.name}</option>`);
+            (piCatalog.deductions || []).forEach(d => dSelect.innerHTML += `<option value="${d.id}">${d.name}</option>`);
+            (piCatalog.taxReliefs || piCatalog.taxrelief || []).forEach(t => tSelect.innerHTML += `<option value="${t.id}">${t.name}</option>`);
+        }
+
+        async function addPiItem(ev, type) {
+            ev.preventDefault();
+            const typeMap = {allowance:'allowances', deduction:'deductions', taxRelief:'tax-reliefs'};
+            const selectMap = {allowance:'piAllowanceSelect', deduction:'piDeductionSelect', taxRelief:'piTaxReliefSelect'};
+            const overrideMap = {allowance:'piAllowanceOverride', deduction:'piDeductionOverride', taxRelief:'piTaxReliefOverride'};
+            const amountMap = {allowance:'piAllowanceAmount', deduction:'piDeductionAmount', taxRelief:'piTaxReliefAmount'};
+            const itemId = document.getElementById(selectMap[type]).value;
+            if (!itemId) return alert('Select an item first.');
+            const overrideEnabled = document.getElementById(overrideMap[type]).checked;
+            const overrideAmount = overrideEnabled ? Number(document.getElementById(amountMap[type]).value) : null;
+            const payload = {[`${type}Id`]: Number(itemId)};
+            if (overrideAmount) payload.overrideAmount = overrideAmount;
+            try {
+                const r = await fetch(`/employees/${currentPiEmpId}/${typeMap[type]}`, {
+                    method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)
+                });
+                if (!r.ok) throw new Error(await r.text());
+                await loadPiData(currentPiEmpId);
+            } catch(e) { alert(e.message); }
+        }
+
+        async function removePiItem(id, type) {
+            if (!confirm('Remove this item?')) return;
+            const typeMap = {allowance:'allowances', deduction:'deductions', taxRelief:'tax-reliefs'};
+            try {
+                const r = await fetch(`/employees/${currentPiEmpId}/${typeMap[type]}/${id}`, {method:'DELETE'});
+                if (!r.ok) throw new Error(await r.text());
+                await loadPiData(currentPiEmpId);
+            } catch(e) { alert(e.message); }
+        }
+
+        function switchPiTab(tab) {
+            ['allowances','deductions','taxRelief'].forEach(t => {
+                document.getElementById('pi-panel-' + t).classList.toggle('active', t === tab);
+            });
+            document.querySelectorAll('#piSheet .em-tab').forEach((btn, i) => {
+                const tabs = ['allowances','deductions','taxRelief'];
+                btn.classList.toggle('active', tabs[i] === tab);
+            });
+        }
+
+        ['piAllowanceOverride','piDeductionOverride','piTaxReliefOverride'].forEach((id, i) => {
+            const amountIds = ['piAllowanceAmount','piDeductionAmount','piTaxReliefAmount'];
+            document.getElementById(id).addEventListener('change', function() {
+                document.getElementById(amountIds[i]).classList.toggle('hidden', !this.checked);
+            });
+        });
+
+        // ── Suspend / Unsuspend ──
+        function confirmSuspend(empId) {
+            const e = EMPLOYEES.find(x => x.id === empId);
+            document.getElementById('confirmTitle').textContent = 'Suspend Employee';
+            document.getElementById('confirmMsg').textContent = `Suspend ${e ? e.firstName + ' ' + e.lastName : 'this employee'}?`;
+            document.getElementById('confirmOkBtn').className = 'flex-1 py-2.5 bg-red-600 text-white rounded-xl text-sm font-bold';
+            document.getElementById('confirmOkBtn').onclick = () => doSuspend(empId);
+            openSheet('confirmSheet', 'confirmBackdrop');
+        }
+        function confirmUnsuspend(empId) {
+            const e = EMPLOYEES.find(x => x.id === empId);
+            document.getElementById('confirmTitle').textContent = 'Unsuspend Employee';
+            document.getElementById('confirmMsg').textContent = `Reinstate ${e ? e.firstName + ' ' + e.lastName : 'this employee'}?`;
+            document.getElementById('confirmOkBtn').className = 'flex-1 py-2.5 bg-green-600 text-white rounded-xl text-sm font-bold';
+            document.getElementById('confirmOkBtn').onclick = () => doUnsuspend(empId);
+            openSheet('confirmSheet', 'confirmBackdrop');
+        }
+        function closeConfirm() { closeSheet('confirmSheet', 'confirmBackdrop'); }
+        async function doSuspend(empId) {
+            closeConfirm();
+            const r = await fetch(`/employees/${empId}/suspend`, {method:'POST'});
+            if (!r.ok) return alert(await r.text());
+            location.reload();
+        }
+        async function doUnsuspend(empId) {
+            closeConfirm();
+            const r = await fetch(`/employees/${empId}/unsuspend`, {method:'POST'});
+            if (!r.ok) return alert(await r.text());
+            location.reload();
+        }
+
+        // ── CSV Upload ──
+        async function uploadCsv() {
+            const file = document.getElementById('csvFileInput').files[0];
+            if (!file) return alert('Choose a CSV file first.');
+            const form = new FormData();
+            form.append('file', file);
+            const r = await fetch('/employees/upload-csv', {method:'POST', body: form});
+            const msg = await r.text();
+            alert(msg);
+            if (r.ok) location.reload();
+        }
+
+        // ── Sheet helpers ──
+        function openSheet(sheetId, backdropId) {
+            document.getElementById(sheetId).classList.add('open');
+            document.getElementById(backdropId).classList.add('open');
+        }
+        function closeSheet(sheetId, backdropId) {
+            document.getElementById(sheetId).classList.remove('open');
+            document.getElementById(backdropId).classList.remove('open');
+        }
+    </script>
+
+</section>
+</body>
+</html>

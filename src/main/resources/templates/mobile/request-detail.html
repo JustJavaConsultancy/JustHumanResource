@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/mobileEmployeeLayout}">
+<head>
+    <meta charset="UTF-8">
+    <title>Request Detail</title>
+    <style>
+        .rd-card { background:#fff; border:1px solid #e5e7eb; border-radius:14px; }
+        .dark .rd-card { background:#1f2937; border-color:#374151; }
+        .rd-head { padding:12px 14px; border-bottom:1px solid #e5e7eb; display:flex; gap:8px; align-items:center; font-weight:700; font-size:13px; }
+        .dark .rd-head { border-bottom-color:#374151; }
+        .rd-body { padding:12px 14px; }
+        .rd-kv { display:grid; grid-template-columns:110px 1fr; gap:6px 12px; font-size:12px; }
+        .rd-kv b { color:#64748b; font-weight:600; }
+        .rd-badge { display:inline-flex; align-items:center; padding:2px 8px; border-radius:999px; font-size:10px; font-weight:700; text-transform:uppercase; }
+        .rd-badge-success { background:#dcfce7; color:#166534; }
+        .rd-badge-error { background:#fee2e2; color:#991b1b; }
+        .rd-badge-warning { background:#fef3c7; color:#92400e; }
+        .rd-badge-info { background:#dbeafe; color:#1e40af; }
+        .rd-badge-neutral { background:#f1f5f9; color:#475569; }
+        .rd-input { width:100%; border:1px solid #d1d5db; background:#fff; border-radius:10px; padding:10px 12px; font-size:14px; outline:none; }
+        .dark .rd-input { border-color:#374151; background:#0f172a; color:#e5e7eb; }
+        .rd-primary { background:#2463eb; color:#fff; padding:10px 14px; border-radius:10px; font-weight:600; font-size:13px; }
+        .rd-secondary { background:#f1f5f9; color:#0f172a; padding:10px 14px; border-radius:10px; font-weight:600; font-size:13px; border:1px solid #e5e7eb; }
+        .rd-success { background:#16a34a; color:#fff; padding:10px 14px; border-radius:10px; font-weight:600; font-size:13px; }
+        .rd-danger { background:#dc2626; color:#fff; padding:10px 14px; border-radius:10px; font-weight:600; font-size:13px; }
+        .rd-warning { background:#d97706; color:#fff; padding:10px 14px; border-radius:10px; font-weight:600; font-size:13px; }
+        .rd-timeline-item { border:1px solid #e5e7eb; background:#f8fafc; border-radius:10px; padding:10px; }
+        .dark .rd-timeline-item { border-color:#334155; background:#0f172a; }
+        .rd-sheet-backdrop { position:fixed; inset:0; background:rgba(15,23,42,.5); z-index:60; }
+        .rd-sheet { position:fixed; left:0; right:0; bottom:0; background:#fff; border-radius:20px 20px 0 0; z-index:70; max-height:88vh; display:flex; flex-direction:column; }
+        .dark .rd-sheet { background:#0f172a; }
+        .rd-sheet-head { padding:14px 18px; border-bottom:1px solid #e5e7eb; display:flex; justify-content:space-between; align-items:center; }
+        .rd-sheet-body { padding:16px 18px; overflow-y:auto; flex:1; }
+        .rd-sheet-foot { padding:12px 18px; border-top:1px solid #e5e7eb; display:flex; gap:8px; justify-content:flex-end; }
+        .rd-toast { position:fixed; left:50%; transform:translateX(-50%); bottom:100px; z-index:100; background:#111827; color:#fff; padding:10px 16px; border-radius:12px; font-size:13px; font-weight:600; }
+    </style>
+</head>
+<body>
+<main layout:fragment="content" class="px-4 pb-24 pt-2 space-y-3">
+
+    <input type="hidden" id="rdRequestId" th:value="${requestId}">
+
+    <a th:href="@{/mobile/employee/requests}" class="inline-flex items-center gap-1 text-primary text-xs font-semibold">
+        <span class="material-symbols-outlined text-base">arrow_back</span>Back to Requests
+    </a>
+
+    <div>
+        <h2 id="rdTitle" class="text-lg font-bold">Loading…</h2>
+        <p id="rdMeta" class="text-xs text-slate-500"></p>
+    </div>
+
+    <div id="rdActions" class="flex flex-wrap gap-2"></div>
+
+    <!-- Summary -->
+    <div class="rd-card">
+        <div class="rd-head"><span class="material-symbols-outlined text-primary text-base">summarize</span>Summary</div>
+        <div class="rd-body"><div id="rdSummary" class="rd-kv"></div></div>
+    </div>
+
+    <!-- Type details -->
+    <div class="rd-card">
+        <div class="rd-head"><span class="material-symbols-outlined text-primary text-base">category</span>Type Details</div>
+        <div class="rd-body text-xs" id="rdTypeDetails">—</div>
+    </div>
+
+    <!-- Items -->
+    <div class="rd-card">
+        <div class="rd-head"><span class="material-symbols-outlined text-primary text-base">inventory_2</span>Items</div>
+        <div class="rd-body text-xs" id="rdItems">—</div>
+    </div>
+
+    <!-- Attachments -->
+    <div class="rd-card">
+        <div class="rd-head"><span class="material-symbols-outlined text-primary text-base">attach_file</span>Attachments</div>
+        <div class="rd-body text-xs space-y-2">
+            <form id="rdAttachmentForm" class="hidden space-y-2">
+                <input id="rdAttachmentFile" type="file" class="text-xs w-full">
+                <select id="rdAttachmentType" class="rd-input">
+                    <option>SUPPORTING_DOCUMENT</option><option>RECEIPT</option><option>QUOTE</option>
+                    <option>APPROVAL_DOCUMENT</option><option>POLICY_DOCUMENT</option>
+                    <option>IDENTIFICATION</option><option>OTHER</option>
+                </select>
+                <button class="rd-primary w-full">Upload</button>
+            </form>
+            <div id="rdAttachments">—</div>
+        </div>
+    </div>
+
+    <!-- Approval steps -->
+    <div class="rd-card">
+        <div class="rd-head"><span class="material-symbols-outlined text-primary text-base">timeline</span>Approval Timeline</div>
+        <div class="rd-body text-xs">
+            <ol id="rdApprovals" class="space-y-2"></ol>
+            <div id="rdFreeRouteEvents" class="mt-3 space-y-2"></div>
+        </div>
+    </div>
+
+    <!-- Comments -->
+    <div class="rd-card">
+        <div class="rd-head"><span class="material-symbols-outlined text-primary text-base">comment</span>Comments</div>
+        <div class="rd-body space-y-2 text-xs">
+            <form id="rdCommentForm" class="space-y-2">
+                <textarea id="rdCommentText" rows="2" placeholder="Add a comment" class="rd-input"></textarea>
+                <label id="rdInternalWrap" class="inline-flex items-center gap-2 hidden"><input id="rdInternalComment" type="checkbox"> Internal only</label>
+                <button class="rd-primary w-full">Add Comment</button>
+            </form>
+            <ul id="rdComments" class="space-y-2"></ul>
+        </div>
+    </div>
+
+    <!-- Activity -->
+    <div class="rd-card">
+        <div class="rd-head"><span class="material-symbols-outlined text-primary text-base">history</span>Activity</div>
+        <div class="rd-body text-xs"><ul id="rdActivity" class="space-y-2"></ul></div>
+    </div>
+
+    <!-- Confirm sheet -->
+    <div id="rdConfirmBackdrop" class="rd-sheet-backdrop hidden"></div>
+    <div id="rdConfirmSheet" class="rd-sheet hidden">
+        <div class="rd-sheet-head">
+            <p id="rdConfirmTitle" class="text-base font-bold">Confirm</p>
+        </div>
+        <div class="rd-sheet-body text-sm">
+            <p id="rdConfirmMessage" class="text-slate-600 dark:text-slate-300"></p>
+        </div>
+        <div class="rd-sheet-foot">
+            <button id="rdConfirmCancel" class="rd-secondary">Cancel</button>
+            <button id="rdConfirmOk" class="rd-danger">Confirm</button>
+        </div>
+    </div>
+
+    <!-- Approval sheet -->
+    <div id="rdApprovalBackdrop" class="rd-sheet-backdrop hidden" onclick="rdCloseApproval()"></div>
+    <div id="rdApprovalSheet" class="rd-sheet hidden">
+        <div class="rd-sheet-head">
+            <p id="rdApprovalTitle" class="text-base font-bold">Approve Request</p>
+            <button onclick="rdCloseApproval()"><span class="material-symbols-outlined text-slate-500">close</span></button>
+        </div>
+        <div class="rd-sheet-body space-y-2">
+            <label id="rdApprovalLabel" class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Comment (optional)</label>
+            <textarea id="rdApprovalComment" rows="4" class="rd-input"></textarea>
+            <div id="rdApprovalError" class="hidden text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2"></div>
+        </div>
+        <div class="rd-sheet-foot">
+            <button onclick="rdCloseApproval()" class="rd-secondary">Cancel</button>
+            <button id="rdApprovalSubmit" onclick="rdSubmitApproval()" class="rd-primary">Confirm</button>
+        </div>
+    </div>
+
+    <!-- Free-route sheet -->
+    <div id="rdFreeBackdrop" class="rd-sheet-backdrop hidden" onclick="rdCloseFree()"></div>
+    <div id="rdFreeSheet" class="rd-sheet hidden">
+        <div class="rd-sheet-head">
+            <p id="rdFreeTitle" class="text-base font-bold">Send To</p>
+            <button onclick="rdCloseFree()"><span class="material-symbols-outlined text-slate-500">close</span></button>
+        </div>
+        <div class="rd-sheet-body space-y-2">
+            <label class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Employee</label>
+            <select id="rdFreeEmployee" class="rd-input"><option value="">Select employee</option></select>
+            <label class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Comment (optional)</label>
+            <textarea id="rdFreeComment" rows="3" class="rd-input"></textarea>
+            <div id="rdFreeError" class="hidden text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2"></div>
+        </div>
+        <div class="rd-sheet-foot">
+            <button onclick="rdCloseFree()" class="rd-secondary">Cancel</button>
+            <button onclick="rdSubmitFree()" class="rd-primary">Confirm</button>
+        </div>
+    </div>
+
+    <script>
+        const rdApi = '/api/requests';
+        const rdRequestId = Number(document.getElementById('rdRequestId').value);
+        let rdDetail = null, rdContext = null, rdTasks = [], rdEmpNames = {};
+
+        function rdText(v) { return v == null || v === '' ? '-' : v; }
+        function rdFmt(v) { return (v || '').replaceAll('_', ' '); }
+        function rdEsc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+        function rdEmpName(id) { return id == null ? '-' : (rdEmpNames[id] || `Employee #${id}`); }
+        function rdBadge(status) {
+            const cls = status === 'APPROVED' ? 'rd-badge-success'
+                : (status === 'REJECTED' || status === 'CANCELLED') ? 'rd-badge-error'
+                : status === 'RETURNED_FOR_CORRECTION' ? 'rd-badge-warning'
+                : status === 'IN_APPROVAL' ? 'rd-badge-info' : 'rd-badge-neutral';
+            return `<span class="rd-badge ${cls}">${rdEsc(rdFmt(status))}</span>`;
+        }
+        function rdShowToast(msg) {
+            const el = document.createElement('div');
+            el.className = 'rd-toast';
+            el.textContent = msg;
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 2500);
+        }
+        async function rdJson(url, options) {
+            const r = await fetch(url, options);
+            if (!r.ok) throw new Error(await r.text() || `HTTP ${r.status}`);
+            const ct = r.headers.get('content-type') || '';
+            return ct.includes('application/json') ? r.json() : null;
+        }
+
+        function rdIsOwner() { return rdDetail && rdContext && rdDetail.request.requesterEmployeeId === rdContext.employeeId; }
+        function rdWasFreeRoute() { return rdDetail && rdDetail.request && rdDetail.request.approvalRouteType === 'FREE_ROUTE'; }
+        function rdCanSubmit() {
+            if (!rdIsOwner()) return false;
+            const r = rdDetail.request;
+            if (r.status === 'DRAFT') return true;
+            if (r.status === 'RETURNED_FOR_CORRECTION') return !rdWasFreeRoute();
+            return false;
+        }
+        function rdCanSendFree() {
+            if (!rdIsOwner()) return false;
+            const r = rdDetail.request;
+            if (r.status === 'DRAFT') return true;
+            if (r.status === 'RETURNED_FOR_CORRECTION') return rdWasFreeRoute();
+            return false;
+        }
+        function rdCanEditAttachments() { return rdIsOwner() && ['DRAFT','SUBMITTED','RETURNED_FOR_CORRECTION'].includes(rdDetail.request.status); }
+        function rdCanRemoveAttachments() { return rdIsOwner() && ['DRAFT','RETURNED_FOR_CORRECTION'].includes(rdDetail.request.status); }
+        function rdRequiresAttachment() { return ['EXPENSE_REIMBURSEMENT','FILE_REQUEST'].includes(rdDetail.request.requestType); }
+        function rdHasAttachment() { return (rdDetail.attachments || []).length > 0; }
+        function rdMissingAttachmentMsg() { return `${rdFmt(rdDetail.request.requestType)} requests need at least one attachment.`; }
+
+        function rdConfirm({ title = 'Confirm', message = '', confirmLabel = 'Confirm', danger = true }) {
+            return new Promise(resolve => {
+                document.getElementById('rdConfirmTitle').textContent = title;
+                document.getElementById('rdConfirmMessage').textContent = message;
+                const ok = document.getElementById('rdConfirmOk');
+                const cancel = document.getElementById('rdConfirmCancel');
+                ok.textContent = confirmLabel;
+                ok.className = danger ? 'rd-danger' : 'rd-primary';
+                document.getElementById('rdConfirmBackdrop').classList.remove('hidden');
+                document.getElementById('rdConfirmSheet').classList.remove('hidden');
+                function done(v) {
+                    document.getElementById('rdConfirmBackdrop').classList.add('hidden');
+                    document.getElementById('rdConfirmSheet').classList.add('hidden');
+                    ok.removeEventListener('click', onOk);
+                    cancel.removeEventListener('click', onCancel);
+                    resolve(v);
+                }
+                function onOk() { done(true); }
+                function onCancel() { done(false); }
+                ok.addEventListener('click', onOk);
+                cancel.addEventListener('click', onCancel);
+            });
+        }
+
+        let rdApprovalState = null;
+        function rdOpenApproval(taskId, action) {
+            rdApprovalState = { taskId, action };
+            const titles = { approve: 'Approve Request', reject: 'Reject Request', return: 'Return Request' };
+            const labels = { approve: 'Comment (optional)', reject: 'Comment (required)', return: 'Comment (required)' };
+            const styles = { approve: 'rd-success', reject: 'rd-danger', return: 'rd-warning' };
+            document.getElementById('rdApprovalTitle').textContent = titles[action];
+            document.getElementById('rdApprovalLabel').textContent = labels[action];
+            document.getElementById('rdApprovalComment').value = '';
+            document.getElementById('rdApprovalError').classList.add('hidden');
+            const btn = document.getElementById('rdApprovalSubmit');
+            btn.className = styles[action];
+            btn.textContent = titles[action].split(' ')[0];
+            document.getElementById('rdApprovalBackdrop').classList.remove('hidden');
+            document.getElementById('rdApprovalSheet').classList.remove('hidden');
+        }
+        function rdCloseApproval() {
+            document.getElementById('rdApprovalBackdrop').classList.add('hidden');
+            document.getElementById('rdApprovalSheet').classList.add('hidden');
+            rdApprovalState = null;
+        }
+        async function rdSubmitApproval() {
+            if (!rdApprovalState) return;
+            const { taskId, action } = rdApprovalState;
+            const comment = document.getElementById('rdApprovalComment').value.trim();
+            const err = document.getElementById('rdApprovalError');
+            if (action !== 'approve' && !comment) { err.textContent = 'A comment is required.'; err.classList.remove('hidden'); return; }
+            try {
+                await rdJson(`${rdApi}/approvals/${action}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({taskId, comment}) });
+                rdCloseApproval();
+                rdShowToast(`Request ${action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : 'returned'}.`);
+                await rdLoad();
+            } catch (e) { err.textContent = e.message; err.classList.remove('hidden'); }
+        }
+
+        let rdFreeState = null;
+        function rdOpenFree(mode, taskId) {
+            rdFreeState = { mode, taskId };
+            document.getElementById('rdFreeTitle').textContent = mode === 'forward' ? 'Forward Request' : 'Send To';
+            document.getElementById('rdFreeEmployee').innerHTML = '<option value="">Loading…</option>';
+            document.getElementById('rdFreeComment').value = '';
+            document.getElementById('rdFreeError').classList.add('hidden');
+            document.getElementById('rdFreeBackdrop').classList.remove('hidden');
+            document.getElementById('rdFreeSheet').classList.remove('hidden');
+            rdLoadFreeRecipients();
+        }
+        function rdCloseFree() {
+            document.getElementById('rdFreeBackdrop').classList.add('hidden');
+            document.getElementById('rdFreeSheet').classList.add('hidden');
+            rdFreeState = null;
+        }
+        async function rdLoadFreeRecipients() {
+            const sel = document.getElementById('rdFreeEmployee');
+            try {
+                const opts = await rdJson(`${rdApi}/free-route/recipients?requestId=${rdRequestId}`);
+                sel.innerHTML = '<option value="">Select employee</option>' +
+                    (opts || []).map(o => `<option value="${rdEsc(o.value)}">${rdEsc(o.label)}</option>`).join('');
+            } catch (e) {
+                sel.innerHTML = '<option value="">Select employee</option>';
+                document.getElementById('rdFreeError').textContent = e.message;
+                document.getElementById('rdFreeError').classList.remove('hidden');
+            }
+        }
+        async function rdSubmitFree() {
+            if (!rdFreeState) return;
+            const { mode, taskId } = rdFreeState;
+            const to = document.getElementById('rdFreeEmployee').value;
+            const comment = document.getElementById('rdFreeComment').value.trim();
+            const err = document.getElementById('rdFreeError');
+            if (!to) { err.textContent = 'Select an employee.'; err.classList.remove('hidden'); return; }
+            if (rdRequiresAttachment() && !rdHasAttachment()) { err.textContent = rdMissingAttachmentMsg(); err.classList.remove('hidden'); return; }
+            try {
+                if (mode === 'forward') {
+                    await rdJson(`${rdApi}/free-route/forward`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({taskId, toEmployeeId: Number(to), comment}) });
+                } else {
+                    await rdJson(`${rdApi}/${rdRequestId}/free-route/send`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({toEmployeeId: Number(to), comment}) });
+                }
+                rdCloseFree();
+                rdShowToast(mode === 'forward' ? 'Request forwarded.' : 'Request sent.');
+                await rdLoad();
+            } catch (e) { err.textContent = e.message; err.classList.remove('hidden'); }
+        }
+
+        async function rdLoad() {
+            try {
+                [rdDetail, rdContext, rdTasks] = await Promise.all([
+                    rdJson(`${rdApi}/${rdRequestId}`),
+                    rdJson(`${rdApi}/context`),
+                    rdJson(`${rdApi}/approvals/tasks`)
+                ]);
+                await rdLoadEmpNames();
+                rdRender();
+            } catch (e) {
+                document.getElementById('rdTitle').textContent = 'Failed to load';
+                document.getElementById('rdMeta').textContent = e.message || String(e);
+            }
+        }
+        async function rdLoadEmpNames() {
+            const ids = new Set();
+            if (rdDetail.request.requesterEmployeeId != null) ids.add(rdDetail.request.requesterEmployeeId);
+            (rdDetail.approvalSteps || []).forEach(s => {
+                if (s.approverEmployeeId != null) ids.add(s.approverEmployeeId);
+                if (s.forwardedToEmployeeId != null) ids.add(s.forwardedToEmployeeId);
+            });
+            if (!ids.size) { rdEmpNames = {}; return; }
+            try { rdEmpNames = await rdJson(`${rdApi}/employees/names?ids=${[...ids].join(',')}`); } catch (e) { rdEmpNames = {}; }
+        }
+
+        function rdRender() {
+            const r = rdDetail.request;
+            document.getElementById('rdTitle').textContent = `${r.requestNumber || ''}: ${r.title || ''}`;
+            document.getElementById('rdMeta').innerHTML = `${rdEsc(rdFmt(r.requestType))} · ${rdEsc(r.priority || '')} · ${rdBadge(r.status)}`;
+            document.getElementById('rdSummary').innerHTML = `
+                <b>Description</b><span>${rdEsc(rdText(r.description))}</span>
+                <b>Requester ID</b><span>${rdEsc(rdText(r.requesterEmployeeId))}</span>
+                <b>Requester</b><span>${rdEsc(rdEmpName(r.requesterEmployeeId))}</span>
+                <b>Department</b><span>${rdEsc(rdText(r.departmentId))}</span>
+                <b>Submitted</b><span>${rdEsc(rdText(r.submittedAt))}</span>`;
+            rdRenderTypeDetails();
+            rdRenderItems();
+            rdRenderAttachments();
+            rdRenderApprovals();
+            rdRenderComments();
+            rdRenderActivity();
+            rdRenderActions();
+            document.getElementById('rdAttachmentForm').classList.toggle('hidden', !rdCanEditAttachments());
+            document.getElementById('rdInternalWrap').classList.toggle('hidden', !(rdContext && rdContext.hrAdmin));
+        }
+        function rdRenderTypeDetails() {
+            const d = rdDetail.typeDetails;
+            const el = document.getElementById('rdTypeDetails');
+            if (!d) { el.textContent = 'No additional details.'; return; }
+            if (rdDetail.request.requestType === 'EXPENSE_REIMBURSEMENT') {
+                const rows = d.expenseItems || [];
+                el.innerHTML = `
+                    <div class="space-y-1">${Object.entries(d).filter(([k]) => k !== 'expenseItems').map(([k,v]) => `<p><b class="text-slate-500">${rdEsc(rdFmt(k))}:</b> ${rdEsc(rdText(v))}</p>`).join('')}</div>
+                    <div class="mt-2 space-y-1">${rows.map(x => `
+                        <div class="rd-timeline-item">
+                            <p><b>${rdEsc(rdText(x.description))}</b></p>
+                            <p class="text-slate-500">${rdEsc(rdText(x.expenseDate))} · ${rdEsc(rdText(x.expenseCategoryLabel))} · ${rdEsc(rdText(x.amount))} ${rdEsc(rdText(x.currency))}</p>
+                            ${x.vendorName ? `<p class="text-slate-500">Vendor: ${rdEsc(x.vendorName)}</p>` : ''}
+                            ${x.remarks ? `<p class="text-slate-500">${rdEsc(x.remarks)}</p>` : ''}
+                        </div>`).join('')}</div>`;
+                return;
+            }
+            el.innerHTML = Object.entries(d)
+                .filter(([k]) => !['id','createdAt','updatedAt','version','workflowRequestId'].includes(k))
+                .map(([k,v]) => `<p><b class="text-slate-500">${rdEsc(rdFmt(k))}:</b> ${rdEsc(rdText(v))}</p>`).join('') || 'No additional details.';
+        }
+        function rdRenderItems() {
+            const rows = rdDetail.items || [];
+            const el = document.getElementById('rdItems');
+            if (!rows.length) { el.textContent = 'No items.'; return; }
+            el.innerHTML = rows.map(x => `
+                <div class="rd-timeline-item mb-2">
+                    <p class="font-semibold">${rdEsc(x.itemName || '')}</p>
+                    <p class="text-slate-500">Qty ${rdEsc(x.quantity)} ${rdEsc(rdText(x.unitOfMeasure))} · ${rdEsc(rdText(x.estimatedTotalCost))} ${rdEsc(rdText(x.currency))}</p>
+                    ${x.externalAssetCode ? `<p class="text-slate-500">Code: ${rdEsc(x.externalAssetCode)}</p>` : ''}
+                </div>`).join('');
+        }
+        function rdRenderAttachments() {
+            const rows = rdDetail.attachments || [];
+            const el = document.getElementById('rdAttachments');
+            if (!rows.length) { el.textContent = 'No attachments.'; return; }
+            el.innerHTML = rows.map(a => `
+                <div class="flex items-center justify-between py-2 border-b border-slate-100 dark:border-slate-700">
+                    <a class="text-primary text-xs truncate flex-1" href="${rdApi}/${rdRequestId}/attachments/${a.id}">${rdEsc(a.originalFilename || '')}</a>
+                    ${rdCanRemoveAttachments() ? `<button onclick="rdRemoveAttachment(${a.id})" class="text-red-600 text-[11px] ml-2">Remove</button>` : ''}
+                </div>`).join('');
+        }
+        function rdRenderApprovals() {
+            const rows = rdDetail.approvalSteps || [];
+            const el = document.getElementById('rdApprovals');
+            el.innerHTML = rows.length ? rows.map(s => `
+                <li class="rd-timeline-item">
+                    <p><b>Level ${rdEsc(s.sequenceNo)}</b> - ${rdEsc(rdFmt(s.decision))}</p>
+                    <p class="text-slate-500">Approver: ${rdEsc(rdEmpName(s.approverEmployeeId))}</p>
+                    ${s.decision === 'DELEGATED' ? `<p class="text-slate-500">Forwarded to: ${rdEsc(rdEmpName(s.forwardedToEmployeeId))}</p>` : ''}
+                    ${s.comments ? `<p class="text-slate-500">${rdEsc(s.comments)}</p>` : ''}
+                </li>`).join('') : '<li class="text-slate-400">Not submitted.</li>';
+            const events = rdDetail.freeRouteEvents || [];
+            const sent = events.find(ev => ev.eventType === 'SENT' && ev.comment && ev.comment.trim());
+            const fEl = document.getElementById('rdFreeRouteEvents');
+            fEl.innerHTML = sent ? `<div class="rd-timeline-item"><p class="font-semibold">Requester comment</p><p class="text-slate-500">${rdEsc(sent.comment)}</p></div>` : '';
+        }
+        function rdRenderComments() {
+            const rows = rdDetail.comments || [];
+            document.getElementById('rdComments').innerHTML = rows.length ?
+                rows.map(c => `<li class="border border-slate-200 dark:border-slate-700 rounded-lg p-2">${rdEsc(c.comment)}</li>`).join('')
+                : '<li class="text-slate-400">No comments.</li>';
+        }
+        function rdRenderActivity() {
+            const rows = rdDetail.activities || [];
+            document.getElementById('rdActivity').innerHTML = rows.length ?
+                rows.map(a => `<li><b>${rdEsc(rdFmt(a.activityType))}</b><br><span class="text-slate-500">${rdEsc(rdText(a.description))}</span></li>`).join('')
+                : '<li class="text-slate-400">No activity.</li>';
+        }
+        function rdRenderActions() {
+            const r = rdDetail.request;
+            const task = rdTasks.find(t => t.variables && Number(t.variables.workflowRequestId) === rdRequestId);
+            const btns = [];
+            if (rdCanSubmit()) btns.push(`<button onclick="rdSubmitRequest()" class="rd-primary">Submit</button>`);
+            if (rdCanSendFree()) btns.push(`<button onclick="rdOpenFree('send')" class="rd-secondary">Send To</button>`);
+            if (rdIsOwner() && rdCanEditAttachments()) btns.push(`<a href="/mobile/employee/requests?edit=${r.id}" class="rd-secondary">Edit</a>`);
+            if (rdIsOwner() && !['APPROVED','REJECTED','CANCELLED','CLOSED'].includes(r.status)) btns.push(`<button onclick="rdCancelRequest()" class="rd-danger">Cancel</button>`);
+            if (rdContext && rdContext.hrAdmin && r.status === 'APPROVED') btns.push(`<button onclick="rdCloseRequest()" class="rd-secondary">Close</button>`);
+            if (task) {
+                btns.push(`<button onclick="rdOpenApproval('${rdEsc(task.taskId)}','approve')" class="rd-success">Approve</button>`);
+                btns.push(`<button onclick="rdOpenApproval('${rdEsc(task.taskId)}','reject')" class="rd-danger">Reject</button>`);
+                btns.push(`<button onclick="rdOpenApproval('${rdEsc(task.taskId)}','return')" class="rd-warning">Return</button>`);
+                if (r.approvalRouteType === 'FREE_ROUTE') btns.push(`<button onclick="rdOpenFree('forward','${rdEsc(task.taskId)}')" class="rd-secondary">Forward</button>`);
+            }
+            document.getElementById('rdActions').innerHTML = btns.join('');
+        }
+
+        async function rdSubmitRequest() {
+            if (rdRequiresAttachment() && !rdHasAttachment()) { rdShowToast(rdMissingAttachmentMsg()); return; }
+            if (await rdConfirm({ title: 'Submit Request', message: 'Submit this request for approval?', confirmLabel: 'Submit', danger: false })) {
+                await rdMutate(`${rdApi}/${rdRequestId}/submit`, 'POST');
+            }
+        }
+        async function rdCancelRequest() {
+            if (await rdConfirm({ title: 'Cancel Request', message: 'Cancel this request? This cannot be undone.', confirmLabel: 'Cancel Request' }))
+                await rdMutate(`${rdApi}/${rdRequestId}/cancel`, 'POST');
+        }
+        async function rdCloseRequest() {
+            if (await rdConfirm({ title: 'Close Request', message: 'Close this request?', confirmLabel: 'Close', danger: false }))
+                await rdMutate(`${rdApi}/${rdRequestId}/close`, 'POST');
+        }
+        async function rdMutate(url, method) {
+            try { await rdJson(url, { method }); await rdLoad(); } catch (e) { rdShowToast(e.message || String(e)); }
+        }
+        async function rdRemoveAttachment(id) {
+            if (!await rdConfirm({ title: 'Remove Attachment', message: 'Remove this attachment?', confirmLabel: 'Remove' })) return;
+            try {
+                const r = await fetch(`${rdApi}/${rdRequestId}/attachments/${id}`, { method: 'DELETE' });
+                if (!r.ok) throw new Error(await r.text() || `HTTP ${r.status}`);
+                await rdLoad();
+            } catch (e) { rdShowToast(e.message || String(e)); }
+        }
+
+        document.getElementById('rdAttachmentForm').addEventListener('submit', async e => {
+            e.preventDefault();
+            const file = document.getElementById('rdAttachmentFile').files[0];
+            if (!file) { rdShowToast('Choose a file to upload.'); return; }
+            const fd = new FormData();
+            fd.append('file', file);
+            fd.append('attachmentType', document.getElementById('rdAttachmentType').value);
+            try {
+                const r = await fetch(`${rdApi}/${rdRequestId}/attachments`, { method:'POST', body: fd });
+                if (!r.ok) throw new Error(await r.text() || `HTTP ${r.status}`);
+                e.target.reset();
+                await rdLoad();
+            } catch (err) { rdShowToast(err.message || String(err)); }
+        });
+        document.getElementById('rdCommentForm').addEventListener('submit', async e => {
+            e.preventDefault();
+            try {
+                await rdJson(`${rdApi}/${rdRequestId}/comments`, {
+                    method:'POST',
+                    headers:{'Content-Type':'application/json'},
+                    body: JSON.stringify({ comment: document.getElementById('rdCommentText').value, internalOnly: document.getElementById('rdInternalComment').checked })
+                });
+                e.target.reset();
+                await rdLoad();
+            } catch (err) { rdShowToast(err.message || String(err)); }
+        });
+
+        rdLoad();
+    </script>
+</main>
+</body>
+</html>

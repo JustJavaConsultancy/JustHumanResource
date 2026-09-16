@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/mobileEmployeeLayout}">
+<head>
+    <meta charset="UTF-8">
+    <title>Tax Bands</title>
+    <style>
+        .tb-card { background:#fff; border:1px solid #e5e7eb; border-radius:14px; }
+        .dark .tb-card { background:#1e293b; border-color:#334155; }
+        .tb-stat { padding:.85rem; }
+        .tb-stat h4 { font-size:1.25rem; font-weight:700; }
+        .tb-stat p { font-size:.68rem; color:#64748b; margin-top:.1rem; }
+        .tb-badge { display:inline-flex; padding:.15rem .55rem; border-radius:999px; font-size:.62rem; font-weight:700; text-transform:uppercase; }
+        .tb-badge.success { background:#dcfce7; color:#166534; }
+        .tb-badge.warn { background:#fef3c7; color:#92400e; }
+        .tb-badge.info { background:#dbeafe; color:#1e40af; }
+        .tb-badge.neutral { background:#f1f5f9; color:#475569; }
+        .tb-badge.red { background:#fee2e2; color:#991b1b; }
+        .tb-input { width:100%; border:1.5px solid #e2e8f0; border-radius:.55rem; padding:.55rem .75rem; font-size:.85rem; background:#fff; }
+        .dark .tb-input { background:#0f172a; border-color:#334155; color:#f1f5f9; }
+        .tb-input:focus { outline:none; border-color:#2463eb; box-shadow:0 0 0 3px rgba(36,99,235,.15); }
+        .tb-label { font-size:.72rem; font-weight:600; color:#475569; margin-bottom:.25rem; display:block; }
+        .tb-primary { background:#2463eb; color:#fff; font-weight:600; padding:.6rem 1rem; border-radius:.6rem; font-size:.82rem; }
+        .tb-primary:disabled { opacity:.5; }
+        .tb-secondary { background:#f1f5f9; color:#334155; font-weight:600; padding:.55rem 1rem; border-radius:.6rem; font-size:.8rem; }
+        .tb-outline { background:transparent; color:#2463eb; border:1px solid #2463eb; font-weight:600; padding:.55rem 1rem; border-radius:.6rem; font-size:.8rem; }
+        .tb-danger { background:#dc2626; color:#fff; font-weight:600; padding:.55rem 1rem; border-radius:.6rem; font-size:.8rem; }
+        .tb-sheet-backdrop { position:fixed; inset:0; background:rgba(15,23,42,.6); backdrop-filter:blur(3px); z-index:60; display:none; }
+        .tb-sheet-backdrop.open { display:block; }
+        .tb-sheet { position:fixed; left:0; right:0; bottom:0; background:#fff; border-radius:20px 20px 0 0; z-index:61; max-height:90vh; overflow-y:auto; transform:translateY(100%); transition:transform .25s ease; }
+        .dark .tb-sheet { background:#1e293b; }
+        .tb-sheet.open { transform:translateY(0); }
+        .tb-sheet-head { padding:.85rem 1rem; border-bottom:1px solid #e5e7eb; display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; background:#fff; z-index:1; border-radius:20px 20px 0 0; }
+        .dark .tb-sheet-head { background:#1e293b; border-color:#334155; }
+        .tb-sheet-body { padding:1rem; }
+        .tb-err { background:#fef2f2; color:#991b1b; border:1px solid #fca5a5; padding:.5rem .75rem; border-radius:.5rem; font-size:.75rem; display:none; }
+        .tb-err.show { display:block; }
+        .tb-toast { position:fixed; left:50%; bottom:6rem; transform:translateX(-50%); background:#0f172a; color:#fff; padding:.6rem 1rem; border-radius:.6rem; font-size:.8rem; z-index:70; display:none; }
+        .tb-toast.show { display:block; }
+        .tb-toast.error { background:#dc2626; }
+        .tb-fab { position:fixed; right:1rem; bottom:6rem; z-index:50; box-shadow:0 4px 12px rgba(36,99,235,.4); }
+        .tb-mono { font-family:ui-monospace,monospace; }
+        .tb-band-card { border:1px solid #e5e7eb; border-radius:12px; padding:.75rem .85rem; display:flex; align-items:center; gap:.75rem; }
+        .dark .tb-band-card { border-color:#334155; }
+        .tb-progress { height:6px; background:#e5e7eb; border-radius:999px; overflow:hidden; }
+        .tb-progress-fill { height:100%; background:linear-gradient(90deg,#3b82f6,#8b5cf6); }
+    </style>
+</head>
+<body>
+<section layout:fragment="content" class="px-4 pb-28 pt-2 space-y-4">
+
+    <!-- Stats -->
+    <div class="grid grid-cols-2 gap-3">
+        <div class="tb-card tb-stat">
+            <div class="flex items-start justify-between">
+                <span class="material-symbols-outlined text-blue-600 text-lg">receipt</span>
+                <span class="tb-badge info">Active</span>
+            </div>
+            <h4 th:text="${#lists.size(activeBands)}">0</h4>
+            <p>Active Bands</p>
+            <p class="text-[0.6rem] text-slate-400 mt-1" th:text="${(#lists.size(activeBands) - futureCount) + ' current · ' + futureCount + ' future'}">—</p>
+        </div>
+        <div class="tb-card tb-stat">
+            <div class="flex items-start justify-between">
+                <span class="material-symbols-outlined text-purple-600 text-lg">calendar_month</span>
+                <span class="tb-badge neutral" th:text="${primaryTaxYear}">—</span>
+            </div>
+            <h4 th:text="${primaryTaxYear}">—</h4>
+            <p>Tax Year</p>
+            <p class="text-[0.6rem] text-slate-400 mt-1" th:text="${earliestFrom != null ? 'From ' + earliestFrom : 'No bands'}">—</p>
+        </div>
+        <div class="tb-card tb-stat">
+            <div class="flex items-start justify-between">
+                <span class="material-symbols-outlined text-green-600 text-lg">percent</span>
+                <span class="tb-badge success">Avg</span>
+            </div>
+            <h4 th:text="${avgRate + '%'}">0%</h4>
+            <p>Average Rate</p>
+        </div>
+        <div class="tb-card tb-stat">
+            <div class="flex items-start justify-between">
+                <span class="material-symbols-outlined text-red-600 text-lg">update</span>
+                <span class="tb-badge warn">Next</span>
+            </div>
+            <h4 class="text-sm" th:text="${nextExpiry != null ? nextExpiry : 'None'}">None</h4>
+            <p>Next Expiry</p>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="grid grid-cols-2 gap-2">
+        <button class="tb-primary flex items-center justify-center gap-2" onclick="tbOpenSheet('newSheet')">
+            <span class="material-symbols-outlined text-base">add</span> New Band
+        </button>
+        <button class="tb-outline flex items-center justify-center gap-2" onclick="tbOpenSheet('bulkSheet')">
+            <span class="material-symbols-outlined text-base">upload_file</span> Bulk Upload
+        </button>
+    </div>
+
+    <!-- Search + list -->
+    <div class="tb-card">
+        <div class="p-3 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between gap-2">
+            <div>
+                <h3 class="font-bold text-sm">Tax Bands</h3>
+                <p class="text-[0.65rem] text-slate-500">PAYE · effective dating</p>
+            </div>
+            <input type="text" id="tbSearch" class="tb-input" style="max-width:160px" placeholder="Search…" oninput="tbRenderList()">
+        </div>
+        <div id="tbList" class="p-3 space-y-2">
+            <div th:if="${#lists.isEmpty(activeBands)}" class="text-center py-8 text-xs text-slate-400">
+                <span class="material-symbols-outlined text-4xl block mb-2">inbox</span>
+                No active tax bands.
+            </div>
+            <div th:each="b : ${activeBands}" class="tb-band-card"
+                 th:attr="data-id=${b.id},data-lower=${b.lowerBound},data-upper=${b.upperBound},data-rate=${b.rate},data-from=${b.effectiveFrom},data-to=${b.effectiveTo},data-regime=${b.regimeCode},data-status=${b.status}">
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-baseline gap-1">
+                        <span class="tb-mono text-xs" th:text="${#numbers.formatDecimal(b.lowerBound,1,'COMMA',2,'POINT')}">0</span>
+                        <span class="text-[0.65rem] text-slate-400">–</span>
+                        <span class="tb-mono text-xs" th:text="${b.upperBound == null ? '&#8734;' : #numbers.formatDecimal(b.upperBound,1,'COMMA',2,'POINT')}">∞</span>
+                        <span class="ml-auto text-sm font-bold text-primary" th:text="${b.rate + '%'}">10%</span>
+                    </div>
+                    <div class="flex items-center gap-1 mt-1 flex-wrap">
+                        <span class="tb-badge neutral" th:text="${b.regimeCode}">PAYE</span>
+                        <span class="tb-badge" th:classappend="${b.status == 'ACTIVE'} ? 'success' : 'warn'" th:text="${b.status}">ACTIVE</span>
+                        <span class="text-[0.6rem] text-slate-400" th:text="${b.effectiveFrom + (b.effectiveTo == null ? ' · open' : ' → ' + b.effectiveTo)}">2024-01-01</span>
+                    </div>
+                </div>
+                <button class="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg" onclick="tbEditBand(this.parentElement)">
+                    <span class="material-symbols-outlined text-primary text-base">edit</span>
+                </button>
+                <button class="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-lg" onclick="tbDeleteBand(this.parentElement)">
+                    <span class="material-symbols-outlined text-red-600 text-base">delete</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Effective dating overview -->
+    <div class="tb-card p-3 space-y-2">
+        <h3 class="font-bold text-sm mb-1">Effective Dating</h3>
+        <div class="flex items-center justify-between bg-slate-50 dark:bg-slate-900/40 rounded-lg p-2">
+            <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-indigo-600 text-lg">date_range</span>
+                <div>
+                    <p class="text-xs font-semibold">Current tax year</p>
+                    <p class="text-[0.65rem] text-slate-500" th:text="'from ' + ${earliestFrom} + ' · ' + ${#lists.size(activeBands) - futureCount} + ' band(s)'">—</p>
+                </div>
+            </div>
+            <span class="tb-badge success">active</span>
+        </div>
+        <div class="flex items-center justify-between bg-slate-50 dark:bg-slate-900/40 rounded-lg p-2">
+            <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-blue-600 text-lg">upcoming</span>
+                <div>
+                    <p class="text-xs font-semibold">Future bands</p>
+                    <p class="text-[0.65rem] text-slate-500" th:text="${futureCount} + ' not yet effective'">0</p>
+                </div>
+            </div>
+            <span th:text="${futureCount > 0 ? 'pending' : 'none'}"
+                  th:classappend="${futureCount > 0} ? 'info' : 'neutral'"
+                  class="tb-badge">none</span>
+        </div>
+        <div class="flex items-center justify-between bg-slate-50 dark:bg-slate-900/40 rounded-lg p-2">
+            <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-amber-600 text-lg">event_busy</span>
+                <div>
+                    <p class="text-xs font-semibold">Next expiry</p>
+                    <p class="text-[0.65rem] text-slate-500" th:text="${nextExpiry != null ? 'Expires ' + nextExpiry : 'No upcoming expiries'}">—</p>
+                </div>
+            </div>
+            <span th:text="${nextExpiry != null ? 'expiring' : 'stable'}"
+                  th:classappend="${nextExpiry != null} ? 'warn' : 'success'"
+                  class="tb-badge">stable</span>
+        </div>
+    </div>
+
+    <!-- Regime summary -->
+    <div class="tb-card p-3" th:if="${regimeCounts != null and !regimeCounts.isEmpty()}">
+        <h3 class="font-bold text-sm mb-2">Regimes</h3>
+        <div class="space-y-1.5">
+            <div th:each="entry : ${regimeCounts}" class="flex items-center justify-between text-xs">
+                <span class="tb-badge neutral" th:text="${entry.key}">PAYE-FED</span>
+                <span class="text-slate-500" th:text="${entry.value} + ' band(s)'">1 band</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- FAB -->
+    <button class="tb-fab tb-primary flex items-center gap-2" onclick="tbOpenSheet('newSheet')">
+        <span class="material-symbols-outlined">add</span> New
+    </button>
+
+    <!-- Sheet: New Tax Band -->
+    <div class="tb-sheet-backdrop" id="bd-newSheet" onclick="tbCloseSheet('newSheet')"></div>
+    <div class="tb-sheet" id="newSheet">
+        <div class="tb-sheet-head">
+            <h3 class="font-bold">Add Tax Band</h3>
+            <button onclick="tbCloseSheet('newSheet')"><span class="material-symbols-outlined text-slate-400">close</span></button>
+        </div>
+        <div class="tb-sheet-body">
+            <form id="tbAddForm" method="post" action="/addTaxBand" class="space-y-3" onsubmit="return tbBeforeSubmit(this)">
+                <div class="grid grid-cols-2 gap-2">
+                    <div><label class="tb-label">Lower Bound (₦) *</label><input name="lowerBound" type="number" step="0.01" min="0" required class="tb-input"></div>
+                    <div><label class="tb-label">Upper Bound (₦)</label><input name="upperBound" type="number" step="0.01" min="0" class="tb-input" placeholder="Blank = open"></div>
+                </div>
+                <div><label class="tb-label">Rate (%) *</label><input name="rate" type="number" step="0.01" min="0" max="100" required class="tb-input"></div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div><label class="tb-label">Effective From *</label><input name="effectiveFrom" type="date" required class="tb-input"></div>
+                    <div><label class="tb-label">Effective To</label><input name="effectiveTo" type="date" class="tb-input"></div>
+                </div>
+                <div><label class="tb-label">Regime Code *</label><input readonly name="regimeCode" id="regimeCodeInput" type="text" required class="tb-input bg-slate-50 dark:bg-slate-800/60"></div>
+                <div><label class="tb-label">Status *</label>
+                    <select name="status" required class="tb-input">
+                        <option value="ACTIVE">ACTIVE</option>
+                        <option value="INACTIVE">INACTIVE</option>
+                        <option value="PENDING">PENDING</option>
+                    </select>
+                </div>
+                <div class="flex gap-2 pt-2">
+                    <button type="button" class="tb-secondary flex-1" onclick="tbCloseSheet('newSheet')">Cancel</button>
+                    <button type="submit" id="tbAddBtn" class="tb-primary flex-1">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Sheet: Edit -->
+    <div class="tb-sheet-backdrop" id="bd-editSheet" onclick="tbCloseSheet('editSheet')"></div>
+    <div class="tb-sheet" id="editSheet">
+        <div class="tb-sheet-head">
+            <h3 class="font-bold">Edit Tax Band</h3>
+            <button onclick="tbCloseSheet('editSheet')"><span class="material-symbols-outlined text-slate-400">close</span></button>
+        </div>
+        <div class="tb-sheet-body space-y-3">
+            <input type="hidden" id="edId">
+            <div class="grid grid-cols-2 gap-2">
+                <div><label class="tb-label">Lower *</label><input id="edLower" type="number" step="0.01" class="tb-input"></div>
+                <div><label class="tb-label">Upper</label><input id="edUpper" type="number" step="0.01" class="tb-input"></div>
+            </div>
+            <div><label class="tb-label">Rate (%) *</label><input id="edRate" type="number" step="0.01" min="0" max="100" class="tb-input"></div>
+            <div class="grid grid-cols-2 gap-2">
+                <div><label class="tb-label">From *</label><input id="edFrom" type="date" class="tb-input"></div>
+                <div><label class="tb-label">To</label><input id="edTo" type="date" class="tb-input"></div>
+            </div>
+            <div><label class="tb-label">Regime Code *</label><input id="edRegime" type="text" class="tb-input"></div>
+            <div><label class="tb-label">Status *</label>
+                <select id="edStatus" class="tb-input">
+                    <option value="ACTIVE">ACTIVE</option>
+                    <option value="INACTIVE">INACTIVE</option>
+                    <option value="PENDING">PENDING</option>
+                </select>
+            </div>
+            <div id="editErr" class="tb-err"></div>
+            <div class="flex gap-2 pt-2">
+                <button class="tb-secondary flex-1" onclick="tbCloseSheet('editSheet')">Cancel</button>
+                <button id="tbEditBtn" class="tb-primary flex-1" onclick="tbSaveEdit()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sheet: Delete Confirm -->
+    <div class="tb-sheet-backdrop" id="bd-delSheet" onclick="tbCloseSheet('delSheet')"></div>
+    <div class="tb-sheet" id="delSheet">
+        <div class="tb-sheet-head">
+            <h3 class="font-bold">Delete Tax Band</h3>
+            <button onclick="tbCloseSheet('delSheet')"><span class="material-symbols-outlined text-slate-400">close</span></button>
+        </div>
+        <div class="tb-sheet-body space-y-3">
+            <p class="text-sm">This will permanently delete the selected tax band. This cannot be undone.</p>
+            <div id="delSummary" class="text-xs text-slate-500 bg-slate-50 dark:bg-slate-900/40 rounded-lg p-2"></div>
+            <div id="delErr" class="tb-err"></div>
+            <div class="flex gap-2 pt-2">
+                <button class="tb-secondary flex-1" onclick="tbCloseSheet('delSheet')">Cancel</button>
+                <button id="tbDelBtn" class="tb-danger flex-1" onclick="tbConfirmDelete()">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sheet: Bulk Upload -->
+    <div class="tb-sheet-backdrop" id="bd-bulkSheet" onclick="tbCloseSheet('bulkSheet')"></div>
+    <div class="tb-sheet" id="bulkSheet">
+        <div class="tb-sheet-head">
+            <h3 class="font-bold">Bulk Upload</h3>
+            <button onclick="tbCloseSheet('bulkSheet')"><span class="material-symbols-outlined text-slate-400">close</span></button>
+        </div>
+        <div class="tb-sheet-body space-y-3">
+            <p class="text-xs text-slate-500">
+                CSV columns: <span class="tb-mono bg-slate-100 dark:bg-slate-800 px-1 rounded">lowerBound,upperBound,rate</span>.
+                Leave upperBound blank on the last row for an open-ended top band.
+            </p>
+            <div class="grid grid-cols-2 gap-2">
+                <div><label class="tb-label">From *</label><input id="bulkFrom" type="date" required class="tb-input"></div>
+                <div><label class="tb-label">To</label><input id="bulkTo" type="date" class="tb-input"></div>
+            </div>
+            <button type="button" class="text-xs text-primary font-semibold" onclick="tbDownloadSample()">
+                <span class="material-symbols-outlined text-sm align-middle">file_download</span> Download sample CSV
+            </button>
+            <div class="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg p-4 text-center">
+                <input type="file" id="bulkCsv" accept=".csv" class="hidden">
+                <button type="button" class="tb-secondary" onclick="document.getElementById('bulkCsv').click()">Choose CSV File</button>
+                <p id="bulkFileName" class="text-[0.65rem] text-slate-500 mt-2">No file selected</p>
+            </div>
+            <div id="bulkPreview" class="hidden">
+                <p class="text-xs font-semibold mb-1">Preview</p>
+                <div class="max-h-48 overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-lg text-xs">
+                    <table class="w-full">
+                        <thead class="bg-slate-50 dark:bg-slate-800 sticky top-0 text-[0.65rem]">
+                            <tr><th class="p-1.5 text-left">#</th><th class="p-1.5 text-left">Lower</th><th class="p-1.5 text-left">Upper</th><th class="p-1.5 text-left">Rate</th></tr>
+                        </thead>
+                        <tbody id="bulkPreviewBody"></tbody>
+                    </table>
+                </div>
+                <p id="bulkPreviewSummary" class="text-[0.65rem] text-slate-500 mt-1"></p>
+            </div>
+            <div id="bulkServerErr" class="tb-err"></div>
+            <div class="flex gap-2 pt-2">
+                <button class="tb-secondary flex-1" onclick="tbCloseSheet('bulkSheet')">Cancel</button>
+                <button id="tbBulkBtn" class="tb-primary flex-1" disabled onclick="tbSubmitBulk()">Upload</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="tbToast" class="tb-toast"></div>
+
+    <script th:inline="javascript">
+        function tbOpenSheet(id) {
+            document.getElementById('bd-'+id).classList.add('open');
+            document.getElementById(id).classList.add('open');
+            if (id === 'newSheet') {
+                const el = document.getElementById('regimeCodeInput');
+                if (el && !el.value) el.value = 'PAYE-' + Math.random().toString(36).slice(2,6).toUpperCase();
+            }
+        }
+        function tbCloseSheet(id) {
+            document.getElementById('bd-'+id).classList.remove('open');
+            document.getElementById(id).classList.remove('open');
+        }
+        function tbToast(msg, type) {
+            const t = document.getElementById('tbToast');
+            t.textContent = msg;
+            t.className = 'tb-toast show' + (type === 'error' ? ' error' : '');
+            setTimeout(() => t.classList.remove('show'), 3200);
+        }
+        function tbShowErr(id, msg) { const el = document.getElementById(id); if (el) { el.textContent = msg; el.classList.add('show'); } }
+        function tbHideErr(id) { const el = document.getElementById(id); if (el) el.classList.remove('show'); }
+        function tbBeforeSubmit(form) {
+            const btn = document.getElementById('tbAddBtn');
+            if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+            return true;
+        }
+
+        function tbRenderList() {
+            const q = (document.getElementById('tbSearch').value || '').toLowerCase();
+            document.querySelectorAll('#tbList .tb-band-card').forEach(c => {
+                const t = (c.textContent || '').toLowerCase();
+                c.style.display = (!q || t.includes(q)) ? '' : 'none';
+            });
+        }
+
+        let delRow = null;
+        window.tbDeleteBand = function(row) {
+            delRow = row;
+            const id = row.dataset.id;
+            const summary = 'Range: ' + row.dataset.lower + ' – ' + (row.dataset.upper || '∞') + ' · Rate: ' + row.dataset.rate + '% · Regime: ' + row.dataset.regime;
+            document.getElementById('delSummary').textContent = summary;
+            tbOpenSheet('delSheet');
+        };
+        window.tbConfirmDelete = async function() {
+            if (!delRow) return;
+            const id = delRow.dataset.id;
+            const btn = document.getElementById('tbDelBtn'); btn.disabled = true; btn.textContent = 'Deleting…';
+            try {
+                const res = await fetch('/delete/tax-band/' + id, {method:'DELETE'});
+                if (!res.ok) { const j = await res.json().catch(() => ({})); throw new Error(j.message || 'Failed to delete'); }
+                delRow.remove(); tbCloseSheet('delSheet'); tbToast('Tax band deleted');
+                setTimeout(() => location.reload(), 900);
+            } catch (e) { tbShowErr('delErr', e.message); }
+            finally { btn.disabled = false; btn.textContent = 'Delete'; }
+        };
+
+        window.tbEditBand = function(row) {
+            document.getElementById('edId').value = row.dataset.id;
+            document.getElementById('edLower').value = row.dataset.lower;
+            document.getElementById('edUpper').value = row.dataset.upper && row.dataset.upper !== 'null' ? row.dataset.upper : '';
+            document.getElementById('edRate').value = row.dataset.rate;
+            document.getElementById('edFrom').value = row.dataset.from;
+            document.getElementById('edTo').value = row.dataset.to && row.dataset.to !== 'null' ? row.dataset.to : '';
+            document.getElementById('edRegime').value = row.dataset.regime;
+            document.getElementById('edStatus').value = row.dataset.status;
+            tbHideErr('editErr');
+            tbOpenSheet('editSheet');
+        };
+        window.tbSaveEdit = async function() {
+            tbHideErr('editErr');
+            const id = document.getElementById('edId').value;
+            const body = {
+                lowerBound: parseFloat(document.getElementById('edLower').value),
+                upperBound: document.getElementById('edUpper').value ? parseFloat(document.getElementById('edUpper').value) : null,
+                rate: parseFloat(document.getElementById('edRate').value),
+                effectiveFrom: document.getElementById('edFrom').value,
+                effectiveTo: document.getElementById('edTo').value || null,
+                regimeCode: document.getElementById('edRegime').value,
+                status: document.getElementById('edStatus').value
+            };
+            const btn = document.getElementById('tbEditBtn'); btn.disabled = true; btn.textContent = 'Saving…';
+            try {
+                const res = await fetch('/update/tax-band/' + id, {method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
+                if (!res.ok && res.status !== 302) { const t = await res.text(); throw new Error(t || 'Update failed'); }
+                tbCloseSheet('editSheet'); tbToast('Tax band updated');
+                setTimeout(() => location.reload(), 900);
+            } catch (e) { tbShowErr('editErr', e.message); }
+            finally { btn.disabled = false; btn.textContent = 'Save'; }
+        };
+
+        let bulkCsvContent = null, bulkFile = null;
+        document.getElementById('bulkCsv').addEventListener('change', function(e) {
+            const f = e.target.files[0]; if (!f) { bulkFile = null; document.getElementById('bulkPreview').classList.add('hidden'); document.getElementById('tbBulkBtn').disabled = true; return; }
+            bulkFile = f;
+            document.getElementById('bulkFileName').textContent = f.name;
+            const r = new FileReader();
+            r.onload = function() {
+                bulkCsvContent = r.result;
+                const lines = r.result.split(/\r?\n/).filter(l => l.trim());
+                const body = document.getElementById('bulkPreviewBody'); body.innerHTML = '';
+                const rows = lines.slice(0, 20);
+                let idx = 0;
+                rows.forEach((line, i) => {
+                    if (i === 0 && /[a-zA-Z]/.test(line.split(',')[0] || '')) return;
+                    idx++;
+                    const p = line.split(',');
+                    body.innerHTML += '<tr class="border-t border-slate-100"><td class="p-1.5">' + idx + '</td><td class="p-1.5 tb-mono">' + (p[0] || '') + '</td><td class="p-1.5 tb-mono">' + (p[1] || '∞') + '</td><td class="p-1.5 tb-mono">' + (p[2] || '') + '</td></tr>';
+                });
+                document.getElementById('bulkPreviewSummary').textContent = idx + ' data row(s) parsed.';
+                document.getElementById('bulkPreview').classList.remove('hidden');
+                document.getElementById('tbBulkBtn').disabled = false;
+            };
+            r.readAsText(f);
+        });
+
+        window.tbDownloadSample = function() {
+            const sample = 'lowerBound,upperBound,rate\n0,300000,7\n300000,600000,11\n600000,,24\n';
+            const blob = new Blob([sample], {type:'text/csv'});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'tax-bands-sample.csv';
+            a.click();
+        };
+
+        window.tbSubmitBulk = async function() {
+            tbHideErr('bulkServerErr');
+            const from = document.getElementById('bulkFrom').value;
+            const to = document.getElementById('bulkTo').value;
+            if (!from) { tbShowErr('bulkServerErr', 'Effective From is required.'); return; }
+            if (!bulkFile) { tbShowErr('bulkServerErr', 'Choose a CSV file.'); return; }
+            const fd = new FormData();
+            fd.append('file', bulkFile);
+            fd.append('effectiveFrom', from);
+            if (to) fd.append('effectiveTo', to);
+            const btn = document.getElementById('tbBulkBtn'); btn.disabled = true; btn.textContent = 'Uploading…';
+            try {
+                const res = await fetch('/tax-band/upload-csv', {method:'POST', body: fd});
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                    let msg = data.message || 'Upload failed';
+                    if (data.rowErrors && data.rowErrors.length) {
+                        msg += ' — ' + data.rowErrors.slice(0,3).map(r => 'row ' + (r.row || '?') + ': ' + (r.message || r.error || '')).join('; ');
+                    }
+                    throw new Error(msg);
+                }
+                tbCloseSheet('bulkSheet'); tbToast(data.message + ' (' + data.successRows + '/' + data.totalRows + ')');
+                setTimeout(() => location.reload(), 1100);
+            } catch (e) { tbShowErr('bulkServerErr', e.message); }
+            finally { btn.disabled = false; btn.textContent = 'Upload'; }
+        };
+    </script>
+</section>
+</body>
+</html>

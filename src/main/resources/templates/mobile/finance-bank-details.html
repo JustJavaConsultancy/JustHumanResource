@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/mobileEmployeeLayout}">
+<head>
+    <title>Bank Details</title>
+    <style>
+        .bd-card { background:#fff; border-radius:12px; border:1px solid #e5e7eb; padding:14px; margin-bottom:10px; }
+        .bd-row  { display:flex; justify-content:space-between; align-items:center; padding:5px 0; border-bottom:1px solid #f3f4f6; font-size:0.8rem; }
+        .bd-row:last-child { border-bottom:none; }
+        .bd-account { font-family:monospace; background:#f3f4f6; padding:3px 10px; border-radius:999px; font-size:0.8rem; display:inline-flex; align-items:center; gap:6px; }
+    </style>
+</head>
+<body>
+<section layout:fragment="content">
+
+    <!-- Inject records from Thymeleaf -->
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        const ALL_RECORDS = /*[[${bankDetails}]]*/ [];
+        /*]]>*/
+    </script>
+
+    <!-- Header -->
+    <div class="bg-blue-900 rounded-xl p-4 mb-4 text-white">
+        <p class="text-xs text-blue-300 uppercase font-semibold">Bank Details</p>
+        <p class="text-sm text-blue-200 mt-1" id="bd-period-label">—</p>
+    </div>
+
+    <!-- Summary stats -->
+    <div class="grid grid-cols-2 gap-3 mb-4">
+        <div class="bd-card">
+            <p class="text-xs text-gray-500">Total Net Pay</p>
+            <p class="text-xl font-bold text-blue-900" id="bd-total-net">₦0</p>
+        </div>
+        <div class="bd-card">
+            <p class="text-xs text-gray-500">Employees</p>
+            <p class="text-xl font-bold text-blue-900" id="bd-total-emp">0</p>
+        </div>
+    </div>
+
+    <!-- Search + controls -->
+    <div class="bd-card mb-3 flex gap-2 items-center">
+        <span class="material-symbols-outlined text-gray-400" style="font-size:18px">search</span>
+        <input type="text" id="bd-search" placeholder="Search name, bank, account..."
+               class="flex-1 text-sm outline-none bg-transparent"/>
+        <button id="bd-export"
+                class="flex items-center gap-1 text-xs text-blue-600 font-semibold border border-blue-200 rounded-lg px-2 py-1">
+            <span class="material-symbols-outlined" style="font-size:14px">download</span> CSV
+        </button>
+    </div>
+
+    <!-- Reveal all toggle -->
+    <div class="bd-card mb-3 flex items-center justify-between">
+        <span class="text-sm text-gray-600">Reveal all account numbers</span>
+        <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" id="bd-reveal-all" class="sr-only peer">
+            <div class="w-10 h-6 bg-gray-200 peer-checked:bg-blue-600 rounded-full peer
+                        after:content-[''] after:absolute after:top-[2px] after:left-[2px]
+                        after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all
+                        peer-checked:after:translate-x-4"></div>
+        </label>
+    </div>
+
+    <!-- Card list -->
+    <div id="bd-list"></div>
+
+    <!-- Empty state -->
+    <div id="bd-empty" style="display:none" class="bd-card text-center py-8">
+        <span class="material-symbols-outlined text-gray-300 block" style="font-size:48px">account_balance</span>
+        <p class="font-semibold text-sm text-gray-600 mt-2">No records found</p>
+        <button onclick="bdClearSearch()" class="mt-2 text-xs text-blue-600 font-semibold">Clear search</button>
+    </div>
+
+    <!-- Pagination -->
+    <div id="bd-pagination" class="flex items-center justify-between mt-2 mb-4" style="display:none!important">
+        <span id="bd-page-info" class="text-xs text-gray-400"></span>
+        <div id="bd-page-btns" class="flex gap-1"></div>
+    </div>
+
+    <!-- Security note -->
+    <div class="bd-card text-xs text-blue-700 bg-blue-50 border border-blue-100 flex gap-2">
+        <span class="material-symbols-outlined text-blue-500" style="font-size:16px;flex-shrink:0">info</span>
+        Account numbers are masked by default. Tap the eye icon or enable "Reveal all" to show full numbers.
+    </div>
+
+    <script>
+    (function () {
+        'use strict';
+        const PAGE_SIZE = 8;
+
+        const records = Array.isArray(ALL_RECORDS) ? ALL_RECORDS : [];
+        let filtered = [...records];
+        let currentPage = 0;
+        let revealAll = false;
+
+        function fmt(s) {
+            return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        }
+        function fmtMoney(n) {
+            if (n == null) return '—';
+            return '₦' + Number(n).toLocaleString('en-NG', {minimumFractionDigits:2,maximumFractionDigits:2});
+        }
+        function maskAcc(s) {
+            s = String(s ?? '');
+            return s ? '•••• •••• ' + s.slice(-4) : '—';
+        }
+        function revealAcc(s) {
+            s = String(s ?? '');
+            return s ? s.replace(/(.{4})(?=.)/g,'$1 ').trim() : '—';
+        }
+        function fmtDate(v) {
+            if (!v) return '—';
+            const d = Array.isArray(v) ? new Date(v[0], v[1]-1, v[2]) : new Date(v);
+            return isNaN(d) ? '—' : d.toLocaleDateString('en-GB',{month:'long',year:'numeric'});
+        }
+        function initials(name) {
+            if (!name) return '?';
+            const p = name.trim().split(/\s+/);
+            return (p.length >= 2 ? p[0][0]+p[p.length-1][0] : name.substring(0,2)).toUpperCase();
+        }
+        function badgeCls(status) {
+            const s = String(status ?? '').toUpperCase();
+            if (s === 'COMPLETED' || s === 'APPROVED') return 'bg-emerald-100 text-emerald-700';
+            if (s === 'PENDING'   || s === 'DRAFT')    return 'bg-amber-100 text-amber-700';
+            if (s === 'FAILED')                        return 'bg-red-100 text-red-700';
+            return 'bg-gray-100 text-gray-600';
+        }
+
+        function buildCard(slip) {
+            const acc = slip.bankAccountNumber ?? '';
+            const display = revealAll ? revealAcc(acc) : maskAcc(acc);
+            const eye = revealAll ? 'visibility_off' : 'visibility';
+            const hue = (Number(slip.employeeId ?? 0) * 47) % 360;
+
+            return `<div class="bd-card mb-2">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-2">
+                        <div class="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0"
+                             style="background:hsl(${hue},60%,92%);color:hsl(${hue},50%,35%)">${fmt(initials(slip.employeeName))}</div>
+                        <div>
+                            <p class="font-semibold text-sm">${fmt(slip.employeeName ?? '—')}</p>
+                            <p class="text-xs text-gray-400">EMP${fmt(slip.employeeId ?? '')}</p>
+                        </div>
+                    </div>
+                    <span class="text-xs font-bold px-2 py-0.5 rounded-full ${badgeCls(slip.status)}">${fmt(slip.status ?? '—')}</span>
+                </div>
+                <div class="bd-row">
+                    <span class="text-gray-500">Bank</span>
+                    <span class="font-medium">${fmt(slip.bankName ?? '—')}</span>
+                </div>
+                <div class="bd-row">
+                    <span class="text-gray-500">Account</span>
+                    <div class="bd-account">
+                        <span class="acc-display">${fmt(display)}</span>
+                        <span class="material-symbols-outlined" style="font-size:14px;cursor:pointer;color:#6b7280"
+                              data-full="${fmt(acc)}" onclick="bdToggleAcc(this)">${eye}</span>
+                    </div>
+                </div>
+                <div class="bd-row" style="padding-top:8px;border-top:1px solid #f3f4f6;margin-top:4px;border-bottom:none">
+                    <span class="font-semibold">Net Pay</span>
+                    <span class="font-bold text-blue-700">${fmtMoney(slip.netPay)}</span>
+                </div>
+            </div>`;
+        }
+
+        function render() {
+            const list  = document.getElementById('bd-list');
+            const empty = document.getElementById('bd-empty');
+            const pag   = document.getElementById('bd-pagination');
+
+            if (!filtered.length) {
+                list.innerHTML = '';
+                empty.style.display = 'block';
+                pag.style.setProperty('display','none','important');
+                return;
+            }
+            empty.style.display = 'none';
+            pag.style.removeProperty('display');
+
+            const start = currentPage * PAGE_SIZE;
+            list.innerHTML = filtered.slice(start, start + PAGE_SIZE).map(buildCard).join('');
+            renderPag();
+        }
+
+        function renderPag() {
+            const total = filtered.length;
+            const pages = Math.ceil(total / PAGE_SIZE);
+            const start = currentPage * PAGE_SIZE + 1;
+            const end   = Math.min(currentPage * PAGE_SIZE + PAGE_SIZE, total);
+            document.getElementById('bd-page-info').textContent = `${start}–${end} of ${total}`;
+
+            const nav = document.getElementById('bd-page-btns');
+            nav.innerHTML = '';
+            const btn = (label, page, active, disabled) => {
+                const b = document.createElement('button');
+                b.textContent = label;
+                b.className = 'px-2 py-1 text-xs rounded border ' +
+                    (active ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-300 text-gray-600');
+                b.disabled = disabled;
+                if (!disabled && !active) b.onclick = () => { currentPage = page; render(); };
+                return b;
+            };
+            nav.appendChild(btn('‹', currentPage-1, false, currentPage === 0));
+            for (let i = 0; i < pages; i++) nav.appendChild(btn(i+1, i, i === currentPage, false));
+            nav.appendChild(btn('›', currentPage+1, false, currentPage >= pages-1));
+        }
+
+        function updateSummary() {
+            const total = records.reduce((s, r) => s + Number(r.netPay ?? 0), 0);
+            document.getElementById('bd-total-net').textContent = fmtMoney(total);
+            document.getElementById('bd-total-emp').textContent = records.length;
+            document.getElementById('bd-period-label').textContent =
+                records.length ? fmtDate(records[0].payDate) : '—';
+        }
+
+        function applySearch() {
+            const q = document.getElementById('bd-search').value.trim().toLowerCase();
+            filtered = q
+                ? records.filter(r =>
+                    (r.employeeName ?? '').toLowerCase().includes(q) ||
+                    (r.bankName ?? '').toLowerCase().includes(q) ||
+                    (r.bankAccountNumber ?? '').toLowerCase().includes(q) ||
+                    String(r.employeeId ?? '').includes(q))
+                : [...records];
+            currentPage = 0;
+            render();
+        }
+
+        window.bdClearSearch = function() {
+            document.getElementById('bd-search').value = '';
+            applySearch();
+        };
+
+        window.bdToggleAcc = function(icon) {
+            const div  = icon.closest('.bd-account');
+            const span = div.querySelector('.acc-display');
+            const full = icon.dataset.full ?? '';
+            if (!full) return;
+            const masked = span.textContent.includes('•');
+            span.textContent = masked ? revealAcc(full) : maskAcc(full);
+            icon.textContent = masked ? 'visibility_off' : 'visibility';
+        };
+
+        document.getElementById('bd-reveal-all').addEventListener('change', function() {
+            revealAll = this.checked;
+            document.querySelectorAll('.bd-account').forEach(div => {
+                const span = div.querySelector('.acc-display');
+                const icon = div.querySelector('[data-full]');
+                const full = icon?.dataset.full ?? '';
+                if (!full) return;
+                span.textContent = revealAll ? revealAcc(full) : maskAcc(full);
+                if (icon) icon.textContent = revealAll ? 'visibility_off' : 'visibility';
+            });
+        });
+
+        let searchTimer;
+        document.getElementById('bd-search').addEventListener('input', () => {
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(applySearch, 300);
+        });
+
+        document.getElementById('bd-export').addEventListener('click', () => {
+            const header = ['Employee ID','Employee Name','Bank Name','Account Number','Net Pay (NGN)','Pay Date','Status'];
+            const rows = [header, ...filtered.map(r => [
+                r.employeeId ?? '', r.employeeName ?? '', r.bankName ?? '',
+                r.bankAccountNumber ?? '',
+                r.netPay != null ? Number(r.netPay).toFixed(2) : '',
+                fmtDate(r.payDate), r.status ?? ''
+            ])].map(row => row.map(c => {
+                const s = String(c).replace(/"/g,'""');
+                return /[,"\n\r]/.test(s) ? `"${s}"` : s;
+            }).join(',')).join('\r\n');
+
+            const blob = new Blob(['﻿' + rows], {type:'text/csv;charset=utf-8;'});
+            const url  = URL.createObjectURL(blob);
+            const a    = Object.assign(document.createElement('a'), {
+                href: url, download: `bank-details-${new Date().toISOString().slice(0,10)}.csv`
+            });
+            document.body.appendChild(a); a.click();
+            document.body.removeChild(a); URL.revokeObjectURL(url);
+        });
+
+        updateSummary();
+        applySearch();
+    })();
+    </script>
+
+</section>
+</body>
+</html>

@@ -1,16 +1,34 @@
 <!DOCTYPE html>
-<html xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" xmlns:th="http://www.thymeleaf.org"
+<html xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" xmlns:th="http://www.w3.org/1999/xhtml"
       layout:decorate="layouts/mobileEmployeeLayout">
 <head>
     <meta charset="UTF-8">
     <title>Documents | JustHR Mobile</title>
     <style>
+        .document-category-card {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            border: 1px solid #e2e8f0;
+            border-radius: 1rem;
+            padding: 1rem;
+            transition: all 0.2s ease;
+        }
+
+        .dark .document-category-card {
+            background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
+            border-color: #374151;
+        }
+
+        .document-category-card:active {
+            transform: scale(0.98);
+        }
+
         .document-item {
             background-color: white;
             border: 1px solid #e5e7eb;
             border-radius: 0.75rem;
             padding: 1rem;
             margin-bottom: 0.75rem;
+            transition: all 0.2s ease;
         }
 
         .dark .document-item {
@@ -18,16 +36,26 @@
             border-color: #374151;
         }
 
+        .document-item:active {
+            transform: scale(0.98);
+            background-color: #f9fafb;
+        }
+
+        .dark .document-item:active {
+            background-color: #111827;
+        }
+
         .filter-chip {
             padding: 0.5rem 1rem;
             border-radius: 9999px;
             font-size: 0.875rem;
             font-weight: 500;
+            transition: all 0.2s ease;
             white-space: nowrap;
         }
 
         .filter-chip.active {
-            background-color: #2463eb;
+            background-color: #2563eb;
             color: white;
         }
 
@@ -40,148 +68,554 @@
             background-color: #374151;
             color: #d1d5db;
         }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            z-index: 100;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-container {
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            background-color: white;
+            border-radius: 1rem 1rem 0 0;
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        .dark .modal-container {
+            background-color: #1f2937;
+        }
+
+        .modal-overlay.active .modal-container {
+            transform: translateY(0);
+        }
+
+        .swipe-indicator {
+            width: 2rem;
+            height: 0.25rem;
+            background-color: #d1d5db;
+            border-radius: 9999px;
+            margin: 0.75rem auto 0;
+        }
+
+        .dark .swipe-indicator {
+            background-color: #4b5563;
+        }
     </style>
 </head>
 <body>
-<main layout:fragment="content" class="px-4 pb-6">
-    <section class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        <div class="flex items-center justify-between gap-3">
-            <div class="flex items-center gap-3">
-                <div class="flex size-10 items-center justify-center rounded-lg bg-primary/10">
-                    <span class="material-symbols-outlined text-primary">folder</span>
+<main layout:fragment="content">
+
+    <!-- Employee context -->
+    <input type="hidden" id="mobileEmployeeId" th:value="${employee != null ? employee.id : ''}" />
+
+    <!-- Document Summary -->
+    <div class="mobile-card p-4 mb-4">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-indigo-100 dark:bg-indigo-900/30 rounded-xl flex items-center justify-center">
+                    <span class="material-icons-round text-indigo-600 dark:text-indigo-400">folder</span>
                 </div>
                 <div>
-                    <h3 class="font-bold text-slate-900 dark:text-white">Documents</h3>
-                    <p id="documentSummary" class="text-xs text-slate-500 dark:text-slate-400">Loading documents...</p>
+                    <h3 class="font-bold text-gray-900 dark:text-white">Document Center</h3>
+                    <p class="text-xs text-gray-500 dark:text-gray-400"><span id="docCountLabel">0</span> documents</p>
+                </div>
+            </div>
+            <button onclick="openUploadModal()" class="p-2 text-white bg-primary-600 hover:bg-primary-700 rounded-lg">
+                <span class="material-icons-round">upload_file</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Documents List -->
+    <div id="mobileDocumentsList" class="space-y-3 mb-6">
+        <p class="text-sm text-gray-500 text-center py-8">Loading documents...</p>
+    </div>
+
+    <!-- Static demo items removed - replaced with dynamic list above -->
+    <div style="display:none">
+        <!-- Employment Contract -->
+        <div class="document-item" onclick="openDocumentModal('Employment Contract')">
+            <div class="flex items-center space-x-3">
+                <span class="material-icons-round text-red-500 text-2xl">picture_as_pdf</span>
+                <div class="flex-1">
+                    <p class="font-medium text-gray-900 dark:text-white">Employment Contract.pdf</p>
+                    <div class="flex items-center justify-between mt-1">
+                        <span class="badge badge-success">Active</span>
+                        <span class="text-xs text-gray-500 dark:text-gray-400">1.2 MB • 12 Apr 2021</span>
+                    </div>
+                </div>
+                <div class="flex space-x-2">
+                    <button class="p-2 text-gray-400 hover:text-primary-600 rounded-lg">
+                        <span class="material-icons-round text-lg">visibility</span>
+                    </button>
+                    <button class="p-2 text-gray-400 hover:text-primary-600 rounded-lg">
+                        <span class="material-icons-round text-lg">download</span>
+                    </button>
                 </div>
             </div>
         </div>
-    </section>
 
-    <section class="mt-4">
-        <label class="sr-only" for="documentSearch">Search documents</label>
-        <div class="relative">
-            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">search</span>
-            <input id="documentSearch"
-                   class="w-full rounded-xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 dark:border-slate-700 dark:bg-slate-900"
-                   placeholder="Search documents">
+        <!-- Offer Letter -->
+        <div class="document-item" onclick="openDocumentModal('Offer Letter')">
+            <div class="flex items-center space-x-3">
+                <span class="material-icons-round text-red-500 text-2xl">picture_as_pdf</span>
+                <div class="flex-1">
+                    <p class="font-medium text-gray-900 dark:text-white">Offer Letter.pdf</p>
+                    <div class="flex items-center justify-between mt-1">
+                        <span class="badge badge-success">Active</span>
+                        <span class="text-xs text-gray-500 dark:text-gray-400">0.8 MB • 01 Apr 2021</span>
+                    </div>
+                </div>
+                <div class="flex space-x-2">
+                    <button class="p-2 text-gray-400 hover:text-primary-600 rounded-lg">
+                        <span class="material-icons-round text-lg">visibility</span>
+                    </button>
+                    <button class="p-2 text-gray-400 hover:text-primary-600 rounded-lg">
+                        <span class="material-icons-round text-lg">download</span>
+                    </button>
+                </div>
+            </div>
         </div>
-    </section>
 
-    <section class="mt-4 flex gap-2 overflow-x-auto pb-2 no-scrollbar" id="filterChips">
-        <button class="filter-chip active" data-type="">All</button>
-        <button class="filter-chip" data-type="application/pdf">PDF</button>
-        <button class="filter-chip" data-type="image/">Images</button>
-        <button class="filter-chip" data-type="text/">Text</button>
-        <button class="filter-chip" data-type="application/msword">Word</button>
-    </section>
+        <!-- Payslip -->
+        <div class="document-item" onclick="openDocumentModal('Payslip March 2025')">
+            <div class="flex items-center space-x-3">
+                <span class="material-icons-round text-red-500 text-2xl">picture_as_pdf</span>
+                <div class="flex-1">
+                    <p class="font-medium text-gray-900 dark:text-white">Payslip_Mar2025.pdf</p>
+                    <div class="flex items-center justify-between mt-1">
+                        <span class="badge badge-success">Current</span>
+                        <span class="text-xs text-gray-500 dark:text-gray-400">0.5 MB • 31 Mar 2025</span>
+                    </div>
+                </div>
+                <div class="flex space-x-2">
+                    <button class="p-2 text-gray-400 hover:text-primary-600 rounded-lg">
+                        <span class="material-icons-round text-lg">visibility</span>
+                    </button>
+                    <button class="p-2 text-gray-400 hover:text-primary-600 rounded-lg">
+                        <span class="material-icons-round text-lg">download</span>
+                    </button>
+                </div>
+            </div>
+        </div>
 
-    <section class="mt-3" id="documentsList">
-        <div class="py-10 text-center text-sm text-slate-500">Loading documents...</div>
-    </section>
+        <!-- Tax Certificate -->
+        <div class="document-item" onclick="openDocumentModal('Tax Certificate 2024')">
+            <div class="flex items-center space-x-3">
+                <span class="material-icons-round text-red-500 text-2xl">picture_as_pdf</span>
+                <div class="flex-1">
+                    <p class="font-medium text-gray-900 dark:text-white">Tax_Certificate_2024.pdf</p>
+                    <div class="flex items-center justify-between mt-1">
+                        <span class="badge badge-neutral">Archived</span>
+                        <span class="text-xs text-gray-500 dark:text-gray-400">0.6 MB • 15 Jan 2025</span>
+                    </div>
+                </div>
+                <div class="flex space-x-2">
+                    <button class="p-2 text-gray-400 hover:text-primary-600 rounded-lg">
+                        <span class="material-icons-round text-lg">visibility</span>
+                    </button>
+                    <button class="p-2 text-gray-400 hover:text-primary-600 rounded-lg">
+                        <span class="material-icons-round text-lg">download</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ID Card -->
+        <div class="document-item" onclick="openDocumentModal('ID Card')">
+            <div class="flex items-center space-x-3">
+                <span class="material-icons-round text-blue-500 text-2xl">image</span>
+                <div class="flex-1">
+                    <p class="font-medium text-gray-900 dark:text-white">Employee_ID_Card.jpg</p>
+                    <div class="flex items-center justify-between mt-1">
+                        <span class="badge badge-success">Active</span>
+                        <span class="text-xs text-gray-500 dark:text-gray-400">2.3 MB • 20 Apr 2021</span>
+                    </div>
+                </div>
+                <div class="flex space-x-2">
+                    <button class="p-2 text-gray-400 hover:text-primary-600 rounded-lg">
+                        <span class="material-icons-round text-lg">visibility</span>
+                    </button>
+                    <button class="p-2 text-gray-400 hover:text-primary-600 rounded-lg">
+                        <span class="material-icons-round text-lg">download</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Performance Review -->
+        <div class="document-item" onclick="openDocumentModal('Performance Review')">
+            <div class="flex items-center space-x-3">
+                <span class="material-icons-round text-red-500 text-2xl">picture_as_pdf</span>
+                <div class="flex-1">
+                    <p class="font-medium text-gray-900 dark:text-white">Performance_Review_Q4_2024.pdf</p>
+                    <div class="flex items-center justify-between mt-1">
+                        <span class="badge badge-success">Current</span>
+                        <span class="text-xs text-gray-500 dark:text-gray-400">0.9 MB • 10 Jan 2025</span>
+                    </div>
+                </div>
+                <div class="flex space-x-2">
+                    <button class="p-2 text-gray-400 hover:text-primary-600 rounded-lg">
+                        <span class="material-icons-round text-lg">visibility</span>
+                    </button>
+                    <button class="p-2 text-gray-400 hover:text-primary-600 rounded-lg">
+                        <span class="material-icons-round text-lg">download</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Health Insurance -->
+        <div class="document-item" onclick="openDocumentModal('Health Insurance')">
+            <div class="flex items-center space-x-3">
+                <span class="material-icons-round text-red-500 text-2xl">picture_as_pdf</span>
+                <div class="flex-1">
+                    <p class="font-medium text-gray-900 dark:text-white">Health_Insurance_Certificate.pdf</p>
+                    <div class="flex items-center justify-between mt-1">
+                        <span class="badge badge-success">Active</span>
+                        <span class="text-xs text-gray-500 dark:text-gray-400">1.1 MB • 01 Jan 2025</span>
+                    </div>
+                </div>
+                <div class="flex space-x-2">
+                    <button class="p-2 text-gray-400 hover:text-primary-600 rounded-lg">
+                        <span class="material-icons-round text-lg">visibility</span>
+                    </button>
+                    <button class="p-2 text-gray-400 hover:text-primary-600 rounded-lg">
+                        <span class="material-icons-round text-lg">download</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Training Certificate -->
+        <div class="document-item" onclick="openDocumentModal('Training Certificate')">
+            <div class="flex items-center space-x-3">
+                <span class="material-icons-round text-red-500 text-2xl">picture_as_pdf</span>
+                <div class="flex-1">
+                    <p class="font-medium text-gray-900 dark:text-white">Digital_Marketing_Certificate.pdf</p>
+                    <div class="flex items-center justify-between mt-1">
+                        <span class="badge badge-neutral">Archived</span>
+                        <span class="text-xs text-gray-500 dark:text-gray-400">1.5 MB • 15 Aug 2024</span>
+                    </div>
+                </div>
+                <div class="flex space-x-2">
+                    <button class="p-2 text-gray-400 hover:text-primary-600 rounded-lg">
+                        <span class="material-icons-round text-lg">visibility</span>
+                    </button>
+                    <button class="p-2 text-gray-400 hover:text-primary-600 rounded-lg">
+                        <span class="material-icons-round text-lg">download</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help Text -->
+    <div class="text-center text-xs text-gray-500 dark:text-gray-400 mb-6">
+        <span class="material-icons-round text-xs align-text-bottom mr-1">lock</span>
+        Documents are provided by HR. Contact HR support for missing documents.
+    </div>
+
+    <!-- Upload Document Modal -->
+    <div id="uploadModal" class="modal-overlay">
+        <div class="modal-container">
+            <div class="swipe-indicator"></div>
+            <div class="p-4">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-bold text-gray-900 dark:text-white">Upload Document</h3>
+                    <button onclick="closeUploadModal()" class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg">
+                        <span class="material-icons-round">close</span>
+                    </button>
+                </div>
+                <form id="mobileUploadForm" class="space-y-4" enctype="multipart/form-data">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Document Name</label>
+                        <input type="text" id="uploadDocName" required class="form-input w-full rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 dark:bg-gray-700" placeholder="e.g. CV, ID Card, Certificate" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">File</label>
+                        <input type="file" id="uploadDocFile" required class="form-input w-full rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 dark:bg-gray-700" />
+                    </div>
+                    <div id="uploadDocError" class="hidden text-sm text-red-600 dark:text-red-400"></div>
+                    <div class="flex space-x-3 pt-2 border-t border-gray-200 dark:border-gray-700">
+                        <button type="button" onclick="closeUploadModal()" class="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 font-medium">Cancel</button>
+                        <button type="submit" id="uploadDocBtn" class="flex-1 px-4 py-3 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700">Upload</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Document Preview Modal -->
+    <div id="documentModal" class="modal-overlay">
+        <div class="modal-container">
+            <div class="swipe-indicator"></div>
+            <div class="p-4">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center space-x-3">
+                        <span class="material-icons-round text-red-500 text-2xl" id="modalIcon">picture_as_pdf</span>
+                        <h3 class="font-bold text-gray-900 dark:text-white" id="modalTitle">Employment Contract.pdf</h3>
+                    </div>
+                    <button onclick="closeDocumentModal()" class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg">
+                        <span class="material-icons-round">close</span>
+                    </button>
+                </div>
+
+                <!-- Document Preview Placeholder -->
+                <div class="bg-gray-100 dark:bg-gray-800 rounded-lg p-8 mb-4 flex flex-col items-center justify-center min-h-[200px] border border-gray-200 dark:border-gray-700">
+                    <span class="material-icons-round text-gray-400 text-4xl mb-3">description</span>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-2 text-center">Document preview not available in demo</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 text-center" id="modalFileInfo">File: Employment_Contract.pdf • 1.2 MB</p>
+                </div>
+
+                <!-- Document Info -->
+                <div class="grid grid-cols-2 gap-3 mb-4 text-sm">
+                    <div>
+                        <p class="text-xs text-gray-500">Category</p>
+                        <p class="font-medium" id="modalCategory">Contracts</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500">Uploaded</p>
+                        <p class="font-medium" id="modalDate">12 Apr 2021</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500">Status</p>
+                        <p id="modalStatus"><span class="badge badge-success">Active</span></p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500">Size</p>
+                        <p class="font-medium" id="modalSize">1.2 MB</p>
+                    </div>
+                </div>
+
+                <div class="flex space-x-3">
+                    <a id="modalViewLink" href="#" target="_blank" class="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-center">
+                        <span class="material-icons-round text-sm mr-2">visibility</span>
+                        View
+                    </a>
+                    <a id="modalDownloadLink" href="#" class="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-center">
+                        <span class="material-icons-round text-sm mr-2">download</span>
+                        Download
+                    </a>
+                    <button onclick="closeDocumentModal()" class="flex-1 px-4 py-3 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 flex items-center justify-center">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script>
-        let allDocuments = [];
-        let activeType = '';
+        const mobileEmployeeId = document.getElementById('mobileEmployeeId').value;
+        let mobileDocsCache = [];
 
-        document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('documentSearch').addEventListener('input', renderDocuments);
-            document.querySelectorAll('.filter-chip').forEach(chip => {
-                chip.addEventListener('click', () => {
-                    document.querySelectorAll('.filter-chip').forEach(item => item.classList.remove('active'));
-                    chip.classList.add('active');
-                    activeType = chip.dataset.type || '';
-                    renderDocuments();
-                });
-            });
-            loadDocuments();
-        });
-
-        function loadDocuments() {
-            fetch('/api/documents/me')
-                .then(response => {
-                    if (!response.ok) throw new Error('Unable to load documents');
-                    return response.json();
-                })
-                .then(documents => {
-                    allDocuments = documents || [];
-                    renderDocuments();
-                })
-                .catch(error => {
-                    document.getElementById('documentSummary').textContent = 'Unable to load documents';
-                    document.getElementById('documentsList').innerHTML =
-                        `<div class="py-10 text-center text-sm text-red-600">${escapeHtml(error.message)}</div>`;
-                });
+        function mobileDocEscape(v) {
+            return String(v == null ? '' : v).replace(/[&<>"']/g, ch => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[ch]));
         }
 
-        function renderDocuments() {
-            const query = document.getElementById('documentSearch').value.trim().toLowerCase();
-            const documents = allDocuments.filter(document => {
-                const type = (document.contentType || '').toLowerCase();
-                const matchesType = !activeType || type.includes(activeType.toLowerCase());
-                const haystack = [
-                    document.displayName,
-                    document.originalFileName,
-                    document.contentType,
-                    document.documentName,
-                    document.uploadedBy
-                ].filter(Boolean).join(' ').toLowerCase();
-                return matchesType && (!query || haystack.includes(query));
-            });
+        function mobileDocIcon(fileType, fileName) {
+            const t = (fileType || '').toLowerCase();
+            const n = (fileName || '').toLowerCase();
+            if (t.includes('pdf') || n.endsWith('.pdf')) return { icon: 'picture_as_pdf', color: 'text-red-500' };
+            if (t.includes('image') || /\.(png|jpe?g|gif|webp|bmp)$/.test(n)) return { icon: 'image', color: 'text-blue-500' };
+            if (t.includes('word') || /\.(docx?)$/.test(n)) return { icon: 'description', color: 'text-blue-600' };
+            if (t.includes('sheet') || /\.(xlsx?|csv)$/.test(n)) return { icon: 'grid_on', color: 'text-green-600' };
+            return { icon: 'insert_drive_file', color: 'text-gray-500' };
+        }
 
-            document.getElementById('documentSummary').textContent =
-                `${allDocuments.length} ${allDocuments.length === 1 ? 'document' : 'documents'}`;
+        function mobileDocDate(iso) {
+            if (!iso) return '';
+            const d = new Date(iso);
+            if (isNaN(d)) return String(iso);
+            return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+        }
 
-            if (!documents.length) {
-                document.getElementById('documentsList').innerHTML =
-                    '<div class="py-10 text-center text-sm text-slate-500">No documents found.</div>';
+        async function loadMobileDocuments() {
+            const list = document.getElementById('mobileDocumentsList');
+            if (!mobileEmployeeId) {
+                list.innerHTML = '<p class="text-sm text-red-600 text-center py-8">Employee not identified. Please re-login.</p>';
                 return;
             }
+            list.innerHTML = '<p class="text-sm text-gray-500 text-center py-8">Loading documents...</p>';
+            try {
+                const res = await fetch('/employees/' + mobileEmployeeId + '/documents');
+                if (!res.ok) throw new Error(await res.text());
+                const docs = await res.json();
+                mobileDocsCache = docs || [];
+                document.getElementById('docCountLabel').textContent = mobileDocsCache.length;
 
-            document.getElementById('documentsList').innerHTML = documents.map(document => `
-                <article class="document-item">
-                    <div class="flex items-center gap-3">
-                        <span class="material-symbols-outlined text-2xl text-primary">${iconFor(document)}</span>
-                        <div class="min-w-0 flex-1">
-                            <p class="truncate font-semibold text-slate-900 dark:text-white">${escapeHtml(document.displayName || document.originalFileName || 'Document')}</p>
-                            <p class="mt-1 truncate text-xs text-slate-500 dark:text-slate-400">
-                                ${escapeHtml(document.originalFileName || '')} ${document.uploadedAt ? '&middot; ' + formatDate(document.uploadedAt) : ''}
-                            </p>
-                        </div>
-                        <div class="flex gap-1">
-                            <a href="${document.viewUrl}" target="_blank" class="flex size-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-primary dark:hover:bg-slate-800" aria-label="View document">
-                                <span class="material-symbols-outlined text-xl">visibility</span>
-                            </a>
-                            <a href="${document.downloadUrl}" class="flex size-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-primary dark:hover:bg-slate-800" aria-label="Download document">
-                                <span class="material-symbols-outlined text-xl">download</span>
-                            </a>
-                        </div>
-                    </div>
-                </article>
-            `).join('');
+                if (!mobileDocsCache.length) {
+                    list.innerHTML = '<div class="text-center py-8"><span class="material-icons-round text-gray-300 text-4xl">folder_open</span><p class="text-sm text-gray-500 mt-2">No documents uploaded yet.</p></div>';
+                    return;
+                }
+
+                list.innerHTML = mobileDocsCache.map((doc, idx) => {
+                    const ic = mobileDocIcon(doc.fileType, doc.fileName);
+                    const uploaded = mobileDocDate(doc.uploadedAt);
+                    return '' +
+                        '<div class="document-item" onclick="openMobileDocumentModal(' + idx + ')">' +
+                            '<div class="flex items-center space-x-3">' +
+                                '<span class="material-icons-round text-2xl ' + ic.color + '">' + ic.icon + '</span>' +
+                                '<div class="flex-1 min-w-0">' +
+                                    '<p class="font-medium text-gray-900 dark:text-white truncate">' + mobileDocEscape(doc.documentName || doc.fileName) + '</p>' +
+                                    '<div class="flex items-center justify-between mt-1">' +
+                                        '<span class="badge badge-success">Active</span>' +
+                                        '<span class="text-xs text-gray-500 dark:text-gray-400">' + mobileDocEscape(uploaded) + '</span>' +
+                                    '</div>' +
+                                '</div>' +
+                                '<div class="flex space-x-1" onclick="event.stopPropagation()">' +
+                                    '<a href="/documents/view/' + doc.id + '" target="_blank" class="p-2 text-gray-400 hover:text-primary-600 rounded-lg">' +
+                                        '<span class="material-icons-round text-lg">visibility</span>' +
+                                    '</a>' +
+                                    '<a href="/documents/download/' + doc.id + '" class="p-2 text-gray-400 hover:text-primary-600 rounded-lg">' +
+                                        '<span class="material-icons-round text-lg">download</span>' +
+                                    '</a>' +
+                                '</div>' +
+                            '</div>' +
+                        '</div>';
+                }).join('');
+            } catch (e) {
+                list.innerHTML = '<p class="text-sm text-red-600 text-center py-8">' + mobileDocEscape(e.message || 'Failed to load documents') + '</p>';
+            }
         }
 
-        function iconFor(document) {
-            const type = (document.contentType || '').toLowerCase();
-            if (type.includes('image')) return 'image';
-            if (type.includes('pdf')) return 'picture_as_pdf';
-            return 'description';
+        function openMobileDocumentModal(idx) {
+            const doc = mobileDocsCache[idx];
+            if (!doc) return;
+            const ic = mobileDocIcon(doc.fileType, doc.fileName);
+            document.getElementById('modalTitle').textContent = doc.documentName || doc.fileName;
+            document.getElementById('modalFileInfo').textContent = 'File: ' + (doc.fileName || '');
+            document.getElementById('modalCategory').textContent = doc.fileType || '—';
+            document.getElementById('modalDate').textContent = mobileDocDate(doc.uploadedAt);
+            document.getElementById('modalStatus').innerHTML = '<span class="badge badge-success">Active</span>';
+            document.getElementById('modalSize').textContent = doc.uploadedBy || '—';
+            document.getElementById('modalIcon').textContent = ic.icon;
+            document.getElementById('modalViewLink').href = '/documents/view/' + doc.id;
+            document.getElementById('modalDownloadLink').href = '/documents/download/' + doc.id;
+            document.getElementById('documentModal').classList.add('active');
+            document.body.style.overflow = 'hidden';
         }
 
-        function formatDate(value) {
-            const date = new Date(value);
-            return isNaN(date) ? 'N/A' : date.toLocaleDateString();
+        // Preserve old function name for any legacy hidden markup
+        function openDocumentModal() {}
+
+        function closeDocumentModal() {
+            const modal = document.getElementById('documentModal');
+            modal.classList.remove('active');
+            document.body.style.overflow = 'auto';
         }
 
-        function escapeHtml(value) {
-            return String(value == null ? '' : value)
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#039;');
+        function openUploadModal() {
+            document.getElementById('uploadModal').classList.add('active');
+            document.body.style.overflow = 'hidden';
         }
+        function closeUploadModal() {
+            document.getElementById('uploadModal').classList.remove('active');
+            document.body.style.overflow = 'auto';
+        }
+
+        document.getElementById('mobileUploadForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const err = document.getElementById('uploadDocError');
+            err.classList.add('hidden');
+            const btn = document.getElementById('uploadDocBtn');
+            const fileEl = document.getElementById('uploadDocFile');
+            const name = document.getElementById('uploadDocName').value.trim();
+            if (!fileEl.files.length || !name) {
+                err.textContent = 'Document name and file are required.';
+                err.classList.remove('hidden');
+                return;
+            }
+            const fd = new FormData();
+            fd.append('documentName', name);
+            fd.append('file', fileEl.files[0]);
+            btn.disabled = true;
+            btn.textContent = 'Uploading...';
+            try {
+                const res = await fetch('/employees/' + mobileEmployeeId + '/documents/upload', {
+                    method: 'POST',
+                    body: fd
+                });
+                if (!res.ok) throw new Error(await res.text());
+                event.target.reset();
+                closeUploadModal();
+                await loadMobileDocuments();
+            } catch (e) {
+                err.textContent = e.message || 'Upload failed';
+                err.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Upload';
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', loadMobileDocuments);
+
+        // Close modal when clicking overlay
+        document.getElementById('documentModal').addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal-overlay')) {
+                closeDocumentModal();
+            }
+        });
+
+        // Touch gestures for modal
+        (function() {
+            let startY = 0;
+            let currentY = 0;
+            let isDragging = false;
+
+            const modalContainer = document.querySelector('#documentModal .modal-container');
+
+            modalContainer.addEventListener('touchstart', (e) => {
+                startY = e.touches[0].clientY;
+                isDragging = true;
+            });
+
+            modalContainer.addEventListener('touchmove', (e) => {
+                if (!isDragging) return;
+                currentY = e.touches[0].clientY;
+                const deltaY = currentY - startY;
+
+                if (deltaY > 0) {
+                    modalContainer.style.transform = `translateY(${deltaY}px)`;
+                }
+            });
+
+            modalContainer.addEventListener('touchend', () => {
+                if (!isDragging) return;
+                isDragging = false;
+
+                const deltaY = currentY - startY;
+                if (deltaY > 100) {
+                    closeDocumentModal();
+                }
+                modalContainer.style.transform = '';
+            });
+        })();
     </script>
+
 </main>
 </body>
 </html>

@@ -20,7 +20,7 @@ public class RequestEmailService {
     private static final String DEFAULT_COMPANY_NAME = "Human Resources";
 
     private final EmployeeService employeeService;
-    private final ResendService resendService;
+    private final EmailService emailService;
 
 
 
@@ -243,7 +243,7 @@ public class RequestEmailService {
         }
 
         try {
-            resendService.sendEmail(email.trim(), subject, html, text);
+            emailService.sendEmail(email.trim(), subject, html, text);
         } catch (Exception e) {
             log.warn("Request email: failed to send {} to employee {}: {}", context, recipient.getId(), e.getMessage());
         }

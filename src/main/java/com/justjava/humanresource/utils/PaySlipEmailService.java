@@ -34,7 +34,7 @@ public class PaySlipEmailService {
     private final AuthenticationManager authenticationManager;
     private final JobHrEmployeeAccessService jobHrEmployeeAccessService;
     private final PaySlipPdfService paySlipPdfService;
-    private final ResendService resendService;
+    private final EmailService emailService;
 
     public PayslipEmailResponse emailCurrentPayslips(Long companyId, PayslipEmailRequest request) {
         List<Long> requestedEmployeeIds = request != null && request.employeeIds() != null
@@ -190,7 +190,7 @@ public class PaySlipEmailService {
                     + "<p>Please find attached your payslip for " + html(month) + ".</p>"
                     + "<p>Regards,<br>Human Resources</p>";
 
-            String resendEmailId = resendService.sendPdfAttachment(
+            String emailMessageId = emailService.sendPdfAttachment(
                     email.trim(),
                     subject,
                     html,
@@ -198,7 +198,7 @@ public class PaySlipEmailService {
                     filename,
                     pdf
             );
-            return new PayslipEmailResult(employeeId, employeeName, email, "SENT", "Email sent successfully.", resendEmailId);
+            return new PayslipEmailResult(employeeId, employeeName, email, "SENT", "Email sent successfully.", emailMessageId);
         } catch (Exception e) {
             return new PayslipEmailResult(employeeId, employeeName, email, "FAILED", e.getMessage(), null);
         }

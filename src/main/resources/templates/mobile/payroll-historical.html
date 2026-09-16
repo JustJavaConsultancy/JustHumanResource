@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/mobileEmployeeLayout}">
+<head>
+    <title>Historical Adjustments</title>
+    <style>
+        .ha-tab { padding:8px 14px; border-radius:20px; font-size:0.75rem; font-weight:600; border:1px solid #e5e7eb; background:#fff; cursor:pointer; white-space:nowrap; }
+        .ha-tab.active { background:#1e3a8a; color:#fff; border-color:#1e3a8a; }
+        .ha-panel { display:none; }
+        .ha-panel.active { display:block; }
+        .ha-card { background:#fff; border-radius:12px; border:1px solid #e5e7eb; padding:14px; margin-bottom:10px; }
+        .ha-row { display:flex; justify-content:space-between; align-items:flex-start; padding:6px 0; border-bottom:1px solid #f3f4f6; font-size:0.78rem; }
+        .ha-row:last-child { border-bottom:none; }
+        .amount-positive { color:#047857; }
+        .amount-negative { color:#b91c1c; }
+        .amount-neutral { color:#475569; }
+        .ha-sheet { position:fixed; bottom:0; left:0; right:0; z-index:50; transform:translateY(100%); transition:transform .3s; background:#fff; border-radius:20px 20px 0 0; max-height:92vh; overflow-y:auto; padding-bottom:env(safe-area-inset-bottom); }
+        .ha-sheet.open { transform:translateY(0); }
+        .ha-backdrop { position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:49; display:none; }
+        .ha-backdrop.open { display:block; }
+    </style>
+</head>
+<body>
+<section layout:fragment="content">
+
+    <!-- Header -->
+    <div class="bg-blue-900 rounded-xl p-4 mb-4 text-white">
+        <p class="text-xs text-blue-300 uppercase font-semibold">Historical Payroll Adjustments</p>
+        <p class="text-sm text-blue-200 mt-1">Versioned corrections for closed periods</p>
+        <div class="flex gap-2 mt-2 flex-wrap">
+            <span class="text-xs px-2 py-0.5 bg-blue-800 rounded-full text-blue-200">Versioned</span>
+            <span class="text-xs px-2 py-0.5 bg-blue-800 rounded-full text-blue-200">Original preserved</span>
+            <span class="text-xs px-2 py-0.5 bg-blue-800 rounded-full text-blue-200">Audit logged</span>
+        </div>
+    </div>
+
+    <!-- Alert -->
+    <div id="pageAlert" class="hidden rounded-xl border px-4 py-3 text-sm mb-4"></div>
+
+    <!-- Tabs -->
+    <div class="flex gap-2 overflow-x-auto pb-2 mb-4 scrollbar-hide">
+        <button class="ha-tab active" data-tab="createPanel">Create</button>
+        <button class="ha-tab" data-tab="historyPanel">History</button>
+        <button class="ha-tab" data-tab="comparePanel">Compare</button>
+        <button class="ha-tab" data-tab="linesPanel">Line Diff</button>
+    </div>
+
+    <!-- TAB 1: Create Adjustment -->
+    <div id="createPanel" class="ha-panel active">
+        <div class="ha-card">
+            <p class="font-semibold text-sm mb-3">Create Versioned Amendment</p>
+            <div class="space-y-3">
+                <div>
+                    <label class="text-xs font-semibold text-gray-500 uppercase">Employee</label>
+                    <select id="employeeId"
+                            class="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30">
+                        <option value="">Select employee</option>
+                        <option th:each="employee : ${employees}"
+                                th:value="${employee.id}"
+                                th:text="${employee.fullName + ' - ' + employee.employeeNumber}">Employee</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs font-semibold text-gray-500 uppercase">Closed Period</label>
+                    <select id="periodId"
+                            class="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30">
+                        <option value="">Select closed period</option>
+                        <option th:each="period : ${closedPeriods}"
+                                th:value="${period.id}"
+                                th:text="${#temporals.format(period.periodStart,'dd MMM yyyy') + ' – ' + #temporals.format(period.periodEnd,'dd MMM yyyy')}">Period</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs font-semibold text-gray-500 uppercase">Amendment Reason</label>
+                    <textarea id="reason" rows="3"
+                              class="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                              placeholder="Required for audit trail"></textarea>
+                </div>
+            </div>
+
+            <!-- Adjustment Lines -->
+            <div class="flex items-center justify-between mt-4 mb-2">
+                <p class="text-xs font-bold text-gray-500 uppercase">Correction Lines</p>
+                <button onclick="addAdjustmentLine()"
+                        class="flex items-center gap-1 text-xs font-bold text-blue-700 px-3 py-1.5 border border-blue-200 rounded-lg bg-blue-50">
+                    <span class="material-symbols-outlined" style="font-size:14px">add</span> Add Line
+                </button>
+            </div>
+            <div id="adjustmentLines" class="space-y-3"></div>
+
+            <div class="flex gap-2 mt-4">
+                <button onclick="previewAdjustment()"
+                        class="flex-1 py-2.5 border border-gray-300 text-gray-700 text-sm font-semibold rounded-xl flex items-center justify-center gap-2">
+                    <span class="material-symbols-outlined" style="font-size:16px">visibility</span> Preview
+                </button>
+                <button id="createAmendmentBtn" onclick="openCreateConfirm()" disabled
+                        class="flex-1 py-2.5 bg-blue-900 text-white text-sm font-bold rounded-xl flex items-center justify-center gap-2 disabled:opacity-50">
+                    <span class="material-symbols-outlined" style="font-size:16px">task_alt</span> Create
+                </button>
+            </div>
+        </div>
+
+        <!-- Preview area -->
+        <div id="previewEmpty" class="ha-card text-sm text-gray-400">
+            Select employee and closed period, enter corrected values, then preview before creating.
+        </div>
+        <div id="previewContent" class="hidden"></div>
+    </div>
+
+    <!-- TAB 2: Version History -->
+    <div id="historyPanel" class="ha-panel">
+        <div class="ha-card">
+            <p class="font-semibold text-sm mb-3">Version History</p>
+            <div class="space-y-3 mb-3">
+                <div>
+                    <label class="text-xs font-semibold text-gray-500 uppercase">Employee</label>
+                    <select id="historyEmployeeId"
+                            class="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm">
+                        <option value="">Select employee</option>
+                        <option th:each="employee : ${employees}"
+                                th:value="${employee.id}"
+                                th:text="${employee.fullName + ' - ' + employee.employeeNumber}">Employee</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs font-semibold text-gray-500 uppercase">Closed Period</label>
+                    <select id="historyPeriodId"
+                            class="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm">
+                        <option value="">Select closed period</option>
+                        <option th:each="period : ${closedPeriods}"
+                                th:value="${period.id}"
+                                th:text="${#temporals.format(period.periodStart,'dd MMM yyyy') + ' – ' + #temporals.format(period.periodEnd,'dd MMM yyyy')}">Period</option>
+                    </select>
+                </div>
+                <button onclick="loadVersionHistory()"
+                        class="w-full py-2.5 bg-blue-900 text-white text-sm font-bold rounded-xl flex items-center justify-center gap-2">
+                    <span class="material-symbols-outlined" style="font-size:16px">search</span> Load History
+                </button>
+            </div>
+            <div id="historyTable"></div>
+        </div>
+    </div>
+
+    <!-- TAB 3: Original vs Adjusted -->
+    <div id="comparePanel" class="ha-panel">
+        <div class="ha-card">
+            <p class="font-semibold text-sm mb-3">Original vs Adjusted</p>
+            <div class="space-y-3 mb-3">
+                <div>
+                    <label class="text-xs font-semibold text-gray-500 uppercase">Employee</label>
+                    <select id="compareEmployeeId"
+                            class="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm">
+                        <option value="">Select employee</option>
+                        <option th:each="employee : ${employees}"
+                                th:value="${employee.id}"
+                                th:text="${employee.fullName + ' - ' + employee.employeeNumber}">Employee</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs font-semibold text-gray-500 uppercase">Closed Period</label>
+                    <select id="comparePeriodId"
+                            class="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm">
+                        <option value="">Select closed period</option>
+                        <option th:each="period : ${closedPeriods}"
+                                th:value="${period.id}"
+                                th:text="${#temporals.format(period.periodStart,'dd MMM yyyy') + ' – ' + #temporals.format(period.periodEnd,'dd MMM yyyy')}">Period</option>
+                    </select>
+                </div>
+                <button onclick="loadOriginalVsAdjusted()"
+                        class="w-full py-2.5 bg-blue-900 text-white text-sm font-bold rounded-xl flex items-center justify-center gap-2">
+                    <span class="material-symbols-outlined" style="font-size:16px">compare</span> Compare
+                </button>
+            </div>
+            <div id="compareResult"></div>
+        </div>
+    </div>
+
+    <!-- TAB 4: Line Differences -->
+    <div id="linesPanel" class="ha-panel">
+        <div class="ha-card">
+            <p class="font-semibold text-sm mb-3">Line Differences</p>
+            <div class="space-y-3 mb-3">
+                <div>
+                    <label class="text-xs font-semibold text-gray-500 uppercase">Employee</label>
+                    <select id="linesEmployeeId"
+                            class="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm">
+                        <option value="">Select employee</option>
+                        <option th:each="employee : ${employees}"
+                                th:value="${employee.id}"
+                                th:text="${employee.fullName + ' - ' + employee.employeeNumber}">Employee</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs font-semibold text-gray-500 uppercase">Closed Period</label>
+                    <select id="linesPeriodId"
+                            class="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm">
+                        <option value="">Select closed period</option>
+                        <option th:each="period : ${closedPeriods}"
+                                th:value="${period.id}"
+                                th:attr="data-start=${period.periodStart},data-end=${period.periodEnd}"
+                                th:text="${#temporals.format(period.periodStart,'dd MMM yyyy') + ' – ' + #temporals.format(period.periodEnd,'dd MMM yyyy')}">Period</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-xs font-semibold text-gray-500 uppercase">From Version</label>
+                        <input id="fromVersion" type="number" min="1" value="1"
+                               class="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm"/>
+                    </div>
+                    <div>
+                        <label class="text-xs font-semibold text-gray-500 uppercase">To Version</label>
+                        <input id="toVersion" type="number" min="1" value="2"
+                               class="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm"/>
+                    </div>
+                </div>
+                <button onclick="loadLineDifferences()"
+                        class="w-full py-2.5 bg-blue-900 text-white text-sm font-bold rounded-xl flex items-center justify-center gap-2">
+                    <span class="material-symbols-outlined" style="font-size:16px">difference</span> Load Lines
+                </button>
+            </div>
+            <div id="lineDifferenceResult"></div>
+        </div>
+    </div>
+
+    <!-- Confirm Bottom Sheet -->
+    <div id="confirmBackdrop" class="ha-backdrop" onclick="closeCreateConfirm()"></div>
+    <div id="confirmSheet" class="ha-sheet">
+        <div class="p-4 border-b border-gray-100 flex items-center justify-between">
+            <p class="font-bold text-sm">Create Versioned Amendment</p>
+            <button onclick="closeCreateConfirm()" class="text-gray-400">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="p-4 space-y-4">
+            <p id="confirmMessage" class="text-sm text-gray-600">This will create a new payroll version. The original will remain unchanged.</p>
+            <div class="flex gap-3">
+                <button onclick="closeCreateConfirm()"
+                        class="flex-1 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold">Cancel</button>
+                <button onclick="createAmendment()"
+                        class="flex-1 py-2.5 bg-blue-900 text-white rounded-xl text-sm font-bold">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let lineIndex = 0;
+        let latestPreview = null;
+        let adjustablePayItems = [];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('.ha-tab').forEach(btn => {
+                btn.addEventListener('click', () => activateTab(btn.dataset.tab));
+            });
+            document.getElementById('employeeId').addEventListener('change', loadAdjustablePayItems);
+            document.getElementById('periodId').addEventListener('change', loadAdjustablePayItems);
+            addAdjustmentLine();
+        });
+
+        function activateTab(panelId) {
+            document.querySelectorAll('.ha-tab').forEach(btn =>
+                btn.classList.toggle('active', btn.dataset.tab === panelId));
+            document.querySelectorAll('.ha-panel').forEach(p =>
+                p.classList.toggle('active', p.id === panelId));
+        }
+
+        function addAdjustmentLine() {
+            const container = document.getElementById('adjustmentLines');
+            const idx = lineIndex++;
+            const div = document.createElement('div');
+            div.dataset.lineIndex = idx;
+            div.className = 'ha-card p-3 space-y-2';
+            div.innerHTML = `
+                <div class="flex items-center justify-between mb-1">
+                    <p class="text-xs font-bold text-gray-500">Line ${idx + 1}</p>
+                    <button onclick="removeAdjustmentLine(this)" class="text-red-400 text-xs">Remove</button>
+                </div>
+                <select class="line-pay-item w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" onchange="handlePayItemChange(this)" required>
+                    <option value="">Select pay item</option>
+                </select>
+                <p class="line-description text-xs text-gray-400"></p>
+                <div class="grid grid-cols-3 gap-2 text-xs">
+                    <div class="bg-gray-50 rounded p-2">
+                        <p class="text-gray-400">Original</p>
+                        <p class="line-original font-semibold">—</p>
+                    </div>
+                    <div class="bg-blue-50 rounded p-2">
+                        <p class="text-gray-400">Corrected</p>
+                        <input class="line-amount w-full bg-transparent font-semibold text-blue-700 focus:outline-none" type="number" min="0" step="0.01" placeholder="0.00" oninput="updateLineDifference(this.closest('[data-line-index]'))">
+                    </div>
+                    <div class="bg-gray-50 rounded p-2">
+                        <p class="text-gray-400">Difference</p>
+                        <p class="line-difference font-semibold">—</p>
+                    </div>
+                </div>
+            `;
+            container.appendChild(div);
+            populatePayItemSelect(div.querySelector('.line-pay-item'));
+            latestPreview = null;
+            document.getElementById('createAmendmentBtn').disabled = true;
+        }
+
+        function removeAdjustmentLine(btn) {
+            const lines = document.querySelectorAll('#adjustmentLines [data-line-index]');
+            if (lines.length === 1) { showAlert('At least one line is required.', 'warning'); return; }
+            btn.closest('[data-line-index]').remove();
+            latestPreview = null;
+            document.getElementById('createAmendmentBtn').disabled = true;
+            refreshPayItemDropdowns();
+        }
+
+        function buildCommand() {
+            const employeeId = document.getElementById('employeeId').value;
+            const periodId   = document.getElementById('periodId').value;
+            const reason     = document.getElementById('reason').value.trim();
+            const lines      = Array.from(document.querySelectorAll('#adjustmentLines [data-line-index]')).map(row => {
+                const code    = row.querySelector('.line-pay-item').value;
+                const payItem = findPayItem(code);
+                return { componentCode: code, componentType: payItem?.componentType || null, correctedAmount: Number(row.querySelector('.line-amount').value) };
+            });
+            if (!employeeId || !periodId || !reason) throw new Error('Employee, period, and reason are required.');
+            for (const l of lines) if (!l.componentCode || isNaN(l.correctedAmount)) throw new Error('Each line needs a pay item and corrected amount.');
+            const codes = lines.map(l => l.componentCode);
+            if (new Set(codes).size !== codes.length) throw new Error('Each pay item can only be adjusted once.');
+            return { employeeId: Number(employeeId), periodId: Number(periodId), reason, lines };
+        }
+
+        async function loadAdjustablePayItems() {
+            const empId = document.getElementById('employeeId').value;
+            const perId = document.getElementById('periodId').value;
+            latestPreview = null;
+            document.getElementById('createAmendmentBtn').disabled = true;
+            if (!empId || !perId) { adjustablePayItems = []; refreshPayItemDropdowns(); return; }
+            try {
+                adjustablePayItems = await getJson(`/api/payroll/historical-adjustments/pay-items?employeeId=${empId}&periodId=${perId}`);
+                refreshPayItemDropdowns();
+                if (!adjustablePayItems.length) showAlert('No adjustable pay items for the selected employee and period.', 'warning');
+            } catch (e) { adjustablePayItems = []; refreshPayItemDropdowns(); showAlert(e.message, 'error'); }
+        }
+
+        function populatePayItemSelect(select) {
+            const cur = select.value;
+            select.innerHTML = '<option value="">Select pay item</option>' + adjustablePayItems.map(item =>
+                `<option value="${esc(item.componentCode)}">${esc(item.componentCode + ' – ' + (item.description || item.componentCode) + ' (' + fmt(item.currentAmount) + ')')}</option>`
+            ).join('');
+            select.value = cur;
+            updatePayItemOptionAvailability();
+        }
+
+        function refreshPayItemDropdowns() {
+            document.querySelectorAll('.line-pay-item').forEach(sel => { populatePayItemSelect(sel); handlePayItemChange(sel, false); });
+        }
+
+        function handlePayItemChange(select, shouldRefresh = true) {
+            const row  = select.closest('[data-line-index]');
+            const item = findPayItem(select.value);
+            const amtInput = row.querySelector('.line-amount');
+            const desc = row.querySelector('.line-description');
+            const orig = row.querySelector('.line-original');
+            if (!item) { amtInput.value = ''; desc.textContent = ''; orig.textContent = '—'; row.querySelector('.line-difference').textContent = '—'; return; }
+            desc.textContent = item.componentType || '';
+            orig.textContent = fmt(item.currentAmount);
+            if (!amtInput.value) amtInput.value = Number(item.currentAmount || 0).toFixed(2);
+            updateLineDifference(row);
+            if (shouldRefresh) updatePayItemOptionAvailability();
+            latestPreview = null;
+            document.getElementById('createAmendmentBtn').disabled = true;
+        }
+
+        function updateLineDifference(row) {
+            const item = findPayItem(row.querySelector('.line-pay-item').value);
+            const diffEl = row.querySelector('.line-difference');
+            if (!item) { diffEl.textContent = '—'; return; }
+            const diff = Number(row.querySelector('.line-amount').value || 0) - Number(item.currentAmount || 0);
+            diffEl.textContent = fmt(diff);
+            diffEl.className = 'line-difference font-semibold ' + amtClass(diff);
+            latestPreview = null;
+            document.getElementById('createAmendmentBtn').disabled = true;
+        }
+
+        function updatePayItemOptionAvailability() {
+            const selected = Array.from(document.querySelectorAll('.line-pay-item')).map(s => s.value).filter(Boolean);
+            document.querySelectorAll('.line-pay-item').forEach(sel =>
+                Array.from(sel.options).forEach(opt => {
+                    opt.disabled = opt.value && opt.value !== sel.value && selected.includes(opt.value);
+                })
+            );
+        }
+
+        function findPayItem(code) { return adjustablePayItems.find(i => i.componentCode === code); }
+
+        async function previewAdjustment() {
+            try {
+                const command = buildCommand();
+                const data = await postJson('/api/payroll/historical-adjustments/preview', command);
+                latestPreview = data;
+                renderPreview(data);
+                document.getElementById('createAmendmentBtn').disabled = false;
+                showAlert('Preview ready. Review before creating.', 'success');
+            } catch (e) { showAlert(e.message, 'error'); }
+        }
+
+        function openCreateConfirm() {
+            if (!latestPreview) { showAlert('Generate a preview first.', 'warning'); return; }
+            document.getElementById('confirmMessage').textContent =
+                `This will create payroll version ${latestPreview.adjustedVersion} for ${latestPreview.employeeName}. The original will remain unchanged.`;
+            document.getElementById('confirmSheet').classList.add('open');
+            document.getElementById('confirmBackdrop').classList.add('open');
+        }
+
+        function closeCreateConfirm() {
+            document.getElementById('confirmSheet').classList.remove('open');
+            document.getElementById('confirmBackdrop').classList.remove('open');
+        }
+
+        async function createAmendment() {
+            try {
+                const command = buildCommand();
+                const result = await postJson('/api/payroll/historical-adjustments', command);
+                closeCreateConfirm();
+                showAlert(`Amendment version ${result.versionNumber} created for ${result.employeeName}.`, 'success');
+                document.getElementById('createAmendmentBtn').disabled = true;
+                latestPreview = null;
+                syncSelects(command.employeeId, command.periodId);
+                activateTab('historyPanel');
+                await loadVersionHistory();
+            } catch (e) { showAlert(e.message, 'error'); }
+        }
+
+        async function loadVersionHistory() {
+            const empId = document.getElementById('historyEmployeeId').value;
+            const perId = document.getElementById('historyPeriodId').value;
+            if (!empId || !perId) { showAlert('Select employee and period.', 'warning'); return; }
+            const data = await getJson(`/api/payroll/reports/version-history?employeeId=${empId}&periodId=${perId}`);
+            renderHistory(data);
+        }
+
+        async function loadOriginalVsAdjusted() {
+            const empId = document.getElementById('compareEmployeeId').value;
+            const perId = document.getElementById('comparePeriodId').value;
+            if (!empId || !perId) { showAlert('Select employee and period.', 'warning'); return; }
+            const data = await getJson(`/api/payroll/reports/original-vs-adjusted?employeeId=${empId}&periodId=${perId}`);
+            document.getElementById('compareResult').innerHTML = renderComparison(data);
+        }
+
+        async function loadLineDifferences() {
+            const empId   = document.getElementById('linesEmployeeId').value;
+            const perSel  = document.getElementById('linesPeriodId');
+            const perOpt  = perSel.options[perSel.selectedIndex];
+            const fromVer = document.getElementById('fromVersion').value;
+            const toVer   = document.getElementById('toVersion').value;
+            if (!empId || !perOpt.value || !fromVer || !toVer) { showAlert('Fill all fields.', 'warning'); return; }
+            const params = new URLSearchParams({ employeeId: empId, periodStart: perOpt.dataset.start, periodEnd: perOpt.dataset.end, originalVersion: fromVer, adjustedVersion: toVer });
+            const data = await getJson(`/api/payroll/reports/version-comparison?${params}`);
+            document.getElementById('lineDifferenceResult').innerHTML = renderLineDifferences(data.lineDifferences || []);
+        }
+
+        async function postJson(url, body) {
+            const res = await fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
+            return readResponse(res);
+        }
+        async function getJson(url) { const res = await fetch(url); return readResponse(res); }
+        async function readResponse(res) {
+            if (!res.ok) { const t = await res.text(); throw new Error(t || 'Request failed ' + res.status); }
+            return res.json();
+        }
+
+        function renderPreview(data) {
+            document.getElementById('previewEmpty').classList.add('hidden');
+            const pc = document.getElementById('previewContent');
+            pc.classList.remove('hidden');
+            pc.innerHTML = renderComparison(data);
+        }
+
+        function renderComparison(data) {
+            const rows = [
+                ['Original Gross', data.originalGrossPay],
+                ['Adjusted Gross', data.adjustedGrossPay],
+                ['Gross Diff', data.grossDifference],
+                ['Orig Deductions', data.originalTotalDeductions],
+                ['Adj Deductions', data.adjustedTotalDeductions],
+                ['Deductions Diff', data.deductionsDifference],
+                ['Original Net', data.originalNetPay],
+                ['Adjusted Net', data.adjustedNetPay],
+                ['Net Diff', data.netDifference]
+            ];
+            return `<div class="ha-card mb-2">
+                <div class="flex justify-between items-start mb-3">
+                    <div>
+                        <p class="font-semibold text-sm">${esc(data.employeeName || '')}</p>
+                        <p class="text-xs text-gray-400">${fmtDate(data.periodStart)} – ${fmtDate(data.periodEnd)}</p>
+                    </div>
+                    <span class="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">v${data.originalVersion} → v${data.adjustedVersion}</span>
+                </div>
+                <div class="grid grid-cols-3 gap-2 text-xs text-center mb-3">
+                    ${rows.map(([label, amt]) => `<div class="bg-gray-50 rounded p-2"><p class="text-gray-400">${label}</p><p class="font-bold ${amtClass(amt)}">${fmt(amt)}</p></div>`).join('')}
+                </div>
+                ${renderLineDifferences(data.lineDifferences || [])}
+            </div>`;
+        }
+
+        function renderHistory(rows) {
+            const c = document.getElementById('historyTable');
+            if (!rows.length) { c.innerHTML = '<p class="text-xs text-gray-400 text-center py-4">No versions found.</p>'; return; }
+            const latest = Math.max(...rows.map(r => r.versionNumber));
+            c.innerHTML = rows.map(row => `
+                <div class="ha-card mb-2">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold text-sm">v${row.versionNumber}</span>
+                            ${row.versionNumber === 1 ? badge('Original','slate') : badge('Amendment','blue')}
+                            ${row.versionNumber === latest ? badge('Latest','green') : ''}
+                        </div>
+                        <span class="text-xs text-gray-400">${row.runType||''}</span>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 text-xs text-center mb-2">
+                        <div class="bg-gray-50 rounded p-2"><p class="text-gray-400">Gross</p><p class="font-semibold">${fmt(row.grossPay)}</p></div>
+                        <div class="bg-gray-50 rounded p-2"><p class="text-gray-400">Deductions</p><p class="font-semibold">${fmt(row.totalDeductions)}</p></div>
+                        <div class="bg-blue-50 rounded p-2"><p class="text-gray-400">Net</p><p class="font-semibold text-blue-700">${fmt(row.netPay)}</p></div>
+                    </div>
+                    ${row.amendmentReason ? `<p class="text-xs text-gray-500 italic">${esc(row.amendmentReason)}</p>` : ''}
+                </div>`).join('');
+        }
+
+        function renderLineDifferences(lines) {
+            if (!lines.length) return '<p class="text-xs text-gray-400 text-center py-3">No line differences.</p>';
+            return lines.map(l => {
+                const flags = [];
+                if (l.taxable) flags.push('Taxable');
+                if (l.pensionable) flags.push('Pensionable');
+                if (l.partOfGross) flags.push('Gross');
+                if (l.outOfPayroll) flags.push('Out of payroll');
+                return `<div class="ha-row">
+                    <div class="flex-1 mr-2">
+                        <p class="font-semibold text-xs font-mono">${esc(l.componentCode||'')}</p>
+                        <p class="text-gray-400" style="font-size:0.7rem">${esc(l.description||'')}</p>
+                        <div class="flex flex-wrap gap-1 mt-1">${flags.map(f => badge(f,'slate')).join('')}</div>
+                    </div>
+                    <div class="text-right text-xs">
+                        <p class="text-gray-400">${fmt(l.originalAmount)} → ${fmt(l.adjustedAmount)}</p>
+                        <p class="font-bold ${amtClass(l.differenceAmount)}">${fmt(l.differenceAmount)}</p>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function syncSelects(employeeId, periodId) {
+            ['historyEmployeeId','compareEmployeeId','linesEmployeeId'].forEach(id => document.getElementById(id).value = employeeId);
+            ['historyPeriodId','comparePeriodId','linesPeriodId'].forEach(id => document.getElementById(id).value = periodId);
+        }
+
+        function showAlert(message, type) {
+            const el = document.getElementById('pageAlert');
+            const styles = { success:'bg-emerald-50 border-emerald-200 text-emerald-800', error:'bg-red-50 border-red-200 text-red-800', warning:'bg-amber-50 border-amber-200 text-amber-800' };
+            el.className = `rounded-xl border px-4 py-3 text-sm mb-4 ${styles[type]||styles.warning}`;
+            el.textContent = message;
+            el.classList.remove('hidden');
+        }
+
+        function badge(text, tone) {
+            const tones = { green:'bg-emerald-100 text-emerald-700', blue:'bg-blue-100 text-blue-700', slate:'bg-gray-100 text-gray-600' };
+            return `<span class="px-2 py-0.5 rounded-full text-xs font-semibold ${tones[tone]||tones.slate}">${esc(text)}</span>`;
+        }
+
+        function fmt(v) {
+            const n = Number(v || 0);
+            return '₦' + n.toLocaleString('en-NG', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+        }
+        function fmtDate(v) { if (!v) return ''; return new Date(v + 'T00:00:00').toLocaleDateString('en-NG', { day:'2-digit', month:'short', year:'numeric' }); }
+        function amtClass(v) { const n = Number(v||0); return n > 0 ? 'amount-positive' : n < 0 ? 'amount-negative' : 'amount-neutral'; }
+        function esc(s) { return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+    </script>
+
+</section>
+</body>
+</html>
