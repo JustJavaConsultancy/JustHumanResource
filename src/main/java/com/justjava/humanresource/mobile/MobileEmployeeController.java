@@ -175,13 +175,17 @@ public class MobileEmployeeController {
         DateTimeFormatter dateFmt  = DateTimeFormatter.ofPattern("d MMM yyyy");
 
         if (previousPaySlip != null) {
-            previousPaySlip.stream().limit(3).forEach(slip -> {
-                Map<String, String> item = new LinkedHashMap<>();
-                item.put("icon", "account_balance_wallet");
-                item.put("description", "Payslip for " + slip.getPayDate().format(labelFmt) + " processed");
-                item.put("timeAgo", slip.getPayDate().format(dateFmt));
-                recentActivity.add(item);
-            });
+            previousPaySlip.stream()
+                    .filter(slip -> slip.getPayDate() != null)
+                    .sorted((a, b) -> b.getPayDate().compareTo(a.getPayDate()))
+                    .limit(3)
+                    .forEach(slip -> {
+                        Map<String, String> item = new LinkedHashMap<>();
+                        item.put("icon", "account_balance_wallet");
+                        item.put("description", "Payslip for " + slip.getPayDate().format(labelFmt) + " processed");
+                        item.put("timeAgo", slip.getPayDate().format(dateFmt));
+                        recentActivity.add(item);
+                    });
         }
         for (FutureEmployeeAllowanceDTO fa : futureAllowances) {
             Map<String, String> item = new LinkedHashMap<>();
@@ -317,6 +321,14 @@ public class MobileEmployeeController {
         model.addAttribute("title", "Performance");
         model.addAttribute("subTitle", "View your KPI metrics");
         return "mobile/kpi";
+    }
+
+    @PostMapping("/employee/self-review")
+    public String submitMobileSelfReview(@RequestParam String taskId,
+                                         @RequestParam Map<String, Object> formParams) {
+        formParams.put("selfComplete", true);
+        flowableTaskService.completeTask(taskId, formParams);
+        return "redirect:/mobile/employee/performance";
     }
 
     @GetMapping("/employee/documents")
