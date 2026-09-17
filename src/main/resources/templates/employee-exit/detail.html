@@ -22,16 +22,19 @@
                     <div><p class="text-gray-400">Last working date</p><p th:text="${exit.effectiveExitDate ?: exit.proposedLastWorkingDate}">Date</p></div>
                 </div>
                 <form th:if="${exit.status.name() == 'DRAFT' and canActAsHr}" method="post" th:action="@{/employee-exits/{id}/submit(id=${exit.id})}" class="mt-5">
-                    <button class="btn-primary">Submit for approval</button>
+                    <button class="btn-primary inline-flex items-center justify-center rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 transition-colors">Submit for approval</button>
                 </form>
 
                 <form th:if="${canActAsHr and exit.status.name() != 'COMPLETED' and exit.status.name() != 'REJECTED' and exit.status.name() != 'CANCELLED'}"
                       method="post" th:action="@{/employee-exits/{id}/cancel(id=${exit.id})}"
                       onsubmit="return confirm('Cancel this exit case? This cannot be undone.');"
                       class="mt-5 pt-5 border-t border-gray-100 dark:border-gray-700 space-y-3">
-                    <label class="block text-sm font-medium text-gray-600">Cancel this exit</label>
-                    <textarea name="reason" class="form-input" placeholder="Reason for cancellation" required></textarea>
-                    <button class="btn-danger">Cancel exit</button>
+                    <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">Cancel this exit</p>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Reason for cancellation</label>
+                        <textarea name="reason" placeholder="Reason for cancellation" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors" required></textarea>
+                    </div>
+                    <button class="btn-danger inline-flex items-center justify-center rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-700 transition-colors">Cancel exit</button>
                 </form>
             </div>
 
@@ -62,32 +65,57 @@
                 <div class="flex justify-between items-center mb-1">
                     <h3 class="font-bold">Company assets</h3>
                     <form th:if="${canUseAssetActions}" method="post" th:action="@{/employee-exits/{id}/assets/sync(id=${exit.id})}">
-                        <button class="btn-secondary">Sync assigned assets</button>
+                        <button class="inline-flex items-center justify-center rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 transition-colors">Sync assigned assets</button>
                     </form>
                 </div>
                 <p th:if="${canUseAssetActions}" class="text-xs text-gray-500 mb-4">Sync pulls from this employee's locally assigned assets. Manage that source on the <a th:href="@{/employee-exits/assigned-assets(employeeId=${exit.employeeId})}" class="text-primary-600">Assigned assets</a> page.</p>
                 <div th:each="a:${assets}" class="py-3 border-b border-gray-100 dark:border-gray-700">
                     <div class="flex justify-between"><span th:text="${a.assetName}">Asset</span><span th:text="${a.disposition}">Pending</span></div>
                     <form th:if="${canUseAssetActions and exit.status.name() != 'COMPLETED'}" method="post" th:action="@{/employee-exits/{id}/assets/{assetId}/dispose(id=${exit.id},assetId=${a.id})}" class="grid sm:grid-cols-4 gap-3 mt-3">
-                        <select name="disposition" class="form-input">
-                            <option value="RETURNED">Returned</option>
-                            <option value="TRANSFERRED">Transferred</option>
-                            <option value="WRITTEN_OFF">Written off</option>
-                            <option value="WAIVED">Waived</option>
-                            <option value="RECOVER_FROM_SETTLEMENT">Recover from settlement</option>
-                        </select>
-                        <input name="condition" class="form-input" placeholder="Return condition">
-                        <input type="number" step="0.01" min="0" name="recoveryAmount" class="form-input" placeholder="Recovery amount (required if recovering from settlement)">
-                        <button class="btn-secondary">Update disposition</button>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Disposition</label>
+                            <select name="disposition" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
+                                <option value="RETURNED">Returned</option>
+                                <option value="TRANSFERRED">Transferred</option>
+                                <option value="WRITTEN_OFF">Written off</option>
+                                <option value="WAIVED">Waived</option>
+                                <option value="RECOVER_FROM_SETTLEMENT">Recover from settlement</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Return condition</label>
+                            <input name="condition" placeholder="Return condition" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Recovery amount</label>
+                            <input type="number" step="0.01" min="0" name="recoveryAmount" placeholder="Required if recovering from settlement" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
+                        </div>
+                        <div class="flex items-end">
+                            <button class="btn-secondary w-full inline-flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Update disposition</button>
+                        </div>
                     </form>
                 </div>
                 <p th:if="${#lists.isEmpty(assets)}" class="text-sm text-gray-500">No assigned assets found for this employee.</p>
-                <form th:if="${canUseAssetActions}" method="post" th:action="@{/employee-exits/{id}/assets(id=${exit.id})}" class="grid sm:grid-cols-2 gap-3 mt-4">
-                    <input name="externalAssetId" class="form-input" placeholder="External asset ID" required>
-                    <input name="assetName" class="form-input" placeholder="Asset name" required>
-                    <input name="externalAssetCode" class="form-input" placeholder="Asset code">
-                    <input name="category" class="form-input" placeholder="Category">
-                    <button class="btn-primary sm:col-span-2">Add assigned asset</button>
+                <form th:if="${canUseAssetActions}" method="post" th:action="@{/employee-exits/{id}/assets(id=${exit.id})}" class="grid sm:grid-cols-2 gap-4 mt-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">External asset ID</label>
+                        <input name="externalAssetId" placeholder="External asset ID" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Asset name</label>
+                        <input name="assetName" placeholder="Asset name" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Asset code</label>
+                        <input name="externalAssetCode" placeholder="Asset code" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Category</label>
+                        <input name="category" placeholder="Category" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
+                    </div>
+                    <div class="sm:col-span-2 flex justify-center">
+                        <button class="btn-primary inline-flex items-center justify-center rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 transition-colors">Add assigned asset</button>
+                    </div>
                 </form>
             </div>
 
@@ -105,17 +133,28 @@
                             <span class="badge" th:classappend="${h.completed} ? ' badge-success' : ' badge-warning'" th:text="${h.completed} ? 'Completed' : 'Pending'">Status</span>
                             <p th:if="${h.completed}" class="text-xs text-gray-400">Verified by <span th:text="${h.verifiedByEmployeeId}">0</span> on <span th:text="${h.verifiedAt}">date</span></p>
                             <form th:if="${canUseHandoverActions and !h.completed}" method="post" th:action="@{/employee-exits/{id}/handovers/{itemId}/complete(id=${exit.id},itemId=${h.id})}">
-                                <button class="btn-secondary">Mark complete</button>
+                                <button class="btn-secondary inline-flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Mark complete</button>
                             </form>
                         </div>
                     </div>
                 </div>
                 <p th:if="${#lists.isEmpty(handovers)}" class="text-sm text-gray-500">No handover items yet.</p>
-                <form th:if="${canUseHandoverActions}" method="post" th:action="@{/employee-exits/{id}/handovers(id=${exit.id})}" class="grid sm:grid-cols-3 gap-3 mt-4">
-                    <input name="subject" class="form-input" placeholder="Subject" required>
-                    <input name="details" class="form-input" placeholder="Details">
-                    <input type="number" name="successorEmployeeId" class="form-input" placeholder="Successor employee ID">
-                    <button class="btn-primary sm:col-span-3">Add handover item</button>
+                <form th:if="${canUseHandoverActions}" method="post" th:action="@{/employee-exits/{id}/handovers(id=${exit.id})}" class="grid sm:grid-cols-3 gap-4 mt-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Subject</label>
+                        <input name="subject" placeholder="Subject" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Details</label>
+                        <input name="details" placeholder="Details" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Successor employee ID</label>
+                        <input type="number" name="successorEmployeeId" placeholder="Successor employee ID" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
+                    </div>
+                    <div class="sm:col-span-3 flex justify-center">
+                        <button class="btn-primary inline-flex items-center justify-center rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 transition-colors">Add handover item</button>
+                    </div>
                 </form>
             </div>
 
@@ -125,24 +164,60 @@
                     <span th:text="${'Version '+s.settlementVersion+' - '+s.status}">Version</span>
                     <strong th:text="${s.currency+' '+s.netSettlement}">NGN 0</strong>
                     <div th:if="${canUseSettlementActions}" class="flex gap-2">
-                        <a th:href="@{/employee-exits/{id}/settlements/{settlementId}/payroll-preview(id=${exit.id},settlementId=${s.id})}" class="btn-secondary">Payroll preview</a>
+                        <a th:href="@{/employee-exits/{id}/settlements/{settlementId}/payroll-preview(id=${exit.id},settlementId=${s.id})}" class="inline-flex items-center justify-center rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 transition-colors">Payroll preview</a>
                         <form th:if="${s.status.name() == 'IN_APPROVAL'}" method="post" th:action="@{/employee-exits/{id}/settlements/{settlementId}/approve(id=${exit.id},settlementId=${s.id})}">
-                            <button class="btn-primary">Approve</button>
+                            <button class="btn-primary inline-flex items-center justify-center rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 transition-colors">Approve</button>
                         </form>
                     </div>
                 </div>
-                <form th:if="${canUseSettlementActions}" method="post" th:action="@{/employee-exits/{id}/settlements/package(id=${exit.id})}" class="grid sm:grid-cols-3 gap-3 mt-4">
-                    <input type="number" step="0.01" min="0" name="monthlyBasic" class="form-input" placeholder="Monthly basic" required>
-                    <input type="number" step="0.01" min="0" name="leaveDays" class="form-input" placeholder="Leave days">
-                    <button class="btn-primary">Calculate from package rules</button>
-                </form>
-                <form th:if="${canUseSettlementActions}" method="post" th:action="@{/employee-exits/{id}/settlements(id=${exit.id})}" class="grid sm:grid-cols-2 gap-3 mt-4">
-                    <select name="lineType" class="form-input"><option value="SALARY">Salary</option><option value="LEAVE_ENCASHMENT">Leave encashment</option><option value="SEVERANCE">Severance</option><option value="NOTICE_PAY">Notice pay</option><option value="ASSET_RECOVERY">Asset recovery</option><option value="OTHER_DEDUCTION">Other deduction</option></select>
-                    <input name="description" class="form-input" placeholder="Description" required>
-                    <input type="number" step="0.01" min="0" name="amount" class="form-input" placeholder="Amount" required>
-                    <label class="flex items-center gap-2"><input type="checkbox" name="earning" value="true"> Earning</label>
-                    <button class="btn-primary sm:col-span-2">Calculate manual settlement</button>
-                </form>
+
+                <div class="mt-5 pt-5 border-t border-gray-100 dark:border-gray-700">
+                    <form th:if="${canUseSettlementActions}" method="post" th:action="@{/employee-exits/{id}/settlements/package(id=${exit.id})}" class="grid sm:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Monthly basic</label>
+                            <input type="number" step="0.01" min="0" name="monthlyBasic" placeholder="Monthly basic" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Leave days</label>
+                            <input type="number" step="0.01" min="0" name="leaveDays" placeholder="Leave days" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
+                        </div>
+                        <div class="flex items-end">
+                            <button class="w-full inline-flex items-center justify-center rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 transition-colors">Calculate from package rules</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="mt-5 pt-5 border-t border-gray-100 dark:border-gray-700">
+                    <form th:if="${canUseSettlementActions}" method="post" th:action="@{/employee-exits/{id}/settlements(id=${exit.id})}" class="grid sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Line type</label>
+                            <select name="lineType" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
+                                <option value="SALARY">Salary</option>
+                                <option value="LEAVE_ENCASHMENT">Leave encashment</option>
+                                <option value="SEVERANCE">Severance</option>
+                                <option value="NOTICE_PAY">Notice pay</option>
+                                <option value="ASSET_RECOVERY">Asset recovery</option>
+                                <option value="OTHER_DEDUCTION">Other deduction</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Description</label>
+                            <input name="description" placeholder="Description" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Amount</label>
+                            <input type="number" step="0.01" min="0" name="amount" placeholder="Amount" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors" required>
+                        </div>
+                        <div class="flex items-end">
+                            <label class="inline-flex items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer">
+                                <input type="checkbox" name="earning" value="true" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500"> Earning
+                            </label>
+                        </div>
+                        <div class="sm:col-span-2 flex justify-center">
+                            <button class="btn-primary inline-flex items-center justify-center rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 transition-colors">Calculate manual settlement</button>
+                        </div>
+                    </form>
+                </div>
             </div>
 
             <div th:if="${canViewDocumentSection}" class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
@@ -150,16 +225,31 @@
                 <div th:each="d:${documents}" class="flex justify-between items-center py-3 border-b">
                     <div><p class="font-medium" th:text="${d.documentType}">Document</p><p class="text-sm text-gray-500" th:text="${d.fileName}">file.pdf</p></div>
                     <div class="flex gap-2">
-                        <a th:href="@{/employee-exits/{id}/documents/{docId}(id=${exit.id},docId=${d.id})}" class="btn-secondary">Download</a>
-                        <form th:if="${canManageDocuments}" method="post" th:action="@{/employee-exits/{id}/documents/{docId}/delete(id=${exit.id},docId=${d.id})}"><button class="btn-danger">Delete</button></form>
+                        <a th:href="@{/employee-exits/{id}/documents/{docId}(id=${exit.id},docId=${d.id})}" class="btn-secondary inline-flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Download</a>
+                        <form th:if="${canManageDocuments}" method="post" th:action="@{/employee-exits/{id}/documents/{docId}/delete(id=${exit.id},docId=${d.id})}"><button class="btn-danger inline-flex items-center justify-center rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-700 transition-colors">Delete</button></form>
                     </div>
                 </div>
                 <p th:if="${#lists.isEmpty(documents)}" class="text-sm text-gray-500">No documents available.</p>
-                <form th:if="${canManageDocuments}" method="post" enctype="multipart/form-data" th:action="@{/employee-exits/{id}/documents(id=${exit.id})}" class="grid sm:grid-cols-3 gap-3 mt-4">
-                    <select name="documentType" class="form-input" required><option th:each="t:${documentTypes}" th:value="${t}" th:text="${t}"></option></select>
-                    <select name="visibility" class="form-input"><option th:each="v:${documentVisibilities}" th:value="${v}" th:text="${v}"></option></select>
-                    <input type="file" name="file" class="form-input" required>
-                    <button class="btn-primary sm:col-span-3">Upload document</button>
+                <form th:if="${canManageDocuments}" method="post" enctype="multipart/form-data" th:action="@{/employee-exits/{id}/documents(id=${exit.id})}" class="grid sm:grid-cols-3 gap-4 mt-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Document type</label>
+                        <select name="documentType" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors" required>
+                            <option th:each="t:${documentTypes}" th:value="${t}" th:text="${t}"></option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Visibility</label>
+                        <select name="visibility" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
+                            <option th:each="v:${documentVisibilities}" th:value="${v}" th:text="${v}"></option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">File</label>
+                        <input type="file" name="file" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors" required>
+                    </div>
+                    <div class="sm:col-span-3 flex justify-center">
+                        <button class="btn-primary inline-flex items-center justify-center rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 transition-colors">Upload document</button>
+                    </div>
                 </form>
             </div>
 
@@ -173,34 +263,75 @@
             <div th:each="taskAction:${taskActions}" th:with="t=${taskAction.task}" class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5">
                 <h3 class="font-bold" th:text="${t.name}">Task</h3>
                 <form th:if="${taskAction.approvalTask}" method="post" th:action="@{/employee-exits/{id}/tasks/{task}/decision(id=${exit.id},task=${t.id})}" class="space-y-3 mt-4">
-                    <textarea name="comment" class="form-input" placeholder="Comments"></textarea>
-                    <div class="grid grid-cols-3 gap-2"><button name="decision" value="RETURN" class="p-2 bg-amber-100 rounded">Return</button><button name="decision" value="REJECT" class="p-2 bg-red-100 rounded">Reject</button><button name="decision" value="APPROVE" class="p-2 bg-emerald-600 text-white rounded">Approve</button></div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Comments</label>
+                        <textarea name="comment" placeholder="Comments" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Decision</label>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button name="decision" value="RETURN" class="inline-flex items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200 text-sm font-semibold py-2 hover:bg-amber-200 dark:hover:bg-amber-900/60 transition-colors">Return</button>
+                            <button name="decision" value="REJECT" class="inline-flex items-center justify-center rounded-lg bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-200 text-sm font-semibold py-2 hover:bg-red-200 dark:hover:bg-red-900/60 transition-colors">Reject</button>
+                            <button name="decision" value="APPROVE" class="inline-flex items-center justify-center rounded-lg bg-emerald-600 text-white text-sm font-semibold py-2 shadow-sm hover:bg-emerald-700 transition-colors">Approve</button>
+                        </div>
+                    </div>
                 </form>
-                <form th:if="${taskAction.revisionTask}" method="post" th:action="@{/employee-exits/{id}/tasks/{task}/revise(id=${exit.id},task=${t.id})}" class="grid gap-3 mt-4">
-                    <input name="reasonCode" th:value="${exit.reasonCode}" class="form-input" required>
-                    <input type="date" name="noticeDate" th:value="${exit.noticeDate}" class="form-input" required>
-                    <input type="date" name="proposedLastWorkingDate" th:value="${exit.proposedLastWorkingDate}" class="form-input" required>
-                    <input type="number" min="0" name="contractualNoticeDays" th:value="${exit.contractualNoticeDays}" class="form-input">
-                    <input type="number" min="0" name="noticeWaivedDays" th:value="${exit.noticeWaivedDays}" class="form-input">
-                    <textarea name="reasonDetails" th:text="${exit.reasonDetails}" class="form-input"></textarea>
-                    <button class="btn-primary">Save and return to approval</button>
+                <form th:if="${taskAction.revisionTask}" method="post" th:action="@{/employee-exits/{id}/tasks/{task}/revise(id=${exit.id},task=${t.id})}" class="grid gap-4 mt-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Reason</label>
+                        <input name="reasonCode" th:value="${exit.reasonCode}" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Notice date</label>
+                        <input type="date" name="noticeDate" th:value="${exit.noticeDate}" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Proposed last working date</label>
+                        <input type="date" name="proposedLastWorkingDate" th:value="${exit.proposedLastWorkingDate}" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Contractual notice days</label>
+                        <input type="number" min="0" name="contractualNoticeDays" th:value="${exit.contractualNoticeDays}" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Notice waived days</label>
+                        <input type="number" min="0" name="noticeWaivedDays" th:value="${exit.noticeWaivedDays}" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Reason details</label>
+                        <textarea name="reasonDetails" th:text="${exit.reasonDetails}" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"></textarea>
+                    </div>
+                    <button class="btn-primary w-full inline-flex items-center justify-center rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 transition-colors">Save and return to approval</button>
                 </form>
                 <form th:if="${taskAction.clearanceTask}" method="post" th:action="@{/employee-exits/{id}/tasks/{task}/clearance(id=${exit.id},task=${t.id})}" class="space-y-3 mt-4">
-                    <textarea name="comments" class="form-input" placeholder="Clearance notes"></textarea>
-                    <select name="status" class="form-input"><option value="CLEARED">Cleared</option><option value="CLEARED_WITH_EXCEPTION">Cleared with exception</option><option value="WAIVED">Waived</option></select>
-                    <button class="btn-primary w-full">Complete clearance</button>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Clearance notes</label>
+                        <textarea name="comments" placeholder="Clearance notes" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Clearance status</label>
+                        <select name="status" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
+                            <option value="CLEARED">Cleared</option>
+                            <option value="CLEARED_WITH_EXCEPTION">Cleared with exception</option>
+                            <option value="WAIVED">Waived</option>
+                        </select>
+                    </div>
+                    <button class="btn-primary w-full inline-flex items-center justify-center rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 transition-colors">Complete clearance</button>
                 </form>
                 <div th:if="${taskAction.resolveExceptionsTask}" class="mt-4 space-y-3">
                     <p class="text-sm text-gray-500">Exit readiness found blockers after clearance. Resolve them below, then re-check to continue the workflow.</p>
-                    <ul th:if="${!#lists.isEmpty(readiness.blockers())}" class="space-y-2 text-sm">
-                        <li th:each="b:${readiness.blockers()}" class="p-3 rounded-lg bg-amber-50 text-amber-900">
-                            <strong th:text="${b.category()}">CATEGORY</strong>
-                            <span th:text="${b.message()}">Blocker</span>
-                        </li>
-                    </ul>
+                    <div th:if="${!#lists.isEmpty(readiness.blockers())}">
+                        <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Readiness blockers</p>
+                        <ul class="space-y-2 text-sm">
+                            <li th:each="b:${readiness.blockers()}" class="p-3 rounded-lg bg-amber-50 text-amber-900">
+                                <strong th:text="${b.category()}">CATEGORY</strong>
+                                <span th:text="${b.message()}">Blocker</span>
+                            </li>
+                        </ul>
+                    </div>
                     <p th:if="${#lists.isEmpty(readiness.blockers())}" class="text-sm text-emerald-600">No blockers remain. Ready to re-check and continue.</p>
                     <form method="post" th:action="@{/employee-exits/{id}/tasks/{task}/resolve-exceptions(id=${exit.id},task=${t.id})}">
-                        <button class="btn-primary w-full">Re-check and continue</button>
+                        <button class="btn-primary w-full inline-flex items-center justify-center rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 transition-colors">Re-check and continue</button>
                     </form>
                 </div>
             </div>

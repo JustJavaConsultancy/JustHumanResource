@@ -5,15 +5,31 @@
 <main layout:fragment="content" class="space-y-6">
     <div class="flex justify-between items-center">
         <div><h2 class="text-2xl font-bold">Exit Reports</h2><p class="text-gray-500">Operational status, settlement liability and recoveries</p></div>
-        <a th:if="${canSeeExitList}" href="/employee-exits" class="btn-secondary">Back to exits</a>
+        <a th:if="${canSeeExitList}" href="/employee-exits"
+           class="inline-flex items-center rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-100 font-semibold text-sm px-4 py-2.5 shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">
+            Back to exits
+        </a>
     </div>
 
     <form method="get" action="/employee-exits/reports" class="grid md:grid-cols-5 gap-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5">
-        <input type="date" name="from" th:value="${filter.from}" class="form-input">
-        <input type="date" name="to" th:value="${filter.to}" class="form-input">
-        <select name="status" class="form-input"><option value="">All statuses</option><option th:each="s:${statuses}" th:value="${s}" th:text="${s}" th:selected="${filter.status == s}"></option></select>
-        <select name="exitType" class="form-input"><option value="">All types</option><option th:each="t:${exitTypes}" th:value="${t}" th:text="${t}" th:selected="${filter.exitType == t}"></option></select>
-        <button class="btn-primary">Apply filters</button>
+        <input type="date" name="from" th:value="${filter.from}"
+               class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+        <input type="date" name="to" th:value="${filter.to}"
+               class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+        <select name="status"
+                class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+            <option value="">All statuses</option>
+            <option th:each="s:${statuses}" th:value="${s}" th:text="${s}" th:selected="${filter.status == s}"></option>
+        </select>
+        <select name="exitType"
+                class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+            <option value="">All types</option>
+            <option th:each="t:${exitTypes}" th:value="${t}" th:text="${t}" th:selected="${filter.exitType == t}"></option>
+        </select>
+        <button type="submit"
+                class="w-full rounded-lg bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white font-semibold text-sm px-4 py-2.5 shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">
+            Apply filters
+        </button>
     </form>
 
     <div class="grid md:grid-cols-5 gap-4">

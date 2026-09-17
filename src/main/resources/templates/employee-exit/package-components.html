@@ -5,46 +5,115 @@
 <main layout:fragment="content" class="space-y-6">
     <div class="flex justify-between items-center">
         <div><h2 class="text-2xl font-bold">Exit Package Settings</h2><p class="text-gray-500">Settlement components and calculation rules</p></div>
-        <a th:if="${canSeeExitList}" href="/employee-exits" class="btn-secondary">Back to exits</a>
+        <a th:if="${canSeeExitList}" href="/employee-exits" class="btn-secondary inline-flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Back to exits</a>
     </div>
     <div class="grid lg:grid-cols-2 gap-6">
         <section class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
-            <h3 class="font-bold mb-4">Components</h3>
-            <div th:each="c:${components}" class="flex justify-between py-2 border-b"><span th:text="${c.componentCode + ' - ' + c.name}">Component</span><span th:text="${c.lineType}">Type</span></div>
-            <form method="post" action="/employee-exits/settings/package-components" class="grid md:grid-cols-2 gap-3 mt-5">
-                <input name="componentCode" class="form-input" placeholder="Component code" required>
-                <input name="name" class="form-input" placeholder="Name" required>
-                <select name="lineType" class="form-input"><option th:each="t:${lineTypes}" th:value="${t}" th:text="${t}"></option></select>
-                <label class="flex items-center gap-2"><input type="checkbox" name="earning" value="true"> Earning</label>
-                <label class="flex items-center gap-2"><input type="checkbox" name="taxable" value="true"> Taxable</label>
-                <label class="flex items-center gap-2"><input type="checkbox" name="pensionable" value="true"> Pensionable</label>
-                <input type="hidden" name="active" value="true">
-                <button class="btn-primary md:col-span-2">Save component</button>
-            </form>
-        </section>
-        <section class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
-            <h3 class="font-bold mb-4">Rules</h3>
-            <div th:each="r:${rules}" class="flex justify-between py-2 border-b"><span th:text="${'Component '+r.componentId}">Rule</span><span th:text="${r.calculationMethod}">Method</span></div>
-            <form method="post" action="/employee-exits/settings/package-rules" class="grid md:grid-cols-2 gap-3 mt-5">
-                <select name="componentId" class="form-input"><option th:each="c:${components}" th:value="${c.id}" th:text="${c.componentCode + ' - ' + c.name}"></option></select>
-                <select name="calculationMethod" class="form-input"><option th:each="m:${calculationMethods}" th:value="${m}" th:text="${m}"></option></select>
-                <input type="number" step="0.01" min="0" name="fixedAmount" class="form-input" placeholder="Fixed amount">
-                <input type="number" step="0.0001" min="0" name="percentage" class="form-input" placeholder="Percentage">
-                <div class="md:col-span-2">
-                    <p class="text-sm font-medium mb-2">Applies to exit types <span class="text-gray-500 font-normal">(leave all unchecked to apply to every exit type)</span></p>
-                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                        <label th:each="t:${exitTypes}" class="flex items-center gap-2">
-                            <input type="checkbox" name="appliesToExitTypes" th:value="${t}">
-                            <span th:text="${t}">Exit type</span>
+            <h3 class="text-lg font-bold mb-4">Components</h3>
+            <div class="space-y-2">
+                <div th:each="c:${components}" class="flex items-center justify-between gap-3 rounded-lg border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 px-4 py-3">
+                    <span class="text-sm font-medium text-gray-900 dark:text-gray-100" th:text="${c.componentCode + ' - ' + c.name}">Component</span>
+                    <span class="badge badge-info" th:text="${c.lineType}">Type</span>
+                </div>
+                <p th:if="${#lists.isEmpty(components)}" class="text-sm text-gray-500">No components configured yet.</p>
+            </div>
+
+            <div class="mt-6 pt-5 border-t border-gray-100 dark:border-gray-700">
+                <h4 class="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">Add a component</h4>
+                <form method="post" action="/employee-exits/settings/package-components" class="grid md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Component code</label>
+                        <input name="componentCode" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Name</label>
+                        <input name="name" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors" required>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Line type</label>
+                        <select name="lineType" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
+                            <option th:each="t:${lineTypes}" th:value="${t}" th:text="${t}"></option>
+                        </select>
+                    </div>
+                    <div class="md:col-span-2 flex flex-wrap gap-2">
+                        <label class="inline-flex items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer">
+                            <input type="checkbox" name="earning" value="true" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500"> Earning
+                        </label>
+                        <label class="inline-flex items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer">
+                            <input type="checkbox" name="taxable" value="true" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500"> Taxable
+                        </label>
+                        <label class="inline-flex items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer">
+                            <input type="checkbox" name="pensionable" value="true" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500"> Pensionable
                         </label>
                     </div>
+                    <input type="hidden" name="active" value="true">
+                    <div class="md:col-span-2">
+                        <button class="btn-primary w-full inline-flex items-center justify-center rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 transition-colors">Save component</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+        <section class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+            <h3 class="text-lg font-bold mb-4">Rules</h3>
+            <div class="space-y-2">
+                <div th:each="r:${rules}" class="flex items-center justify-between gap-3 rounded-lg border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 px-4 py-3">
+                    <span class="text-sm font-medium text-gray-900 dark:text-gray-100" th:text="${'Component '+r.componentId}">Rule</span>
+                    <span class="badge badge-info" th:text="${r.calculationMethod}">Method</span>
                 </div>
-                <input type="number" min="0" name="minimumYearsOfService" class="form-input" placeholder="Minimum years">
-                <input type="number" min="0" name="maximumYearsOfService" class="form-input" placeholder="Maximum years">
-                <label class="flex items-center gap-2"><input type="checkbox" name="requiresManualApproval" value="true"> Manual approval</label>
-                <input type="hidden" name="active" value="true">
-                <button class="btn-primary md:col-span-2">Save rule</button>
-            </form>
+                <p th:if="${#lists.isEmpty(rules)}" class="text-sm text-gray-500">No rules configured yet.</p>
+            </div>
+
+            <div class="mt-6 pt-5 border-t border-gray-100 dark:border-gray-700">
+                <h4 class="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">Add a rule</h4>
+                <form method="post" action="/employee-exits/settings/package-rules" class="grid md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Component</label>
+                        <select name="componentId" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
+                            <option th:each="c:${components}" th:value="${c.id}" th:text="${c.componentCode + ' - ' + c.name}"></option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Calculation method</label>
+                        <select name="calculationMethod" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
+                            <option th:each="m:${calculationMethods}" th:value="${m}" th:text="${m}"></option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Fixed amount</label>
+                        <input type="number" step="0.01" min="0" name="fixedAmount" placeholder="0.00" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Percentage</label>
+                        <input type="number" step="0.0001" min="0" name="percentage" placeholder="0.00" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
+                    </div>
+                    <div class="md:col-span-2">
+                        <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Applies to exit types <span class="text-gray-500 font-normal">(leave all unchecked to apply to every exit type)</span></p>
+                        <div class="flex flex-wrap gap-2">
+                            <label th:each="t:${exitTypes}" class="inline-flex items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer">
+                                <input type="checkbox" name="appliesToExitTypes" th:value="${t}" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500">
+                                <span th:text="${t}">Exit type</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Minimum years</label>
+                        <input type="number" min="0" name="minimumYearsOfService" placeholder="0" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Maximum years</label>
+                        <input type="number" min="0" name="maximumYearsOfService" placeholder="No limit" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="inline-flex items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer">
+                            <input type="checkbox" name="requiresManualApproval" value="true" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500"> Manual approval
+                        </label>
+                    </div>
+                    <input type="hidden" name="active" value="true">
+                    <div class="md:col-span-2">
+                        <button class="btn-primary w-full inline-flex items-center justify-center rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 transition-colors">Save rule</button>
+                    </div>
+                </form>
+            </div>
         </section>
     </div>
 </main>

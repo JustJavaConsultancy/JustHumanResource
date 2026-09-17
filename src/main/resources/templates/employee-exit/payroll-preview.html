@@ -20,9 +20,15 @@
             <span th:text="${line.componentType()}">Type</span>
             <strong th:text="${line.amount()}">0</strong>
         </div>
-        <form method="post" th:action="@{/employee-exits/{id}/settlements/{settlementId}/post(id=${exit.id},settlementId=${preview.settlementId()})}" class="grid md:grid-cols-2 gap-3 mt-5">
-            <select name="payrollPeriodId" class="form-input" required><option th:each="p:${payrollPeriods}" th:value="${p.id}" th:text="${p.periodStart + ' - ' + p.periodEnd}"></option></select>
-            <button class="btn-primary">Post to payroll</button>
+        <form method="post" th:action="@{/employee-exits/{id}/settlements/{settlementId}/post(id=${exit.id},settlementId=${preview.settlementId()})}" class="flex flex-wrap items-center gap-3 mt-5">
+            <select name="payrollPeriodId" required
+                    class="w-64 min-w-0 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 truncate">
+                <option th:each="p:${payrollPeriods}" th:value="${p.id}" th:text="${p.periodStart + ' - ' + p.periodEnd}"></option>
+            </select>
+            <button type="submit"
+                    class="rounded-lg bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white font-semibold text-sm px-5 py-2.5 shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">
+                Post to payroll
+            </button>
         </form>
     </section>
 </main>
