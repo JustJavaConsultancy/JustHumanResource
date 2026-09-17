@@ -41,7 +41,7 @@
         </div>
         <p th:if="${#lists.isEmpty(assets)}" class="text-sm text-gray-500">No assigned assets recorded for this employee yet.</p>
 
-        <form method="post" th:action="@{/employee-exits/assigned-assets}" class="grid sm:grid-cols-3 gap-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+        <form id="addAssetForm" method="post" th:action="@{/employee-exits/assigned-assets}" class="grid sm:grid-cols-3 gap-4 pt-4 border-t border-gray-100 dark:border-gray-700">
             <input type="hidden" name="employeeId" th:value="${selectedEmployeeId}">
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">External asset ID</label>
@@ -61,7 +61,7 @@
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Assessed value</label>
-                <input type="number" step="0.01" min="0" name="assessedValue" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors" placeholder="Assessed value">
+                <input type="text" inputmode="decimal" autocomplete="off" id="assessedValue" name="assessedValue" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors" placeholder="Assessed value">
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Assigned date</label>
@@ -74,6 +74,42 @@
     </div>
 
     <p th:if="${selectedEmployeeId == null}" class="text-sm text-gray-500">Select an employee above to view or add their assigned assets.</p>
+
+    <script th:inline="none">
+        (function () {
+            function formatNumberInput(input) {
+                input.addEventListener('input', function () {
+                    var cursorFromEnd = input.value.length - input.selectionStart;
+                    var raw = input.value.replace(/[^\d.]/g, '');
+                    var firstDot = raw.indexOf('.');
+                    if (firstDot !== -1) {
+                        raw = raw.slice(0, firstDot + 1) + raw.slice(firstDot + 1).replace(/\./g, '');
+                    }
+                    var parts = raw.split('.');
+                    var intPart = parts[0].replace(/^0+(?=\d)/, '');
+                    var decPart = parts[1];
+                    var formattedInt = intPart ? intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : '';
+                    input.value = decPart !== undefined ? formattedInt + '.' + decPart : formattedInt;
+                    var newPos = Math.max(input.value.length - cursorFromEnd, 0);
+                    input.setSelectionRange(newPos, newPos);
+                });
+            }
+
+            function stripCommasOnSubmit(form, input) {
+                if (!form || !input) return;
+                form.addEventListener('submit', function () {
+                    input.value = input.value.replace(/,/g, '');
+                });
+            }
+
+            var assessedValueInput = document.getElementById('assessedValue');
+            var addAssetForm = document.getElementById('addAssetForm');
+            if (assessedValueInput) {
+                formatNumberInput(assessedValueInput);
+                stripCommasOnSubmit(addAssetForm, assessedValueInput);
+            }
+        })();
+    </script>
 </main>
 </body>
 </html>

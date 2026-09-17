@@ -205,7 +205,7 @@
                             <p class="text-sm font-medium text-gray-600 dark:text-gray-300">Timing & Budget</p>
                             <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                                 <label class="text-sm font-medium">Target Start Date<input id="staffStartDate" type="date" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-900"></label>
-                                <label class="text-sm font-medium">Estimated Monthly Cost<input id="staffMonthlyCost" type="number" min="0" step="0.01" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-900"></label>
+                                <label class="text-sm font-medium">Estimated Monthly Cost<input id="staffMonthlyCost" type="text" inputmode="decimal" placeholder="0.00" oninput="formatThousands(this)" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-900"></label>
                             </div>
                             <label class="inline-flex items-center gap-2 text-sm"><input id="staffBudgeted" type="checkbox"> Budgeted</label>
                         </div>
@@ -882,7 +882,7 @@
                 document.getElementById('staffRequisitionReason').value = staff.requisitionReason || '';
                 document.getElementById('staffReplacementId').value = staff.replacementEmployeeId != null ? staff.replacementEmployeeId : '';
                 document.getElementById('staffStartDate').value = staff.targetStartDate || '';
-                document.getElementById('staffMonthlyCost').value = staff.estimatedMonthlyCost != null ? staff.estimatedMonthlyCost : '';
+                document.getElementById('staffMonthlyCost').value = staff.estimatedMonthlyCost != null ? Number(staff.estimatedMonthlyCost).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) : '';
                 document.getElementById('staffBudgeted').checked = !!staff.budgeted;
                 document.getElementById('staffReason').value = staff.reasonForHire || '';
                 toggleReplacementEmployee();
@@ -928,7 +928,7 @@
                     row.querySelector('[data-expense="expenseCategory"]').value = item.expenseCategory || '';
                     row.querySelector('[data-expense="description"]').value = item.description || '';
                     row.querySelector('[data-expense="vendorName"]').value = item.vendorName || '';
-                    row.querySelector('[data-expense="amount"]').value = item.amount != null ? item.amount : '';
+                    row.querySelector('[data-expense="amount"]').value = item.amount != null ? Number(item.amount).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) : '';
                     row.querySelector('[data-expense="remarks"]').value = item.remarks || '';
                 });
                 updateExpenseTotal();
@@ -991,7 +991,7 @@
             row.innerHTML = `
                 <input data-expense="expenseDate" type="date" required class="rounded border border-gray-300 px-2 py-2 dark:border-gray-600 dark:bg-gray-900">
                 <select data-expense="expenseCategory" required class="rounded border border-gray-300 px-2 py-2 dark:border-gray-600 dark:bg-gray-900"></select>
-                <input data-expense="amount" type="number" min="0.01" step="0.01" placeholder="Amount" required oninput="updateExpenseTotal()" class="rounded border border-gray-300 px-2 py-2 dark:border-gray-600 dark:bg-gray-900">
+                <input data-expense="amount" type="text" inputmode="decimal" placeholder="Amount" required oninput="formatThousands(this); updateExpenseTotal();" class="rounded border border-gray-300 px-2 py-2 dark:border-gray-600 dark:bg-gray-900">
                 <button type="button" onclick="this.closest('div').remove(); updateExpenseTotal();" class="rounded border border-gray-300 px-2 py-2 text-sm dark:border-gray-600">Remove</button>
                 <input data-expense="description" placeholder="Description" required class="rounded border border-gray-300 px-2 py-2 dark:border-gray-600 dark:bg-gray-900 md:col-span-2">
                 <input data-expense="vendorName" placeholder="Vendor" class="rounded border border-gray-300 px-2 py-2 dark:border-gray-600 dark:bg-gray-900">
@@ -1002,13 +1002,61 @@
 
         function updateExpenseTotal() {
             const total = [...document.querySelectorAll('[data-expense="amount"]')]
-                .reduce((sum, input) => sum + (Number(input.value) || 0), 0);
-            document.getElementById('expenseTotal').textContent = total.toFixed(2);
+                .reduce((sum, input) => sum + (parseFormattedNumber(input.value) || 0), 0);
+            document.getElementById('expenseTotal').textContent = total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        // Live-formats a text input with thousands separators (e.g. 1234567.5 -> 1,234,567.5)
+        // while preserving the cursor position, so numbers stay easy to read as the user types.
+        function formatThousands(input) {
+            const rawValue = input.value;
+            const cursorPos = input.selectionStart;
+            const digitsBeforeCursor = rawValue.slice(0, cursorPos).replace(/[^\d]/g, '').length;
+
+            // Keep digits and a single decimal point only
+            let cleaned = rawValue.replace(/[^\d.]/g, '');
+            const firstDot = cleaned.indexOf('.');
+            if (firstDot !== -1) {
+                cleaned = cleaned.slice(0, firstDot + 1) + cleaned.slice(firstDot + 1).replace(/\./g, '');
+            }
+
+            let [intPart, decPart] = cleaned.split('.');
+            intPart = intPart || '';
+            let formatted = intPart ? Number(intPart).toLocaleString('en-US') : '';
+            if (decPart !== undefined) {
+                formatted += '.' + decPart.slice(0, 2);
+            }
+
+            input.value = formatted;
+
+            let count = 0;
+            let pos = formatted.length;
+            if (digitsBeforeCursor === 0) {
+                pos = 0;
+            } else {
+                for (let i = 0; i < formatted.length; i++) {
+                    if (/\d/.test(formatted[i])) {
+                        count++;
+                        if (count === digitsBeforeCursor) {
+                            pos = i + 1;
+                            break;
+                        }
+                    }
+                }
+            }
+            input.setSelectionRange(pos, pos);
+        }
+
+        // Strips thousands separators back out so the underlying value can be used as a number.
+        function parseFormattedNumber(value) {
+            if (value === '' || value === null || value === undefined) return null;
+            const cleaned = String(value).replace(/,/g, '');
+            return cleaned === '' ? null : Number(cleaned);
         }
 
         function optionalNumber(id) {
             const value = document.getElementById(id).value;
-            return value === '' ? null : Number(value);
+            return parseFormattedNumber(value);
         }
 
         function payload() {
@@ -1070,7 +1118,7 @@
                         expenseCategory: row.querySelector('[data-expense="expenseCategory"]').value,
                         description: row.querySelector('[data-expense="description"]').value,
                         vendorName: row.querySelector('[data-expense="vendorName"]').value,
-                        amount: Number(row.querySelector('[data-expense="amount"]').value),
+                        amount: parseFormattedNumber(row.querySelector('[data-expense="amount"]').value),
                         remarks: row.querySelector('[data-expense="remarks"]').value
                     }))
                 };

@@ -237,10 +237,10 @@
                           class="p-1 text-gray-400 hover:text-primary-600 transition-colors">
                     <span class="material-icons-round text-sm">edit</span>
                   </button>
-<!--                  <button th:onclick="'deleteGrade(' + ${grade.id} + ')'"-->
-<!--                          class="p-1 text-gray-400 hover:text-red-600 transition-colors">-->
-<!--                    <span class="material-icons-round text-sm">delete</span>-->
-<!--                  </button>-->
+                  <!--                  <button th:onclick="'deleteGrade(' + ${grade.id} + ')'"-->
+                  <!--                          class="p-1 text-gray-400 hover:text-red-600 transition-colors">-->
+                  <!--                    <span class="material-icons-round text-sm">delete</span>-->
+                  <!--                  </button>-->
                 </div>
               </div>
 
@@ -452,13 +452,57 @@
     let selectedGradeId = null;
 
     // ─────────────────────────────────────────────────────────────────────────
+    // SALARY INPUT — live thousand-separator formatting
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Formats a salary <input> as the user types, adding "," thousand
+     * separators (e.g. 150000 → 150,000). The actual numeric value (without
+     * commas) is restored right before the form is submitted — see
+     * stripCommasFromSalaryInputs().
+     */
+    function formatNumberWithCommas(input) {
+      const cursorPosBefore = input.selectionStart;
+      const prevLength      = input.value.length;
+
+      // Keep only digits and a single decimal point
+      let raw = input.value.replace(/,/g, '').replace(/[^0-9.]/g, '');
+      const firstDot = raw.indexOf('.');
+      if (firstDot !== -1) {
+        raw = raw.slice(0, firstDot + 1) + raw.slice(firstDot + 1).replace(/\./g, '');
+      }
+
+      const [intPartRaw, decPart] = raw.split('.');
+      const intPart      = (intPartRaw || '').replace(/^0+(?=\d)/, '');
+      const formattedInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      const newValue      = decPart !== undefined ? `${formattedInt}.${decPart}` : formattedInt;
+
+      input.value = newValue;
+
+      // Try to keep the caret in roughly the same place relative to the digits typed
+      const newLength = newValue.length;
+      const cursorPos  = Math.max(0, cursorPosBefore + (newLength - prevLength));
+      input.setSelectionRange(cursorPos, cursorPos);
+    }
+
+    /**
+     * Strips the "," separators back out of every salary input in a form
+     * right before submission, so the backend receives a plain numeric value.
+     */
+    function stripCommasFromSalaryInputs(form) {
+      form.querySelectorAll('.salary-input').forEach(input => {
+        input.value = input.value.replace(/,/g, '');
+      });
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
     // ADD MODAL — step rows
     // ─────────────────────────────────────────────────────────────────────────
 
     function refreshStepIndices() {
       document.querySelectorAll('#stepsContainer .modal-step-row').forEach((row, i) => {
-        const nameInput   = row.querySelector('input[type="text"]');
-        const salaryInput = row.querySelector('input[type="number"]');
+        const nameInput   = row.querySelector('.step-name-input');
+        const salaryInput = row.querySelector('.salary-input');
         const radios      = row.querySelectorAll('input[type="radio"]');
         const annual      = row.querySelector('input[type="checkbox"]');
         if (annual)     annual.name     = `steps[${i}].annual`;
@@ -483,7 +527,7 @@
 
     function updateSalaryFieldName(radio) {
       const row         = radio.closest('.modal-step-row');
-      const salaryInput = row.querySelector('input[type="number"]');
+      const salaryInput = row.querySelector('.salary-input');
       if (!salaryInput) return;
       const match = salaryInput.name.match(/steps\[(\d+)\]/);
       const idx   = match ? match[1] : '0';
@@ -507,14 +551,14 @@
             <input type="text"
                    name="steps[${idx}].stepName"
                    placeholder="Step name (e.g. Step 1)"
-                   class="flex-1 min-w-0 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-900 dark:text-white transition"
+                   class="step-name-input flex-1 min-w-0 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-900 dark:text-white transition"
                    required>
             <div class="relative flex-1 min-w-0">
               <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium pointer-events-none">₦</span>
-              <input type="number"
+              <input type="text" inputmode="decimal" autocomplete="off"
                      name="steps[${idx}].basicSalary"
-                     placeholder="0.00000" min="0" step="0.00001"
-                     class="w-full pl-8 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-900 dark:text-white transition"
+                     placeholder="0.00" oninput="formatNumberWithCommas(this)"
+                     class="salary-input w-full pl-8 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-900 dark:text-white transition"
                      required>
             </div>
             <div class="salary-type-toggle flex-shrink-0">
@@ -580,15 +624,15 @@
                    name="steps[${idx}].stepName"
                    value="${stepName}"
                    placeholder="Step name (e.g. Step 1)"
-                   class="flex-1 min-w-0 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-900 dark:text-white transition"
+                   class="step-name-input flex-1 min-w-0 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-900 dark:text-white transition"
                    required>
             <div class="relative flex-1 min-w-0">
               <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium pointer-events-none">₦</span>
-              <input type="number"
+              <input type="text" inputmode="decimal" autocomplete="off"
                      name="${salaryField}"
                      value="${amount}"
-                     placeholder="0.00000" min="0" step="0.00001"
-                     class="w-full pl-8 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-900 dark:text-white transition"
+                     placeholder="0.00" oninput="formatNumberWithCommas(this)"
+                     class="salary-input w-full pl-8 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-900 dark:text-white transition"
                      required>
             </div>
             <div class="salary-type-toggle flex-shrink-0">
@@ -613,6 +657,10 @@
           </div>
         </div>`;
       container.appendChild(row);
+
+      // Format the pre-filled amount with thousand separators
+      const salaryInputEl = row.querySelector('.salary-input');
+      if (salaryInputEl) formatNumberWithCommas(salaryInputEl);
     }
 
     function removeEditStepRow(btn) {
@@ -625,8 +673,8 @@
     function refreshEditStepIndices() {
       document.querySelectorAll('#editStepsContainer .modal-step-row').forEach((row, i) => {
         const hiddenId    = row.querySelector('input[type="hidden"]');
-        const nameInput   = row.querySelector('input[type="text"]');
-        const salaryInput = row.querySelector('input[type="number"]');
+        const nameInput   = row.querySelector('.step-name-input');
+        const salaryInput = row.querySelector('.salary-input');
         const radios      = row.querySelectorAll('input[type="radio"]');
         const annual      = row.querySelector('input[type="checkbox"]');
 
@@ -659,7 +707,7 @@
 
     function updateEditSalaryFieldName(radio) {
       const row         = radio.closest('.modal-step-row');
-      const salaryInput = row.querySelector('input[type="number"]');
+      const salaryInput = row.querySelector('.salary-input');
       if (!salaryInput) return;
       const match = salaryInput.name.match(/steps\[(\d+)\]/);
       const idx   = match ? match[1] : '0';
@@ -894,10 +942,12 @@ const fmt = n => Number(n).toLocaleString('en-NG', { minimumFractionDigits: 2, m
 
     document.addEventListener('DOMContentLoaded', function () {
       document.getElementById('addGradeForm').addEventListener('submit', function () {
+        stripCommasFromSalaryInputs(this);
         disableSubmitButton(this);
       });
 
       document.getElementById('editGradeForm').addEventListener('submit', function () {
+        stripCommasFromSalaryInputs(this);
         disableSubmitButton(this);
       });
 
@@ -926,6 +976,7 @@ const fmt = n => Number(n).toLocaleString('en-NG', { minimumFractionDigits: 2, m
     window.updateEditSalaryFieldName = updateEditSalaryFieldName;
     window.selectGrade               = selectGrade;
     window.editGrade                 = editGrade;
+    window.formatNumberWithCommas    = formatNumberWithCommas;
 
   </script>
 </main>

@@ -121,6 +121,11 @@
 
         function text(value) { return value == null || value === '' ? '-' : value; }
         function fmt(value) { return (value || '').replaceAll('_', ' '); }
+        function fmtAmount(value) {
+            if (value == null || value === '') return '-';
+            const num = Number(value);
+            return isNaN(num) ? text(value) : num.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        }
         function employeeName(id) { return id == null ? '-' : (employeeNames[id] || `Employee #${id}`); }
         function isOwner() { return detail && context && detail.request.requesterEmployeeId === context.employeeId; }
         function canEditAttachments() { return isOwner() && ['DRAFT','SUBMITTED','RETURNED_FOR_CORRECTION'].includes(detail.request.status); }
@@ -192,11 +197,11 @@
                 const rows = d.expenseItems || [];
                 document.getElementById('typeDetails').innerHTML = `
                     <div class="space-y-2">
-                        ${Object.entries(d).filter(([key]) => key !== 'expenseItems').map(([key, value]) => `<p><b>${fmt(key)}:</b> ${text(value)}</p>`).join('')}
+                        ${Object.entries(d).filter(([key]) => key !== 'expenseItems').map(([key, value]) => `<p><b>${fmt(key)}:</b> ${key === 'totalClaimAmount' ? fmtAmount(value) : text(value)}</p>`).join('')}
                         <div class="overflow-x-auto">
                             <table class="w-full text-sm">
                                 <thead class="request-table-head"><tr><th class="px-3 py-2 text-left">Date</th><th class="px-3 py-2 text-left">Category</th><th class="px-3 py-2 text-left">Description</th><th class="px-3 py-2 text-left">Vendor</th><th class="px-3 py-2 text-left">Amount</th><th class="px-3 py-2 text-left">Remarks</th></tr></thead>
-                                <tbody>${rows.map(x => `<tr><td class="px-3 py-2">${text(x.expenseDate)}</td><td class="px-3 py-2">${text(x.expenseCategoryLabel)}</td><td class="px-3 py-2">${text(x.description)}</td><td class="px-3 py-2">${text(x.vendorName)}</td><td class="px-3 py-2">${text(x.amount)} ${text(x.currency)}</td><td class="px-3 py-2">${text(x.remarks)}</td></tr>`).join('')}</tbody>
+                                <tbody>${rows.map(x => `<tr><td class="px-3 py-2">${text(x.expenseDate)}</td><td class="px-3 py-2">${text(x.expenseCategoryLabel)}</td><td class="px-3 py-2">${text(x.description)}</td><td class="px-3 py-2">${text(x.vendorName)}</td><td class="px-3 py-2">${fmtAmount(x.amount)} ${text(x.currency)}</td><td class="px-3 py-2">${text(x.remarks)}</td></tr>`).join('')}</tbody>
                             </table>
                         </div>
                     </div>`;
@@ -204,7 +209,7 @@
             }
             document.getElementById('typeDetails').innerHTML = Object.entries(d)
                 .filter(([key]) => !['id','createdAt','updatedAt','version','workflowRequestId'].includes(key))
-                .map(([key, value]) => `<p><b>${fmt(key)}:</b> ${text(value)}</p>`)
+                .map(([key, value]) => `<p><b>${fmt(key)}:</b> ${key === 'estimatedMonthlyCost' ? fmtAmount(value) : text(value)}</p>`)
                 .join('');
         }
 

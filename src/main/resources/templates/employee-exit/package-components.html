@@ -65,7 +65,7 @@
 
             <div class="mt-6 pt-5 border-t border-gray-100 dark:border-gray-700">
                 <h4 class="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">Add a rule</h4>
-                <form method="post" action="/employee-exits/settings/package-rules" class="grid md:grid-cols-2 gap-4">
+                <form id="addRuleForm" method="post" action="/employee-exits/settings/package-rules" class="grid md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Component</label>
                         <select name="componentId" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
@@ -80,7 +80,7 @@
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Fixed amount</label>
-                        <input type="number" step="0.01" min="0" name="fixedAmount" placeholder="0.00" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
+                        <input type="text" inputmode="decimal" autocomplete="off" id="fixedAmount" name="fixedAmount" placeholder="0.00" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Percentage</label>
@@ -116,6 +116,42 @@
             </div>
         </section>
     </div>
+
+    <script th:inline="none">
+        (function () {
+            function formatNumberInput(input) {
+                input.addEventListener('input', function () {
+                    var cursorFromEnd = input.value.length - input.selectionStart;
+                    var raw = input.value.replace(/[^\d.]/g, '');
+                    var firstDot = raw.indexOf('.');
+                    if (firstDot !== -1) {
+                        raw = raw.slice(0, firstDot + 1) + raw.slice(firstDot + 1).replace(/\./g, '');
+                    }
+                    var parts = raw.split('.');
+                    var intPart = parts[0].replace(/^0+(?=\d)/, '');
+                    var decPart = parts[1];
+                    var formattedInt = intPart ? intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : '';
+                    input.value = decPart !== undefined ? formattedInt + '.' + decPart : formattedInt;
+                    var newPos = Math.max(input.value.length - cursorFromEnd, 0);
+                    input.setSelectionRange(newPos, newPos);
+                });
+            }
+
+            function stripCommasOnSubmit(form, input) {
+                if (!form || !input) return;
+                form.addEventListener('submit', function () {
+                    input.value = input.value.replace(/,/g, '');
+                });
+            }
+
+            var fixedAmountInput = document.getElementById('fixedAmount');
+            var addRuleForm = document.getElementById('addRuleForm');
+            if (fixedAmountInput) {
+                formatNumberInput(fixedAmountInput);
+                stripCommasOnSubmit(addRuleForm, fixedAmountInput);
+            }
+        })();
+    </script>
 </main>
 </body>
 </html>

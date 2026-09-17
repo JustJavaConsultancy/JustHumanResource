@@ -88,7 +88,7 @@
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-gray-500 mb-1">Recovery amount</label>
-                            <input type="number" step="0.01" min="0" name="recoveryAmount" placeholder="Required if recovering from settlement" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
+                            <input type="text" inputmode="decimal" name="recoveryAmount" placeholder="Required if recovering from settlement" class="money-input w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
                         </div>
                         <div class="flex items-end">
                             <button class="btn-secondary w-full inline-flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Update disposition</button>
@@ -162,7 +162,7 @@
                 <h3 class="font-bold mb-4">Final settlement</h3>
                 <div th:each="s:${settlements}" class="flex flex-wrap justify-between gap-3 py-3 border-b">
                     <span th:text="${'Version '+s.settlementVersion+' - '+s.status}">Version</span>
-                    <strong th:text="${s.currency+' '+s.netSettlement}">NGN 0</strong>
+                    <strong th:text="${s.currency+' '+#numbers.formatDecimal(s.netSettlement, 1, 'COMMA', 2, 'POINT')}">NGN 0</strong>
                     <div th:if="${canUseSettlementActions}" class="flex gap-2">
                         <a th:href="@{/employee-exits/{id}/settlements/{settlementId}/payroll-preview(id=${exit.id},settlementId=${s.id})}" class="inline-flex items-center justify-center rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 transition-colors">Payroll preview</a>
                         <form th:if="${s.status.name() == 'IN_APPROVAL'}" method="post" th:action="@{/employee-exits/{id}/settlements/{settlementId}/approve(id=${exit.id},settlementId=${s.id})}">
@@ -175,7 +175,7 @@
                     <form th:if="${canUseSettlementActions}" method="post" th:action="@{/employee-exits/{id}/settlements/package(id=${exit.id})}" class="grid sm:grid-cols-3 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Monthly basic</label>
-                            <input type="number" step="0.01" min="0" name="monthlyBasic" placeholder="Monthly basic" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors" required>
+                            <input type="text" inputmode="decimal" name="monthlyBasic" placeholder="Monthly basic" class="money-input w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors" required>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Leave days</label>
@@ -206,7 +206,7 @@
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Amount</label>
-                            <input type="number" step="0.01" min="0" name="amount" placeholder="Amount" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors" required>
+                            <input type="text" inputmode="decimal" name="amount" placeholder="Amount" class="money-input w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors" required>
                         </div>
                         <div class="flex items-end">
                             <label class="inline-flex items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer">
@@ -337,6 +337,46 @@
             </div>
         </aside>
     </div>
+
+    <script th:inline="none">
+        (function () {
+            function formatMoneyValue(raw) {
+                var cleaned = raw.replace(/[^0-9.]/g, '');
+                var firstDot = cleaned.indexOf('.');
+                if (firstDot !== -1) {
+                    cleaned = cleaned.slice(0, firstDot + 1) + cleaned.slice(firstDot + 1).replace(/\./g, '');
+                }
+                var parts = cleaned.split('.');
+                parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                if (parts.length > 1) {
+                    parts[1] = parts[1].slice(0, 2);
+                }
+                return parts.join('.');
+            }
+
+            function onMoneyInput(e) {
+                var el = e.target;
+                var cursorFromEnd = el.value.length - el.selectionEnd;
+                el.value = formatMoneyValue(el.value);
+                var newPos = el.value.length - cursorFromEnd;
+                el.setSelectionRange(newPos, newPos);
+            }
+
+            document.querySelectorAll('input.money-input').forEach(function (el) {
+                if (el.value) {
+                    el.value = formatMoneyValue(el.value);
+                }
+                el.addEventListener('input', onMoneyInput);
+
+                var form = el.closest('form');
+                if (form) {
+                    form.addEventListener('submit', function () {
+                        el.value = el.value.replace(/,/g, '');
+                    });
+                }
+            });
+        })();
+    </script>
 </main>
 </body>
 </html>
