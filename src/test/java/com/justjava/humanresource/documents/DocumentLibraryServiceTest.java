@@ -205,7 +205,7 @@ class DocumentLibraryServiceTest {
         group.setName("Finance Team");
         GroupChatMessage message = new GroupChatMessage();
         message.setId(41L);
-        message.setChatGroup(group);
+        message.setGroup(group);
         message.setSender(sender);
         message.setContent("");
 

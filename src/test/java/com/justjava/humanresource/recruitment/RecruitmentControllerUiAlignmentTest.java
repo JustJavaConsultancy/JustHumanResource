@@ -1,6 +1,10 @@
 package com.justjava.humanresource.recruitment;
 
 import com.justjava.humanresource.core.config.AuthenticationManager;
+import com.justjava.humanresource.hr.repository.DepartmentRepository;
+import com.justjava.humanresource.hr.repository.EmployeeRepository;
+import com.justjava.humanresource.hr.repository.JobStepRepository;
+import com.justjava.humanresource.hr.repository.PayGroupRepository;
 import com.justjava.humanresource.recruitment.entity.Candidate;
 import com.justjava.humanresource.recruitment.entity.EmploymentOffer;
 import com.justjava.humanresource.recruitment.entity.JobApplication;
@@ -41,6 +45,10 @@ class RecruitmentControllerUiAlignmentTest {
     @Mock CandidateEmployeeConversionRepository conversionRepository;
     @Mock TaskService taskService;
     @Mock AuthenticationManager authenticationManager;
+    @Mock EmployeeRepository employeeRepository;
+    @Mock JobStepRepository jobStepRepository;
+    @Mock PayGroupRepository payGroupRepository;
+    @Mock DepartmentRepository departmentRepository;
     RecruitmentController controller;
 
     @BeforeEach
@@ -48,7 +56,8 @@ class RecruitmentControllerUiAlignmentTest {
         controller = new RecruitmentController(openingRepository, applicationRepository, candidateRepository,
                 historyRepository, recruitmentService, interviewService, offerService, candidateHireService,
                 interviewRepository, scorecardRepository, offerRepository, conversionRepository,
-                taskService, authenticationManager);
+                taskService, authenticationManager, employeeRepository, jobStepRepository,
+                payGroupRepository, departmentRepository);
     }
 
     @Test
