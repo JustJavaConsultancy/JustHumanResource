@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+    <meta charset="UTF-8">
+    <title>Leave Request Details</title>
+</head>
+<body>
+<main layout:fragment="content" class="space-y-6">
+
+    <div>
+        <a th:href="@{/leave}" class="inline-flex items-center gap-1 text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400">
+            <span class="material-icons-round text-base align-middle">arrow_back</span>
+            Back to Leave Management
+        </a>
+    </div>
+
+    <section id="leaveDetailsContainer" class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+        <p class="text-sm text-gray-500 dark:text-gray-400">Loading...</p>
+    </section>
+
+    <script th:inline="javascript">
+        const leaveRequestId = /*[[${leaveRequestId}]]*/ 0;
+    </script>
+    <script>
+        function statusBadge(status) {
+            const s = (status || '').toUpperCase();
+            if (s === 'APPROVED') return '<span class="px-2 py-1 rounded text-xs bg-green-100 text-green-700">APPROVED</span>';
+            if (s === 'REJECTED') return '<span class="px-2 py-1 rounded text-xs bg-red-100 text-red-700">REJECTED</span>';
+            if (s === 'IN_APPROVAL' || s === 'SUBMITTED') return '<span class="px-2 py-1 rounded text-xs bg-yellow-100 text-yellow-700">' + s + '</span>';
+            return '<span class="px-2 py-1 rounded text-xs bg-gray-100 text-gray-700">' + s + '</span>';
+        }
+
+        async function fetchJsonSafe(url) {
+            const res = await fetch(url);
+            const contentType = (res.headers.get('content-type') || '').toLowerCase();
+            if (!res.ok) {
+                const text = await res.text();
+                throw new Error(text || ('Request failed with status ' + res.status));
+            }
+            if (!contentType.includes('application/json')) {
+                const text = await res.text();
+                throw new Error('Expected JSON but received HTML/other response');
+            }
+            return res.json();
+        }
+
+        function formatDateTime(value) {
+            return value ? String(value).replace('T', ' ') : '-';
+        }
+
+        function formatPerson(name, id) {
+            return `${name || '-'}${id ? ' (ID: ' + id + ')' : ''}`;
+        }
+
+        function fieldRow(label, id) {
+            return `
+                <div class="py-3">
+                    <p class="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">${label}</p>
+                    <p id="${id}" class="mt-1 text-sm text-gray-900 dark:text-white"></p>
+                </div>
+            `;
+        }
+
+        function renderSkeleton() {
+            const container = document.getElementById('leaveDetailsContainer');
+            container.innerHTML = `
+                <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100 mb-2">Leave Request Details</h2>
+                <div class="divide-y divide-gray-200 dark:divide-gray-700">
+                    ${fieldRow('Request', 'fieldRequest')}
+                    ${fieldRow('Leave Type', 'fieldLeaveType')}
+                    ${fieldRow('Period', 'fieldPeriod')}
+                    ${fieldRow('Days', 'fieldDays')}
+                    ${fieldRow('Requesting Employee', 'fieldRequester')}
+                    ${fieldRow('Reason', 'fieldReason')}
+                    ${fieldRow('Stand-in Colleague', 'fieldStandIn')}
+                    ${fieldRow('Date Created', 'fieldCreatedAt')}
+                    ${fieldRow('Status', 'fieldStatus')}
+                    ${fieldRow('Approval Level', 'fieldApprovalLevel')}
+                </div>
+            `;
+        }
+
+        async function loadLeaveRequestDetails() {
+            const container = document.getElementById('leaveDetailsContainer');
+            container.innerHTML = '<p class="text-sm text-gray-500 dark:text-gray-400">Loading...</p>';
+            try {
+                const data = await fetchJsonSafe(`/leave/requests/${leaveRequestId}/details`);
+
+                renderSkeleton();
+                document.getElementById('fieldRequest').textContent = `Leave #${data.id ?? ''}`;
+                document.getElementById('fieldLeaveType').textContent = data.leaveType || '-';
+                document.getElementById('fieldPeriod').textContent = `${data.startDate || ''} to ${data.endDate || ''}`;
+                document.getElementById('fieldDays').textContent = data.totalDays ?? '-';
+                document.getElementById('fieldRequester').textContent = formatPerson(data.requesterName, data.requesterId);
+                document.getElementById('fieldReason').textContent = data.reason || '-';
+                document.getElementById('fieldStandIn').textContent = formatPerson(data.standInName, data.standInId);
+                document.getElementById('fieldCreatedAt').textContent = formatDateTime(data.createdAt);
+                document.getElementById('fieldStatus').innerHTML = statusBadge(data.status);
+                document.getElementById('fieldApprovalLevel').textContent = `${data.currentApprovalLevel || '-'} / ${data.totalApprovalLevels || '-'}`;
+            } catch (e) {
+                container.innerHTML = '<p class="text-sm text-red-600">' + e.message + '</p>';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadLeaveRequestDetails);
+    </script>
+
+</main>
+</body>
+</html>
