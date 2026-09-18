@@ -392,7 +392,10 @@ public class KpiController {
     }
     @GetMapping("/kpi/measurements/form-items")
     public String getMeasurementFormItems(@RequestParam Long employeeId, Model model) {
-        List<KpiAssignmentResponseDTO> kpiDefinition = kpiAssignmentService.getAssignmentsForEmployee(employeeId);
+        List<KpiAssignmentResponseDTO> kpiDefinition = kpiAssignmentService.getAssignmentsForEmployee(employeeId)
+                .stream()
+                .filter(kpi -> !kpi.isParentKpi())
+                .collect(Collectors.toList());
         System.out.println("Received request for measurement form items for employee ID: " + employeeId);
 
         kpiDefinition.forEach(

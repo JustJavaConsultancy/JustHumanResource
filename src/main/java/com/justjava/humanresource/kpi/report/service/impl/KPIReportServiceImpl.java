@@ -9,6 +9,7 @@ import com.justjava.humanresource.kpi.report.dto.*;
 import com.justjava.humanresource.kpi.report.service.KPIReportService;
 import com.justjava.humanresource.kpi.repositories.EmployeeAppraisalRepository;
 import com.justjava.humanresource.kpi.repositories.KpiAssignmentRepository;
+import com.justjava.humanresource.kpi.repositories.KpiDefinitionRepository;
 import com.justjava.humanresource.kpi.repositories.KpiMeasurementRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -30,6 +31,7 @@ public class KPIReportServiceImpl implements KPIReportService {
     private final KpiAssignmentRepository assignmentRepository;
     private final EmployeeRepository employeeRepository;
     private final EmployeeAppraisalRepository appraisalRepository;
+    private final KpiDefinitionRepository kpiDefinitionRepository;
 
     /* =========================================================
        1. EMPLOYEE KPI SCORECARD
@@ -46,6 +48,7 @@ public class KPIReportServiceImpl implements KPIReportService {
                 );
 
         return measurements.stream()
+                .filter(m -> !kpiDefinitionRepository.existsByParentDefinition_Id(m.getKpi().getId()))
                 .map(m -> {
 
 /*                    BigDecimal weight = m.getWeight() != null
@@ -118,6 +121,9 @@ public class KPIReportServiceImpl implements KPIReportService {
                                         );
 
                         for (KpiMeasurement m : measurements) {
+                            if (kpiDefinitionRepository.existsByParentDefinition_Id(m.getKpi().getId())) {
+                                continue;
+                            }
                             totalScore = totalScore.add(m.getScore());
                             count++;
                         }
@@ -176,6 +182,7 @@ public class KPIReportServiceImpl implements KPIReportService {
                 measurementRepository.findAllDetailedByPeriod(period);
 
         return measurements.stream()
+                .filter(m -> !kpiDefinitionRepository.existsByParentDefinition_Id(m.getKpi().getId()))
                 .map(m -> {
 
                     BigDecimal weight =

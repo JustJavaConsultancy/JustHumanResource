@@ -8,6 +8,7 @@ import com.justjava.humanresource.kpi.enums.AppraisalOutcome;
 import com.justjava.humanresource.kpi.repositories.AppraisalCycleRepository;
 import com.justjava.humanresource.kpi.repositories.EmployeeAppraisalRepository;
 import com.justjava.humanresource.kpi.repositories.KpiAssignmentRepository;
+import com.justjava.humanresource.kpi.repositories.KpiDefinitionRepository;
 import com.justjava.humanresource.kpi.repositories.KpiMeasurementRepository;
 import com.justjava.humanresource.workflow.dto.FlowableTaskDTO;
 import com.justjava.humanresource.workflow.service.FlowableTaskService;
@@ -36,6 +37,7 @@ public class AppraisalService {
     private final EmployeeRepository employeeRepository;
     private final KpiAssignmentRepository assignmentRepository;
     private final KpiMeasurementRepository measurementRepository;
+    private final KpiDefinitionRepository kpiDefinitionRepository;
     private final EmployeeAppraisalRepository appraisalRepository;
     private final AppraisalCycleRepository cycleRepository;
     private final FlowableTaskService flowableTaskService;
@@ -188,6 +190,17 @@ public class AppraisalService {
         if (measurements.isEmpty()) {
             throw new IllegalStateException(
                     "No KPI measurements found for employee "
+                            + employeeId + " in cycle " + cycle.getName()
+            );
+        }
+
+        measurements = measurements.stream()
+                .filter(m -> !kpiDefinitionRepository.existsByParentDefinition_Id(m.getKpi().getId()))
+                .toList();
+
+        if (measurements.isEmpty()) {
+            throw new IllegalStateException(
+                    "No measurable child KPI measurements found for employee "
                             + employeeId + " in cycle " + cycle.getName()
             );
         }

@@ -725,6 +725,7 @@
                     <tr>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Code</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Name</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Hierarchy</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Category</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Target Value</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Unit</th>
@@ -750,6 +751,23 @@
                                  class="text-sm text-gray-500">
                                 Percentage of monthly sales target achieved
                             </div>
+                        </td>
+
+                        <!-- Hierarchy -->
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span th:if="${kpi.hasChildren()}"
+                                  class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+                                Parent
+                            </span>
+                            <span th:if="${!kpi.hasChildren() and kpi.parentDefinition != null}"
+                                  th:text="${'Child of ' + kpi.parentDefinition.name}"
+                                  class="px-2 py-1 text-xs rounded-full bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200">
+                                Child KPI
+                            </span>
+                            <span th:if="${!kpi.hasChildren() and kpi.parentDefinition == null}"
+                                  class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400">
+                                Standalone
+                            </span>
                         </td>
 
                         <!-- Category Badge -->
@@ -832,7 +850,7 @@
 
                     <!-- Empty State -->
                     <tr th:if="${kpiDefinitions == null or #lists.isEmpty(kpiDefinitions)}">
-                        <td colspan="8"
+                        <td colspan="9"
                             class="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
                             No KPI definitions found.
                         </td>
@@ -1029,6 +1047,7 @@
                            focus:ring-2 focus:ring-primary-500 focus:outline-none text-sm">
                         <option value="">— Select KPI —</option>
                         <option th:each="kpi : ${kpiDefinitions}"
+                                th:if="${!kpi.hasChildren()}"
                                 th:value="${kpi.id}"
                                 th:text="${kpi.code + ' – ' + kpi.name}">
                             KPI001 – Sales Target
@@ -1155,6 +1174,22 @@
                     <textarea name="description" id="kpiDescription" rows="3"
                               class="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none"></textarea>
                 </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Parent KPI</label>
+                    <select name="parentDefinition.id" id="kpiParent"
+                            class="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+                        <option value="">No parent</option>
+                        <option th:each="parentKpi : ${kpiDefinitions}"
+                                th:value="${parentKpi.id}"
+                                th:data-parent-id="${parentKpi.parentDefinitionId}"
+                                th:text="${parentKpi.code + ' - ' + parentKpi.name}">
+                            Parent KPI
+                        </option>
+                    </select>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        Use parent KPIs to group related child KPIs. Weights are assigned later per employee, job step, or department.
+                    </p>
+                </div>
                 <div class="grid grid-cols-3 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Category *</label>
@@ -1189,7 +1224,7 @@
                         <input type="checkbox" name="impactSalary" id="kpiImpactSalary" value="true"
                                class="w-4 h-4 text-primary-600 rounded focus:ring-primary-500">
                         <label for="kpiImpactSalary" class="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer select-none">
-                            Tick for KPI to impacts salary calculation
+                            Include this KPI in salary calculation
                         </label>
                     </div>
                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 ml-6">
@@ -1198,7 +1233,7 @@
                 </div>
 
                 <div class="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3">
-                    <button type="button" onclick="closeModal('kpiDefinitionModal')" class="px-4 py-2 border ...">
+                    <button type="button" onclick="closeModal('kpiDefinitionModal')" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
                         Cancel
                     </button>
                     <button type="submit" class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
@@ -1214,7 +1249,7 @@
         <div class="modal-content">
             <div class="p-6 border-b border-gray-200 dark:border-gray-700">
                 <h3 class="text-lg font-bold">Assign Multiple KPIs</h3>
-                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Add multiple KPIs with weights (total must not exceed configured maximum)</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Assign KPIs with scoped weights. Child KPI weights must match their parent weight.</p>
             </div>
             <!-- Standard form submission – htmx will send as application/x-www-form-urlencoded -->
             <form id="kpiAssignmentForm"
@@ -1226,6 +1261,7 @@
                   hx-on:htmx:after-request="handleAssignmentResponse(event)"
                   onsubmit="return validateAssignmentForm(event)"
                   class="p-6 space-y-4">
+                <div id="assignmentErrorBanner" class="hidden rounded-lg border px-4 py-3 text-sm"></div>
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Assign To</label>
@@ -1318,6 +1354,7 @@
                     <div id="assignmentKpisContainer" class="space-y-3">
                         <!-- KPI rows will be added here with indexed names -->
                     </div>
+                    <div id="assignmentHierarchySummary" class="mt-3 space-y-2"></div>
                     <button type="button" onclick="addKpiAssignmentRow()" class="mt-3 text-primary-600 hover:text-primary-800 flex items-center space-x-1">
                         <span class="material-icons-round text-sm">add_circle</span>
                         <span class="text-sm">Add Another KPI</span>
@@ -1493,10 +1530,37 @@
         }
 
         // KPI Definition form functions (unchanged)
+        function isKpiDescendant(candidateId, ancestorId) {
+            let candidate = getKpiById(candidateId);
+            while (candidate && candidate.parentDefinitionId) {
+                if (Number(candidate.parentDefinitionId) === Number(ancestorId)) {
+                    return true;
+                }
+                candidate = getKpiById(candidate.parentDefinitionId);
+            }
+            return false;
+        }
+
+        function refreshParentKpiOptions(currentId = null) {
+            const parentSelect = document.getElementById('kpiParent');
+            if (!parentSelect) return;
+            Array.from(parentSelect.options).forEach(option => {
+                if (!option.value) {
+                    option.disabled = false;
+                    return;
+                }
+                const optionId = Number(option.value);
+                const invalid = currentId && (optionId === Number(currentId) || isKpiDescendant(optionId, currentId));
+                option.disabled = !!invalid;
+            });
+        }
+
         function resetKpiForm() {
             document.getElementById('kpiDefinitionForm').reset();
             document.getElementById('kpiId').value = '';
             document.getElementById('kpiCode').value = generateRandomKpiCode();
+            refreshParentKpiOptions(null);
+            document.getElementById('kpiParent').value = '';
         }
 
         function editKpiDefinition(id) {
@@ -1510,6 +1574,8 @@
             document.getElementById('kpiCategory').value = kpi.category;
             document.getElementById('kpiTarget').value = kpi.targetValue;
             document.getElementById('kpiUnit').value = kpi.unit;
+            refreshParentKpiOptions(kpi.id);
+            document.getElementById('kpiParent').value = kpi.parentDefinitionId || '';
             document.getElementById('kpiImpactSalary').checked = !!kpi.impactSalary;
 
             openModal('kpiDefinitionModal', true);
@@ -1539,34 +1605,93 @@ const MAX_KPI_WEIGHT = (() => {
 // Counter for indexing KPI rows
 let kpiRowCounter = 0;
 
+function escapeKpiHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
+function getKpiById(id) {
+    return kpiDefinitions.find(k => Number(k.id) === Number(id));
+}
+
+function getActiveChildKpis(parentId) {
+    return kpiDefinitions.filter(k => k.active && Number(k.parentDefinitionId) === Number(parentId));
+}
+
+function kpiHasActiveChildren(kpi) {
+    return !!kpi && getActiveChildKpis(kpi.id).length > 0;
+}
+
+function getKpiType(kpi) {
+    if (!kpi) return 'Unselected';
+    if (kpiHasActiveChildren(kpi)) return 'Parent';
+    if (kpi.parentDefinitionId) return 'Child';
+    return 'Standalone';
+}
+
+function renderKpiTypeBadge(kpi) {
+    const type = getKpiType(kpi);
+    const classes = {
+        Parent: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+        Child: 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200',
+        Standalone: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
+        Unselected: 'bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-400'
+    };
+    return `<span class="kpi-type-badge px-2 py-0.5 text-xs rounded-full ${classes[type]}">${type}</span>`;
+}
+
+function buildKpiOptions(selectedId = '') {
+    const active = kpiDefinitions.filter(k => k.active);
+    const groups = [
+        { label: 'Parent KPIs', items: active.filter(k => kpiHasActiveChildren(k)) },
+        { label: 'Child KPIs', items: active.filter(k => k.parentDefinitionId && !kpiHasActiveChildren(k)) },
+        { label: 'Standalone KPIs', items: active.filter(k => !k.parentDefinitionId && !kpiHasActiveChildren(k)) }
+    ];
+
+    return '<option value="">Select KPI</option>' + groups
+        .filter(group => group.items.length > 0)
+        .map(group => {
+            const options = group.items.map(k => {
+                const type = getKpiType(k).toLowerCase();
+                const parentText = k.parentDefinitionName ? ` · child of ${k.parentDefinitionName}` : ` · ${type}`;
+                return `<option value="${k.id}" ${selectedId == k.id ? 'selected' : ''}>${escapeKpiHtml(k.code)} - ${escapeKpiHtml(k.name)}${escapeKpiHtml(parentText)}</option>`;
+            }).join('');
+            return `<optgroup label="${escapeKpiHtml(group.label)}">${options}</optgroup>`;
+        })
+        .join('');
+}
+
 // Function to add a KPI row with indexed field names
 function addKpiAssignmentRow(kpiId = '', weight = '', mandatory = true) {
     const container = document.getElementById('assignmentKpisContainer');
     const index = kpiRowCounter++; // use and increment counter
+    const selectedKpi = getKpiById(kpiId);
 
     const row = document.createElement('div');
-    row.className = 'kpi-item';
+    row.className = 'kpi-item bg-white dark:bg-gray-800';
     row.setAttribute('data-index', index);
     row.innerHTML = `
         <div class="kpi-item-header" onclick="toggleKpiItem(this)">
             <div class="flex items-center space-x-2">
                 <span class="material-icons-round text-sm">expand_more</span>
-                <span>KPI Assignment</span>
+                <span class="kpi-row-title">${selectedKpi ? escapeKpiHtml(selectedKpi.name) : 'KPI Assignment'}</span>
+                <span class="kpi-row-badge">${renderKpiTypeBadge(selectedKpi)}</span>
             </div>
-            <button type="button" onclick="removeKpiAssignmentRow(this)" class="text-red-600 hover:text-red-900">
+            <button type="button" onclick="event.stopPropagation(); removeKpiAssignmentRow(this)" class="text-red-600 hover:text-red-900" title="Remove KPI">
                 <span class="material-icons-round text-sm">delete</span>
             </button>
         </div>
-        <div class="kpi-item-content hidden">
-            <div class="grid grid-cols-2 gap-4">
+        <div class="kpi-item-content">
+            <div class="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_140px] gap-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">KPI</label>
-                    <select name="kpis[${index}].kpiId" class="kpi-select w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none" onchange="updateTotalWeight()">
-                        <option value="">Select KPI</option>
-                        ${kpiDefinitions.filter(k => k.active).map(k =>
-                            `<option value="${k.id}" ${kpiId == k.id ? 'selected' : ''}>${k.code} - ${k.name}</option>`
-                        ).join('')}
+                    <select name="kpis[${index}].kpiId" class="kpi-select w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none" onchange="handleKpiAssignmentSelection(this)">
+                        ${buildKpiOptions(kpiId)}
                     </select>
+                    <p class="kpi-hierarchy-note mt-1.5 text-xs text-gray-500 dark:text-gray-400"></p>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Weight (0-${MAX_KPI_WEIGHT})</label>
@@ -1582,10 +1707,78 @@ function addKpiAssignmentRow(kpiId = '', weight = '', mandatory = true) {
                 <!-- Hidden field to ensure 'false' is sent when checkbox is unchecked -->
                 <input type="hidden" name="kpis[${index}].mandatory" value="false">
             </div>
+            <button type="button" onclick="addChildKpisForRow(this)" class="add-children-btn hidden mt-3 inline-flex items-center gap-1 text-xs font-medium text-primary-700 hover:text-primary-900 dark:text-primary-300 dark:hover:text-primary-200">
+                <span class="material-icons-round text-sm">account_tree</span>
+                Add child KPIs
+            </button>
         </div>
     `;
     container.appendChild(row);
+    updateRowHierarchyPresentation(row);
     updateTotalWeight();
+}
+
+function handleKpiAssignmentSelection(select) {
+    updateRowHierarchyPresentation(select.closest('.kpi-item'));
+    updateTotalWeight();
+}
+
+function updateRowHierarchyPresentation(row) {
+    if (!row) return;
+    const select = row.querySelector('.kpi-select');
+    const title = row.querySelector('.kpi-row-title');
+    const badge = row.querySelector('.kpi-row-badge');
+    const note = row.querySelector('.kpi-hierarchy-note');
+    const addChildrenBtn = row.querySelector('.add-children-btn');
+    const kpi = getKpiById(select?.value);
+
+    title.textContent = kpi ? kpi.name : 'KPI Assignment';
+    badge.innerHTML = renderKpiTypeBadge(kpi);
+    row.classList.toggle('ml-6', !!kpi?.parentDefinitionId);
+    row.classList.toggle('border-l-4', !!kpi?.parentDefinitionId);
+    row.classList.toggle('border-l-slate-300', !!kpi?.parentDefinitionId);
+
+    if (!kpi) {
+        note.textContent = '';
+        addChildrenBtn.classList.add('hidden');
+        return;
+    }
+
+    if (kpi.parentDefinitionName) {
+        note.textContent = `Child KPI under ${kpi.parentDefinitionName}. Parent must be assigned in this scope.`;
+    } else if (kpiHasActiveChildren(kpi)) {
+        const count = getActiveChildKpis(kpi.id).length;
+        note.textContent = `Parent KPI with ${count} active child KPI${count === 1 ? '' : 's'}. Child weights must equal this parent weight.`;
+    } else {
+        note.textContent = 'Standalone KPI.';
+    }
+
+    addChildrenBtn.classList.toggle('hidden', !kpiHasActiveChildren(kpi));
+}
+
+function addChildKpisForRow(button) {
+    const row = button.closest('.kpi-item');
+    const parentId = row.querySelector('.kpi-select')?.value;
+    if (!parentId) return;
+
+    const selectedIds = new Set(Array.from(document.querySelectorAll('.kpi-select'))
+        .map(select => Number(select.value))
+        .filter(Boolean));
+
+    getActiveChildKpis(parentId).forEach(child => {
+        if (!selectedIds.has(Number(child.id))) {
+            addKpiAssignmentRow(child.id, '', true);
+        }
+    });
+    updateTotalWeight();
+}
+
+function assignKpi(kpiId) {
+    openModal('kpiAssignmentModal');
+    const container = document.getElementById('assignmentKpisContainer');
+    container.innerHTML = '';
+    kpiRowCounter = 0;
+    addKpiAssignmentRow(kpiId, '', true);
 }
 
 // Toggle row content (expand/collapse)
@@ -1622,6 +1815,7 @@ function renumberKpiRows() {
     });
     // Reset the global counter to the next available index
     kpiRowCounter = rows.length;
+    updateTotalWeight();
 }
 
 // Update total weight display
@@ -1643,14 +1837,118 @@ function updateTotalWeight() {
         totalWeightElement.classList.remove('text-red-600');
         weightErrorElement.classList.add('hidden');
     }
+    document.querySelectorAll('#assignmentKpisContainer .kpi-item').forEach(updateRowHierarchyPresentation);
+    updateHierarchySummary();
+    clearAssignmentBanner();
+}
+
+function getSelectedAssignmentItems() {
+    return Array.from(document.querySelectorAll('#assignmentKpisContainer .kpi-item'))
+        .map(row => {
+            const select = row.querySelector('.kpi-select');
+            const weight = row.querySelector('.weight-input');
+            const kpi = getKpiById(select?.value);
+            return {
+                row,
+                kpi,
+                kpiId: kpi ? Number(kpi.id) : null,
+                weight: parseFloat(weight?.value) || 0
+            };
+        })
+        .filter(item => item.kpiId);
+}
+
+function validateHierarchySelection() {
+    const items = getSelectedAssignmentItems();
+    const selectedIds = new Set(items.map(item => item.kpiId));
+    const errors = [];
+    const seen = new Set();
+
+    items.forEach(item => {
+        if (seen.has(item.kpiId)) {
+            errors.push(`"${item.kpi.name}" is selected more than once.`);
+        }
+        seen.add(item.kpiId);
+
+        if (item.kpi.parentDefinitionId && !selectedIds.has(Number(item.kpi.parentDefinitionId))) {
+            errors.push(`Child KPI "${item.kpi.name}" requires parent KPI "${item.kpi.parentDefinitionName}" in this assignment.`);
+        }
+    });
+
+    items.forEach(item => {
+        if (!kpiHasActiveChildren(item.kpi)) return;
+        const childTotal = items
+            .filter(child => Number(child.kpi.parentDefinitionId) === Number(item.kpiId))
+            .reduce((total, child) => total + child.weight, 0);
+        if (Math.abs(childTotal - item.weight) > 0.001) {
+            errors.push(`Child KPI weights for "${item.kpi.name}" must equal ${item.weight.toFixed(2)}. Current child total is ${childTotal.toFixed(2)}.`);
+        }
+    });
+
+    return errors;
+}
+
+function updateHierarchySummary() {
+    const summary = document.getElementById('assignmentHierarchySummary');
+    if (!summary) return;
+
+    const items = getSelectedAssignmentItems();
+    const parentItems = items.filter(item => kpiHasActiveChildren(item.kpi));
+
+    if (parentItems.length === 0) {
+        summary.innerHTML = '';
+        return;
+    }
+
+    summary.innerHTML = parentItems.map(item => {
+        const childTotal = items
+            .filter(child => Number(child.kpi.parentDefinitionId) === Number(item.kpiId))
+            .reduce((total, child) => total + child.weight, 0);
+        const diff = childTotal - item.weight;
+        const ok = Math.abs(diff) <= 0.001;
+        const below = diff < 0;
+        const statusClass = ok
+            ? 'bg-green-50 border-green-200 text-green-700 dark:bg-green-900/10 dark:border-green-800 dark:text-green-300'
+            : below
+                ? 'bg-amber-50 border-amber-200 text-amber-700 dark:bg-amber-900/10 dark:border-amber-800 dark:text-amber-300'
+                : 'bg-red-50 border-red-200 text-red-700 dark:bg-red-900/10 dark:border-red-800 dark:text-red-300';
+        const statusText = ok ? 'Balanced' : below ? 'Below parent weight' : 'Exceeds parent weight';
+        return `
+            <div class="rounded-lg border px-3 py-2 text-xs ${statusClass}">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <span class="font-medium">${escapeKpiHtml(item.kpi.name)}</span>
+                    <span>${childTotal.toFixed(2)} / ${item.weight.toFixed(2)} · ${statusText}</span>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function showAssignmentBanner(message, type = 'error') {
+    const banner = document.getElementById('assignmentErrorBanner');
+    if (!banner) return;
+    const success = type === 'success';
+    banner.className = success
+        ? 'rounded-lg border px-4 py-3 text-sm bg-green-50 border-green-200 text-green-700 dark:bg-green-900/10 dark:border-green-800 dark:text-green-300'
+        : 'rounded-lg border px-4 py-3 text-sm bg-red-50 border-red-200 text-red-700 dark:bg-red-900/10 dark:border-red-800 dark:text-red-300';
+    banner.textContent = message;
+}
+
+function clearAssignmentBanner() {
+    const banner = document.getElementById('assignmentErrorBanner');
+    if (!banner) return;
+    banner.className = 'hidden rounded-lg border px-4 py-3 text-sm';
+    banner.textContent = '';
 }
 
 // Reset form (clear rows, reset fields, and ensure correct div visibility)
 function resetAssignmentForm() {
     document.getElementById('kpiAssignmentForm').reset();
     document.getElementById('assignmentKpisContainer').innerHTML = '';
+    document.getElementById('assignmentHierarchySummary').innerHTML = '';
     document.getElementById('totalWeight').textContent = '0.00';
     document.getElementById('weightError').classList.add('hidden');
+    clearAssignmentBanner();
     const gradeSelect = document.getElementById('assignmentJobGrade');
     const stepSelect = document.getElementById('assignmentJobStep');
     const departmentDiv = document.getElementById('departmentAssignment');
@@ -1684,15 +1982,18 @@ function resetAssignmentForm() {
     if (document.getElementById('assignEmployee').checked) {
         employeeDiv.classList.remove('hidden');
         gradeDiv.classList.add('hidden');
+        if (departmentDiv) departmentDiv.classList.add('hidden');
         employeeSelect.required = true;
         jobGradeSelect.required = false;
         jobStepSelect.required = false;
+        if (departmentSelect) departmentSelect.required = false;
     } else {
         employeeDiv.classList.add('hidden');
         gradeDiv.classList.remove('hidden');
         employeeSelect.required = false;
         jobGradeSelect.required = true;
         jobStepSelect.required = true;
+        if (departmentSelect) departmentSelect.required = false;
     }
 }
 function toggleMeasurementItem(kpiId, headerElement) {
@@ -1762,6 +2063,7 @@ const departmentSelect = document.getElementById('assignmentDepartment');
 
 // Validation (now checks indexed fields correctly)
 function validateAssignmentForm(event) {
+    clearAssignmentBanner();
     // Basic HTML5 validation (required attributes)
     const form = document.getElementById('kpiAssignmentForm');
     if (!form.checkValidity()) {
@@ -1773,7 +2075,7 @@ function validateAssignmentForm(event) {
     // Total weight must not exceed configured maximum
     const totalWeight = parseFloat(document.getElementById('totalWeight').textContent);
     if (totalWeight - MAX_KPI_WEIGHT > 0.001) {
-        alert(`Total weight cannot exceed ${MAX_KPI_WEIGHT.toFixed(2)}`);
+        showAssignmentBanner(`Total weight cannot exceed ${MAX_KPI_WEIGHT.toFixed(2)}.`);
         event.preventDefault();
         return false;
     }
@@ -1781,7 +2083,14 @@ function validateAssignmentForm(event) {
     // At least one KPI row with selected KPI
     const kpiSelects = document.querySelectorAll('.kpi-select');
     if (kpiSelects.length === 0 || !Array.from(kpiSelects).some(s => s.value)) {
-        alert('Please add at least one KPI');
+        showAssignmentBanner('Please add at least one KPI.');
+        event.preventDefault();
+        return false;
+    }
+
+    const hierarchyErrors = validateHierarchySelection();
+    if (hierarchyErrors.length > 0) {
+        showAssignmentBanner(hierarchyErrors[0]);
         event.preventDefault();
         return false;
     }
@@ -1792,7 +2101,7 @@ function validateAssignmentForm(event) {
         const select = row.querySelector('.kpi-select');
         const weight = row.querySelector('.weight-input');
         if (!select.value || !weight.value) {
-            alert('Each KPI row must have a KPI selected and a weight entered.');
+            showAssignmentBanner('Each KPI row must have a KPI selected and a weight entered.');
             event.preventDefault();
             return false;
         }
@@ -1803,7 +2112,7 @@ function validateAssignmentForm(event) {
         const grade = document.getElementById('assignmentJobGrade');
         const step = document.getElementById('assignmentJobStep');
         if (!grade.value || !step.value) {
-            alert('Please select both Job Grade and Job Step.');
+            showAssignmentBanner('Please select both Job Grade and Job Step.');
             event.preventDefault();
             return false;
         }
@@ -1813,7 +2122,7 @@ function validateAssignmentForm(event) {
     if (document.getElementById('assignEmployee').checked) {
         const employee = document.getElementById('assignmentEmployee');
         if (!employee.value) {
-            alert('Please select an employee.');
+            showAssignmentBanner('Please select an employee.');
             event.preventDefault();
             return false;
         }
@@ -1822,7 +2131,7 @@ function validateAssignmentForm(event) {
     if (document.getElementById('assignDepartment').checked) {
     const dept = document.getElementById('assignmentDepartment');
     if (!dept.value) {
-        alert('Please select a department.');
+        showAssignmentBanner('Please select a department.');
         event.preventDefault();
         return false;
     }
@@ -1849,6 +2158,7 @@ function enableMeasurementSubmit(event) {
 }
 // Disable submit button during request
 function disableAssignmentSubmit() {
+    clearAssignmentBanner();
     const btn = document.querySelector('#kpiAssignmentForm button[type="submit"]');
     if (btn) {
         btn.disabled = true;
@@ -1867,6 +2177,33 @@ function enableAssignmentSubmit() {
     }
 }
 
+function extractAssignmentErrorMessage(event) {
+    const xhr = event?.detail?.xhr;
+    if (!xhr) return 'Failed to assign KPIs. Please review the hierarchy and weights.';
+    const text = xhr.responseText || '';
+    if (!text) return xhr.statusText || 'Failed to assign KPIs.';
+
+    const plainText = text
+        .replace(/<script[\s\S]*?<\/script>/gi, '')
+        .replace(/<style[\s\S]*?<\/style>/gi, '')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    const known = [
+        'Child KPI',
+        'Total KPI weight',
+        'Weight must be',
+        'Either employeeId',
+        'At least one KPI'
+    ];
+    const hit = known.find(marker => plainText.includes(marker));
+    if (hit) {
+        return plainText.substring(plainText.indexOf(hit), plainText.indexOf(hit) + 220);
+    }
+    return plainText.substring(0, 220) || 'Failed to assign KPIs.';
+}
+
 // Handle response: close modal on success, show notification, re-enable button on error
 function handleAssignmentResponse(event) {
     if (event.detail.successful) {
@@ -1876,7 +2213,7 @@ function handleAssignmentResponse(event) {
         refreshStats(); // Refresh stats after assignment
     } else {
         enableAssignmentSubmit();
-        showNotification('Failed to assign KPIs. Please try again.', 'error');
+        showAssignmentBanner(extractAssignmentErrorMessage(event));
     }
 }
 
