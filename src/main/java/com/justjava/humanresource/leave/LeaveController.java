@@ -5,6 +5,7 @@ import com.justjava.humanresource.hr.dto.EmployeeDTO;
 import com.justjava.humanresource.hr.service.EmployeeService;
 import com.justjava.humanresource.leave.dto.LeaveApprovalActionCommand;
 import com.justjava.humanresource.leave.dto.LeaveRequestCreateCommand;
+import com.justjava.humanresource.leave.dto.LeaveRequestDetailDTO;
 import com.justjava.humanresource.leave.entity.LeaveApprovalStep;
 import com.justjava.humanresource.leave.entity.LeaveRequest;
 import com.justjava.humanresource.leave.service.LeaveWorkflowService;
@@ -75,6 +76,23 @@ public class LeaveController {
     @ResponseBody
     public List<LeaveApprovalStep> getLeaveSteps(@PathVariable Long id) {
         return leaveWorkflowService.getApprovalSteps(id);
+    }
+
+    @GetMapping("/leave/requests/{id}/details")
+    @ResponseBody
+    public LeaveRequestDetailDTO getLeaveRequestDetails(@PathVariable Long id) {
+        return leaveWorkflowService.getLeaveRequestDetail(id);
+    }
+
+    @GetMapping("/leave/details/{id}")
+    public String leaveDetailsPage(@PathVariable Long id, Model model) {
+        if (authenticationManager.isEmployee() && !isHrUser()) {
+            return "redirect:/employee/leave/details/" + id;
+        }
+        model.addAttribute("title", "Leave Request Details");
+        model.addAttribute("subTitle", "Full details for this leave request");
+        model.addAttribute("leaveRequestId", id);
+        return "leave/details";
     }
 
     private boolean isHrUser() {

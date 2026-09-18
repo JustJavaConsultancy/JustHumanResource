@@ -59,6 +59,7 @@
                     <th class="px-4 py-3 text-left">Days</th>
                     <th class="px-4 py-3 text-left">Status</th>
                     <th class="px-4 py-3 text-left">Approval Level</th>
+                    <th class="px-4 py-3 text-left">Details</th>
                 </tr>
                 </thead>
                 <tbody id="leaveRows" class="divide-y divide-gray-200 dark:divide-gray-700"></tbody>
@@ -85,6 +86,7 @@
                     <th class="px-4 py-3 text-left">Task</th>
                     <th class="px-4 py-3 text-left">Created</th>
                     <th class="px-4 py-3 text-left">Action</th>
+                    <th class="px-4 py-3 text-left">Details</th>
                 </tr>
                 </thead>
                 <tbody id="pendingApprovalRows" class="divide-y divide-gray-200 dark:divide-gray-700"></tbody>
@@ -217,7 +219,7 @@
 
         async function loadLeaveRequests() {
             const body = document.getElementById('leaveRows');
-            body.innerHTML = '<tr><td colspan="5" class="px-4 py-4 text-gray-500">Loading...</td></tr>';
+            body.innerHTML = '<tr><td colspan="6" class="px-4 py-4 text-gray-500">Loading...</td></tr>';
             try {
                 const data = await fetchJson('/leave/requests/me');
                 document.getElementById('openCount').textContent = data.filter(r => ['SUBMITTED', 'IN_APPROVAL'].includes(r.status)).length;
@@ -226,7 +228,7 @@
                 document.getElementById('daysCount').textContent = data.reduce((sum, r) => sum + (Number(r.totalDays) || 0), 0);
 
                 if (!data.length) {
-                    body.innerHTML = '<tr><td colspan="5" class="px-4 py-4 text-gray-500">No leave requests found.</td></tr>';
+                    body.innerHTML = '<tr><td colspan="6" class="px-4 py-4 text-gray-500">No leave requests found.</td></tr>';
                     return;
                 }
 
@@ -237,20 +239,25 @@
                         <td class="px-4 py-3 font-medium">${r.totalDays || ''}</td>
                         <td class="px-4 py-3">${badge(r.status)}</td>
                         <td class="px-4 py-3">${r.currentApprovalLevel || '-'} / ${r.totalApprovalLevels || '-'}</td>
+                        <td class="px-4 py-3">
+                            <a href="/employee/leave/details/${r.id}" class="text-primary-600 hover:text-primary-700 dark:text-primary-400" title="View details">
+                                <span class="material-icons-round text-base align-middle">visibility</span>
+                            </a>
+                        </td>
                     </tr>
                 `).join('');
             } catch (e) {
-                body.innerHTML = '<tr><td colspan="5" class="px-4 py-4 text-red-600">' + e.message + '</td></tr>';
+                body.innerHTML = '<tr><td colspan="6" class="px-4 py-4 text-red-600">' + e.message + '</td></tr>';
             }
         }
 
         async function loadPendingApprovals() {
             const body = document.getElementById('pendingApprovalRows');
-            body.innerHTML = '<tr><td colspan="4" class="px-4 py-4 text-gray-500">Loading...</td></tr>';
+            body.innerHTML = '<tr><td colspan="5" class="px-4 py-4 text-gray-500">Loading...</td></tr>';
             try {
                 const data = await fetchJson('/leave/approvals/tasks');
                 if (!data.length) {
-                    body.innerHTML = '<tr><td colspan="4" class="px-4 py-4 text-gray-500">No pending approval tasks.</td></tr>';
+                    body.innerHTML = '<tr><td colspan="5" class="px-4 py-4 text-gray-500">No pending approval tasks.</td></tr>';
                     return;
                 }
                 body.innerHTML = data.map(t => {
@@ -267,11 +274,14 @@
                                     <button onclick="rejectLeaveTask('${t.taskId}')" class="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700">Reject</button>
                                 </div>
                             </td>
+                            <td class="px-4 py-3">
+                                ${leaveRequestId !== '-' ? `<a href="/employee/leave/details/${leaveRequestId}" class="text-primary-600 hover:text-primary-700 dark:text-primary-400" title="View details"><span class="material-icons-round text-base align-middle">visibility</span></a>` : ''}
+                            </td>
                         </tr>
                     `;
                 }).join('');
             } catch (e) {
-                body.innerHTML = '<tr><td colspan="4" class="px-4 py-4 text-red-600">' + escapeHtml(e.message) + '</td></tr>';
+                body.innerHTML = '<tr><td colspan="5" class="px-4 py-4 text-red-600">' + escapeHtml(e.message) + '</td></tr>';
             }
         }
 

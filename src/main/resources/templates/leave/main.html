@@ -29,10 +29,12 @@
                 <table class="w-full text-sm">
                     <thead class="bg-gray-50 dark:bg-gray-700">
                     <tr>
+                        <th class="text-left px-4 py-3">Request</th>
                         <th class="text-left px-4 py-3">Type</th>
                         <th class="text-left px-4 py-3">Period</th>
                         <th class="text-left px-4 py-3">Days</th>
                         <th class="text-left px-4 py-3">Status</th>
+                        <th class="text-left px-4 py-3">Details</th>
                     </tr>
                     </thead>
                     <tbody id="myLeaveRequestsBody" class="divide-y divide-gray-200 dark:divide-gray-700"></tbody>
@@ -88,23 +90,29 @@
 
         async function loadMyLeaveRequests() {
             const body = document.getElementById('myLeaveRequestsBody');
-            body.innerHTML = '<tr><td colspan="4" class="px-4 py-4 text-sm text-gray-500">Loading...</td></tr>';
+            body.innerHTML = '<tr><td colspan="6" class="px-4 py-4 text-sm text-gray-500">Loading...</td></tr>';
             try {
                 const data = await fetchJsonSafe('/leave/requests/me');
                 if (!data.length) {
-                    body.innerHTML = '<tr><td colspan="4" class="px-4 py-4 text-sm text-gray-500">No leave requests found.</td></tr>';
+                    body.innerHTML = '<tr><td colspan="6" class="px-4 py-4 text-sm text-gray-500">No leave requests found.</td></tr>';
                     return;
                 }
                 body.innerHTML = data.map(r => `
                     <tr>
+                        <td class="px-4 py-3 font-medium">Leave #${r.id ?? ''}</td>
                         <td class="px-4 py-3">${r.leaveType || ''}</td>
                         <td class="px-4 py-3">${r.startDate || ''} to ${r.endDate || ''}</td>
                         <td class="px-4 py-3">${r.totalDays || ''}</td>
                         <td class="px-4 py-3">${statusBadge(r.status)}</td>
+                        <td class="px-4 py-3">
+                            <a href="/leave/details/${r.id}" class="text-primary-600 hover:text-primary-700" title="View details">
+                                <span class="material-icons-round text-base align-middle">visibility</span>
+                            </a>
+                        </td>
                     </tr>
                 `).join('');
             } catch (e) {
-                body.innerHTML = '<tr><td colspan="4" class="px-4 py-4 text-sm text-red-600">' + e.message + '</td></tr>';
+                body.innerHTML = '<tr><td colspan="6" class="px-4 py-4 text-sm text-red-600">' + e.message + '</td></tr>';
             }
         }
 

@@ -8,6 +8,7 @@ import com.justjava.humanresource.core.config.AuthenticationManager;
 import com.justjava.humanresource.hr.entity.Employee;
 import com.justjava.humanresource.hr.service.EmployeeService;
 import com.justjava.humanresource.leave.dto.LeaveRequestCreateCommand;
+import com.justjava.humanresource.leave.dto.LeaveRequestDetailDTO;
 import com.justjava.humanresource.leave.entity.LeaveApprovalStep;
 import com.justjava.humanresource.leave.entity.LeaveRequest;
 import com.justjava.humanresource.leave.enums.LeaveApprovalDecision;
@@ -24,11 +25,12 @@ import org.flowable.engine.RuntimeService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -77,7 +79,7 @@ public class LeaveWorkflowService {
             request.setLeaveType(command.getLeaveType().trim());
             request.setStartDate(command.getStartDate());
             request.setEndDate(command.getEndDate());
-            request.setTotalDays((int) ChronoUnit.DAYS.between(command.getStartDate(), command.getEndDate()) + 1);
+            request.setTotalDays(countWeekdays(command.getStartDate(), command.getEndDate()));
             request.setReason(command.getReason());
             request.setStatus(LeaveRequestStatus.SUBMITTED);
 
@@ -203,6 +205,52 @@ public class LeaveWorkflowService {
         return leaveApprovalStepRepository.findByLeaveRequestIdOrderBySequenceNoAsc(leaveRequestId);
     }
 
+    @Transactional(readOnly = true)
+    public LeaveRequestDetailDTO getLeaveRequestDetail(Long leaveRequestId) {
+        LeaveRequest request = leaveRequestRepository.findById(leaveRequestId)
+                .orElseThrow(() -> new IllegalStateException("Leave request not found"));
+
+        if (!isHrUser()) {
+            Employee current = getCurrentEmployee();
+            if (!canEmployeeViewLeaveRequest(request, current)) {
+                throw new IllegalStateException("You are not authorized to view this leave request.");
+            }
+        }
+
+        Employee requester = employeeService.getById(request.getEmployeeId());
+        Employee standIn = employeeService.getById(request.getStandInEmployeeId());
+
+        return LeaveRequestDetailDTO.builder()
+                .id(request.getId())
+                .leaveType(request.getLeaveType())
+                .startDate(request.getStartDate())
+                .endDate(request.getEndDate())
+                .totalDays(request.getTotalDays())
+                .reason(request.getReason())
+                .status(request.getStatus())
+                .currentApprovalLevel(request.getCurrentApprovalLevel())
+                .totalApprovalLevels(request.getTotalApprovalLevels())
+                .createdAt(request.getCreatedAt())
+                .requesterId(requester.getId())
+                .requesterName(requester.getFullName())
+                .standInId(standIn.getId())
+                .standInName(standIn.getFullName())
+                .build();
+    }
+
+    private int countWeekdays(LocalDate start, LocalDate end) {
+        int weekdays = 0;
+        LocalDate date = start;
+        while (!date.isAfter(end)) {
+            DayOfWeek day = date.getDayOfWeek();
+            if (day != DayOfWeek.SATURDAY && day != DayOfWeek.SUNDAY) {
+                weekdays++;
+            }
+            date = date.plusDays(1);
+        }
+        return weekdays;
+    }
+
     private void completeApprovalTask(String taskId, String decision, String comment) {
         Employee current = getCurrentEmployee();
         if (!flowableTaskService.isTaskAssignedTo(taskId, String.valueOf(current.getId()))) {
@@ -231,6 +279,34 @@ public class LeaveWorkflowService {
         if (applicant.getId().equals(command.getStandInEmployeeId())) {
             throw new IllegalArgumentException("Employee cannot choose self as stand-in.");
         }
+    }
+
+    private boolean canEmployeeViewLeaveRequest(LeaveRequest request, Employee current) {
+        if (current == null || current.getId() == null) {
+            return false;
+        }
+
+        if (Objects.equals(request.getEmployeeId(), current.getId())) {
+            return true;
+        }
+
+        boolean hasPendingTask = flowableTaskService
+                .getTasksForAssignee(String.valueOf(current.getId()), "leaveApprovalProcess")
+                .stream()
+                .anyMatch(task -> {
+                    Map<String, Object> variables = task.getVariables();
+                    Object taskLeaveRequestId = variables != null ? variables.get("leaveRequestId") : null;
+                    return taskLeaveRequestId != null
+                            && String.valueOf(taskLeaveRequestId).equals(String.valueOf(request.getId()));
+                });
+
+        if (hasPendingTask) {
+            return true;
+        }
+
+        return leaveApprovalStepRepository.findByLeaveRequestIdOrderBySequenceNoAsc(request.getId())
+                .stream()
+                .anyMatch(step -> Objects.equals(step.getApproverEmployeeId(), current.getId()));
     }
 
     private Employee getCurrentEmployee() {

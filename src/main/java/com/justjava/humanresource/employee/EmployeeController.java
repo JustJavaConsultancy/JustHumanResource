@@ -504,6 +504,19 @@ public class EmployeeController {
         return "employees/leave";
     }
 
+    @GetMapping("/employee/leave/details/{id}")
+    public String getLeaveDetails(@PathVariable Long id, Model model) {
+        String email = (String) authenticationManager.get("email");
+        Employee loginEmployee = employeeService.getByEmail(email);
+        Employee employee = employeeService.getEmployeeWithBankDetails(loginEmployee.getId());
+
+        model.addAttribute("employee", employee);
+        model.addAttribute("leaveRequestId", id);
+        model.addAttribute("title", "Leave Request Details");
+        model.addAttribute("subTitle", "Full details for this leave request");
+        return "employees/leave-details";
+    }
+
     @GetMapping("employee/performance")
     public String getPerformance(Model model) {
         String   email         = (String) authenticationManager.get("email");
