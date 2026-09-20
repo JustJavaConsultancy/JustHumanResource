@@ -21,7 +21,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -117,6 +119,7 @@ public class KpiAssignmentService {
         }
 
         validateTotalWeight(existingAssignments, incomingWeightToAdd);
+        validateHierarchyWeights(existingAssignments, toSave);
 
         List<KpiAssignment> saved = repository.saveAll(toSave);
 
@@ -129,6 +132,8 @@ public class KpiAssignmentService {
                             .weight(assignment.getWeight())
                             .mandatory(assignment.isMandatory())
                             .name(assignment.getKpi().getName())
+                            .parentDefinitionId(getParentDefinitionId(assignment.getKpi()))
+                            .parentKpi(hasActiveChildDefinitions(assignment.getKpi()))
                             .build()
             );
         }
@@ -166,6 +171,8 @@ public class KpiAssignmentService {
                             .name(assignment.getKpi().getName())
                             .targetValue(assignment.getKpi().getTargetValue())
                             .kpiUnit(assignment.getKpi().getUnit())
+                            .parentDefinitionId(getParentDefinitionId(assignment.getKpi()))
+                            .parentKpi(hasActiveChildDefinitions(assignment.getKpi()))
                             .build()
             );
         }
@@ -196,6 +203,8 @@ public class KpiAssignmentService {
                             .weight(assignment.getWeight())
                             .mandatory(assignment.isMandatory())
                             .name(assignment.getKpi().getName())
+                            .parentDefinitionId(getParentDefinitionId(assignment.getKpi()))
+                            .parentKpi(hasActiveChildDefinitions(assignment.getKpi()))
                             .build()
             );
         }
@@ -218,6 +227,8 @@ public class KpiAssignmentService {
                             .weight(assignment.getWeight())
                             .mandatory(assignment.isMandatory())
                             .name(assignment.getKpi().getName())
+                            .parentDefinitionId(getParentDefinitionId(assignment.getKpi()))
+                            .parentKpi(hasActiveChildDefinitions(assignment.getKpi()))
                             .build()
             );
         }
@@ -259,6 +270,63 @@ public class KpiAssignmentService {
     private void validateKpiWeightSetting() {
         if (maxKpiWeight == null || maxKpiWeight.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalStateException("Configured app.kpi.max-kpi-weight must be greater than zero.");
+        }
+    }
+
+    private Long getParentDefinitionId(KpiDefinition kpi) {
+        return kpi.getParentDefinition() != null ? kpi.getParentDefinition().getId() : null;
+    }
+
+    private boolean hasActiveChildDefinitions(KpiDefinition kpi) {
+        return kpi.getChildren() != null && kpi.getChildren().stream().anyMatch(KpiDefinition::isActive);
+    }
+
+    private void validateHierarchyWeights(
+            List<KpiAssignment> existingAssignments,
+            List<KpiAssignment> incomingAssignments
+    ) {
+        List<KpiAssignment> combinedAssignments = new ArrayList<>(existingAssignments);
+        combinedAssignments.addAll(incomingAssignments);
+
+        Map<Long, KpiAssignment> assignmentsByKpiId = new HashMap<>();
+        for (KpiAssignment assignment : combinedAssignments) {
+            assignmentsByKpiId.put(assignment.getKpi().getId(), assignment);
+        }
+
+        for (KpiAssignment assignment : combinedAssignments) {
+            KpiDefinition parent = assignment.getKpi().getParentDefinition();
+            if (parent != null && !assignmentsByKpiId.containsKey(parent.getId())) {
+                throw new IllegalArgumentException(
+                        "Child KPI '" + assignment.getKpi().getName()
+                                + "' requires parent KPI '" + parent.getName()
+                                + "' to be assigned in the same scope."
+                );
+            }
+        }
+
+        for (KpiAssignment assignment : combinedAssignments) {
+            KpiDefinition parentKpi = assignment.getKpi();
+            boolean hasChildDefinitions = hasActiveChildDefinitions(parentKpi);
+
+            if (!hasChildDefinitions) {
+                continue;
+            }
+
+            BigDecimal childWeightTotal = combinedAssignments.stream()
+                    .filter(childAssignment -> {
+                        KpiDefinition childParent = childAssignment.getKpi().getParentDefinition();
+                        return childParent != null && parentKpi.getId().equals(childParent.getId());
+                    })
+                    .map(KpiAssignment::getWeight)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            if (childWeightTotal.compareTo(assignment.getWeight()) != 0) {
+                throw new IllegalArgumentException(
+                        "Child KPI weights for parent '" + parentKpi.getName()
+                                + "' must equal parent weight " + assignment.getWeight()
+                                + ". Current child total is " + childWeightTotal + "."
+                );
+            }
         }
     }
 

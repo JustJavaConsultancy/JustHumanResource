@@ -86,6 +86,7 @@ public class KpiMeasurementService {
             if (kpi == null)
                 throw new IllegalStateException("Invalid KPI id: " + item.getKpiId());
 
+            validateKpiIsMeasurable(kpi);
             validateAssignmentExists(employee, kpi);
 
             boolean exists =
@@ -140,6 +141,8 @@ public class KpiMeasurementService {
 
         KpiMeasurement measurement = measurementRepository.findById(measurementId)
                 .orElseThrow(() -> new IllegalArgumentException("Measurement not found: " + measurementId));
+
+        validateKpiIsMeasurable(measurement.getKpi());
 
         BigDecimal newScore = calculateScore(newActualValue, measurement.getKpi().getTargetValue());
 
@@ -201,6 +204,7 @@ public class KpiMeasurementService {
                 .collect(Collectors.toSet());
 
         return measurements.stream()
+                .filter(m -> !kpiRepository.existsByParentDefinition_Id(m.getKpi().getId()))
                 .filter(m -> assignedKpiIds.contains(m.getKpi().getId()))
                 .collect(Collectors.toList());
     }
@@ -236,6 +240,7 @@ public class KpiMeasurementService {
         }
 
         return measurements.stream()
+                .filter(m -> !kpiRepository.existsByParentDefinition_Id(m.getKpi().getId()))
                 .filter(m -> {
                     Employee emp = m.getEmployee();
                     if (authenticationManager.isRestrictedHr() && emp.isRestrictedVisibility()) return false;
@@ -281,7 +286,9 @@ public class KpiMeasurementService {
             return Collections.emptyList();
         }
 
-        return measurements;
+        return measurements.stream()
+                .filter(m -> !kpiRepository.existsByParentDefinition_Id(m.getKpi().getId()))
+                .toList();
     }
 
 
@@ -333,6 +340,14 @@ public class KpiMeasurementService {
         if (!assigned) {
             throw new IllegalStateException(
                     "KPI not assigned to employee or job step."
+            );
+        }
+    }
+
+    private void validateKpiIsMeasurable(KpiDefinition kpi) {
+        if (kpiRepository.existsByParentDefinition_Id(kpi.getId())) {
+            throw new IllegalStateException(
+                    "Parent KPI '" + kpi.getName() + "' is a grouping KPI and cannot be measured directly."
             );
         }
     }

@@ -21,4 +21,6 @@ public class KpiAssignmentResponseDTO {
     private BigDecimal targetValue;
     private Category category;
     private KpiUnit kpiUnit;
+    private Long parentDefinitionId;
+    private boolean parentKpi;
 }
