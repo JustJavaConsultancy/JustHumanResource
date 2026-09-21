@@ -84,13 +84,13 @@ public interface KpiAssignmentRepository
            FROM KpiAssignment a
            WHERE a.active = true
            AND (
-                (a.employee.jobStep.id = :jobStepId)
+                (a.employee IS NULL AND a.jobStep.id = :jobStepId)
            )
            AND (a.validFrom IS NULL OR a.validFrom <= :referenceDate)
            AND (a.validTo IS NULL OR a.validTo >= :referenceDate)
            """)
     List<KpiAssignment> findEffectiveAssignmentsForJobStep(
-            @Param("employeeId") Long jobStepId,
+            @Param("jobStepId") Long jobStepId,
             @Param("referenceDate") LocalDate referenceDate
     );
 

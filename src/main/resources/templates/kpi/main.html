@@ -1820,12 +1820,7 @@ function renumberKpiRows() {
 
 // Update total weight display
 function updateTotalWeight() {
-    const weightInputs = document.querySelectorAll('.weight-input');
-    let total = 0;
-    weightInputs.forEach(input => {
-        const value = parseFloat(input.value) || 0;
-        total += value;
-    });
+    const total = calculateEffectiveSelectedWeight();
     const totalWeightElement = document.getElementById('totalWeight');
     const weightErrorElement = document.getElementById('weightError');
     totalWeightElement.textContent = total.toFixed(2);
@@ -1856,6 +1851,15 @@ function getSelectedAssignmentItems() {
             };
         })
         .filter(item => item.kpiId);
+}
+
+function calculateEffectiveSelectedWeight() {
+    const items = getSelectedAssignmentItems();
+    const selectedIds = new Set(items.map(item => item.kpiId));
+
+    return items
+        .filter(item => !item.kpi.parentDefinitionId || !selectedIds.has(Number(item.kpi.parentDefinitionId)))
+        .reduce((total, item) => total + item.weight, 0);
 }
 
 function validateHierarchySelection() {

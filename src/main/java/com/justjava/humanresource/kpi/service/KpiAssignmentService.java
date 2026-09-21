@@ -83,7 +83,6 @@ public class KpiAssignmentService {
 
         List<KpiAssignment> toSave = new ArrayList<>();
         List<KpiAssignmentResponseDTO> response = new ArrayList<>();
-        BigDecimal incomingWeightToAdd = BigDecimal.ZERO;
         Set<Long> existingKpiIds = existingAssignments.stream()
                 .map(a -> a.getKpi().getId())
                 .collect(Collectors.toSet());
@@ -101,7 +100,6 @@ public class KpiAssignmentService {
                 continue; // skip duplicate safely
             }
 
-            incomingWeightToAdd = incomingWeightToAdd.add(item.getWeight());
             existingKpiIds.add(kpi.getId());
 
             KpiAssignment assignment = KpiAssignment.builder()
@@ -118,7 +116,7 @@ public class KpiAssignmentService {
             toSave.add(assignment);
         }
 
-        validateTotalWeight(existingAssignments, incomingWeightToAdd);
+        validateTotalWeight(existingAssignments, toSave);
         validateHierarchyWeights(existingAssignments, toSave);
 
         List<KpiAssignment> saved = repository.saveAll(toSave);
@@ -253,12 +251,12 @@ public class KpiAssignmentService {
 
     private void validateTotalWeight(
             List<KpiAssignment> existingAssignments,
-            BigDecimal incomingWeightToAdd
+            List<KpiAssignment> incomingAssignments
     ) {
-        BigDecimal existingWeight = existingAssignments.stream()
-                .map(KpiAssignment::getWeight)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal total = existingWeight.add(incomingWeightToAdd);
+        List<KpiAssignment> combinedAssignments = new ArrayList<>(existingAssignments);
+        combinedAssignments.addAll(incomingAssignments);
+
+        BigDecimal total = calculateEffectiveTotalWeight(combinedAssignments);
 
         if (total.compareTo(maxKpiWeight) > 0) {
             throw new IllegalArgumentException(
@@ -271,6 +269,38 @@ public class KpiAssignmentService {
         if (maxKpiWeight == null || maxKpiWeight.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalStateException("Configured app.kpi.max-kpi-weight must be greater than zero.");
         }
+    }
+
+    public BigDecimal calculateEffectiveTotalWeightFromResponses(List<KpiAssignmentResponseDTO> assignments) {
+        if (assignments == null || assignments.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+
+        Set<Long> assignedKpiIds = assignments.stream()
+                .map(KpiAssignmentResponseDTO::getKpiId)
+                .collect(Collectors.toSet());
+
+        return assignments.stream()
+                .filter(assignment -> assignment.getParentDefinitionId() == null
+                        || !assignedKpiIds.contains(assignment.getParentDefinitionId()))
+                .map(KpiAssignmentResponseDTO::getWeight)
+                .filter(weight -> weight != null)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private BigDecimal calculateEffectiveTotalWeight(List<KpiAssignment> assignments) {
+        Set<Long> assignedKpiIds = assignments.stream()
+                .map(assignment -> assignment.getKpi().getId())
+                .collect(Collectors.toSet());
+
+        return assignments.stream()
+                .filter(assignment -> {
+                    KpiDefinition parent = assignment.getKpi().getParentDefinition();
+                    return parent == null || !assignedKpiIds.contains(parent.getId());
+                })
+                .map(KpiAssignment::getWeight)
+                .filter(weight -> weight != null)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     private Long getParentDefinitionId(KpiDefinition kpi) {
