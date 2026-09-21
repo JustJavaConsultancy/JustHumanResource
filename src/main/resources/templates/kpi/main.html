@@ -1248,8 +1248,8 @@
     <div id="kpiAssignmentModal" class="modal">
         <div class="modal-content">
             <div class="p-6 border-b border-gray-200 dark:border-gray-700">
-                <h3 class="text-lg font-bold">Assign Multiple KPIs</h3>
-                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Assign KPIs with scoped weights. Child KPI weights must match their parent weight.</p>
+                <h3 id="assignmentModalTitle" class="text-lg font-bold">Assign Multiple KPIs</h3>
+                <p id="assignmentModalDescription" class="text-sm text-gray-500 dark:text-gray-400 mt-1">Assign KPIs with scoped weights. Child KPI weights must match their parent weight.</p>
             </div>
             <!-- Standard form submission – htmx will send as application/x-www-form-urlencoded -->
             <form id="kpiAssignmentForm"
@@ -1374,7 +1374,7 @@
                     <button type="button" onclick="closeModal('kpiAssignmentModal')" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
                         Cancel
                     </button>
-                    <button type="submit" class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
+                    <button id="assignmentSubmitButton" type="submit" class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
                         Assign KPIs
                     </button>
                     <span id="submit-spinner" class="htmx-indicator ml-2">
@@ -1382,6 +1382,34 @@
                 </span>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <div id="deleteAssignmentConfirmModal" class="modal">
+        <div class="modal-content max-w-md">
+            <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+                <div class="flex items-start gap-3">
+                    <div class="rounded-lg bg-red-100 p-2 text-red-600 dark:bg-red-900/30 dark:text-red-300">
+                        <span class="material-icons-round">warning</span>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold">Delete KPI Assignments</h3>
+                        <p id="deleteAssignmentConfirmText" class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                            This will permanently delete these KPI assignments.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="flex justify-end gap-3 p-6">
+                <button type="button" onclick="closeDeleteAssignmentConfirmModal()"
+                        class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
+                    Cancel
+                </button>
+                <button id="confirmDeleteAssignmentButton" type="button" onclick="confirmDeleteAllAssignments()"
+                        class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                    Delete
+                </button>
+            </div>
         </div>
     </div>
 
@@ -1413,12 +1441,8 @@
     </script>
 
     <script>
-        // Data Structures (used by modals) - hardcoded demo data, but kpiDefinitions now comes from server
-        let kpiAssignments = [
-            { id: 1, employeeId: 1, assignments: [ { kpiId: 1, weight: 0.3 }, { kpiId: 3, weight: 0.4 }, { kpiId: 4, weight: 0.3 } ], mandatory: true, type: 'employee' },
-            { id: 2, employeeId: 2, assignments: [ { kpiId: 2, weight: 0.5 }, { kpiId: 5, weight: 0.5 } ], mandatory: true, type: 'employee' },
-            { id: 3, jobStepId: 101, assignments: [ { kpiId: 1, weight: 0.6 }, { kpiId: 3, weight: 0.4 } ], mandatory: false, type: 'grade' }
-        ];
+        let assignmentFormMode = 'create';
+        let pendingAssignmentDelete = null;
 
         // Employees are now server-side, but keep a local reference for other functions (may be removed later)
         let employees = [];
@@ -1473,7 +1497,7 @@
 
             if (modalId === 'kpiDefinitionModal' && !isEdit) {
                 resetKpiForm();
-            } else if (modalId === 'kpiAssignmentModal') {
+            } else if (modalId === 'kpiAssignmentModal' && !isEdit) {
                 resetAssignmentForm();
                 addKpiAssignmentRow();
                 setupAssignmentToggle();
@@ -1947,7 +1971,17 @@ function clearAssignmentBanner() {
 
 // Reset form (clear rows, reset fields, and ensure correct div visibility)
 function resetAssignmentForm() {
-    document.getElementById('kpiAssignmentForm').reset();
+    const form = document.getElementById('kpiAssignmentForm');
+    form.reset();
+    form.setAttribute('hx-post', '/kpi/assign');
+    delete form.dataset.editUrl;
+    assignmentFormMode = 'create';
+    const title = document.getElementById('assignmentModalTitle');
+    const description = document.getElementById('assignmentModalDescription');
+    const submitButton = document.getElementById('assignmentSubmitButton');
+    if (title) title.textContent = 'Assign Multiple KPIs';
+    if (description) description.textContent = 'Assign KPIs with scoped weights. Child KPI weights must match their parent weight.';
+    if (submitButton) submitButton.textContent = 'Assign KPIs';
     document.getElementById('assignmentKpisContainer').innerHTML = '';
     document.getElementById('assignmentHierarchySummary').innerHTML = '';
     document.getElementById('totalWeight').textContent = '0.00';
@@ -1977,28 +2011,8 @@ function resetAssignmentForm() {
     if (departmentSelect) departmentSelect.required = false;
     kpiRowCounter = 0; // reset counter
 
-    // Ensure correct visibility and required attributes based on default radio (employee)
-    const employeeDiv = document.getElementById('employeeAssignment');
-    const gradeDiv = document.getElementById('gradeAssignment');
-    const employeeSelect = document.getElementById('assignmentEmployee');
-    const jobGradeSelect = document.getElementById('assignmentJobGrade');
-    const jobStepSelect = document.getElementById('assignmentJobStep');
-    if (document.getElementById('assignEmployee').checked) {
-        employeeDiv.classList.remove('hidden');
-        gradeDiv.classList.add('hidden');
-        if (departmentDiv) departmentDiv.classList.add('hidden');
-        employeeSelect.required = true;
-        jobGradeSelect.required = false;
-        jobStepSelect.required = false;
-        if (departmentSelect) departmentSelect.required = false;
-    } else {
-        employeeDiv.classList.add('hidden');
-        gradeDiv.classList.remove('hidden');
-        employeeSelect.required = false;
-        jobGradeSelect.required = true;
-        jobStepSelect.required = true;
-        if (departmentSelect) departmentSelect.required = false;
-    }
+    document.getElementById('assignEmployee').checked = true;
+    applyAssignmentMode('employee', false);
 }
 function toggleMeasurementItem(kpiId, headerElement) {
     const content = document.getElementById(`measurement-content-${kpiId}`);
@@ -2007,61 +2021,79 @@ function toggleMeasurementItem(kpiId, headerElement) {
     icon.textContent = content.classList.contains('hidden') ? 'expand_more' : 'expand_less';
 }
 
+function setEmployeeAssignmentValue(employeeId) {
+    const employeeSelect = document.getElementById('assignmentEmployee');
+    const searchInput = document.getElementById('employeeSearchInput');
+    const searchContainer = document.getElementById('employeeSearchContainer');
+    const employee = employeesList.find(emp => String(emp.id) === String(employeeId));
+
+    if (employeeSelect) employeeSelect.value = employeeId || '';
+    if (searchInput) searchInput.value = employee ? employee.name : '';
+    if (searchContainer) {
+        searchContainer.classList.toggle('has-value', !!employee);
+    }
+}
+
+function applyAssignmentMode(mode, clearOtherScopes = true) {
+    const employeeDiv = document.getElementById('employeeAssignment');
+    const gradeDiv = document.getElementById('gradeAssignment');
+    const departmentDiv = document.getElementById('departmentAssignment');
+    const employeeSelect = document.getElementById('assignmentEmployee');
+    const gradeSelect = document.getElementById('assignmentJobGrade');
+    const stepSelect = document.getElementById('assignmentJobStep');
+    const departmentSelect = document.getElementById('assignmentDepartment');
+
+    employeeDiv.classList.toggle('hidden', mode !== 'employee');
+    gradeDiv.classList.toggle('hidden', mode !== 'grade');
+    if (departmentDiv) departmentDiv.classList.toggle('hidden', mode !== 'department');
+
+    employeeSelect.required = mode === 'employee';
+    gradeSelect.required = mode === 'grade';
+    stepSelect.required = mode === 'grade';
+    if (departmentSelect) departmentSelect.required = mode === 'department';
+
+    employeeSelect.disabled = mode !== 'employee';
+    gradeSelect.disabled = mode !== 'grade';
+    stepSelect.disabled = mode !== 'grade' || !gradeSelect.value;
+    if (departmentSelect) departmentSelect.disabled = mode !== 'department';
+
+    if (!clearOtherScopes) return;
+
+    if (mode !== 'employee') {
+        setEmployeeAssignmentValue('');
+    }
+    if (mode !== 'grade') {
+        gradeSelect.value = '';
+        stepSelect.innerHTML = '<option value="">Select Job Step</option>';
+        stepSelect.disabled = true;
+    }
+    if (mode !== 'department' && departmentSelect) {
+        departmentSelect.value = '';
+    }
+}
+
 // Setup radio toggle listeners with required attribute handling
 function setupAssignmentToggle() {
     const assignEmployee = document.getElementById('assignEmployee');
     const assignGrade = document.getElementById('assignGrade');
-    const employeeDiv = document.getElementById('employeeAssignment');
-    const gradeDiv = document.getElementById('gradeAssignment');
-    const employeeSelect = document.getElementById('assignmentEmployee');
-    const gradeSelect = document.getElementById('assignmentJobGrade');
-    const stepSelect = document.getElementById('assignmentJobStep');
-    const updatedDepartment = document.getElementById('assignDepartment');
-const departmentDiv = document.getElementById('departmentAssignment');
-const departmentSelect = document.getElementById('assignmentDepartment');
+    const assignDepartment = document.getElementById('assignDepartment');
 
-    // Remove existing listeners to avoid duplicates
-    const newEmployee = assignEmployee.cloneNode(true);
-    const newGrade = assignGrade.cloneNode(true);
-    assignEmployee.parentNode.replaceChild(newEmployee, assignEmployee);
-    assignGrade.parentNode.replaceChild(newGrade, assignGrade);
+    assignEmployee.onchange = () => {
+        if (assignEmployee.checked) applyAssignmentMode('employee');
+    };
 
-    // Re-fetch elements
-    const updatedEmployee = document.getElementById('assignEmployee');
-    const updatedGrade = document.getElementById('assignGrade');
+    assignGrade.onchange = () => {
+        if (assignGrade.checked) applyAssignmentMode('grade');
+    };
 
-    updatedEmployee.addEventListener('change', () => {
-        if (updatedEmployee.checked) {
-            employeeDiv.classList.remove('hidden');
-            gradeDiv.classList.add('hidden');
-            // Set required attributes
-            employeeSelect.required = true;
-            gradeSelect.required = false;
-            stepSelect.required = false;
-        }
-    });
-    updatedGrade.addEventListener('change', () => {
-        if (updatedGrade.checked) {
-            employeeDiv.classList.add('hidden');
-            gradeDiv.classList.remove('hidden');
-            // Set required attributes
-            employeeSelect.required = false;
-            gradeSelect.required = true;
-            stepSelect.required = true;
-            // Step select may still be disabled if no grade selected; that's fine.
-        }
-    });
-    updatedDepartment.addEventListener('change', () => {
-    if (updatedDepartment.checked) {
-        employeeDiv.classList.add('hidden');
-        gradeDiv.classList.add('hidden');
-        departmentDiv.classList.remove('hidden');
-        employeeSelect.required = false;
-        gradeSelect.required = false;
-        stepSelect.required = false;
-        departmentSelect.required = true;
-        }
-   });
+    assignDepartment.onchange = () => {
+        if (assignDepartment.checked) applyAssignmentMode('department');
+    };
+
+    const checkedMode = document.getElementById('assignGrade').checked
+        ? 'grade'
+        : (document.getElementById('assignDepartment').checked ? 'department' : 'employee');
+    applyAssignmentMode(checkedMode, false);
 
 }
 
@@ -2141,6 +2173,13 @@ function validateAssignmentForm(event) {
     }
 }
 
+    if (assignmentFormMode === 'edit') {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        submitAssignmentEdit(form);
+        return false;
+    }
+
     return true; // allow htmx submission
 }
 // Disable the Record Measurements button during form submission
@@ -2177,7 +2216,7 @@ function enableAssignmentSubmit() {
     if (btn) {
         btn.disabled = false;
         btn.classList.remove('opacity-50', 'cursor-not-allowed');
-        btn.innerHTML = 'Assign KPIs';
+        btn.innerHTML = assignmentFormMode === 'edit' ? 'Save Changes' : 'Assign KPIs';
     }
 }
 
@@ -2208,12 +2247,54 @@ function extractAssignmentErrorMessage(event) {
     return plainText.substring(0, 220) || 'Failed to assign KPIs.';
 }
 
+async function submitAssignmentEdit(form) {
+    const editUrl = form.dataset.editUrl;
+    if (!editUrl) {
+        showAssignmentBanner('Unable to save changes because the edit endpoint is missing.');
+        return;
+    }
+
+    disableAssignmentSubmit();
+
+    try {
+        const response = await fetch(editUrl, {
+            method: 'POST',
+            body: new FormData(form),
+            headers: {
+                'HX-Request': 'true'
+            }
+        });
+
+        const responseText = await response.text();
+        if (!response.ok) {
+            throw new Error(responseText || response.statusText || 'Failed to update KPI assignments.');
+        }
+
+        document.getElementById('content-assignments').innerHTML = responseText;
+        closeModal('kpiAssignmentModal');
+        showNotification('KPI assignments updated successfully!', 'success');
+        enableAssignmentSubmit();
+        resetAssignmentForm();
+        refreshStats();
+    } catch (error) {
+        enableAssignmentSubmit();
+        const message = (error.message || 'Failed to update KPI assignments.')
+            .replace(/<script[\s\S]*?<\/script>/gi, '')
+            .replace(/<style[\s\S]*?<\/style>/gi, '')
+            .replace(/<[^>]+>/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+        showAssignmentBanner(message.substring(0, 220) || 'Failed to update KPI assignments.');
+    }
+}
+
 // Handle response: close modal on success, show notification, re-enable button on error
 function handleAssignmentResponse(event) {
     if (event.detail.successful) {
         closeModal('kpiAssignmentModal');
-        showNotification('KPIs assigned successfully!', 'success');
+        showNotification(assignmentFormMode === 'edit' ? 'KPI assignments updated successfully!' : 'KPIs assigned successfully!', 'success');
         enableAssignmentSubmit();
+        resetAssignmentForm();
         refreshStats(); // Refresh stats after assignment
     } else {
         enableAssignmentSubmit();
@@ -2221,83 +2302,120 @@ function handleAssignmentResponse(event) {
     }
 }
 
-        function viewAssignmentDetails(id, type) {
-            const assignments = kpiAssignments.filter(a =>
-                type === 'employee' ? a.employeeId === id : a.jobStepId === id
-            );
-            let details = '';
-            let totalWeight = 0;
-            assignments.forEach(assignment => {
-                assignment.assignments.forEach(a => {
-                    const kpi = kpiDefinitions.find(k => k.id === a.kpiId);
-                    if (kpi) {
-                        details += `${kpi.name}: ${(a.weight * 100).toFixed(0)}%\n`;
-                        totalWeight += a.weight;
-                    }
-                });
-            });
-            const title = type === 'employee'
-                ? employees.find(e => e.id === id)?.name
-                : getJobStepLabel(id);
-            alert(`${title} - KPI Assignments\n\n${details}\nTotal Weight: ${totalWeight.toFixed(2)}`);
+        function getAssignmentTypeLabel(type) {
+            if (type === 'employee') return 'individual';
+            if (type === 'grade') return 'job grade';
+            if (type === 'department') return 'department';
+            return 'KPI';
         }
 
-        function editAssignment(id, type) {
-            const assignments = kpiAssignments.filter(a =>
-                type === 'employee' ? a.employeeId === id : a.jobStepId === id
-            );
-            if (assignments.length === 0) return;
-
-            openModal('kpiAssignmentModal');
-
+        function getAssignmentOwnerLabel(id, type) {
             if (type === 'employee') {
-                document.getElementById('assignEmployee').checked = true;
-                // Trigger change event to update required attributes and visibility
-                document.getElementById('assignEmployee').dispatchEvent(new Event('change'));
-                document.getElementById('assignmentEmployee').value = id;
-
-                // Update the searchable select display
-                const emp = employeesList.find(e => e.id == id);
-                if (emp) {
-                    const searchInput = document.getElementById('employeeSearchInput');
-                    const container = document.getElementById('employeeSearchContainer');
-                    if (searchInput) searchInput.value = emp.name;
-                    if (container) container.classList.add('has-value');
-                }
-            } else {
-                document.getElementById('assignGrade').checked = true;
-                document.getElementById('assignGrade').dispatchEvent(new Event('change'));
-                const step = jobSteps.find(s => s.id === id);
-                if (step) {
-                    const gradeSelect = document.getElementById('assignmentJobGrade');
-                    gradeSelect.value = step.gradeId;
-                    gradeSelect.dispatchEvent(new Event('change'));
-                    setTimeout(() => {
-                        const stepSelect = document.getElementById('assignmentJobStep');
-                        stepSelect.value = id;
-                    }, 100);
-                }
+                return employeesList.find(emp => String(emp.id) === String(id))?.name || 'this employee';
             }
+            if (type === 'grade') {
+                return getJobStepLabel(id);
+            }
+            if (type === 'department') {
+                return departments.find(dept => String(dept.id) === String(id))?.name || 'this department';
+            }
+            return 'this scope';
+        }
 
-            document.getElementById('assignmentKpisContainer').innerHTML = '';
-            assignments.forEach(assignment => {
-                assignment.assignments.forEach(a => {
-                    addKpiAssignmentRow(a.kpiId, a.weight);
+        async function editAssignment(id, type) {
+            try {
+                const response = await fetch(`/kpi/assignments/${type}/${id}`);
+                if (!response.ok) {
+                    throw new Error('Unable to load KPI assignments for editing.');
+                }
+
+                const assignments = await response.json();
+                if (!assignments.length) {
+                    showNotification('No active KPI assignments found for this selection.', 'error');
+                    return;
+                }
+
+                resetAssignmentForm();
+                setupAssignmentToggle();
+                assignmentFormMode = 'edit';
+
+                const form = document.getElementById('kpiAssignmentForm');
+                form.dataset.editUrl = `/kpi/assignments/${type}/${id}/update`;
+                document.getElementById('assignmentModalTitle').textContent = 'Edit KPI Assignments';
+                document.getElementById('assignmentModalDescription').textContent =
+                    `Editing ${getAssignmentTypeLabel(type)} assignments for ${getAssignmentOwnerLabel(id, type)}.`;
+                document.getElementById('assignmentSubmitButton').textContent = 'Save Changes';
+
+                if (type === 'employee') {
+                    document.getElementById('assignEmployee').checked = true;
+                    applyAssignmentMode('employee', false);
+                    setEmployeeAssignmentValue(id);
+                } else if (type === 'grade') {
+                    document.getElementById('assignGrade').checked = true;
+                    applyAssignmentMode('grade', false);
+                    const step = jobSteps.find(s => String(s.id) === String(id));
+                    if (step) {
+                        const gradeSelect = document.getElementById('assignmentJobGrade');
+                        gradeSelect.value = step.gradeId;
+                        gradeSelect.dispatchEvent(new Event('change'));
+                        document.getElementById('assignmentJobStep').value = id;
+                    }
+                } else if (type === 'department') {
+                    document.getElementById('assignDepartment').checked = true;
+                    applyAssignmentMode('department', false);
+                    document.getElementById('assignmentDepartment').value = id;
+                }
+
+                const container = document.getElementById('assignmentKpisContainer');
+                container.innerHTML = '';
+                kpiRowCounter = 0;
+                assignments.forEach(assignment => {
+                    addKpiAssignmentRow(assignment.kpiId, assignment.weight, assignment.mandatory);
                 });
-            });
-
-            kpiAssignments = kpiAssignments.filter(a =>
-                type === 'employee' ? a.employeeId !== id : a.jobStepId !== id
-            );
+                renumberKpiRows();
+                updateTotalWeight();
+                openModal('kpiAssignmentModal', true);
+            } catch (error) {
+                showNotification(error.message || 'Unable to edit KPI assignments.', 'error');
+            }
         }
 
         function deleteAllAssignments(id, type) {
-            if (confirm(`Are you sure you want to remove all KPI assignments?`)) {
-                kpiAssignments = kpiAssignments.filter(a =>
-                    type === 'employee' ? a.employeeId !== id : a.jobStepId !== id
-                );
-                showNotification('Assignments removed!', 'success');
-            }
+            pendingAssignmentDelete = { id, type };
+            const label = getAssignmentOwnerLabel(id, type);
+            document.getElementById('deleteAssignmentConfirmText').textContent =
+                `This will permanently delete all ${getAssignmentTypeLabel(type)} KPI assignments for ${label}.`;
+            openModal('deleteAssignmentConfirmModal');
+        }
+
+        function closeDeleteAssignmentConfirmModal() {
+            pendingAssignmentDelete = null;
+            closeModal('deleteAssignmentConfirmModal');
+        }
+
+        function confirmDeleteAllAssignments() {
+            if (!pendingAssignmentDelete) return;
+
+            const { id, type } = pendingAssignmentDelete;
+            const button = document.getElementById('confirmDeleteAssignmentButton');
+            button.disabled = true;
+            button.classList.add('opacity-50', 'cursor-not-allowed');
+            button.textContent = 'Deleting...';
+
+            htmx.ajax('POST', `/kpi/assignments/${type}/${id}/delete`, {
+                target: '#content-assignments',
+                swap: 'innerHTML'
+            }).then(() => {
+                closeDeleteAssignmentConfirmModal();
+                showNotification('KPI assignments deleted successfully!', 'success');
+                refreshStats();
+            }).catch(() => {
+                showNotification('Unable to delete KPI assignments.', 'error');
+            }).finally(() => {
+                button.disabled = false;
+                button.classList.remove('opacity-50', 'cursor-not-allowed');
+                button.textContent = 'Delete';
+            });
         }
 
         // KPI Measurement functions – most are now replaced by HTMX, but we keep helpers for notifications etc.

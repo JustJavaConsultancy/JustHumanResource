@@ -122,18 +122,7 @@ public class KpiAssignmentService {
         List<KpiAssignment> saved = repository.saveAll(toSave);
 
         for (KpiAssignment assignment : saved) {
-            response.add(
-                    KpiAssignmentResponseDTO.builder()
-                            .assignmentId(assignment.getId())
-                            .kpiId(assignment.getKpi().getId())
-                            .kpiCode(assignment.getKpi().getCode())
-                            .weight(assignment.getWeight())
-                            .mandatory(assignment.isMandatory())
-                            .name(assignment.getKpi().getName())
-                            .parentDefinitionId(getParentDefinitionId(assignment.getKpi()))
-                            .parentKpi(hasActiveChildDefinitions(assignment.getKpi()))
-                            .build()
-            );
+            response.add(toResponseDTO(assignment));
         }
 
         return response;
@@ -158,21 +147,7 @@ public class KpiAssignmentService {
 
         for (KpiAssignment assignment : assignments) {
 
-            response.add(
-
-                    KpiAssignmentResponseDTO.builder()
-                            .assignmentId(assignment.getId())
-                            .kpiId(assignment.getKpi().getId())
-                            .kpiCode(assignment.getKpi().getCode())
-                            .weight(assignment.getWeight())
-                            .mandatory(assignment.isMandatory())
-                            .name(assignment.getKpi().getName())
-                            .targetValue(assignment.getKpi().getTargetValue())
-                            .kpiUnit(assignment.getKpi().getUnit())
-                            .parentDefinitionId(getParentDefinitionId(assignment.getKpi()))
-                            .parentKpi(hasActiveChildDefinitions(assignment.getKpi()))
-                            .build()
-            );
+            response.add(toResponseDTO(assignment));
         }
 
         return response;
@@ -192,19 +167,7 @@ public class KpiAssignmentService {
 
         for (KpiAssignment assignment : assignments) {
 
-            response.add(
-
-                    KpiAssignmentResponseDTO.builder()
-                            .assignmentId(assignment.getId())
-                            .kpiId(assignment.getKpi().getId())
-                            .kpiCode(assignment.getKpi().getCode())
-                            .weight(assignment.getWeight())
-                            .mandatory(assignment.isMandatory())
-                            .name(assignment.getKpi().getName())
-                            .parentDefinitionId(getParentDefinitionId(assignment.getKpi()))
-                            .parentKpi(hasActiveChildDefinitions(assignment.getKpi()))
-                            .build()
-            );
+            response.add(toResponseDTO(assignment));
         }
 
         return response;
@@ -217,24 +180,52 @@ public class KpiAssignmentService {
 
         List<KpiAssignmentResponseDTO> response = new ArrayList<>();
         for (KpiAssignment assignment : assignments) {
-            response.add(
-                    KpiAssignmentResponseDTO.builder()
-                            .assignmentId(assignment.getId())
-                            .kpiId(assignment.getKpi().getId())
-                            .kpiCode(assignment.getKpi().getCode())
-                            .weight(assignment.getWeight())
-                            .mandatory(assignment.isMandatory())
-                            .name(assignment.getKpi().getName())
-                            .parentDefinitionId(getParentDefinitionId(assignment.getKpi()))
-                            .parentKpi(hasActiveChildDefinitions(assignment.getKpi()))
-                            .build()
-            );
+            response.add(toResponseDTO(assignment));
         }
         return response;
     }
 
+    @Transactional(readOnly = true)
+    public List<KpiAssignmentResponseDTO> getDirectAssignments(String type, Long ownerId) {
+        return getAssignmentsByType(type, ownerId).stream()
+                .map(this::toResponseDTO)
+                .collect(Collectors.toList());
+    }
+
+    public List<KpiAssignmentResponseDTO> replaceAssignments(String type, Long ownerId, KpiBulkAssignmentRequestDTO request) {
+        validateKpiWeightSetting();
+        validateRequestKpis(request);
+
+        Employee employee = null;
+        JobStep jobStep = null;
+        Department department = null;
+
+        switch (normalizeAssignmentType(type)) {
+            case "employee" -> employee = employeeRepository.findById(ownerId).orElseThrow();
+            case "grade" -> jobStep = jobStepRepository.findById(ownerId).orElseThrow();
+            case "department" -> department = departmentRepository.findById(ownerId).orElseThrow();
+            default -> throw new IllegalArgumentException("Unknown assignment type: " + type);
+        }
+
+        List<KpiAssignment> incomingAssignments = buildAssignments(request, employee, jobStep, department);
+        validateTotalWeight(new ArrayList<>(), incomingAssignments);
+        validateHierarchyWeights(new ArrayList<>(), incomingAssignments);
+
+        List<KpiAssignment> existingAssignments = getAssignmentsByType(type, ownerId);
+        repository.deleteAll(existingAssignments);
+
+        return repository.saveAll(incomingAssignments).stream()
+                .map(this::toResponseDTO)
+                .collect(Collectors.toList());
+    }
+
+    public void deleteAssignments(String type, Long ownerId) {
+        List<KpiAssignment> existingAssignments = getAssignmentsByType(type, ownerId);
+        repository.deleteAll(existingAssignments);
+    }
+
     public List<KpiAssignment> getAllAssignments() {
-        return repository.findAll();
+        return repository.findByActiveTrue();
     }
         /* ==============================
        INTERNAL VALIDATION
@@ -309,6 +300,68 @@ public class KpiAssignmentService {
 
     private boolean hasActiveChildDefinitions(KpiDefinition kpi) {
         return kpi.getChildren() != null && kpi.getChildren().stream().anyMatch(KpiDefinition::isActive);
+    }
+
+    private List<KpiAssignment> buildAssignments(
+            KpiBulkAssignmentRequestDTO request,
+            Employee employee,
+            JobStep jobStep,
+            Department department
+    ) {
+        List<KpiAssignment> assignments = new ArrayList<>();
+        Set<Long> seenKpiIds = new java.util.HashSet<>();
+
+        for (KpiAssignmentItemRequestDTO item : request.getKpis()) {
+            validateWeight(item.getWeight());
+
+            KpiDefinition kpi = kpiRepository.findById(item.getKpiId())
+                    .orElseThrow();
+
+            if (!seenKpiIds.add(kpi.getId())) {
+                throw new IllegalArgumentException("Each KPI can only be assigned once in the same scope.");
+            }
+
+            assignments.add(KpiAssignment.builder()
+                    .kpi(kpi)
+                    .employee(employee)
+                    .jobStep(jobStep)
+                    .department(department)
+                    .weight(item.getWeight())
+                    .mandatory(item.isMandatory())
+                    .validFrom(LocalDate.now())
+                    .active(true)
+                    .build());
+        }
+
+        return assignments;
+    }
+
+    private List<KpiAssignment> getAssignmentsByType(String type, Long ownerId) {
+        return switch (normalizeAssignmentType(type)) {
+            case "employee" -> repository.findByEmployee_IdAndActiveTrue(ownerId);
+            case "grade" -> repository.findByJobStep_IdAndActiveTrue(ownerId);
+            case "department" -> repository.findByDepartment_IdAndActiveTrue(ownerId);
+            default -> throw new IllegalArgumentException("Unknown assignment type: " + type);
+        };
+    }
+
+    private String normalizeAssignmentType(String type) {
+        return type == null ? "" : type.trim().toLowerCase();
+    }
+
+    private KpiAssignmentResponseDTO toResponseDTO(KpiAssignment assignment) {
+        return KpiAssignmentResponseDTO.builder()
+                .assignmentId(assignment.getId())
+                .kpiId(assignment.getKpi().getId())
+                .kpiCode(assignment.getKpi().getCode())
+                .weight(assignment.getWeight())
+                .mandatory(assignment.isMandatory())
+                .name(assignment.getKpi().getName())
+                .targetValue(assignment.getKpi().getTargetValue())
+                .kpiUnit(assignment.getKpi().getUnit())
+                .parentDefinitionId(getParentDefinitionId(assignment.getKpi()))
+                .parentKpi(hasActiveChildDefinitions(assignment.getKpi()))
+                .build();
     }
 
     private void validateHierarchyWeights(

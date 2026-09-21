@@ -27,6 +27,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 import com.justjava.humanresource.kpi.service.KpiCsvUploadResultDTO;
 import com.justjava.humanresource.kpi.service.KpiCsvUploadService;
 import org.springframework.core.io.ByteArrayResource;
@@ -211,7 +212,7 @@ public class KpiController {
         model.addAttribute("assignmentsByEmployee", assignmentsByEmployee.size());
         model.addAttribute("assignmentsByJobStep", assignmentsByJobStep.size());
         model.addAttribute("assignmentsByDepartment", assignmentsByDepartment);
-        model.addAttribute("totalAssignments",assignmentsByEmployee.size() + assignmentsByJobStep.size());
+        model.addAttribute("totalAssignments",assignmentsByEmployee.size() + assignmentsByJobStep.size() + assignmentsByDepartment.size());
         model.addAttribute("definitionSize", kpiDefinitions.size());
         model.addAttribute("departments", deptList);
         model.addAttribute("jobGrades", jobGrades);
@@ -253,6 +254,39 @@ public class KpiController {
         // Return the fragment to reload the assignments tab
         return "kpi/fragment/kpi-assignments-fragment";
     }
+
+    @GetMapping("/kpi/assignments/{type}/{id}")
+    @ResponseBody
+    public List<KpiAssignmentResponseDTO> getKpiAssignmentsForEdit(
+            @PathVariable String type,
+            @PathVariable Long id
+    ) {
+        return kpiAssignmentService.getDirectAssignments(type, id);
+    }
+
+    @PostMapping("/kpi/assignments/{type}/{id}/update")
+    public String updateKpiAssignments(
+            @PathVariable String type,
+            @PathVariable Long id,
+            KpiBulkAssignmentRequestDTO request,
+            Model model
+    ) {
+        kpiAssignmentService.replaceAssignments(type, id, request);
+        populateAssignmentFragmentModel(model);
+        return "kpi/fragment/kpi-assignments-fragment";
+    }
+
+    @PostMapping("/kpi/assignments/{type}/{id}/delete")
+    public String deleteKpiAssignments(
+            @PathVariable String type,
+            @PathVariable Long id,
+            Model model
+    ) {
+        kpiAssignmentService.deleteAssignments(type, id);
+        populateAssignmentFragmentModel(model);
+        return "kpi/fragment/kpi-assignments-fragment";
+    }
+
     @GetMapping("/kpi/measurements/form-items")
     public String getMeasurementFormItems(@RequestParam Long employeeId, Model model) {
         List<KpiAssignmentResponseDTO> kpiDefinition = kpiAssignmentService.getAssignmentsForEmployee(employeeId)
@@ -369,6 +403,12 @@ public class KpiController {
                 }
         );
 
+        List<Department> uniqueDepartments = assignments.stream()
+                .map(KpiAssignment::getDepartment)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+
         List<FlowableTaskDTO> tasks =
                 flowableTaskService.getTasksForAssignee(
                         "mgr",
@@ -424,7 +464,7 @@ public class KpiController {
         model.addAttribute("managerPendingAppraisals", managerPending);
         model.addAttribute("assignmentsByEmployee", assignmentsByEmployee.size());
         model.addAttribute("assignmentsByJobStep", assignmentsByJobStep.size());
-        model.addAttribute("totalAssignments",assignmentsByEmployee.size() + assignmentsByJobStep.size());
+        model.addAttribute("totalAssignments",assignmentsByEmployee.size() + assignmentsByJobStep.size() + uniqueDepartments.size());
         model.addAttribute("definitionSize", kpiDefinitions.size());
         // Return the fragment (the part inside th:fragment="stats-cards")
         return "kpi/fragment/stats-cards :: stats-cards";
@@ -442,7 +482,7 @@ public class KpiController {
         Map<JobStep, List<KpiAssignmentResponseDTO>> assignmentsByJobStep = new LinkedHashMap<>();
         Map<JobStep, BigDecimal> jobStepEffectiveWeights = new LinkedHashMap<>();
         for (JobStep jobStep : uniqueJobSteps) {
-            List<KpiAssignmentResponseDTO> jobStepKpis = kpiAssignmentService.getAssignmentsForJobStep(jobStep.getId());
+            List<KpiAssignmentResponseDTO> jobStepKpis = kpiAssignmentService.getDirectAssignments("grade", jobStep.getId());
             assignmentsByJobStep.put(jobStep, jobStepKpis);
             jobStepEffectiveWeights.put(
                     jobStep,
@@ -460,7 +500,7 @@ public class KpiController {
         Map<Department, BigDecimal> departmentEffectiveWeights = new LinkedHashMap<>();
         for (Department dept : uniqueDepartments) {
             List<KpiAssignmentResponseDTO> deptKpis =
-                    kpiAssignmentService.getAssignmentsForDepartment(dept.getId());
+                    kpiAssignmentService.getDirectAssignments("department", dept.getId());
             assignmentsByDepartment.put(dept, deptKpis);
             departmentEffectiveWeights.put(
                     dept,
@@ -477,7 +517,7 @@ public class KpiController {
         Map<Employee, List<KpiAssignmentResponseDTO>> assignmentsByEmployee = new LinkedHashMap<>();
         Map<Employee, BigDecimal> employeeEffectiveWeights = new LinkedHashMap<>();
         for (Employee employee : uniqueEmployees) {
-            List<KpiAssignmentResponseDTO> employeeKpis = kpiAssignmentService.getAssignmentsForEmployee(employee.getId());
+            List<KpiAssignmentResponseDTO> employeeKpis = kpiAssignmentService.getDirectAssignments("employee", employee.getId());
             assignmentsByEmployee.put(employee, employeeKpis);
             employeeEffectiveWeights.put(
                     employee,
@@ -491,7 +531,7 @@ public class KpiController {
         model.addAttribute("employeeEffectiveWeights", employeeEffectiveWeights);
         model.addAttribute("jobStepEffectiveWeights", jobStepEffectiveWeights);
         model.addAttribute("departmentEffectiveWeights", departmentEffectiveWeights);
-        model.addAttribute("employmentSize", assignmentsByEmployee.size() + assignmentsByJobStep.size());
+        model.addAttribute("employmentSize", assignmentsByEmployee.size() + assignmentsByJobStep.size() + assignmentsByDepartment.size());
     }
 
     @GetMapping("/fragments/kpi-appraisal")
