@@ -15,6 +15,8 @@ public class KpiDefinitionService {
 
     private final KpiDefinitionRepository repository;
 
+
+
     public KpiDefinition create(KpiDefinition kpi) {
         kpi.setActive(true);
         kpi.setParentDefinition(resolveParent(kpi, null));
@@ -38,7 +40,7 @@ public class KpiDefinitionService {
         return repository.save(existing);
     }
     public List<KpiDefinition> getAll() {
-        return repository.findAll();
+        return repository.findAllWithChildren();
     }
 
     public boolean hasChildren(Long id) {

@@ -4,6 +4,7 @@ import com.justjava.humanresource.core.entity.BaseEntity;
 import com.justjava.humanresource.kpi.enums.KpiCategory;
 import com.justjava.humanresource.kpi.enums.KpiUnit;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -30,6 +31,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class KpiDefinition extends BaseEntity {
 
     @Column(unique = true, nullable = false)
@@ -77,4 +79,3 @@ public class KpiDefinition extends BaseEntity {
         return children != null && !children.isEmpty();
     }
 }
-
