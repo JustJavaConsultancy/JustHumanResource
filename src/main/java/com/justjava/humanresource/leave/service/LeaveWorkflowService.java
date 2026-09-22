@@ -9,12 +9,15 @@ import com.justjava.humanresource.hr.entity.Employee;
 import com.justjava.humanresource.hr.service.EmployeeService;
 import com.justjava.humanresource.leave.dto.LeaveRequestCreateCommand;
 import com.justjava.humanresource.leave.dto.LeaveRequestDetailDTO;
+import com.justjava.humanresource.leave.dto.PublicHolidayCreateCommand;
 import com.justjava.humanresource.leave.entity.LeaveApprovalStep;
 import com.justjava.humanresource.leave.entity.LeaveRequest;
+import com.justjava.humanresource.leave.entity.PublicHoliday;
 import com.justjava.humanresource.leave.enums.LeaveApprovalDecision;
 import com.justjava.humanresource.leave.enums.LeaveRequestStatus;
 import com.justjava.humanresource.leave.repository.LeaveApprovalStepRepository;
 import com.justjava.humanresource.leave.repository.LeaveRequestRepository;
+import com.justjava.humanresource.leave.repository.PublicHolidayRepository;
 import com.justjava.humanresource.utils.AfterCommitExecutor;
 import com.justjava.humanresource.utils.LeaveEmailService;
 import com.justjava.humanresource.workflow.dto.FlowableTaskDTO;
@@ -31,6 +34,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -46,6 +51,7 @@ public class LeaveWorkflowService {
     private final FlowableTaskService flowableTaskService;
     private final LeaveEmailService leaveEmailService;
     private final AfterCommitExecutor afterCommitExecutor;
+    private final PublicHolidayRepository publicHolidayRepository;
 
     @Transactional
     public LeaveRequest submitLeaveRequest(LeaveRequestCreateCommand command) {
@@ -238,12 +244,50 @@ public class LeaveWorkflowService {
                 .build();
     }
 
+    @Transactional(readOnly = true)
+    public List<PublicHoliday> getPublicHolidays() {
+        return publicHolidayRepository.findAllByOrderByDateAsc();
+    }
+
+    @Transactional
+    public PublicHoliday addPublicHoliday(PublicHolidayCreateCommand command) {
+        if (!isHrUser()) {
+            throw new IllegalStateException("You are not authorized to manage public holidays.");
+        }
+        if (command.getDate() == null) {
+            throw new IllegalArgumentException("Holiday date is required.");
+        }
+        if (command.getName() == null || command.getName().isBlank()) {
+            throw new IllegalArgumentException("Holiday name is required.");
+        }
+        if (publicHolidayRepository.existsByDate(command.getDate())) {
+            throw new IllegalArgumentException("A holiday is already defined for this date.");
+        }
+        PublicHoliday holiday = new PublicHoliday();
+        holiday.setDate(command.getDate());
+        holiday.setName(command.getName().trim());
+        return publicHolidayRepository.save(holiday);
+    }
+
+    @Transactional
+    public void deletePublicHoliday(Long id) {
+        if (!isHrUser()) {
+            throw new IllegalStateException("You are not authorized to manage public holidays.");
+        }
+        publicHolidayRepository.deleteById(id);
+    }
+
     private int countWeekdays(LocalDate start, LocalDate end) {
+        Set<LocalDate> holidays = publicHolidayRepository.findByDateBetween(start, end)
+                .stream()
+                .map(PublicHoliday::getDate)
+                .collect(Collectors.toSet());
+
         int weekdays = 0;
         LocalDate date = start;
         while (!date.isAfter(end)) {
             DayOfWeek day = date.getDayOfWeek();
-            if (day != DayOfWeek.SATURDAY && day != DayOfWeek.SUNDAY) {
+            if (day != DayOfWeek.SATURDAY && day != DayOfWeek.SUNDAY && !holidays.contains(date)) {
                 weekdays++;
             }
             date = date.plusDays(1);

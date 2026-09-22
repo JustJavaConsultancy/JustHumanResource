@@ -65,6 +65,61 @@
         </section>
     </div>
 
+    <section class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl">
+        <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+            <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">Public Holidays</h2>
+            <button onclick="loadPublicHolidays()"
+                    class="text-xs px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700">
+                Refresh
+            </button>
+        </div>
+        <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex flex-wrap items-end gap-3">
+            <div>
+                <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Date</label>
+                <input type="date" id="newHolidayDate"
+                       class="text-sm border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1.5 bg-white dark:bg-gray-900">
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Name</label>
+                <input type="text" id="newHolidayName" placeholder="e.g. Independence Day"
+                       class="w-72 text-sm border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1.5 bg-white dark:bg-gray-900">
+            </div>
+            <button onclick="addPublicHoliday()"
+                    class="text-xs px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                Add Holiday
+            </button>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="bg-gray-50 dark:bg-gray-700">
+                <tr>
+                    <th class="text-left px-4 py-3">Date</th>
+                    <th class="text-left px-4 py-3">Name</th>
+                    <th class="text-left px-4 py-3">Remove</th>
+                </tr>
+                </thead>
+                <tbody id="publicHolidaysBody" class="divide-y divide-gray-200 dark:divide-gray-700"></tbody>
+            </table>
+        </div>
+    </section>
+
+    <div id="deleteHolidayModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg w-full max-w-xs p-5">
+            <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Remove holiday?</h3>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">This will permanently remove this public holiday.</p>
+            <div class="flex justify-end gap-2">
+                <button onclick="closeDeleteHolidayModal()"
+                        class="text-xs px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700">
+                    Cancel
+                </button>
+                <button onclick="confirmDeleteHoliday()"
+                        class="text-xs px-3 py-1.5 bg-red-600 text-white rounded-md hover:bg-red-700">
+                    Remove
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script th:inline="javascript">
         function statusBadge(status) {
             const s = (status || '').toUpperCase();
@@ -140,9 +195,119 @@
             }
         }
 
+        async function loadPublicHolidays() {
+            const body = document.getElementById('publicHolidaysBody');
+            body.innerHTML = '<tr><td colspan="3" class="px-4 py-4 text-sm text-gray-500">Loading...</td></tr>';
+            try {
+                const data = await fetchJsonSafe('/leave/holidays');
+                if (!data.length) {
+                    body.innerHTML = '<tr><td colspan="3" class="px-4 py-4 text-sm text-gray-500">No public holidays defined.</td></tr>';
+                    return;
+                }
+                body.innerHTML = data.map(h => `
+                    <tr>
+                        <td class="px-4 py-3">
+                            <div>${formatHolidayDateShort(h.date)}</div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400">${formatHolidayDate(h.date)}</div>
+                        </td>
+                        <td class="px-4 py-3">${h.name || ''}</td>
+                        <td class="px-4 py-3">
+                            <button onclick="deletePublicHoliday(${h.id})" class="text-red-600 hover:text-red-700" title="Remove">
+                                <span class="material-icons-round text-base align-middle">delete</span>
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                body.innerHTML = '<tr><td colspan="3" class="px-4 py-4 text-sm text-red-600">' + e.message + '</td></tr>';
+            }
+        }
+
+        async function addPublicHoliday() {
+            const dateInput = document.getElementById('newHolidayDate');
+            const nameInput = document.getElementById('newHolidayName');
+            const date = dateInput.value;
+            const name = nameInput.value.trim();
+            if (!date || !name) {
+                alert('Please provide both a date and a name.');
+                return;
+            }
+            try {
+                const res = await fetch('/leave/holidays', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ date, name })
+                });
+                if (!res.ok) {
+                    throw new Error(await res.text() || 'Failed to add holiday.');
+                }
+                dateInput.value = '';
+                nameInput.value = '';
+                await loadPublicHolidays();
+            } catch (e) {
+                alert(e.message);
+            }
+        }
+
+        function ordinalSuffix(n) {
+            const j = n % 10, k = n % 100;
+            if (j === 1 && k !== 11) return 'st';
+            if (j === 2 && k !== 12) return 'nd';
+            if (j === 3 && k !== 13) return 'rd';
+            return 'th';
+        }
+
+        function formatHolidayDateShort(value) {
+            if (!value) return '';
+            const [year, month, day] = value.split('-');
+            return `${day}-${month}-${year}`;
+        }
+
+        function formatHolidayDate(value) {
+            if (!value) return '';
+            const [year, month, day] = value.split('-').map(Number);
+            const months = ['January', 'February', 'March', 'April', 'May', 'June',
+                'July', 'August', 'September', 'October', 'November', 'December'];
+            return `${day}${ordinalSuffix(day)} of ${months[month - 1]} ${year}`;
+        }
+
+        let holidayIdPendingDelete = null;
+
+        function deletePublicHoliday(id) {
+            holidayIdPendingDelete = id;
+            const modal = document.getElementById('deleteHolidayModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeDeleteHolidayModal() {
+            holidayIdPendingDelete = null;
+            const modal = document.getElementById('deleteHolidayModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        async function confirmDeleteHoliday() {
+            if (holidayIdPendingDelete == null) {
+                return;
+            }
+            const id = holidayIdPendingDelete;
+            closeDeleteHolidayModal();
+            try {
+                const res = await fetch(`/leave/holidays/${id}`, { method: 'DELETE' });
+                if (!res.ok) {
+                    throw new Error(await res.text() || 'Failed to remove holiday.');
+                }
+                await loadPublicHolidays();
+            } catch (e) {
+                alert(e.message);
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', async function () {
             await loadMyLeaveRequests();
             await loadPendingApprovals();
+            await loadPublicHolidays();
         });
     </script>
 

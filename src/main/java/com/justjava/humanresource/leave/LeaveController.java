@@ -6,8 +6,10 @@ import com.justjava.humanresource.hr.service.EmployeeService;
 import com.justjava.humanresource.leave.dto.LeaveApprovalActionCommand;
 import com.justjava.humanresource.leave.dto.LeaveRequestCreateCommand;
 import com.justjava.humanresource.leave.dto.LeaveRequestDetailDTO;
+import com.justjava.humanresource.leave.dto.PublicHolidayCreateCommand;
 import com.justjava.humanresource.leave.entity.LeaveApprovalStep;
 import com.justjava.humanresource.leave.entity.LeaveRequest;
+import com.justjava.humanresource.leave.entity.PublicHoliday;
 import com.justjava.humanresource.leave.service.LeaveWorkflowService;
 import com.justjava.humanresource.workflow.dto.FlowableTaskDTO;
 import lombok.RequiredArgsConstructor;
@@ -93,6 +95,24 @@ public class LeaveController {
         model.addAttribute("subTitle", "Full details for this leave request");
         model.addAttribute("leaveRequestId", id);
         return "leave/details";
+    }
+
+    @GetMapping("/leave/holidays")
+    @ResponseBody
+    public List<PublicHoliday> getPublicHolidays() {
+        return leaveWorkflowService.getPublicHolidays();
+    }
+
+    @PostMapping("/leave/holidays")
+    @ResponseBody
+    public PublicHoliday addPublicHoliday(@RequestBody PublicHolidayCreateCommand command) {
+        return leaveWorkflowService.addPublicHoliday(command);
+    }
+
+    @DeleteMapping("/leave/holidays/{id}")
+    @ResponseBody
+    public void deletePublicHoliday(@PathVariable Long id) {
+        leaveWorkflowService.deletePublicHoliday(id);
     }
 
     private boolean isHrUser() {
