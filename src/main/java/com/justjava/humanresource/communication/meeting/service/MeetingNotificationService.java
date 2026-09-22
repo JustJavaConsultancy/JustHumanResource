@@ -6,6 +6,7 @@ import com.justjava.humanresource.communication.meeting.entity.HrMeeting;
 import com.justjava.humanresource.communication.meeting.entity.HrMeetingParticipant;
 import com.justjava.humanresource.communication.meeting.repository.HrMeetingParticipantRepository;
 import com.justjava.humanresource.communication.service.CommunicationService;
+import com.justjava.humanresource.hr.entity.Employee;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
@@ -48,8 +49,8 @@ public class MeetingNotificationService {
         Long senderId = properties.getNotifications().getSystemSenderEmployeeId();
         Long recipientId = participant.getEmployee() == null ? null : participant.getEmployee().getId();
         if (senderId == null) {
-            markChatFailure(participant, errors, "Meeting chat sender is not configured");
-            return;
+            Employee sender = communicationService.getOrCreateHrSystemEmployee("hr-system@company.local");
+            senderId = sender.getId();
         }
         if (recipientId == null) {
             markChatFailure(participant, errors, "Participant employee is missing");

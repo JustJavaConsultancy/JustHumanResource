@@ -49,7 +49,10 @@ public class HrMeetingService {
     @Transactional(readOnly = true)
     public List<HrMeetingResponse> listMeetings() {
         requireHrOrAdmin();
-        List<HrMeeting> meetings = meetingRepository.findByStatusOrderByStartTimeDesc(HrMeetingStatus.SCHEDULED);
+        List<HrMeeting> meetings = meetingRepository.findByStatusAndEndTimeAfterOrderByStartTimeAsc(
+                HrMeetingStatus.SCHEDULED,
+                LocalDateTime.now()
+        );
         Map<Long, List<HrMeetingParticipant>> participantsByMeetingId = participantRepository
                 .findByMeeting_IdInOrderByEmployeeNameAsc(meetings.stream().map(HrMeeting::getId).toList())
                 .stream()
@@ -73,6 +76,7 @@ public class HrMeetingService {
         return participantRepository.findByEmployee_IdOrderByMeeting_StartTimeDesc(employee.getId()).stream()
                 .map(HrMeetingParticipant::getMeeting)
                 .filter(meeting -> meeting.getStatus() == HrMeetingStatus.SCHEDULED)
+                .filter(meeting -> meeting.getEndTime() != null && meeting.getEndTime().isAfter(LocalDateTime.now()))
                 .distinct()
                 .map(meeting -> toResponse(meeting, participantRepository.findByMeeting_IdOrderByEmployeeNameAsc(meeting.getId()), false))
                 .toList();
@@ -136,6 +140,16 @@ public class HrMeetingService {
         HrMeeting meeting = meetingRepository.findById(meetingId)
                 .orElseThrow(() -> new EntityNotFoundException("Meeting not found"));
         meeting.setStatus(HrMeetingStatus.CANCELLED);
+        HrMeeting saved = meetingRepository.save(meeting);
+        return toResponse(saved, participantRepository.findByMeeting_IdOrderByEmployeeNameAsc(meetingId), true);
+    }
+
+    @Transactional
+    public HrMeetingResponse completeMeeting(Long meetingId) {
+        requireHrOrAdmin();
+        HrMeeting meeting = meetingRepository.findById(meetingId)
+                .orElseThrow(() -> new EntityNotFoundException("Meeting not found"));
+        meeting.setStatus(HrMeetingStatus.COMPLETED);
         HrMeeting saved = meetingRepository.save(meeting);
         return toResponse(saved, participantRepository.findByMeeting_IdOrderByEmployeeNameAsc(meetingId), true);
     }

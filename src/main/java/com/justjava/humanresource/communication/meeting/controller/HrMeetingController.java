@@ -45,6 +45,12 @@ public class HrMeetingController {
         return ResponseEntity.ok(meetingService.cancelMeeting(meetingId));
     }
 
+    @PostMapping("/communication/meetings/{meetingId}/complete")
+    @ResponseBody
+    public ResponseEntity<HrMeetingResponse> completeMeeting(@PathVariable Long meetingId) {
+        return ResponseEntity.ok(meetingService.completeMeeting(meetingId));
+    }
+
     @GetMapping("/employee/communication/meetings")
     @ResponseBody
     public List<HrMeetingResponse> employeeMeetings() {
