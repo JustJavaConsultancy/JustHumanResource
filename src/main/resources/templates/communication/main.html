@@ -564,6 +564,7 @@
             line-height: 1.55;
             overflow-wrap: anywhere;
             word-break: break-word;
+            white-space: pre-wrap;      /* ← FIX: preserve \n line breaks in messages */
             transition: background .15s;
         }
 
@@ -1058,6 +1059,7 @@
             margin-top: 3px;
             color: var(--hc-text);
             word-wrap: break-word;
+            white-space: pre-wrap;      /* ← FIX: preserve \n line breaks in comments */
         }
 
         /* ── broadcast create form ── */
@@ -2499,9 +2501,12 @@
             return text.length > 160 ? text.substring(0, 157) + '...' : text;
         }
 
+        /* ← FIX: normalise CRLF/CR to LF so pre-wrap renders consistently
+                  and browsers don't show a stray \r as an extra line. */
         function escapeHtml(value) {
             const div = document.createElement('div');
-            div.textContent = value == null ? '' : String(value);
+            const text = value == null ? '' : String(value).replace(/\r\n?/g, '\n');
+            div.textContent = text;
             return div.innerHTML;
         }
 
@@ -3454,7 +3459,7 @@
                 's' : '') + ' selected' : 'Select employees…';
         }
 
-        // ── Group-member dropdown (was missing — caused ReferenceError) ──
+        // ── Group-member dropdown ──
         function toggleMemberDropdown() {
             const panel  = document.getElementById('memberDropdownPanel');
             const toggle = document.getElementById('memberDropdownToggle');
