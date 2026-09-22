@@ -22,6 +22,7 @@
             --hc-blue: #2563eb;
             --hc-blue-soft: #eff6ff;
             --hc-green: #16a34a;
+            --hc-emerald: #10b981;
             --hc-red: #dc2626;
             --hc-amber: #f59e0b;
             --hc-radius: 12px;
@@ -43,6 +44,7 @@
             --hc-soft: #111827;
             --hc-hover: #273449;
             --hc-blue-soft: #172554;
+            --hc-emerald: #10b981;
             --hc-shadow: 0 4px 24px rgba(0, 0, 0, .3);
             --hc-shadow-lg: 0 12px 40px rgba(0, 0, 0, .4);
         }
@@ -1392,6 +1394,19 @@
             margin-top: 2px;
         }
 
+        /* ═══════════════════════════════════════════════
+           MEETINGS VIEW — new
+           ═══════════════════════════════════════════════ */
+        .meetings-view {
+            display: none;
+            grid-column: 2 / 4;
+            overflow-y: auto;
+            background: var(--hc-surface);
+        }
+        .meetings-view.active {
+            display: block;
+        }
+
         /* ── modals (for meetings & groups) ── */
         .comm-modal {
             position: fixed;
@@ -1565,6 +1580,279 @@
             background: var(--hc-hover);
         }
 
+        .meeting-row {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding: 16px;
+            border-bottom: 1px solid var(--hc-border);
+            background: var(--hc-surface);
+            transition: background-color 0.2s;
+        }
+        .meeting-row:hover {
+            background: var(--hc-hover);
+        }
+        .meeting-row-main {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+        }
+        .meeting-title {
+            margin: 0;
+            font-size: 14px;
+            font-weight: 700;
+            line-height: 1.35;
+            overflow-wrap: anywhere;
+            color: var(--hc-text);
+        }
+        .meeting-status-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .meeting-status-badge.active {
+            background: rgba(34, 197, 94, 0.1);
+            color: #16a34a;
+        }
+        .meeting-meta {
+            margin-top: 6px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: var(--hc-muted);
+        }
+        .meeting-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+        .meeting-actions .hr-secondary,
+        .meeting-actions .hr-primary {
+            padding: 6px 12px;
+            font-size: 11px;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .meeting-participants {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .meeting-participant {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            max-width: 100%;
+            border: 1px solid var(--hc-border);
+            border-radius: 12px;
+            padding: 4px 10px;
+            font-size: 11px;
+            color: var(--hc-text);
+            background: var(--hc-soft);
+            transition: all 0.15s;
+        }
+        .meeting-participant:hover {
+            border-color: var(--hc-blue);
+            background: var(--hc-blue-soft);
+            color: var(--hc-blue);
+        }
+        .meeting-participant.failed {
+            border-color: #fecaca;
+            background: #fef2f2;
+            color: #991b1b;
+        }
+        .meeting-participant.sent {
+            border-color: #bbf7d0;
+            background: #f0fdf4;
+            color: #166534;
+        }
+        .meeting-empty {
+            padding: 40px 20px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            color: var(--hc-muted);
+        }
+        .meeting-empty .material-icons-round {
+            font-size: 48px;
+            opacity: 0.3;
+        }
+        .meeting-empty p {
+            margin: 0;
+            font-size: 12px;
+        }
+        .meeting-empty p:first-of-type {
+            font-weight: 600;
+            color: var(--hc-text);
+            font-size: 14px;
+        }
+
+        /* ===== MEETING PARTICIPANTS DROPDOWN ===== */
+        .meeting-participants-dropdown {
+            position: relative;
+        }
+        .meeting-participants-field {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: center;
+            min-height: 40px;
+            padding: 8px 12px;
+            border: 1px solid var(--hc-border);
+            border-radius: 8px;
+            background: var(--hc-surface);
+            cursor: text;
+        }
+        .meeting-participants-field:focus-within {
+            border-color: var(--hc-blue);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+        }
+        .meeting-participants-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .meeting-participants-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            background: var(--hc-blue-soft);
+            color: var(--hc-blue);
+            font-size: 12px;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+        .meeting-participants-tag .tag-remove {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 16px;
+            height: 16px;
+            margin-left: 4px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            padding: 0;
+            color: inherit;
+            font-size: 14px;
+            line-height: 1;
+        }
+        .meeting-participants-tag .tag-remove:hover {
+            opacity: 0.7;
+        }
+        .meeting-participants-search {
+            flex: 1;
+            min-width: 120px;
+            border: none;
+            background: transparent;
+            font-size: 13px;
+            outline: none;
+            color: var(--hc-text);
+        }
+        .meeting-participants-search::placeholder {
+            color: var(--hc-muted);
+        }
+        .meeting-participants-panel {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            margin-top: 6px;
+            background: var(--hc-surface);
+            border: 1px solid var(--hc-border);
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            z-index: 100;
+            max-height: 320px;
+            overflow-y: auto;
+        }
+        .meeting-participants-panel.hidden {
+            display: none;
+        }
+        .meeting-participants-list {
+            display: flex;
+            flex-direction: column;
+        }
+        .meeting-participants-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid var(--hc-border);
+            transition: background-color 0.15s;
+        }
+        .meeting-participants-item:last-child {
+            border-bottom: none;
+        }
+        .meeting-participants-item:hover {
+            background: var(--hc-hover);
+        }
+        .meeting-participants-item.hidden {
+            display: none;
+        }
+        .meeting-participants-item input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+            margin: 0;
+        }
+        .meeting-participants-item-avatar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--hc-blue-soft);
+            color: var(--hc-blue);
+            font-size: 10px;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+        .meeting-participants-item-content {
+            min-width: 0;
+            flex: 1;
+        }
+        .meeting-participants-item-name {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--hc-text);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            margin: 0;
+        }
+        .meeting-participants-item-dept {
+            font-size: 10px;
+            color: var(--hc-muted);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            margin: 2px 0 0 0;
+        }
+        .meeting-participants-empty {
+            padding: 20px 12px;
+            text-align: center;
+            font-size: 12px;
+            color: var(--hc-muted);
+        }
+
         @media (max-width: 960px) {
             .comm-shell {
                 grid-template-columns: 232px minmax(0, 1fr);
@@ -1576,6 +1864,9 @@
             .groups-view {
                 grid-column: 2 / 3;
                 grid-template-columns: 1fr;
+            }
+            .meetings-view {
+                grid-column: 2 / 3;
             }
             .comm-list {
                 display: none;
@@ -1619,6 +1910,9 @@
             .groups-view {
                 grid-column: 1 / 2;
                 grid-template-columns: 1fr;
+            }
+            .meetings-view {
+                grid-column: 1 / 2;
             }
             .broadcast-list {
                 display: none;
@@ -1930,6 +2224,7 @@
                         </div>
                     </div>
                     <div class="group-chat-composer" style="border-top: 1px solid var(--hc-border); background: var(--hc-surface); padding: 12px 16px; flex-shrink: 0;">
+                        <div id="groupAttachmentTray" class="attachment-tray" style="display:none;padding:0 0 8px 0;"></div>
                         <form id="groupMessageForm">
                             <input id="groupMessageFiles" type="file" multiple class="hidden" accept=".pdf,.png,.jpg,.jpeg,.txt,.doc,.docx,.xls,.xlsx">
                             <div class="composer-shell">
@@ -1945,6 +2240,17 @@
                     </div>
                 </div>
             </div>
+        </div>
+
+        <!-- ===== MEETINGS VIEW — new ===== -->
+        <div class="meetings-view" id="meetingsView">
+            <div class="broadcast-list-header">
+                <h2>Meetings</h2>
+                <button class="icon-btn" id="newMeetingBtn" title="Schedule meeting">
+                    <span class="material-icons-round text-base">add</span>
+                </button>
+            </div>
+            <div id="meetingRows"></div>
         </div>
 
     </div> <!-- end comm-shell -->
@@ -1979,13 +2285,13 @@
                         <div id="memberDropdownPanel"
                              class="absolute z-50 w-full max-h-80 overflow-hidden hidden mt-1"
                              style="border:1px solid var(--hc-border);border-radius:10px;background:var(--hc-surface);box-shadow:0 12px 30px -10px rgba(0,0,0,.2);">
-                            <div class="p-2 border-b" style="border-color:var(--hc-border);">
+                            <div class="p-2 border-b" style="border-color:var(--hc-border);padding:8px;">
                                 <input id="memberDropdownSearch" type="text" class="hr-input"
                                        placeholder="Search employees…" autocomplete="off">
                             </div>
                             <div id="memberDropdownList" style="max-height:220px;overflow-y:auto;"></div>
                             <div id="memberDropdownFooter" class="hidden p-2 border-t text-xs text-muted text-right"
-                                 style="border-color:var(--hc-border);">
+                                 style="border-color:var(--hc-border);padding:8px;">
                                 <span id="selectedCount">0</span> selected
                             </div>
                         </div>
@@ -2008,54 +2314,77 @@
     <div id="meetingModal" class="comm-modal">
         <div class="modal-card">
             <div class="modal-head">
-                <h3>Schedule meeting</h3>
+                <div>
+                    <h3 style="margin:0 0 4px 0;">Schedule a meeting</h3>
+                    <p style="margin:0;font-size:12px;color:var(--hc-muted);">Create a video meeting and invite participants</p>
+                </div>
                 <button class="icon-btn modal-close" type="button">
                     <span class="material-icons-round">close</span>
                 </button>
             </div>
             <form id="meetingForm" class="modal-body">
-                <div class="flex gap-3 flex-wrap">
-                    <div class="form-field" style="flex:1;min-width:160px;">
-                        <label class="form-label">Provider</label>
-                        <select id="meetingProvider" class="hr-input">
-                            <option value="MICROSOFT_TEAMS">Microsoft Teams</option>
-                            <option value="ZOOM">Zoom</option>
-                            <option value="GOOGLE_MEET">Google Meet</option>
-                        </select>
-                    </div>
-                    <div class="form-field" style="flex:1;min-width:160px;">
-                        <label class="form-label">Meeting subject</label>
-                        <input id="meetingSubject" class="hr-input" maxlength="200" placeholder="Meeting subject" required>
-                    </div>
+                <div class="form-field">
+                    <label class="form-label">Meeting provider</label>
+                    <select id="meetingProvider" class="hr-input">
+                        <option value="MICROSOFT_TEAMS">Microsoft Teams</option>
+                        <option value="ZOOM">Zoom</option>
+                        <option value="GOOGLE_MEET">Google Meet</option>
+                    </select>
                 </div>
+
+                <div class="form-field">
+                    <label class="form-label">Meeting subject *</label>
+                    <input id="meetingSubject" class="hr-input" maxlength="200" placeholder="e.g., Team Standup, Client Review" required>
+                </div>
+
                 <div class="form-field">
                     <label class="form-label">Agenda</label>
-                    <textarea id="meetingAgenda" class="hr-input" maxlength="2000" rows="3" placeholder="Meeting agenda"></textarea>
+                    <textarea id="meetingAgenda" class="hr-input" maxlength="2000" rows="3" placeholder="Describe the meeting agenda..."></textarea>
                 </div>
-                <label class="flex items-center gap-2 text-xs font-semibold mb-3">
-                    <input id="meetingInstant" type="checkbox" checked>
-                    Start meeting now
-                </label>
-                <div class="flex gap-3 flex-wrap">
+
+                <div class="form-field">
+                    <label class="flex items-center gap-2 text-sm font-semibold mb-3">
+                        <input id="meetingInstant" type="checkbox" checked style="width:16px;height:16px;cursor:pointer;">
+                        <span>Start meeting immediately</span>
+                    </label>
+                    <p style="margin:0;font-size:11px;color:var(--hc-muted);">Uncheck to schedule for a specific date and time</p>
+                </div>
+
+                <div id="meetingTimeFields" class="flex gap-3 flex-wrap" style="display:none;">
                     <div class="form-field" style="flex:1;min-width:160px;">
-                        <label class="form-label">Start</label>
+                        <label class="form-label">Start date and time</label>
                         <input id="meetingStart" type="datetime-local" class="hr-input" disabled>
                     </div>
                     <div class="form-field" style="flex:1;min-width:160px;">
-                        <label class="form-label">End</label>
+                        <label class="form-label">End date and time</label>
                         <input id="meetingEnd" type="datetime-local" class="hr-input" disabled>
                     </div>
                 </div>
+
                 <div class="form-field">
-                    <label class="form-label">Participants</label>
-                    <select id="meetingParticipants" class="hr-input" style="min-height:110px;" multiple></select>
+                    <label class="form-label">Invite participants</label>
+                    <div id="meetingParticipantsDropdown" class="meeting-participants-dropdown">
+                        <div id="meetingParticipantsField" class="meeting-participants-field">
+                            <div id="meetingParticipantsTags" class="meeting-participants-tags"></div>
+                            <input type="hidden" id="meetingParticipantIds" value="">
+                            <input id="meetingParticipantsSearch" type="text" class="meeting-participants-search" placeholder="Search employees..." autocomplete="off">
+                        </div>
+                        <div id="meetingParticipantsPanel" class="meeting-participants-panel hidden">
+                            <div id="meetingParticipantsList" class="meeting-participants-list"></div>
+                        </div>
+                    </div>
                 </div>
-                <label class="flex items-center gap-2 text-xs font-semibold">
-                    <input id="meetingNotify" type="checkbox" checked>
-                    Notify selected participants
-                </label>
+
+                <div class="form-field">
+                    <label class="flex items-center gap-2 text-sm font-semibold">
+                        <input id="meetingNotify" type="checkbox" checked style="width:16px;height:16px;cursor:pointer;">
+                        <span>Send invitations to participants</span>
+                    </label>
+                    <p style="margin:4px 0 0 0;font-size:11px;color:var(--hc-muted);">Participants will be notified via email and chat</p>
+                </div>
+
                 <div class="modal-actions">
-                    <span id="meetingStatus" class="text-xs text-muted mr-auto">Select a provider.</span>
+                    <span id="meetingStatus" class="text-xs text-muted mr-auto">Ready to create</span>
                     <button class="hr-secondary modal-close" type="button">Cancel</button>
                     <button class="hr-primary" type="submit">
                         <span class="material-icons-round" style="font-size:14px;">video_call</span>
@@ -2070,7 +2399,6 @@
     <div class="legacy-data">
         <div id="onlineRows"></div>
         <div id="hrGroupRows"></div>
-        <div id="meetingRows"></div>
         <div id="broadcastRows"></div>
     </div>
 
@@ -2101,6 +2429,7 @@
         let availableMembers = [];
         let selectedBroadcastFiles = [];
         let selectedDirectFiles = [];
+        let selectedGroupFiles = [];
         let selectedDirectContact = null;
         let selectedBroadcast = null;
         let selectedGroup = null;
@@ -2108,9 +2437,24 @@
         let activeReceiptSubscription = null;
         let activeGroupSubscription = null;
         let currentFilter = 'all';
-        let isBroadcastView = false;
-        let isGroupsView = false;
-        let currentView = 'inbox';
+        let activeMainView = 'direct';       // 'direct' | 'broadcasts' | 'groups' | 'meetings'
+        let currentView = 'inbox';           // 'inbox' | 'mentions' | 'sent'
+        let memberDropdownOpen = false;
+        let meetingParticipantsDropdownOpen = false;
+
+        // de-dupe echoed direct messages (subscribed to two destinations)
+        const renderedMessageIds = new Set();
+        function rememberMessageId(id) {
+            if (id == null) return false;
+            if (renderedMessageIds.has(id)) return true;
+            renderedMessageIds.add(id);
+            if (renderedMessageIds.size > 500) {
+                // trim oldest
+                const first = renderedMessageIds.values().next().value;
+                renderedMessageIds.delete(first);
+            }
+            return false;
+        }
 
         // server-side injected identifiers
         const currentEmployeeNumber = /*[[${currentEmployeeNumber}]]*/ '';
@@ -2123,6 +2467,21 @@
         function formatTime(value) {
             if (!value) return '';
             return new Date(value).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        }
+
+        function formatMeetingTime(meeting) {
+            if (!meeting) return '';
+            if (meeting.instantMeeting) return 'Now';
+            const start = meeting.startTime ? new Date(meeting.startTime) : null;
+            const end = meeting.endTime ? new Date(meeting.endTime) : null;
+            if (!start || isNaN(start.getTime())) return '';
+            const startText = start.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+            if (!end || isNaN(end.getTime())) return startText;
+            const sameDay = start.toDateString() === end.toDateString();
+            const endText = sameDay
+                ? end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                : end.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+            return `${startText} - ${endText}`;
         }
 
         function formatShortTime(value) {
@@ -2281,16 +2640,12 @@
         }
 
         function selectOnlineEmployee(employeeId) {
-            if (isBroadcastView) {
-                document.getElementById('navBroadcastsSwitch').click();
-            }
-            if (isGroupsView) {
-                document.getElementById('navGroups').click();
-            }
-            const activeNav = document.querySelector('.nav-link.active');
-            if (!activeNav || activeNav.dataset.view !== 'inbox') {
-                document.getElementById('navInbox').click();
-            }
+            showMainView('direct');
+            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+            document.getElementById('navInbox')?.classList.add('active');
+            currentView = 'inbox';
+            document.getElementById('listTitle').textContent = 'Inbox';
+
             const contact = directContacts.find(c => c.id === employeeId);
             if (contact) {
                 selectDirectContact(contact.id);
@@ -2391,6 +2746,8 @@
             container.style.display = 'none';
             document.getElementById('groupDetailTitle').textContent = 'Select a group';
             document.getElementById('groupDetailMeta').textContent = 'View group details and members.';
+            const chatArea = document.getElementById('groupChatArea');
+            if (chatArea) chatArea.style.display = 'none';
         }
 
         async function selectGroup(id) {
@@ -2451,10 +2808,35 @@
             rows.scrollTop = rows.scrollHeight;
         }
 
+        function appendGroupMessage(msg) {
+            const rows = document.getElementById('groupMessages');
+            if (!rows) return;
+            if (rows.querySelector('.empty-state')) rows.innerHTML = '';
+            const mine = msg.senderId === currentEmployeeId;
+            rows.insertAdjacentHTML('beforeend', `
+                <div class="message-row ${mine ? 'mine' : ''}">
+                    <div class="message-mini-avatar" style="background:${mine ? 'var(--hc-emerald)' : 'var(--hc-blue-soft)'};color:${mine ? '#fff' : 'var(--hc-blue)'};">${initials(msg.senderName)}</div>
+                    <div class="message-stack">
+                        ${!mine ? `<div class="message-author">${escapeHtml(msg.senderName)}</div>` : ''}
+                        <div class="message-bubble">${msg.content ? escapeHtml(msg.content) : ''}${attachmentList(msg.attachments || [])}
+                            <div class="message-meta">${formatTime(msg.createdAt)}</div>
+                        </div>
+                    </div>
+                </div>
+            `);
+            rows.scrollTop = rows.scrollHeight;
+        }
+
         function setupGroupChat(groupId) {
             // Show chat area
             const chatArea = document.getElementById('groupChatArea');
             if (chatArea) chatArea.style.display = 'flex';
+
+            // Reset any pending attachments when switching groups
+            selectedGroupFiles = [];
+            const fileInput = document.getElementById('groupMessageFiles');
+            if (fileInput) fileInput.value = '';
+            renderGroupAttachments();
 
             // Subscribe to WebSocket for real-time messages
             if (stompClient && stompClient.connected) {
@@ -2469,17 +2851,43 @@
                     e.preventDefault();
                     const input = document.getElementById('groupMessageInput');
                     const content = input.value.trim();
-                    if (!content) return;
+                    if (!content && selectedGroupFiles.length === 0) return;
+
+                    const filesToSend = selectedGroupFiles.slice();
                     input.value = '';
+                    selectedGroupFiles = [];
+                    if (fileInput) fileInput.value = '';
+                    renderGroupAttachments();
+
                     try {
-                        await fetch('/communication/groups/' + groupId + '/messages', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ content })
-                        });
+                        let response;
+                        if (filesToSend.length > 0) {
+                            const fd = new FormData();
+                            fd.append('content', content);
+                            filesToSend.forEach(f => fd.append('files', f));
+                            response = await fetch('/communication/groups/' + groupId + '/messages', {
+                                method: 'POST',
+                                body: fd
+                            });
+                        } else {
+                            response = await fetch('/communication/groups/' + groupId + '/messages', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ content })
+                            });
+                        }
+                        if (!response.ok) throw new Error(await response.text());
+
+                        // If the WS echo is not going to arrive, append manually.
+                        if (!stompClient || !stompClient.connected) {
+                            const msg = await response.json();
+                            appendGroupMessage(msg);
+                        }
                     } catch (err) {
                         console.error('Failed to send group message:', err);
-                        input.value = content; // Restore on error
+                        input.value = content;
+                        selectedGroupFiles = filesToSend;
+                        renderGroupAttachments();
                     }
                 };
             }
@@ -2488,22 +2896,7 @@
         function handleGroupMessage(message) {
             const payload = JSON.parse(message.body);
             if (selectedGroup && selectedGroup.id === payload.groupId) {
-                const rows = document.getElementById('groupMessages');
-                if (!rows) return;
-                if (rows.querySelector('.empty-state')) rows.innerHTML = '';
-                const mine = payload.senderId === currentEmployeeId;
-                rows.insertAdjacentHTML('beforeend', `
-                    <div class="message-row ${mine ? 'mine' : ''}">
-                        <div class="message-mini-avatar" style="background:${mine ? 'var(--hc-emerald)' : 'var(--hc-blue-soft)'};color:${mine ? '#fff' : 'var(--hc-blue)'};">${initials(payload.senderName)}</div>
-                        <div class="message-stack">
-                            ${!mine ? `<div class="message-author">${escapeHtml(payload.senderName)}</div>` : ''}
-                            <div class="message-bubble">${payload.content ? escapeHtml(payload.content) : ''}${attachmentList(payload.attachments || [])}
-                                <div class="message-meta">${formatTime(payload.createdAt)}</div>
-                            </div>
-                        </div>
-                    </div>
-                `);
-                rows.scrollTop = rows.scrollHeight;
+                appendGroupMessage(payload);
             }
             // Update group list with last message preview
             renderGroups();
@@ -2515,6 +2908,21 @@
             group.lastMessage = message.content;
             group.lastMessageAt = message.createdAt;
         }
+
+        function renderGroupAttachments() {
+            const tray = document.getElementById('groupAttachmentTray');
+            if (!tray) return;
+            tray.style.display = selectedGroupFiles.length ? 'flex' : 'none';
+            tray.innerHTML = selectedGroupFiles.map((f, i) =>
+                '<span class="attachment-pill"><span class="material-icons-round" style="font-size:13px;">attach_file</span><span class="truncate">' + escapeHtml(f.name) + '</span><button type="button" onclick="removeGroupFile(' + i + ')" title="Remove" style="background:none;border:0;cursor:pointer;color:var(--hc-muted);"><span class="material-icons-round" style="font-size:13px;">close</span></button></span>'
+            ).join('');
+        }
+
+        function removeGroupFile(index) {
+            selectedGroupFiles = selectedGroupFiles.filter((_, i) => i !== index);
+            renderGroupAttachments();
+        }
+        window.removeGroupFile = removeGroupFile;
 
         // ── Broadcasts ──
         function renderBroadcasts() {
@@ -2608,8 +3016,8 @@
             container.style.display = 'none';
             document.getElementById('broadcastDetailTitle').textContent = 'Select a broadcast';
             document.getElementById('broadcastDetailMeta').textContent = 'View its content and comments, or create a new one below.';
-            if (activeCommentSubscription) activeCommentSubscription.unsubscribe();
-            if (activeReceiptSubscription) activeReceiptSubscription.unsubscribe();
+            if (activeCommentSubscription) { activeCommentSubscription.unsubscribe(); activeCommentSubscription = null; }
+            if (activeReceiptSubscription) { activeReceiptSubscription.unsubscribe(); activeReceiptSubscription = null; }
         }
 
         async function fetchComments(broadcastId) {
@@ -2755,7 +3163,8 @@
             if (filtered.length === 0) {
                 rows.innerHTML =
                     '<div style="padding:32px;text-align:center;font-size:12px;color:var(--hc-muted);">No employees found.</div>';
-                renderEmptyState(currentView, search);
+                // Only clobber the chat pane if there is no active conversation.
+                if (!selectedDirectContact) renderEmptyState(currentView, search);
                 return;
             }
 
@@ -2844,6 +3253,7 @@
         async function selectDirectContact(contactId) {
             selectedDirectContact = directContacts.find(c => c.id === contactId);
             if (!selectedDirectContact) return;
+            window.selectedDirectContact = selectedDirectContact;   // was never assigned before
             selectedDirectContact.unreadCount = 0;
             document.getElementById('directChatAvatar').textContent = initials(selectedDirectContact.fullName);
             document.getElementById('directChatName').textContent = selectedDirectContact.fullName;
@@ -3044,41 +3454,166 @@
                 's' : '') + ' selected' : 'Select employees…';
         }
 
-        function renderMeetingParticipants() {
-            const select = document.getElementById('meetingParticipants');
-            if (!select) return;
-            select.innerHTML = availableMembers.map(m =>
-                `<option value="${m.id}">${escapeHtml(m.fullName)} - ${escapeHtml(m.department || 'Unassigned')}</option>`
-            ).join('');
-        }
-
-        // ── member dropdown toggle / search ──
-        let dropdownOpen = false;
-
+        // ── Group-member dropdown (was missing — caused ReferenceError) ──
         function toggleMemberDropdown() {
-            const panel = document.getElementById('memberDropdownPanel');
+            const panel  = document.getElementById('memberDropdownPanel');
             const toggle = document.getElementById('memberDropdownToggle');
-            dropdownOpen = !dropdownOpen;
-            panel.classList.toggle('hidden', !dropdownOpen);
-            toggle.setAttribute('aria-expanded', dropdownOpen);
-            if (dropdownOpen) document.getElementById('memberDropdownSearch').focus();
+            memberDropdownOpen = !memberDropdownOpen;
+            panel.classList.toggle('hidden', !memberDropdownOpen);
+            toggle.setAttribute('aria-expanded', String(memberDropdownOpen));
+            if (memberDropdownOpen) {
+                const search = document.getElementById('memberDropdownSearch');
+                if (search) { search.value = ''; search.focus(); filterMemberDropdown(); }
+            }
         }
 
         function filterMemberDropdown() {
-            const search = document.getElementById('memberDropdownSearch').value.toLowerCase();
-            document.querySelectorAll('.member-dropdown-item').forEach(item => {
-                const name = item.querySelector('[style*="font-weight:600"]')?.textContent.toLowerCase() || '';
-                const dept = item.querySelector('[style*="hc-muted"]')?.textContent.toLowerCase() || '';
-                item.style.display = (!search || name.includes(search) || dept.includes(search)) ? 'flex' : 'none';
+            const term = (document.getElementById('memberDropdownSearch')?.value || '').toLowerCase();
+            document.querySelectorAll('#memberDropdownList .member-dropdown-item').forEach(item => {
+                const text = (item.textContent || '').toLowerCase();
+                item.style.display = (!term || text.includes(term)) ? 'flex' : 'none';
             });
         }
 
+        function closeMemberDropdown() {
+            if (!memberDropdownOpen) return;
+            memberDropdownOpen = false;
+            document.getElementById('memberDropdownPanel')?.classList.add('hidden');
+            document.getElementById('memberDropdownToggle')?.setAttribute('aria-expanded', 'false');
+        }
+
+        function renderMeetingParticipants() {
+            const dropdown = document.getElementById('meetingParticipantsDropdown');
+            if (!dropdown) return;
+
+            const list = document.getElementById('meetingParticipantsList');
+            if (!list) return;
+
+            const selected = getSelectedMeetingParticipants();
+
+            if (availableMembers.length === 0) {
+                list.innerHTML = '<div class="meeting-participants-empty">No employees available.</div>';
+                return;
+            }
+
+            list.innerHTML = availableMembers.map(m => `
+                <label class="meeting-participants-item" data-id="${m.id}">
+                    <input type="checkbox" class="meeting-participants-checkbox" value="${m.id}" ${selected.includes(m.id) ? 'checked' : ''}>
+                    <div class="meeting-participants-item-avatar">${initials(m.fullName)}</div>
+                    <div class="meeting-participants-item-content">
+                        <p class="meeting-participants-item-name">${escapeHtml(m.fullName)}</p>
+                        <p class="meeting-participants-item-dept">${escapeHtml(m.department || 'Unassigned')}</p>
+                    </div>
+                </label>
+            `).join('');
+
+            list.querySelectorAll('.meeting-participants-checkbox').forEach(cb => {
+                cb.addEventListener('change', handleMeetingParticipantSelect);
+            });
+
+            list.querySelectorAll('.meeting-participants-item').forEach(item => {
+                item.addEventListener('click', e => {
+                    if (e.target.tagName !== 'INPUT') {
+                        const cb = item.querySelector('input[type="checkbox"]');
+                        cb.checked = !cb.checked;
+                        handleMeetingParticipantSelect({ target: cb });
+                    }
+                });
+            });
+        }
+
+        // ── meeting participants dropdown ──
+        function getSelectedMeetingParticipants() {
+            const input = document.getElementById('meetingParticipantIds');
+            if (!input) return [];
+            return input.value ? input.value.split(',').map(Number) : [];
+        }
+
+        function renderMeetingParticipantsTags() {
+            const tagsContainer = document.getElementById('meetingParticipantsTags');
+            const hiddenInput = document.getElementById('meetingParticipantIds');
+            const selected = getSelectedMeetingParticipants();
+
+            tagsContainer.innerHTML = selected.map(id => {
+                const m = availableMembers.find(x => x.id === id);
+                if (!m) return '';
+                return `<span class="meeting-participants-tag">
+                    ${escapeHtml(m.fullName)}
+                    <button type="button" class="tag-remove" data-id="${id}" style="cursor:pointer;">
+                        <span class="material-icons-round" style="font-size:14px;">close</span>
+                    </button>
+                </span>`;
+            }).join('');
+
+            tagsContainer.querySelectorAll('.tag-remove').forEach(btn => {
+                btn.addEventListener('click', e => {
+                    e.stopPropagation();
+                    const id = Number(btn.dataset.id);
+                    const cb = document.querySelector(`.meeting-participants-checkbox[value="${id}"]`);
+                    if (cb) {
+                        cb.checked = false;
+                        handleMeetingParticipantSelect({ target: cb });
+                    }
+                });
+            });
+        }
+
+        function handleMeetingParticipantSelect(e) {
+            const checkbox = e.target;
+            const memberId = Number(checkbox.value);
+            const hiddenInput = document.getElementById('meetingParticipantIds');
+            let selectedIds = getSelectedMeetingParticipants();
+
+            if (checkbox.checked) {
+                if (!selectedIds.includes(memberId)) selectedIds.push(memberId);
+            } else {
+                selectedIds = selectedIds.filter(id => id !== memberId);
+            }
+
+            hiddenInput.value = selectedIds.join(',');
+            renderMeetingParticipantsTags();
+        }
+
+        function toggleMeetingParticipantsDropdown() {
+            const panel = document.getElementById('meetingParticipantsPanel');
+            meetingParticipantsDropdownOpen = !meetingParticipantsDropdownOpen;
+            panel.classList.toggle('hidden', !meetingParticipantsDropdownOpen);
+            if (meetingParticipantsDropdownOpen) {
+                document.getElementById('meetingParticipantsSearch').focus();
+                renderMeetingParticipants();
+            }
+        }
+
+        function filterMeetingParticipantsDropdown() {
+            const search = document.getElementById('meetingParticipantsSearch').value.toLowerCase();
+            document.querySelectorAll('.meeting-participants-item').forEach(item => {
+                const name = item.querySelector('.meeting-participants-item-name')?.textContent.toLowerCase() || '';
+                const dept = item.querySelector('.meeting-participants-item-dept')?.textContent.toLowerCase() || '';
+                item.classList.toggle('hidden', !(!search || name.includes(search) || dept.includes(search)));
+            });
+        }
+
+        // Setup meeting participants dropdown events
+        document.getElementById('meetingParticipantsField')?.addEventListener('click', (e) => {
+            // Clicking the search input inside the field must not immediately close the panel
+            if (e.target.id === 'meetingParticipantsSearch' && meetingParticipantsDropdownOpen) return;
+            toggleMeetingParticipantsDropdown();
+        });
+        document.getElementById('meetingParticipantsSearch')?.addEventListener('input', filterMeetingParticipantsDropdown);
+
         document.addEventListener('click', e => {
-            if (dropdownOpen && !e.target.closest('#memberDropdown')) toggleMemberDropdown();
+            const dropdown = document.getElementById('meetingParticipantsDropdown');
+            if (meetingParticipantsDropdownOpen && dropdown && !dropdown.contains(e.target)) {
+                toggleMeetingParticipantsDropdown();
+            }
+            const memberDropdown = document.getElementById('memberDropdown');
+            if (memberDropdownOpen && memberDropdown && !memberDropdown.contains(e.target)) {
+                closeMemberDropdown();
+            }
         });
 
         // ── direct message form ──
-        document.getElementById('directMessageForm').addEventListener('submit', async event => {
+        document.getElementById('directMessageForm')?.addEventListener('submit', async event => {
             event.preventDefault();
             const input = document.getElementById('directMessageInput');
             const content = input.value.trim();
@@ -3121,6 +3656,14 @@
             renderSelectedDirectFiles();
         });
 
+        // ── group attachment picker ──
+        document.getElementById('attachGroupFileBtn')?.addEventListener('click', () => document.getElementById(
+            'groupMessageFiles').click());
+        document.getElementById('groupMessageFiles')?.addEventListener('change', () => {
+            selectedGroupFiles = Array.from(document.getElementById('groupMessageFiles').files || []).slice(0, 5);
+            renderGroupAttachments();
+        });
+
         function renderSelectedDirectFiles() {
             const tray = document.getElementById('directAttachmentTray');
             if (!tray) return;
@@ -3137,16 +3680,25 @@
         window.removeSelectedDirectFile = removeSelectedDirectFile;
 
         // ── meeting form ──
-        document.getElementById('meetingInstant').addEventListener('change', event => {
-            document.getElementById('meetingStart').disabled = event.target.checked;
-            document.getElementById('meetingEnd').disabled = event.target.checked;
+        document.getElementById('meetingInstant')?.addEventListener('change', event => {
+            const timeFields = document.getElementById('meetingTimeFields');
+            const start = document.getElementById('meetingStart');
+            const end = document.getElementById('meetingEnd');
+            if (event.target.checked) {
+                timeFields.style.display = 'none';
+                start.disabled = true;
+                end.disabled = true;
+            } else {
+                timeFields.style.display = 'flex';
+                start.disabled = false;
+                end.disabled = false;
+            }
         });
 
-        document.getElementById('meetingForm').addEventListener('submit', async event => {
+        document.getElementById('meetingForm')?.addEventListener('submit', async event => {
             event.preventDefault();
             const instant = document.getElementById('meetingInstant').checked;
-            const participantEmployeeIds = [...document.getElementById('meetingParticipants').selectedOptions].map(o =>
-                Number(o.value));
+            const participantEmployeeIds = getSelectedMeetingParticipants();
             const payload = {
                 provider: document.getElementById('meetingProvider').value,
                 subject: document.getElementById('meetingSubject').value.trim(),
@@ -3177,6 +3729,10 @@
                 document.getElementById('meetingInstant').checked = true;
                 document.getElementById('meetingStart').disabled = true;
                 document.getElementById('meetingEnd').disabled = true;
+                document.getElementById('meetingParticipantIds').value = '';
+                document.getElementById('meetingParticipantsTags').innerHTML = '';
+                document.querySelectorAll('.meeting-participants-checkbox').forEach(cb => cb.checked = false);
+                if (meetingParticipantsDropdownOpen) toggleMeetingParticipantsDropdown();
                 document.getElementById('meetingStatus').innerHTML = 'Created. <a href="' + meeting.joinUrl +
                     '" target="_blank" style="color:var(--hc-blue);font-weight:700;">Open join link</a>';
                 closeModal(document.getElementById('meetingModal'));
@@ -3188,19 +3744,99 @@
         function renderMeetings() {
             const rows = document.getElementById('meetingRows');
             if (rows) {
-                rows.innerHTML = meetings.length ? meetings.map(m => `
-                    <div class="online-row">
-                        <div class="flex items-start justify-between gap-3 w-full">
+                const now = new Date();
+                const activeMeetings = meetings.filter(m => {
+                    if (!m.endTime) return true; // Show meetings without end time
+                    const endTime = new Date(m.endTime);
+                    return endTime > now;
+                });
+
+                rows.innerHTML = activeMeetings.length ? activeMeetings.map(m => {
+                    const endTime = m.endTime ? new Date(m.endTime) : null;
+                    const hasEndTime = m.endTime && !isNaN(endTime.getTime());
+                    return `
+                    <div class="meeting-row" data-meeting-id="${m.id}">
+                        <div class="meeting-row-main">
                             <div class="min-w-0">
-                                <p style="font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(m.subject)}</p>
-                                <p style="margin-top:4px;font-size:10px;color:var(--hc-muted);">${escapeHtml(providerLabel(m.provider))} · ${formatTime(m.startTime)}</p>
-                                <p style="margin-top:2px;font-size:10px;color:var(--hc-muted);">${m.participants ? m.participants.length : 0} participants</p>
+                                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                                    <p class="meeting-title">${escapeHtml(m.subject)}</p>
+                                    <span class="meeting-status-badge active">Active</span>
+                                </div>
+                                <div class="meeting-meta">
+                                    <span class="material-icons-round" style="font-size:14px;">video_call</span>
+                                    <span>${escapeHtml(providerLabel(m.provider))}</span>
+                                    <span>•</span>
+                                    <span>${escapeHtml(formatMeetingTime(m))}</span>
+                                    ${(m.participants || []).length > 0 ? `
+                                    <span>•</span>
+                                    <span>${(m.participants || []).length} participant${(m.participants || []).length === 1 ? '' : 's'}</span>
+                                    ` : ''}
+                                </div>
                             </div>
-                            <a class="hr-secondary" href="${m.joinUrl}" target="_blank" style="padding:4px 10px;font-size:9px;">Join</a>
+                            <div class="meeting-actions">
+                                <a class="hr-secondary" href="${m.joinUrl}" target="_blank" rel="noopener">
+                                    <span class="material-icons-round" style="font-size:13px;">open_in_new</span>
+                                    Join
+                                </a>
+                                ${!hasEndTime ? `
+                                <button class="hr-secondary close-meeting-btn" type="button" data-meeting-id="${m.id}" title="Manually close this meeting">
+                                    <span class="material-icons-round" style="font-size:13px;">close</span>
+                                    Close
+                                </button>
+                                ` : ''}
+                                <button class="hr-primary complete-meeting-btn" type="button" data-meeting-id="${m.id}">
+                                    <span class="material-icons-round" style="font-size:13px;">done</span>
+                                    Complete
+                                </button>
+                            </div>
                         </div>
-                    </div>`).join('') : '<div style="padding:30px;text-align:center;font-size:12px;color:var(--hc-muted);">No meetings yet.</div>';
+                        <div class="meeting-participants">
+                            ${meetingParticipantsHtml(m.participants || [])}
+                        </div>
+                    </div>`;
+                }).join('') : '<div class="meeting-empty"><span class="material-icons-round">videocam_off</span><p>No active meetings</p><p>Create a meeting to get started.</p></div>';
+
+                rows.querySelectorAll('.complete-meeting-btn').forEach(button => {
+                    button.addEventListener('click', () => completeMeeting(Number(button.dataset.meetingId)));
+                });
+
+                rows.querySelectorAll('.close-meeting-btn').forEach(button => {
+                    button.addEventListener('click', () => completeMeeting(Number(button.dataset.meetingId)));
+                });
             }
             document.getElementById('meetingCount').textContent = meetings.length;
+        }
+
+        function meetingParticipantsHtml(participants) {
+            if (!participants.length) {
+                return '<span class="meeting-participant">No participants selected</span>';
+            }
+            return participants.map(p => {
+                const failed = p.notificationError || p.chatStatus === 'FAILED' || p.emailStatus === 'FAILED';
+                const sent = p.chatNotified || p.emailNotified || p.notified;
+                const statusClass = failed ? 'failed' : sent ? 'sent' : '';
+                const statusText = failed ? 'Invite issue' : sent ? 'Invited' : 'Pending';
+                const title = failed ? ` title="${escapeHtml(p.notificationError || 'Notification failed')}"` : '';
+                return `<span class="meeting-participant ${statusClass}"${title}>
+                    <span class="material-icons-round" style="font-size:12px;">person</span>
+                    <span>${escapeHtml(p.employeeName || p.employeeEmail || p.employeeNumber || 'Employee')}</span>
+                    <span>·</span>
+                    <span>${statusText}</span>
+                </span>`;
+            }).join('');
+        }
+
+        async function completeMeeting(meetingId) {
+            if (!meetingId) return;
+            try {
+                const response = await fetch(`/communication/meetings/${meetingId}/complete`, { method: 'POST' });
+                if (!response.ok) throw new Error(await response.text());
+                meetings = meetings.filter(m => m.id !== meetingId);
+                renderMeetings();
+                renderMetrics();
+            } catch (error) {
+                console.warn('Meeting could not be completed:', error);
+            }
         }
 
         // ── group form ──
@@ -3233,6 +3869,7 @@
                 document.getElementById('memberDropdownFooter').classList.add('hidden');
                 document.querySelectorAll('.member-dropdown-checkbox').forEach(cb => cb.checked = false);
                 document.getElementById('hrGroupStatus').textContent = 'Group created.';
+                closeMemberDropdown();
                 closeModal(document.getElementById('groupModal'));
             } catch (error) {
                 document.getElementById('hrGroupStatus').textContent = 'Group could not be created. Check members and try again.';
@@ -3245,14 +3882,18 @@
                 webSocketFactory: () => new SockJS('/ws'),
                 reconnectDelay: 3000,
                 onConnect: () => {
-                    document.getElementById('sendStatus') && (document.getElementById('sendStatus').textContent =
-                        'Connected and ready.');
+                    const sendStatus = document.getElementById('sendStatus');
+                    if (sendStatus) sendStatus.textContent = 'Connected and ready.';
                     stompClient.subscribe('/user/queue/messages', handleIncomingDirectMessage);
                     stompClient.subscribe('/topic/hr-inbox', handleIncomingDirectMessage);
                     stompClient.subscribe('/topic/hr-broadcasts', handleBroadcast);
                     stompClient.subscribe('/topic/presence', handlePresence);
                     stompClient.subscribe('/topic/chat-groups', handleGroupSummary);
                     if (selectedBroadcast) selectBroadcast(selectedBroadcast.id);
+                    if (selectedGroup) {
+                        if (activeGroupSubscription) activeGroupSubscription.unsubscribe();
+                        activeGroupSubscription = stompClient.subscribe('/topic/chat-groups/' + selectedGroup.id + '/messages', handleGroupMessage);
+                    }
                 }
             });
             stompClient.activate();
@@ -3260,25 +3901,28 @@
 
         function handleIncomingDirectMessage(message) {
             const payload = JSON.parse(message.body);
-            const otherId = payload.senderId === currentEmployeeId ? payload.recipientId : payload.senderId;
+            if (rememberMessageId(payload.id)) return;   // ignore duplicate echo
+            const isMine = payload.senderId === currentEmployeeId;
+            const otherId = isMine ? payload.recipientId : payload.senderId;
             let contact = directContacts.find(c => c.id === otherId);
             if (!contact) {
-                // Create minimal contact from WebSocket payload for new conversations (e.g., employee messaging HR first time)
+                // Create minimal contact from WebSocket payload for new conversations.
+                // NOTE: the id must be `otherId`, not `payload.senderId` (which is us when echoed).
                 contact = {
-                    id: payload.senderId,
-                    employeeNumber: payload.senderEmployeeNumber,
-                    fullName: payload.senderName,
+                    id: otherId,
+                    employeeNumber: isMine ? null : payload.senderEmployeeNumber,
+                    fullName: isMine ? 'Employee' : (payload.senderName || 'Employee'),
                     email: null,
                     department: null,
                     online: true,
-                    unreadCount: 1,
+                    unreadCount: isMine ? 0 : 1,
                     conversationId: payload.conversationId,
                     lastMessage: payload.content,
                     lastMessageAt: payload.createdAt,
                     hasConversation: true
                 };
                 directContacts.unshift(contact);
-            } else if (!selectedDirectContact || selectedDirectContact.id !== otherId) {
+            } else if (!isMine && (!selectedDirectContact || selectedDirectContact.id !== otherId)) {
                 contact.unreadCount = (contact.unreadCount || 0) + 1;
             }
             upsertDirectConversation(payload, contact);
@@ -3343,6 +3987,39 @@
             renderMetrics();
         }
 
+        // ── View switching ──
+        function showMainView(name) {
+            activeMainView = name;
+
+            document.getElementById('directView').classList.toggle('hidden', name !== 'direct');
+            document.getElementById('broadcastView').classList.toggle('active', name === 'broadcasts');
+            document.getElementById('groupsView').classList.toggle('active', name === 'groups');
+            document.getElementById('meetingsView').classList.toggle('active', name === 'meetings');
+
+            ['navBroadcastsSwitch', 'navGroups', 'navMeetings'].forEach(id => {
+                document.getElementById(id)?.classList.remove('active');
+            });
+            if (name === 'broadcasts') document.getElementById('navBroadcastsSwitch')?.classList.add('active');
+            if (name === 'groups') document.getElementById('navGroups')?.classList.add('active');
+            if (name === 'meetings') document.getElementById('navMeetings')?.classList.add('active');
+
+            if (name !== 'broadcasts') {
+                if (activeCommentSubscription) { activeCommentSubscription.unsubscribe(); activeCommentSubscription = null; }
+                if (activeReceiptSubscription) { activeReceiptSubscription.unsubscribe(); activeReceiptSubscription = null; }
+            }
+
+            if (name === 'broadcasts') {
+                renderBroadcastList();
+                if (selectedBroadcast) renderBroadcastDetail(selectedBroadcast); else clearBroadcastDetail();
+            } else if (name === 'groups') {
+                renderGroupList();
+                if (selectedGroup) renderGroupDetail(selectedGroup); else clearGroupDetail();
+            } else if (name === 'meetings') {
+                renderMeetings();
+            }
+        }
+        window.showMainView = showMainView;
+
         // ── UI interactions ──
         document.getElementById('refreshBtn')?.addEventListener('click', loadData);
         document.getElementById('refreshDirectBtn')?.addEventListener('click', loadDirectData);
@@ -3358,9 +4035,19 @@
             });
         });
 
-        function openModal(id) { document.getElementById(id)?.classList.add('open'); }
+        function openModal(id) {
+            document.getElementById(id)?.classList.add('open');
+            if (id === 'meetingModal') {
+                renderMeetingParticipants();
+            }
+        }
 
-        function closeModal(modal) { modal?.classList.remove('open'); }
+        function closeModal(modal) {
+            modal?.classList.remove('open');
+            if (modal?.id === 'meetingModal') {
+                if (meetingParticipantsDropdownOpen) toggleMeetingParticipantsDropdown();
+            }
+        }
 
         document.querySelectorAll('.comm-modal').forEach(modal => {
             modal.addEventListener('click', e => { if (e.target === modal) closeModal(modal); });
@@ -3369,87 +4056,34 @@
             btn.addEventListener('click', () => closeModal(btn.closest('.comm-modal')));
         });
 
-        // ── Switch between direct, broadcast and groups view ──
-        document.getElementById('navBroadcastsSwitch').addEventListener('click', function() {
-            isBroadcastView = !isBroadcastView;
-            isGroupsView = false;
-            const directView = document.getElementById('directView');
-            const broadcastView = document.getElementById('broadcastView');
-            const groupsView = document.getElementById('groupsView');
-            if (isBroadcastView) {
-                directView.classList.add('hidden');
-                groupsView.classList.remove('active');
-                broadcastView.classList.add('active');
-                document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-                this.classList.add('active');
-                document.getElementById('listTitle').textContent = 'Broadcasts';
-                renderBroadcastList();
-                if (!selectedBroadcast) {
-                    clearBroadcastDetail();
-                } else {
-                    renderBroadcastDetail(selectedBroadcast);
-                }
-            } else {
-                directView.classList.remove('hidden');
-                broadcastView.classList.remove('active');
-                document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-                document.getElementById('navInbox').classList.add('active');
-                currentView = 'inbox';
-                document.getElementById('listTitle').textContent = 'Inbox';
-                renderDirectContacts();
-                if (activeCommentSubscription) activeCommentSubscription.unsubscribe();
-                if (activeReceiptSubscription) activeReceiptSubscription.unsubscribe();
-            }
+        // ── Switch between direct, broadcast, groups and meetings views ──
+        document.getElementById('navBroadcastsSwitch').addEventListener('click', () => {
+            showMainView('broadcasts');
         });
 
-        document.getElementById('navGroups').addEventListener('click', function(e) {
-            e.preventDefault();
-            isGroupsView = !isGroupsView;
-            isBroadcastView = false;
-            const directView = document.getElementById('directView');
-            const groupsView = document.getElementById('groupsView');
-            const broadcastView = document.getElementById('broadcastView');
-            if (isGroupsView) {
-                directView.classList.add('hidden');
-                broadcastView.classList.remove('active');
-                groupsView.classList.add('active');
-                document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-                this.classList.add('active');
-                document.getElementById('listTitle').textContent = 'Groups';
-                renderGroupList();
-                if (!selectedGroup) {
-                    clearGroupDetail();
-                } else {
-                    renderGroupDetail(selectedGroup);
-                }
-            } else {
-                directView.classList.remove('hidden');
-                groupsView.classList.remove('active');
-                document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-                document.getElementById('navInbox').classList.add('active');
-                currentView = 'inbox';
-                document.getElementById('listTitle').textContent = 'Inbox';
-                renderDirectContacts();
-            }
+        document.getElementById('navGroups').addEventListener('click', () => {
+            showMainView('groups');
+        });
+
+        document.getElementById('navMeetings').addEventListener('click', () => {
+            showMainView('meetings');
         });
 
         // Create group button in the list header
         document.getElementById('createGroupBtn')?.addEventListener('click', () => openModal('groupModal'));
+        // New meeting button in the meetings view
+        document.getElementById('newMeetingBtn')?.addEventListener('click', () => openModal('meetingModal'));
 
         // ── Direct Nav Click Handlers ──
         document.getElementById('navInbox').addEventListener('click', function(e) {
             e.preventDefault();
-            if (isBroadcastView) {
-                document.getElementById('navBroadcastsSwitch').click();
-            }
-            if (isGroupsView) {
-                document.getElementById('navGroups').click();
-            }
+            showMainView('direct');
             document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
             this.classList.add('active');
             currentView = 'inbox';
             document.getElementById('listTitle').textContent = 'Inbox';
             selectedDirectContact = null;
+            window.selectedDirectContact = null;
             document.getElementById('directChatAvatar').textContent = '--';
             document.getElementById('directChatName').textContent = 'Select an employee';
             document.getElementById('directChatMeta').textContent = 'Choose a conversation from your inbox.';
@@ -3461,17 +4095,13 @@
 
         document.getElementById('navMentions').addEventListener('click', function(e) {
             e.preventDefault();
-            if (isBroadcastView) {
-                document.getElementById('navBroadcastsSwitch').click();
-            }
-            if (isGroupsView) {
-                document.getElementById('navGroups').click();
-            }
+            showMainView('direct');
             document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
             this.classList.add('active');
             currentView = 'mentions';
             document.getElementById('listTitle').textContent = 'Mentions';
             selectedDirectContact = null;
+            window.selectedDirectContact = null;
             document.getElementById('directChatAvatar').textContent = '--';
             document.getElementById('directChatName').textContent = 'Select a mention';
             document.getElementById('directChatMeta').textContent = 'View conversations where you were mentioned.';
@@ -3483,17 +4113,13 @@
 
         document.getElementById('navSent').addEventListener('click', function(e) {
             e.preventDefault();
-            if (isBroadcastView) {
-                document.getElementById('navBroadcastsSwitch').click();
-            }
-            if (isGroupsView) {
-                document.getElementById('navGroups').click();
-            }
+            showMainView('direct');
             document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
             this.classList.add('active');
             currentView = 'sent';
             document.getElementById('listTitle').textContent = 'Sent';
             selectedDirectContact = null;
+            window.selectedDirectContact = null;
             document.getElementById('directChatAvatar').textContent = '--';
             document.getElementById('directChatName').textContent = 'Select a sent message';
             document.getElementById('directChatMeta').textContent = 'View messages you have sent to employees.';
@@ -3504,9 +4130,7 @@
         });
 
         document.getElementById('chatBroadcastBtn')?.addEventListener('click', () => {
-            if (!isBroadcastView) {
-                document.getElementById('navBroadcastsSwitch').click();
-            }
+            showMainView('broadcasts');
         });
 
         document.getElementById('newMessageBtn')?.addEventListener('click', () => document.getElementById('directSearch')
@@ -3535,10 +4159,11 @@
             }
         });
 
-        document.getElementById('memberDropdownToggle')?.addEventListener('click', toggleMemberDropdown);
+        document.getElementById('memberDropdownToggle')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleMemberDropdown();
+        });
         document.getElementById('memberDropdownSearch')?.addEventListener('input', filterMemberDropdown);
-
-        document.getElementById('navMeetings')?.addEventListener('click', () => openModal('meetingModal'));
 
         const outerMain = document.querySelector('main.flex-1');
         if (outerMain) {
