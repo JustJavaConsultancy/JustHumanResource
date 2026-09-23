@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+    <meta charset="UTF-8">
+    <title>KPI Scorecard Dashboard</title>
+</head>
+<body>
+<main layout:fragment="content" class="p-6 space-y-6">
+    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-bold">KPI Admin Monitoring</h1>
+            <p class="text-sm text-gray-500">Template health, active assignment scope, review queues, imports, and published versions.</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+            <a href="/kpi/scorecards" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold hover:bg-gray-100">Designer</a>
+            <a href="/kpi/reports/performance" class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700">Performance Reports</a>
+        </div>
+    </div>
+
+    <section class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+            <p class="text-xs font-bold uppercase text-gray-500">Templates</p>
+            <p class="mt-2 text-sm">Draft <span class="font-bold" th:text="${monitoring.draftTemplates}">0</span></p>
+            <p class="text-sm">Published <span class="font-bold text-emerald-600" th:text="${monitoring.publishedTemplates}">0</span></p>
+            <p class="text-sm">Archived <span class="font-bold text-gray-500" th:text="${monitoring.archivedTemplates}">0</span></p>
+        </div>
+        <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+            <p class="text-xs font-bold uppercase text-gray-500">Active Assignments</p>
+            <p class="mt-2 text-sm">Employee <span class="font-bold" th:text="${monitoring.activeEmployeeAssignments}">0</span></p>
+            <p class="text-sm">Job step <span class="font-bold" th:text="${monitoring.activeJobStepAssignments}">0</span></p>
+            <p class="text-sm">Department <span class="font-bold" th:text="${monitoring.activeDepartmentAssignments}">0</span></p>
+        </div>
+        <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+            <p class="text-xs font-bold uppercase text-gray-500">Self Review Queue</p>
+            <p class="mt-2 text-3xl font-bold text-amber-600" th:text="${monitoring.pendingSelfReview}">0</p>
+        </div>
+        <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+            <p class="text-xs font-bold uppercase text-gray-500">Manager Review Queue</p>
+            <p class="mt-2 text-3xl font-bold text-blue-600" th:text="${monitoring.pendingManagerReview}">0</p>
+        </div>
+    </section>
+
+    <section class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <div class="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+            <div class="border-b border-gray-200 p-5 dark:border-gray-700">
+                <h2 class="text-lg font-bold">Recently Imported Templates</h2>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-50 text-left text-xs uppercase text-gray-500">
+                    <tr><th class="px-4 py-3">Template</th><th class="px-4 py-3">Actor</th><th class="px-4 py-3">Imported</th><th class="px-4 py-3">Status</th></tr>
+                    </thead>
+                    <tbody>
+                    <tr th:if="${#lists.isEmpty(monitoring.recentlyImportedTemplates)}">
+                        <td colspan="4" class="px-4 py-6 text-center text-gray-500">No imports yet.</td>
+                    </tr>
+                    <tr th:each="row : ${monitoring.recentlyImportedTemplates}" class="border-t border-gray-100">
+                        <td class="px-4 py-3 font-semibold" th:text="${row.templateName}">Template</td>
+                        <td class="px-4 py-3" th:text="${row.actor != null ? row.actor : 'system'}">system</td>
+                        <td class="px-4 py-3" th:text="${row.activityAt}">date</td>
+                        <td class="px-4 py-3" th:text="${row.status}">status</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+            <div class="border-b border-gray-200 p-5 dark:border-gray-700">
+                <h2 class="text-lg font-bold">Recently Published Versions</h2>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-50 text-left text-xs uppercase text-gray-500">
+                    <tr><th class="px-4 py-3">Template</th><th class="px-4 py-3">Version</th><th class="px-4 py-3">Published By</th><th class="px-4 py-3">Published</th></tr>
+                    </thead>
+                    <tbody>
+                    <tr th:if="${#lists.isEmpty(monitoring.recentlyPublishedVersions)}">
+                        <td colspan="4" class="px-4 py-6 text-center text-gray-500">No published versions yet.</td>
+                    </tr>
+                    <tr th:each="row : ${monitoring.recentlyPublishedVersions}" class="border-t border-gray-100">
+                        <td class="px-4 py-3 font-semibold" th:text="${row.templateName}">Template</td>
+                        <td class="px-4 py-3" th:text="${'v' + row.versionNumber}">v1</td>
+                        <td class="px-4 py-3" th:text="${row.actor != null ? row.actor : 'system'}">system</td>
+                        <td class="px-4 py-3" th:text="${row.activityAt}">date</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <section class="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+        <div class="border-b border-gray-200 p-5 dark:border-gray-700">
+            <h2 class="text-lg font-bold">Templates With Weight or Validation Issues</h2>
+        </div>
+        <div class="divide-y divide-gray-100 dark:divide-gray-700">
+            <div th:if="${#lists.isEmpty(monitoring.templatesWithValidationIssues)}" class="p-5 text-sm text-emerald-700">No template issues found.</div>
+            <div th:each="issue : ${monitoring.templatesWithValidationIssues}" class="p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                <div>
+                    <p class="font-semibold" th:text="${issue.templateName}">Template</p>
+                    <p class="text-sm text-gray-500" th:text="${issue.message}">Issue</p>
+                </div>
+                <span class="rounded-full px-3 py-1 text-xs font-bold"
+                      th:classappend="${issue.severity == 'ERROR'} ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'"
+                      th:text="${issue.severity}">WARNING</span>
+            </div>
+        </div>
+    </section>
+</main>
+</body>
+</html>

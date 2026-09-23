@@ -212,7 +212,12 @@ public class KpiAssignmentService {
         validateHierarchyWeights(new ArrayList<>(), incomingAssignments);
 
         List<KpiAssignment> existingAssignments = getAssignmentsByType(type, ownerId);
-        repository.deleteAll(existingAssignments);
+        LocalDate yesterday = LocalDate.now().minusDays(1);
+        existingAssignments.forEach(assignment -> {
+            assignment.setActive(false);
+            assignment.setValidTo(yesterday);
+        });
+        repository.saveAll(existingAssignments);
 
         return repository.saveAll(incomingAssignments).stream()
                 .map(this::toResponseDTO)
@@ -221,7 +226,12 @@ public class KpiAssignmentService {
 
     public void deleteAssignments(String type, Long ownerId) {
         List<KpiAssignment> existingAssignments = getAssignmentsByType(type, ownerId);
-        repository.deleteAll(existingAssignments);
+        LocalDate yesterday = LocalDate.now().minusDays(1);
+        existingAssignments.forEach(assignment -> {
+            assignment.setActive(false);
+            assignment.setValidTo(yesterday);
+        });
+        repository.saveAll(existingAssignments);
     }
 
     public List<KpiAssignment> getAllAssignments() {

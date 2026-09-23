@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+    <meta charset="UTF-8">
+    <title>Balanced Scorecards</title>
+    <link rel="stylesheet" th:href="@{/css/kpi-scorecards.css}">
+
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+<main layout:fragment="content" class="p-6 space-y-6">
+    <div class="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-bold">Balanced Scorecard Designer</h1>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Design Perspective -> Objective -> Indicator templates, import Excel scorecards, and apply templates to a scope.</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+            <button type="button" onclick="switchDesignerTab('designer')" class="designer-tab active rounded-lg border px-4 py-2 text-sm font-semibold">Designer</button>
+            <button type="button" onclick="switchDesignerTab('library')" class="designer-tab rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold">Library</button>
+            <button type="button" onclick="switchDesignerTab('rubrics')" class="designer-tab rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold">Rubrics</button>
+            <button type="button" onclick="switchDesignerTab('tools')" class="designer-tab rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold">Import & Apply</button>
+            <a href="/kpi/scorecards/dashboard" class="rounded-lg border border-blue-300 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50">Admin Dashboard</a>
+            <a href="/kpi/reports/performance" class="rounded-lg border border-emerald-300 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-50">Reports</a>
+            <a href="/kpi" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800">Back to KPI</a>
+        </div>
+    </div>
+
+    <div th:if="${scorecardMessage}" class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800"
+         th:text="${scorecardMessage}"></div>
+    <div th:if="${scorecardError}" class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
+         th:text="${scorecardError}"></div>
+    <div id="designerAlert" class="hidden rounded-lg border px-4 py-3 text-sm"></div>
+
+    <section id="designerPanel" class="designer-panel grid grid-cols-1 2xl:grid-cols-[minmax(0,1.45fr)_minmax(420px,0.8fr)] gap-6">
+        <div class="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+            <div class="border-b border-gray-200 p-5 dark:border-gray-700">
+                <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                    <div>
+                        <h2 class="text-lg font-bold">Template Builder</h2>
+                        <p class="text-sm text-gray-500">Use existing KPI definitions and arrange them into a reusable scorecard tree.</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <button type="button" onclick="addDesignerRow('PERSPECTIVE')" class="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white hover:bg-blue-700">Perspective</button>
+                        <button type="button" onclick="addDesignerRow('OBJECTIVE')" class="rounded-lg bg-slate-700 px-3 py-2 text-xs font-bold text-white hover:bg-slate-800">Objective</button>
+                        <button type="button" onclick="addDesignerRow('INDICATOR')" class="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-700">Indicator</button>
+                        <button type="button" onclick="resetDesigner()" class="rounded-lg border border-gray-300 px-3 py-2 text-xs font-bold hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-900">New</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-5 space-y-5">
+                <input id="templateId" type="hidden">
+                <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
+                    <div class="lg:col-span-2">
+                        <label class="block text-xs font-bold uppercase text-gray-500 mb-1">Template Name</label>
+                        <input id="templateName" type="text" placeholder="Head HR Scorecard" class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-gray-500 mb-1">Role Name</label>
+                        <input id="templateRole" type="text" placeholder="Head Human Resources" class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-gray-500 mb-1">Default Rubric</label>
+                        <select id="templateRubric" class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900">
+                            <option value="">None</option>
+                            <option th:each="rubric : ${rubrics}" th:value="${rubric.id}" th:text="${rubric.name}"></option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-gray-700 dark:bg-gray-900/40">
+                    <div>
+                        <p class="text-xs font-bold uppercase text-gray-500">Effective Weight</p>
+                        <p id="designerEffectiveWeight" class="text-xl font-bold">0.00</p>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold uppercase text-gray-500">Rows</p>
+                        <p id="designerRowCount" class="text-xl font-bold">0</p>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold uppercase text-gray-500">Status</p>
+                        <p id="designerWeightStatus" class="text-sm font-bold text-red-600">Incomplete</p>
+                    </div>
+                    <div class="flex items-end">
+                        <div class="grid grid-cols-2 gap-2 w-full">
+                            <button type="button" onclick="saveDesignedTemplate(false)" class="rounded-lg border border-blue-300 px-4 py-2 text-sm font-bold text-blue-700 hover:bg-blue-50">Save Draft</button>
+                            <button type="button" onclick="saveDesignedTemplate(true)" class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700">Publish</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+                    <table class="w-full min-w-[980px] text-sm">
+                        <thead class="bg-gray-50 text-left text-xs uppercase text-gray-500 dark:bg-gray-900/50">
+                        <tr>
+                            <th class="px-3 py-3 w-28">Role</th>
+                            <th class="px-3 py-3 w-[330px]">KPI Definition</th>
+                            <th class="px-3 py-3 w-[220px]">Parent</th>
+                            <th class="px-3 py-3 w-28">Weight</th>
+                            <th class="px-3 py-3 w-40">Frequency</th>
+                            <th class="px-3 py-3 w-24">Mandatory</th>
+                            <th class="px-3 py-3 w-24">Actions</th>
+                        </tr>
+                        </thead>
+                        <tbody id="designerRows" class="divide-y divide-gray-100 dark:divide-gray-700">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <aside class="space-y-6">
+            <div class="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+                <div class="border-b border-gray-200 p-5 dark:border-gray-700">
+                    <h2 class="text-lg font-bold">Hierarchy Preview</h2>
+                    <p class="text-sm text-gray-500">Live preview of the scorecard structure.</p>
+                </div>
+                <div id="designerTree" class="p-5 text-sm text-gray-500">Add rows to preview the scorecard tree.</div>
+            </div>
+
+            <div class="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
+                <h2 class="text-lg font-bold mb-3">Validation</h2>
+                <ul id="designerValidation" class="space-y-2 text-sm text-gray-600 dark:text-gray-300"></ul>
+            </div>
+
+            <div class="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
+                <h2 class="text-lg font-bold mb-3">Template Version History</h2>
+                <div id="templateVersionHistory" class="text-sm text-gray-500">Load a template to view published versions.</div>
+            </div>
+        </aside>
+    </section>
+
+    <section id="libraryPanel" class="designer-panel hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+        <div class="border-b border-gray-200 p-6 dark:border-gray-700">
+            <h2 class="text-lg font-bold">Template Library</h2>
+            <p class="text-sm text-gray-500">Review active scorecard templates and their KPI rows.</p>
+        </div>
+        <div class="divide-y divide-gray-200 dark:divide-gray-700">
+            <div th:if="${#lists.isEmpty(templates)}" class="p-6 text-sm text-gray-500">No scorecard templates yet.</div>
+            <div th:each="template : ${templates}" class="p-6">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                    <div>
+                        <h3 class="font-semibold" th:text="${template.name}">Template</h3>
+                        <p class="text-sm text-gray-500" th:text="${template.roleName != null ? template.roleName : 'No role set'}">Role</p>
+                        <p class="text-xs text-gray-400"
+                           th:if="${template.sourceType != null}"
+                           th:text="${template.sourceType == 'EXCEL_IMPORT' ? 'Imported from ' + (template.sourceFileName != null ? template.sourceFileName : 'workbook') + ' by ' + (template.importedBy != null ? template.importedBy : 'system') : 'Manual template'}">Source</p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <div class="row-chip bg-slate-100 text-slate-800" th:text="${template.status != null ? template.status : (template.active ? 'PUBLISHED' : 'DRAFT')}">Status</div>
+                        <div class="row-chip bg-blue-100 text-blue-800" th:text="${'Weight ' + template.totalWeight}">Weight 1.00</div>
+                        <button type="button" th:onclick="|loadTemplate(${template.id})|" class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-bold hover:bg-gray-100">Edit</button>
+                        <button type="button" th:onclick="|publishTemplate(${template.id})|" class="rounded-lg border border-emerald-300 px-3 py-1.5 text-xs font-bold text-emerald-700 hover:bg-emerald-50">Publish</button>
+                        <button type="button" th:onclick="|duplicateTemplate(${template.id})|" class="rounded-lg border border-blue-300 px-3 py-1.5 text-xs font-bold text-blue-700 hover:bg-blue-50">Duplicate</button>
+                        <button type="button" th:onclick="|archiveTemplate(${template.id})|" class="rounded-lg border border-red-300 px-3 py-1.5 text-xs font-bold text-red-700 hover:bg-red-50">Archive</button>
+                    </div>
+                </div>
+                <div class="mt-4 overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-50 text-left text-xs uppercase text-gray-500 dark:bg-gray-900/40">
+                        <tr>
+                            <th class="px-3 py-2">KPI</th>
+                            <th class="px-3 py-2">Weight</th>
+                            <th class="px-3 py-2">Frequency</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="item : ${itemsByTemplate.get(template.id)}" class="border-t border-gray-100 dark:border-gray-700">
+                            <td class="px-3 py-2" th:text="${item.kpi.name}">KPI</td>
+                            <td class="px-3 py-2" th:text="${item.weight}">0.00</td>
+                            <td class="px-3 py-2" th:text="${item.frequency != null ? item.frequency : '-'}">-</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="toolsPanel" class="designer-panel hidden grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
+            <h2 class="text-lg font-bold mb-4">Import Excel Scorecard</h2>
+            <form id="importPreviewForm" class="space-y-4">
+                <input name="templateName" type="text" placeholder="Template Name" class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900">
+                <input name="roleName" type="text" placeholder="Role Name" class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900">
+                <input name="file" type="file" accept=".xlsx" required class="w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-700 dark:bg-gray-900">
+                <div class="flex flex-wrap gap-2">
+                    <button type="button" onclick="previewImport()" class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700">Preview Import</button>
+                    <button type="button" onclick="confirmImport()" class="rounded-lg border border-blue-300 px-4 py-2 text-sm font-bold text-blue-700 hover:bg-blue-50">Confirm Preview</button>
+                </div>
+            </form>
+            <div id="importPreview" class="mt-5 hidden rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm dark:border-gray-700 dark:bg-gray-900/40"></div>
+        </div>
+
+        <div class="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
+            <h2 class="text-lg font-bold mb-4">Apply Template</h2>
+            <form id="applyTemplateForm" th:action="@{/kpi/scorecards/apply}" method="post" class="space-y-4">
+                <select name="templateId" required class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900">
+                    <option value="">Select template</option>
+                    <option th:each="template : ${activeTemplates}" th:value="${template.id}" th:text="${template.name}"></option>
+                </select>
+                <select id="scopeType" class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900" onchange="toggleScorecardScope()">
+                    <option value="jobStep">Job Step</option>
+                    <option value="employee">Employee</option>
+                    <option value="department">Department</option>
+                </select>
+                <div id="jobStepScope">
+                    <select name="jobStepId" class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900">
+                        <option value="">Select job step</option>
+                        <option th:each="jobStep : ${jobSteps}" th:value="${jobStep.id}" th:text="${jobStep.jobGrade != null ? jobStep.jobGrade.name + ' - ' + jobStep.name : jobStep.name}"></option>
+                    </select>
+                </div>
+                <div id="employeeScope" class="hidden">
+                    <select name="employeeId" class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900">
+                        <option value="">Select employee</option>
+                        <option th:each="employee : ${employees}" th:value="${employee.id}" th:text="${employee.firstName + ' ' + employee.lastName}"></option>
+                    </select>
+                </div>
+                <div id="departmentScope" class="hidden">
+                    <select name="departmentId" class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900">
+                        <option value="">Select department</option>
+                        <option th:each="department : ${departments}" th:value="${department.id}" th:text="${department.name}"></option>
+                    </select>
+                </div>
+                <label class="flex items-center gap-2 text-sm">
+                    <input type="checkbox" name="replaceExisting" value="true" checked class="rounded border-gray-300">
+                    Replace existing assignments in selected scope
+                </label>
+                <div class="flex flex-wrap gap-2">
+                    <button type="button" onclick="previewTemplateApply()" class="rounded-lg border border-emerald-300 px-4 py-2 text-sm font-bold text-emerald-700 hover:bg-emerald-50">Preview Apply</button>
+                    <button type="submit" class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700">Apply Template</button>
+                </div>
+            </form>
+            <div id="applyPreview" class="mt-5 hidden rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm dark:border-gray-700 dark:bg-gray-900/40"></div>
+        </div>
+
+        <div class="lg:col-span-2 rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
+            <div class="flex items-center justify-between gap-3 mb-4">
+                <div>
+                    <h2 class="text-lg font-bold">Assignment History</h2>
+                    <p class="text-sm text-gray-500">Recent template applications and replacement status.</p>
+                </div>
+                <button type="button" onclick="loadAssignmentHistory()" class="rounded-lg border border-gray-300 px-3 py-2 text-xs font-bold hover:bg-gray-100">Refresh</button>
+            </div>
+            <div id="assignmentHistory" class="text-sm text-gray-500">Open this tab to load recent assignments.</div>
+        </div>
+    </section>
+
+    <section id="rubricsPanel" class="designer-panel hidden grid grid-cols-1 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] gap-6">
+        <div class="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+            <div class="border-b border-gray-200 p-5 dark:border-gray-700">
+                <h2 class="text-lg font-bold">Rubric Library</h2>
+                <p class="text-sm text-gray-500">Edit scoring bands used by scorecard templates.</p>
+            </div>
+            <div class="divide-y divide-gray-200 dark:divide-gray-700">
+                <div th:if="${#lists.isEmpty(rubrics)}" class="p-5 text-sm text-gray-500">No rubrics yet.</div>
+                <div th:each="rubric : ${rubrics}" class="p-5 flex items-center justify-between gap-3">
+                    <div>
+                        <h3 class="font-semibold" th:text="${rubric.name}">Rubric</h3>
+                        <p class="text-xs text-gray-500" th:text="${rubric.description != null ? rubric.description : 'No description'}">Description</p>
+                    </div>
+                    <button type="button" th:onclick="|loadRubric(${rubric.id})|" class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-bold hover:bg-gray-100">Edit</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
+            <div class="flex items-center justify-between gap-3 mb-5">
+                <div>
+                    <h2 class="text-lg font-bold">Rubric Designer</h2>
+                    <p class="text-sm text-gray-500">Create non-overlapping score bands.</p>
+                </div>
+                <button type="button" onclick="resetRubricDesigner()" class="rounded-lg border border-gray-300 px-3 py-2 text-xs font-bold hover:bg-gray-100">New</button>
+            </div>
+            <input id="rubricId" type="hidden">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <input id="rubricName" type="text" placeholder="Rubric name" class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900">
+                <input id="rubricDescription" type="text" placeholder="Description" class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900">
+            </div>
+            <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+                <table class="w-full min-w-[760px] text-sm">
+                    <thead class="bg-gray-50 text-left text-xs uppercase text-gray-500 dark:bg-gray-900/50">
+                    <tr>
+                        <th class="px-3 py-3">Label</th>
+                        <th class="px-3 py-3">Min</th>
+                        <th class="px-3 py-3">Max</th>
+                        <th class="px-3 py-3">Score</th>
+                        <th class="px-3 py-3">Description</th>
+                        <th class="px-3 py-3">Action</th>
+                    </tr>
+                    </thead>
+                    <tbody id="rubricBands" class="divide-y divide-gray-100 dark:divide-gray-700"></tbody>
+                </table>
+            </div>
+            <div class="mt-4 flex flex-wrap gap-2">
+                <button type="button" onclick="addRubricBand()" class="rounded-lg border border-blue-300 px-4 py-2 text-sm font-bold text-blue-700 hover:bg-blue-50">Add Band</button>
+                <button type="button" onclick="saveRubric()" class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700">Save Rubric</button>
+            </div>
+        </div>
+    </section>    <script th:inline="javascript">
+        window.kpiScorecardData = {
+            kpiDefinitions: [[${kpiDefinitions}]] || []
+        };
+    </script>
+    <script th:src="@{/js/kpi-scorecards.js}"></script></main>
+</body>
+</html>
+

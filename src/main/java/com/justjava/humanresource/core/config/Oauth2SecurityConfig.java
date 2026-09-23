@@ -6,6 +6,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AnonymousConfigurer;
 import org.springframework.security.config.annotation.web.configurers.CsrfConfigurer;
@@ -28,6 +29,7 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Configuration
+@EnableMethodSecurity
 public class Oauth2SecurityConfig {
     private static final String HR_REGISTRATION_ID = "keycloak";
     private static final String MOBILE_REGISTRATION_ID = "keycloak-mobile";

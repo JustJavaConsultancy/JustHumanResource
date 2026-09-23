@@ -41,6 +41,7 @@ public class AppraisalService {
     private final EmployeeAppraisalRepository appraisalRepository;
     private final AppraisalCycleRepository cycleRepository;
     private final FlowableTaskService flowableTaskService;
+    private final KpiAppraisalLineService appraisalLineService;
 
 
     public Optional<EmployeeAppraisal> findAppraisalById(Long appraisalId) {
@@ -81,7 +82,9 @@ public class AppraisalService {
         log.info("Draft appraisal created for employee {} with kpiScore={}",
                 employeeId, kpiScore);
 
-        return appraisalRepository.save(appraisal);
+        EmployeeAppraisal saved = appraisalRepository.save(appraisal);
+        appraisalLineService.createMissingLines(saved.getId());
+        return saved;
     }
 
     /* =========================================================
@@ -106,11 +109,17 @@ public class AppraisalService {
             throw new IllegalStateException("Appraisal already finalized.");
         }
 
+        BigDecimal scorecardLineScore = appraisalLineService.calculateWeightedFinalScore(appraisalId);
+        BigDecimal kpiScore = scorecardLineScore.compareTo(BigDecimal.ZERO) > 0
+                ? scorecardLineScore
+                : appraisal.getKpiScore();
+
         BigDecimal finalScore = calculateFinalScore(
-                appraisal.getKpiScore(),
+                kpiScore,
                 managerScore
         );
 
+        appraisal.setKpiScore(kpiScore);
         appraisal.setManagerScore(managerScore);
         appraisal.setFinalScore(finalScore);
         appraisal.setOutcome(determineOutcome(finalScore));

@@ -3,6 +3,7 @@ package com.justjava.humanresource.hr.repository;
 import com.justjava.humanresource.hr.entity.JobGrade;
 import com.justjava.humanresource.hr.entity.JobStep;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
@@ -15,5 +16,13 @@ public interface JobStepRepository extends JpaRepository<JobStep, Long> {
     Optional<JobStep> findByGrossSalaryAndJobGrade(BigDecimal grossSalary, JobGrade jobGrade);
 
     Optional<JobStep> findById(Long jobStepId);
+
+    @Query("""
+           SELECT s
+           FROM JobStep s
+           LEFT JOIN FETCH s.jobGrade
+           ORDER BY s.name ASC
+           """)
+    List<JobStep> findAllWithJobGrade();
 }
 

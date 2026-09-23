@@ -2,6 +2,8 @@ package com.justjava.humanresource.kpi.entity;
 
 import com.justjava.humanresource.core.entity.BaseEntity;
 import com.justjava.humanresource.kpi.enums.KpiCategory;
+import com.justjava.humanresource.kpi.enums.KpiFrequency;
+import com.justjava.humanresource.kpi.enums.KpiHierarchyRole;
 import com.justjava.humanresource.kpi.enums.KpiUnit;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -50,10 +52,20 @@ public class KpiDefinition extends BaseEntity {
     @Enumerated(EnumType.STRING)
     private KpiUnit unit; // PERCENTAGE, NUMBER, HOURS
 
+    @Enumerated(EnumType.STRING)
+    private KpiHierarchyRole hierarchyRole;
+
+    @Enumerated(EnumType.STRING)
+    private KpiFrequency frequency;
+
     private boolean active;
 
     @Column(nullable = false)
     private boolean impactSalary = false;
+
+    @JsonIgnore
+    @ManyToOne(fetch = FetchType.LAZY)
+    private KpiScoringRubric scoringRubric;
 
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)

@@ -33,7 +33,10 @@ public class KpiDefinitionService {
         existing.setCategory(kpi.getCategory());
         existing.setTargetValue(kpi.getTargetValue());
         existing.setUnit(kpi.getUnit());
+        existing.setHierarchyRole(kpi.getHierarchyRole());
+        existing.setFrequency(kpi.getFrequency());
         existing.setImpactSalary(kpi.isImpactSalary());
+        existing.setScoringRubric(kpi.getScoringRubric());
         existing.setParentDefinition(resolveParent(kpi, id));
 
 

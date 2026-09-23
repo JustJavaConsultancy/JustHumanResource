@@ -28,6 +28,7 @@ public interface KpiAssignmentRepository
     List<KpiAssignment> findByJobStep_IdAndActiveTrue(Long jobStepId);
 
     List<KpiAssignment> findByDepartment_IdAndActiveTrue(Long departmentId);
+    List<KpiAssignment> findByDepartment_Id(Long departmentId);
 
 
 
