@@ -113,13 +113,7 @@
     </div>
   </div>
 
-  <!-- ══════════════════════════════════════════════
-       SECTION 1 — PENDING TASKS
-       Controller must add to model:
-         model.addAttribute("appraisalMap",
-           employeeAppraisals.stream()
-             .collect(Collectors.toMap(EmployeeAppraisal::getId, ea -> ea)));
-  ══════════════════════════════════════════════════ -->
+
 
   <!-- Section heading -->
   <div th:if="${tasks != null and !tasks.isEmpty()}" class="flex items-center gap-2 mb-4">
@@ -656,13 +650,7 @@
   </div><!-- /task-block th:each -->
 
 
-  <!-- ══════════════════════════════════════════════════════════
-       SECTION 2 — ALL APPRAISALS HISTORY
-       Iterates employeeAppraisals — all records regardless of tasks.
-       processComplete = appraisal.managerScore != null
-       (managerScore on the entity is only written when the full
-        process finishes, so it is the authoritative completion flag)
-  ══════════════════════════════════════════════════════════════ -->
+
   <div th:if="${employeeAppraisals != null and !employeeAppraisals.isEmpty()}" class="mt-10">
 
     <div class="flex items-center gap-2 mb-4">
@@ -791,6 +779,15 @@
             <span class="material-icons-round" style="font-size:13px;">hourglass_top</span>
             Awaiting manager review — final score locked
           </span>
+        </div>
+
+        <!-- Scorecard link -->
+        <div class="pt-3 mt-3 border-t border-gray-100 dark:border-gray-700">
+          <a th:href="@{/kpi/appraisals/{id}/scorecard(id=${appraisal.id})}"
+             class="inline-flex items-center gap-1 text-xs font-bold text-blue-700 dark:text-blue-400 hover:underline">
+            <span class="material-icons-round" style="font-size:14px;">visibility</span>
+            View Scorecard
+          </a>
         </div>
 
       </div><!-- /appraisal each -->

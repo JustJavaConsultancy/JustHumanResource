@@ -26,15 +26,18 @@ public class KpiAppraisalPageController {
         EmployeeAppraisal appraisal = appraisalService.findAppraisalById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Appraisal not found: " + id));
 
+        boolean canManageScorecard = authorizationService.canManageKpi(authentication);
+
         lineService.createMissingLines(id);
         model.addAttribute("appraisal", appraisal);
+        model.addAttribute("employee", appraisal.getEmployee());
         model.addAttribute("lines", lineService.getLines(id));
         model.addAttribute("bandsByLine", lineService.getRubricBandsByLine(id));
         model.addAttribute("summary", lineService.getPerspectiveSummary(id));
         model.addAttribute("weightedScore", lineService.calculateWeightedFinalScore(id));
-        model.addAttribute("canManageScorecard", authorizationService.canManageKpi(authentication));
+        model.addAttribute("canManageScorecard", canManageScorecard);
         model.addAttribute("title", "Balanced Scorecard Appraisal");
         model.addAttribute("subTitle", "Review scorecard lines and weighted performance");
-        return "kpi/appraisal-scorecard";
+        return canManageScorecard ? "kpi/appraisal-scorecard" : "kpi/appraisal-scorecard-employee";
     }
 }
