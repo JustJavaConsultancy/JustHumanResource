@@ -50,6 +50,25 @@ const kpiDefinitions = window.kpiScorecardData?.kpiDefinitions || [];
             renderDesigner();
         }
 
+
+        function updateDesignerWeight(clientKey, input) {
+            const row = designerRows.find(item => item.clientKey === clientKey);
+            if (!row) return;
+            let cleaned = input.value.replace(/,/g, '.').replace(/[^0-9.]/g, '');
+            const firstDot = cleaned.indexOf('.');
+            if (firstDot !== -1) {
+                cleaned = cleaned.slice(0, firstDot + 1) + cleaned.slice(firstDot + 1).replace(/\./g, '');
+            }
+            if (cleaned !== input.value) input.value = cleaned;
+            row.weight = cleaned;
+
+            const badge = document.querySelector(`[data-badge-for="${clientKey}"]`);
+            if (badge) badge.innerHTML = validationBadge(row);
+            renderDesignerSummary();
+            renderDesignerTree();
+            renderDesignerValidation();
+        }
+
         function parentOptions(row) {
             const allowed = designerRows.filter(candidate => {
                 if (candidate.clientKey === row.clientKey) return false;
@@ -71,7 +90,7 @@ const kpiDefinitions = window.kpiScorecardData?.kpiDefinitions || [];
             const tbody = document.getElementById('designerRows');
             tbody.innerHTML = designerRows.map(row => `
                 <tr>
-                    <td class="px-3 py-2"><div class="flex items-center gap-2">${roleBadge(row.role)} ${validationBadge(row)}</div></td>
+                    <td class="px-3 py-2"><div class="flex items-center gap-2">${roleBadge(row.role)} <span data-badge-for="${row.clientKey}">${validationBadge(row)}</span></div></td>
                     <td class="px-3 py-2">
                         <select class="w-full rounded-lg border-gray-300 text-sm" onchange="updateDesignerRow('${row.clientKey}', 'kpiId', this.value)">
                             ${kpiOptions(row.kpiId)}
@@ -83,7 +102,7 @@ const kpiDefinitions = window.kpiScorecardData?.kpiDefinitions || [];
                         </select>
                     </td>
                     <td class="px-3 py-2">
-                        <input type="number" step="0.01" min="0.01" max="1" value="${row.weight}" class="w-full rounded-lg border-gray-300 text-sm" onchange="updateDesignerRow('${row.clientKey}', 'weight', this.value)" oninput="updateDesignerRow('${row.clientKey}', 'weight', this.value)">
+                        <input type="text" inputmode="decimal" autocomplete="off" placeholder="0.00" value="${row.weight}" class="w-full rounded-lg border-gray-300 text-sm" oninput="updateDesignerWeight('${row.clientKey}', this)" onchange="updateDesignerWeight('${row.clientKey}', this)">
                     </td>
                     <td class="px-3 py-2">
                         <select class="w-full rounded-lg border-gray-300 text-sm" onchange="updateDesignerRow('${row.clientKey}', 'frequency', this.value)">

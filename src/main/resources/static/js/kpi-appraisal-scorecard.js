@@ -50,8 +50,13 @@ const appraisalId = window.kpiAppraisalScorecardData?.appraisalId;
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-            if (!response.ok) {
-                showAlert(await response.text(), false);
+            const contentType = response.headers.get('content-type') || '';
+            let saved = null;
+            if (response.ok && !response.redirected && contentType.includes('application/json')) {
+                saved = await response.json().catch(() => null);
+            }
+            if (!saved || Number(saved.id) !== Number(lineId)) {
+                showAlert('Save failed. The server did not confirm the change, so nothing was saved.', false);
                 setLineStatus(row, 'Error', 'red');
                 return;
             }
