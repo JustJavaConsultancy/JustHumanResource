@@ -2,6 +2,31 @@
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <body>
 <div th:fragment="body" class="p-6 space-y-6">
+    <style>
+        .line-input, .line-select {
+            display: inline-block !important;
+            background-color: #ffffff !important;
+            color: #111827 !important;
+            border: 1px solid #94a3b8 !important;
+            border-radius: 8px !important;
+            padding: 6px 10px !important;
+            font-size: 13px !important;
+            line-height: 1.15rem !important;
+        }
+        .line-input::placeholder { color: #9ca3af !important; }
+        .line-input:hover, .line-select:hover { border-color: #64748b !important; }
+        .line-input:focus, .line-select:focus {
+            outline: none !important;
+            border-color: #2563eb !important;
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25) !important;
+        }
+        .line-input:disabled, .line-select:disabled {
+            background-color: #f3f4f6 !important;
+            color: #9ca3af !important;
+            border-color: #cbd5e1 !important;
+            cursor: not-allowed !important;
+        }
+    </style>
     <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
             <p class="text-sm text-gray-500">Appraisal</p>
@@ -110,7 +135,7 @@
                     <td class="px-3 py-3" th:text="${line.weight}">0.00</td>
                     <td class="px-3 py-3" th:text="${line.measurementScore != null ? line.measurementScore : '-'}">-</td>
                     <td class="px-3 py-3">
-                        <select class="selfRubricBand mb-2 w-40 rounded-lg border-gray-300 text-xs"
+                        <select class="selfRubricBand mb-2 w-40 rounded-lg line-select text-xs"
                                 th:if="${!#lists.isEmpty(bandsByLine.get(line.id))}"
                                 th:disabled="${canManageScorecard}">
                             <option value="">Manual score</option>
@@ -120,12 +145,12 @@
                                     th:selected="${line.selfRubricBand != null && line.selfRubricBand.id == band.id}"
                                     th:text="${band.label + ' (' + band.minScore + '-' + band.maxScore + ', score ' + band.numericScore + ')'}"></option>
                         </select>
-                        <input class="selfScore w-24 rounded-lg border-gray-300 text-sm" type="number" min="0" max="100" step="0.01" th:value="${line.selfScore}" th:disabled="${canManageScorecard}">
+                        <input class="selfScore w-24 rounded-lg line-input text-sm" type="number" min="0" max="100" step="0.01" placeholder="0.00" th:value="${line.selfScore}" th:disabled="${canManageScorecard}">
                         <p class="rubricHelp mt-1 max-w-56 text-xs text-gray-500"></p>
-                        <input class="selfComment mt-2 w-56 rounded-lg border-gray-300 text-sm" type="text" placeholder="Employee comment" th:value="${line.selfComment}" th:disabled="${canManageScorecard}">
+                        <input class="selfComment mt-2 w-56 rounded-lg line-input text-sm" type="text" placeholder="Employee comment" th:value="${line.selfComment}" th:disabled="${canManageScorecard}">
                     </td>
                     <td class="px-3 py-3">
-                        <select class="managerRubricBand mb-2 w-40 rounded-lg border-gray-300 text-xs"
+                        <select class="managerRubricBand mb-2 w-40 rounded-lg line-select text-xs"
                                 th:if="${!#lists.isEmpty(bandsByLine.get(line.id))}"
                                 th:disabled="${!canManageScorecard}">
                             <option value="">Manual score</option>
@@ -135,11 +160,11 @@
                                     th:selected="${line.managerRubricBand != null && line.managerRubricBand.id == band.id}"
                                     th:text="${band.label + ' (' + band.minScore + '-' + band.maxScore + ', score ' + band.numericScore + ')'}"></option>
                         </select>
-                        <input class="managerScore w-24 rounded-lg border-gray-300 text-sm" type="number" min="0" max="100" step="0.01" th:value="${line.managerScore}" th:disabled="${!canManageScorecard}">
+                        <input class="managerScore w-24 rounded-lg line-input text-sm" type="number" min="0" max="100" step="0.01" placeholder="0.00" th:value="${line.managerScore}" th:disabled="${!canManageScorecard}">
                         <p class="rubricHelp mt-1 max-w-56 text-xs text-gray-500"></p>
-                        <input class="managerComment mt-2 w-56 rounded-lg border-gray-300 text-sm" type="text" placeholder="Manager comment" th:value="${line.managerComment}" th:disabled="${!canManageScorecard}">
+                        <input class="managerComment mt-2 w-56 rounded-lg line-input text-sm" type="text" placeholder="Manager comment" th:value="${line.managerComment}" th:disabled="${!canManageScorecard}">
                     </td>
-                    <td class="px-3 py-3"><input class="evidenceUrl w-44 rounded-lg border-gray-300 text-sm" type="url" th:value="${line.evidenceUrl}" placeholder="https://..."></td>
+                    <td class="px-3 py-3"><input class="evidenceUrl w-44 rounded-lg line-input text-sm" type="url" th:value="${line.evidenceUrl}" placeholder="https://..."></td>
                     <td class="px-3 py-3 font-bold" th:text="${line.weightedScore != null ? line.weightedScore : '-'}">-</td>
                     <td class="px-3 py-3"><span class="lineSaveStatus rounded-full bg-gray-100 px-2 py-1 text-xs font-bold text-gray-600">Not saved</span></td>
                     <td class="px-3 py-3">

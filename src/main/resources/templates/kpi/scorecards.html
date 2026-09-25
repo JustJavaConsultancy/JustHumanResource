@@ -54,16 +54,16 @@
                 <input id="templateId" type="hidden">
                 <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
                     <div class="lg:col-span-2">
-                        <label class="block text-xs font-bold uppercase text-gray-500 mb-1">Template Name</label>
-                        <input id="templateName" type="text" placeholder="Head HR Scorecard" class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900">
+                        <label class="form-label" for="templateName">Template Name</label>
+                        <input id="templateName" type="text" placeholder="Head HR Scorecard" class="form-input">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold uppercase text-gray-500 mb-1">Role Name</label>
-                        <input id="templateRole" type="text" placeholder="Head Human Resources" class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900">
+                        <label class="form-label" for="templateRole">Role Name</label>
+                        <input id="templateRole" type="text" placeholder="Head Human Resources" class="form-input">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold uppercase text-gray-500 mb-1">Default Rubric</label>
-                        <select id="templateRubric" class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900">
+                        <label class="form-label" for="templateRubric">Default Rubric</label>
+                        <select id="templateRubric" class="form-select">
                             <option value="">None</option>
                             <option th:each="rubric : ${rubrics}" th:value="${rubric.id}" th:text="${rubric.name}"></option>
                         </select>
@@ -183,9 +183,18 @@
         <div class="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
             <h2 class="text-lg font-bold mb-4">Import Excel Scorecard</h2>
             <form id="importPreviewForm" class="space-y-4">
-                <input name="templateName" type="text" placeholder="Template Name" class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900">
-                <input name="roleName" type="text" placeholder="Role Name" class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900">
-                <input name="file" type="file" accept=".xlsx" required class="w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-700 dark:bg-gray-900">
+                <div>
+                    <label class="form-label" for="importTemplateName">Template Name</label>
+                    <input id="importTemplateName" name="templateName" type="text" placeholder="Template Name" class="form-input">
+                </div>
+                <div>
+                    <label class="form-label" for="importRoleName">Role Name</label>
+                    <input id="importRoleName" name="roleName" type="text" placeholder="Role Name" class="form-input">
+                </div>
+                <div>
+                    <label class="form-label" for="importFile">Workbook (.xlsx)</label>
+                    <input id="importFile" name="file" type="file" accept=".xlsx" required class="form-input">
+                </div>
                 <div class="flex flex-wrap gap-2">
                     <button type="button" onclick="previewImport()" class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700">Preview Import</button>
                     <button type="button" onclick="confirmImport()" class="rounded-lg border border-blue-300 px-4 py-2 text-sm font-bold text-blue-700 hover:bg-blue-50">Confirm Preview</button>
@@ -197,35 +206,35 @@
         <div class="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
             <h2 class="text-lg font-bold mb-4">Apply Template</h2>
             <form id="applyTemplateForm" th:action="@{/kpi/scorecards/apply}" method="post" class="space-y-4">
-                <select name="templateId" required class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900">
+                <select name="templateId" required class="form-select">
                     <option value="">Select template</option>
                     <option th:each="template : ${activeTemplates}" th:value="${template.id}" th:text="${template.name}"></option>
                 </select>
-                <select id="scopeType" class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900" onchange="toggleScorecardScope()">
+                <select id="scopeType" class="form-select" onchange="toggleScorecardScope()">
                     <option value="jobStep">Job Step</option>
                     <option value="employee">Employee</option>
                     <option value="department">Department</option>
                 </select>
                 <div id="jobStepScope">
-                    <select name="jobStepId" class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900">
+                    <select name="jobStepId" class="form-select">
                         <option value="">Select job step</option>
                         <option th:each="jobStep : ${jobSteps}" th:value="${jobStep.id}" th:text="${jobStep.jobGrade != null ? jobStep.jobGrade.name + ' - ' + jobStep.name : jobStep.name}"></option>
                     </select>
                 </div>
                 <div id="employeeScope" class="hidden">
-                    <select name="employeeId" class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900">
+                    <select name="employeeId" class="form-select">
                         <option value="">Select employee</option>
                         <option th:each="employee : ${employees}" th:value="${employee.id}" th:text="${employee.firstName + ' ' + employee.lastName}"></option>
                     </select>
                 </div>
                 <div id="departmentScope" class="hidden">
-                    <select name="departmentId" class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900">
+                    <select name="departmentId" class="form-select">
                         <option value="">Select department</option>
                         <option th:each="department : ${departments}" th:value="${department.id}" th:text="${department.name}"></option>
                     </select>
                 </div>
                 <label class="flex items-center gap-2 text-sm">
-                    <input type="checkbox" name="replaceExisting" value="true" checked class="rounded border-gray-300">
+                    <input type="checkbox" name="replaceExisting" value="true" checked>
                     Replace existing assignments in selected scope
                 </label>
                 <div class="flex flex-wrap gap-2">
@@ -276,8 +285,14 @@
             </div>
             <input id="rubricId" type="hidden">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <input id="rubricName" type="text" placeholder="Rubric name" class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900">
-                <input id="rubricDescription" type="text" placeholder="Description" class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900">
+                <div>
+                    <label class="form-label" for="rubricName">Rubric Name</label>
+                    <input id="rubricName" type="text" placeholder="Rubric name" class="form-input">
+                </div>
+                <div>
+                    <label class="form-label" for="rubricDescription">Description</label>
+                    <input id="rubricDescription" type="text" placeholder="Description" class="form-input">
+                </div>
             </div>
             <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
                 <table class="w-full min-w-[760px] text-sm">
@@ -300,11 +315,10 @@
             </div>
         </div>
     </section>    <script th:inline="javascript">
-        window.kpiScorecardData = {
-            kpiDefinitions: [[${kpiDefinitions}]] || []
-        };
-    </script>
+    window.kpiScorecardData = {
+        kpiDefinitions: [[${kpiDefinitions}]] || []
+    };
+</script>
     <script th:src="@{/js/kpi-scorecards.js}"></script></main>
 </body>
 </html>
-

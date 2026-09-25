@@ -92,20 +92,20 @@ const kpiDefinitions = window.kpiScorecardData?.kpiDefinitions || [];
                 <tr>
                     <td class="px-3 py-2"><div class="flex items-center gap-2">${roleBadge(row.role)} <span data-badge-for="${row.clientKey}">${validationBadge(row)}</span></div></td>
                     <td class="px-3 py-2">
-                        <select class="w-full rounded-lg border-gray-300 text-sm" onchange="updateDesignerRow('${row.clientKey}', 'kpiId', this.value)">
+                        <select class="table-select" onchange="updateDesignerRow('${row.clientKey}', 'kpiId', this.value)">
                             ${kpiOptions(row.kpiId)}
                         </select>
                     </td>
                     <td class="px-3 py-2">
-                        <select class="w-full rounded-lg border-gray-300 text-sm" ${row.role === 'PERSPECTIVE' ? 'disabled' : ''} onchange="updateDesignerRow('${row.clientKey}', 'parentClientKey', this.value)">
+                        <select class="table-select" ${row.role === 'PERSPECTIVE' ? 'disabled' : ''} onchange="updateDesignerRow('${row.clientKey}', 'parentClientKey', this.value)">
                             ${parentOptions(row)}
                         </select>
                     </td>
                     <td class="px-3 py-2">
-                        <input type="text" inputmode="decimal" autocomplete="off" placeholder="0.00" value="${row.weight}" class="w-full rounded-lg border-gray-300 text-sm" oninput="updateDesignerWeight('${row.clientKey}', this)" onchange="updateDesignerWeight('${row.clientKey}', this)">
+                        <input type="text" inputmode="decimal" autocomplete="off" placeholder="0.00" value="${row.weight}" class="table-input" oninput="updateDesignerWeight('${row.clientKey}', this)" onchange="updateDesignerWeight('${row.clientKey}', this)">
                     </td>
                     <td class="px-3 py-2">
-                        <select class="w-full rounded-lg border-gray-300 text-sm" onchange="updateDesignerRow('${row.clientKey}', 'frequency', this.value)">
+                        <select class="table-select" onchange="updateDesignerRow('${row.clientKey}', 'frequency', this.value)">
                             <option value="">None</option>
                             ${frequencies.map(freq => `<option value="${freq}" ${row.frequency === freq ? 'selected' : ''}>${freq.replaceAll('_', ' ')}</option>`).join('')}
                         </select>
@@ -462,12 +462,12 @@ const kpiDefinitions = window.kpiScorecardData?.kpiDefinitions || [];
                         <thead class="bg-gray-50 text-left uppercase text-gray-500"><tr><th class="px-3 py-2">Row</th><th class="px-3 py-2">Perspective</th><th class="px-3 py-2">Objective</th><th class="px-3 py-2">Indicator</th><th class="px-3 py-2">Timeline</th><th class="px-3 py-2">Measure</th><th class="px-3 py-2">Weight</th><th class="px-3 py-2">Action</th></tr></thead>
                         <tbody>${currentImportPreview.rows.map((row, index) => `<tr class="border-t border-gray-100">
                             <td class="px-3 py-2">${row.rowNumber || ''}</td>
-                            <td class="px-3 py-2"><input class="w-40 rounded border-gray-300 text-xs" value="${escapeHtml(row.perspective)}" oninput="updateImportPreviewRow(${index}, 'perspective', this.value)"></td>
-                            <td class="px-3 py-2"><input class="w-40 rounded border-gray-300 text-xs" value="${escapeHtml(row.objective || '')}" oninput="updateImportPreviewRow(${index}, 'objective', this.value)"></td>
-                            <td class="px-3 py-2"><input class="w-48 rounded border-gray-300 text-xs" value="${escapeHtml(row.indicator)}" oninput="updateImportPreviewRow(${index}, 'indicator', this.value)"></td>
-                            <td class="px-3 py-2"><input class="w-32 rounded border-gray-300 text-xs" value="${escapeHtml(row.timeline || '')}" oninput="updateImportPreviewRow(${index}, 'timeline', this.value)"></td>
-                            <td class="px-3 py-2"><input class="w-40 rounded border-gray-300 text-xs" value="${escapeHtml(row.measure || '')}" oninput="updateImportPreviewRow(${index}, 'measure', this.value)"></td>
-                            <td class="px-3 py-2"><input type="number" step="0.01" class="w-24 rounded border-gray-300 text-xs" value="${row.weight ?? ''}" oninput="updateImportPreviewRow(${index}, 'weight', this.value)"></td>
+                            <td class="px-3 py-2"><input class="table-input" style="min-width:150px" value="${escapeHtml(row.perspective)}" oninput="updateImportPreviewRow(${index}, 'perspective', this.value)"></td>
+                            <td class="px-3 py-2"><input class="table-input" style="min-width:150px" value="${escapeHtml(row.objective || '')}" oninput="updateImportPreviewRow(${index}, 'objective', this.value)"></td>
+                            <td class="px-3 py-2"><input class="table-input" style="min-width:170px" value="${escapeHtml(row.indicator)}" oninput="updateImportPreviewRow(${index}, 'indicator', this.value)"></td>
+                            <td class="px-3 py-2"><input class="table-input" style="min-width:120px" value="${escapeHtml(row.timeline || '')}" oninput="updateImportPreviewRow(${index}, 'timeline', this.value)"></td>
+                            <td class="px-3 py-2"><input class="table-input" style="min-width:150px" value="${escapeHtml(row.measure || '')}" oninput="updateImportPreviewRow(${index}, 'measure', this.value)"></td>
+                            <td class="px-3 py-2"><input type="number" step="0.01" class="table-input" style="min-width:90px" value="${row.weight ?? ''}" oninput="updateImportPreviewRow(${index}, 'weight', this.value)"></td>
                             <td class="px-3 py-2"><button type="button" onclick="removeImportPreviewRow(${index})" class="rounded border border-red-200 px-2 py-1 text-red-700">Remove</button></td>
                         </tr>`).join('')}</tbody>
                     </table>
@@ -652,11 +652,11 @@ const kpiDefinitions = window.kpiScorecardData?.kpiDefinitions || [];
             const tbody = document.getElementById('rubricBands');
             tbody.innerHTML = rubricBands.map(band => `
                 <tr>
-                    <td class="px-3 py-2"><input value="${escapeHtml(band.label)}" oninput="updateRubricBand('${band.clientKey}', 'label', this.value)" class="w-full rounded-lg border-gray-300 text-sm"></td>
-                    <td class="px-3 py-2"><input type="number" step="0.01" value="${band.minScore ?? ''}" oninput="updateRubricBand('${band.clientKey}', 'minScore', this.value)" class="w-full rounded-lg border-gray-300 text-sm"></td>
-                    <td class="px-3 py-2"><input type="number" step="0.01" value="${band.maxScore ?? ''}" oninput="updateRubricBand('${band.clientKey}', 'maxScore', this.value)" class="w-full rounded-lg border-gray-300 text-sm"></td>
-                    <td class="px-3 py-2"><input type="number" step="0.01" value="${band.numericScore ?? ''}" oninput="updateRubricBand('${band.clientKey}', 'numericScore', this.value)" class="w-full rounded-lg border-gray-300 text-sm"></td>
-                    <td class="px-3 py-2"><input value="${escapeHtml(band.description)}" oninput="updateRubricBand('${band.clientKey}', 'description', this.value)" class="w-full rounded-lg border-gray-300 text-sm"></td>
+                    <td class="px-3 py-2"><input value="${escapeHtml(band.label)}" oninput="updateRubricBand('${band.clientKey}', 'label', this.value)" class="table-input"></td>
+                    <td class="px-3 py-2"><input type="number" step="0.01" placeholder="0.00" value="${band.minScore ?? ''}" oninput="updateRubricBand('${band.clientKey}', 'minScore', this.value)" class="table-input"></td>
+                    <td class="px-3 py-2"><input type="number" step="0.01" placeholder="0.00" value="${band.maxScore ?? ''}" oninput="updateRubricBand('${band.clientKey}', 'maxScore', this.value)" class="table-input"></td>
+                    <td class="px-3 py-2"><input type="number" step="0.01" placeholder="0.00" value="${band.numericScore ?? ''}" oninput="updateRubricBand('${band.clientKey}', 'numericScore', this.value)" class="table-input"></td>
+                    <td class="px-3 py-2"><input value="${escapeHtml(band.description)}" oninput="updateRubricBand('${band.clientKey}', 'description', this.value)" class="table-input"></td>
                     <td class="px-3 py-2"><button type="button" onclick="removeRubricBand('${band.clientKey}')" class="icon-btn bg-red-50 text-red-700 hover:bg-red-100">x</button></td>
                 </tr>
             `).join('');
