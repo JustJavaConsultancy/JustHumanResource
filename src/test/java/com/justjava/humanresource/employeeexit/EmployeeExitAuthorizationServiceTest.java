@@ -23,11 +23,12 @@ import static org.mockito.Mockito.*;
 class EmployeeExitAuthorizationServiceTest {
     @Mock AuthenticationManager auth;
     @Mock EmployeeRepository employees;
+    @Mock org.flowable.engine.TaskService taskService;
     EmployeeExitAuthorizationService service;
 
     @BeforeEach
     void setUp() {
-        service = new EmployeeExitAuthorizationService(auth, employees);
+        service = new EmployeeExitAuthorizationService(auth, employees, taskService);
     }
 
     @Test
