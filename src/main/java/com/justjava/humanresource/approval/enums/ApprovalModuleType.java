@@ -5,5 +5,6 @@ public enum ApprovalModuleType {
     PROMOTION,
     REQUISITION,
     REQUEST,
-    EXIT
+    EXIT,
+    LOAN
 }

@@ -1,0 +1,42 @@
+package com.justjava.humanresource.loan.service;
+
+import com.justjava.humanresource.loan.entity.EmployeeLoanAccount;
+import com.justjava.humanresource.loan.entity.LoanRepaymentTransaction;
+
+import java.math.BigDecimal;
+import java.util.List;
+
+/**
+ * Loan account lifecycle: activation after final approval, repayment application and completion.
+ * Callers (workflow delegates, payroll) are responsible for access checks.
+ */
+public interface EmployeeLoanAccountService {
+
+    /**
+     * Creates the loan account and the locked repayment schedule for a fully approved application
+     * (FINANCE_APPROVED or CUSTOM_APPROVED) and sets the application to ACTIVE.
+     * Idempotent: if the account already exists it is returned and nothing is duplicated.
+     * Schedule maths uses the application's snapshotted terms, never the live product.
+     */
+    EmployeeLoanAccount activate(Long loanApplicationId);
+
+    /** ACTIVE accounts of an employee, newest first. */
+    List<EmployeeLoanAccount> getActiveLoansByEmployee(Long employeeId);
+
+    /** Sum of outstanding balances across the employee's ACTIVE accounts. */
+    BigDecimal getOutstandingBalance(Long employeeId);
+
+    /**
+     * Applies a successful payroll deduction to one schedule row: records the transaction, updates the row
+     * (PARTIALLY_PAID / PAID), reduces the account balance and completes the loan at zero balance.
+     * Idempotent per (schedule row, payroll run): a repeat call returns the existing transaction.
+     */
+    LoanRepaymentTransaction applyRepayment(Long repaymentScheduleId, BigDecimal amount,
+                                            Long payrollRunId, Long payrollLineItemId);
+
+    /**
+     * Flags a due row as MISSED (visibility only: no roll-forward, no schedule change).
+     * Idempotent; ignored for rows that are already PAID/MISSED.
+     */
+    void markMissed(Long repaymentScheduleId);
+}

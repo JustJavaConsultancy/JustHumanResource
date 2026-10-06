@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The Employee Loan feature will allow the organization to manage staff loan products from setup through employee application, HR approval, Finance final approval, and automatic payroll deduction.
+The Employee Loan feature will allow the organization to manage staff loan products from setup through employee application, configurable approval, activation, and automatic payroll deduction.
 
 The feature will be built as a dedicated Employee Loans area instead of being hidden only inside the general request workflow. Employees, HR users, and Finance users will each have loan pages suited to their role.
 
@@ -11,10 +11,12 @@ The feature will be built as a dedicated Employee Loans area instead of being hi
 - Allow HR to configure employee loan products and policy rules.
 - Allow employees to apply for loans from their employee portal.
 - Allow employees to choose both repayment start month and repayment plan details.
-- Route submitted loan applications first to HR, then to Finance.
-- Allow all Human Resource users to act on the HR approval stage.
-- Allow all Finance Officers to act on the final finance approval stage.
-- Automatically activate approved loans after Finance approval.
+- Support the default approval route where submitted loan applications go first to HR, then to Finance.
+- Support a custom approval path route where a loan product can be configured to use a named sequence of employee approvers.
+- Allow all Human Resource users to act on the HR approval stage when the default role-based route is used.
+- Allow all Finance Officers to act on the final finance approval stage when the default role-based route is used.
+- Allow assigned custom approvers to act on their own custom loan approval tasks when a custom route is used.
+- Automatically activate approved loans after Finance approval or after the final custom approval.
 - Automatically deduct loan repayments from payroll starting from the employee-selected repayment month.
 - Give employees, HR, and Finance visibility into loan status, balances, and repayment progress.
 
@@ -39,21 +41,39 @@ Employees will use the loan page to:
 HR users will use the loan page to:
 
 - Configure loan products and policies.
+- Choose the approval route for each loan product:
+  - Default role-based HR then Finance approval.
+  - Custom approval path.
 - Review submitted employee loan applications.
 - Approve, reject, or return loan applications for correction.
 - View employee loan history.
 - Monitor active and completed loans.
 - Track HR approval workload.
+- Track loans currently waiting on custom approvers.
 
 ### Finance Officer
 
 Finance users will use the loan page to:
 
-- Review HR-approved loan applications.
-- Give final approval or reject the loan.
+- Review HR-approved loan applications when the default role-based route is used.
+- Give final approval or reject the loan when the default role-based route is used.
 - Confirm that the loan is financially acceptable before activation.
 - View approved loans that will affect payroll.
 - Monitor active loan deductions and outstanding balances.
+
+### Custom Approver
+
+Custom approvers are employees selected as steps in a configured custom approval path.
+
+Custom approvers will use their assigned loan approval task area to:
+
+- Review the submitted loan details.
+- View employee context needed for a decision.
+- Approve the loan to the next custom approver.
+- Reject the loan.
+- Return the loan for correction.
+
+A custom approver does not need to be an HR or Finance user unless the configured custom path intentionally selects an HR or Finance employee.
 
 ## Dedicated Pages
 
@@ -69,6 +89,7 @@ This page should contain:
 - Repayment calculator/preview.
 - Application status list.
 - Active loan list.
+- Assigned custom approval tasks where the employee is a custom approver.
 - Repayment schedule and repayment history.
 
 Expected employee actions:
@@ -82,6 +103,7 @@ Expected employee actions:
 - Correct and resubmit returned loan application.
 - View approval status.
 - View repayment progress.
+- Approve, reject, or return assigned custom approval tasks.
 
 ### HR Layout: Employee Loans Page
 
@@ -90,7 +112,9 @@ The HR layout will include an `Employee Loans` page.
 This page should contain:
 
 - Loan setup/configuration area.
+- Approval route setup for each loan product.
 - Pending HR approval queue.
+- Custom approval monitoring queue.
 - All loan applications list.
 - Employee loan history lookup.
 - Active loan monitoring.
@@ -100,6 +124,8 @@ Expected HR actions:
 
 - Create loan product.
 - Edit loan product.
+- Select role-based or custom approval routing for a loan product.
+- Select an enabled custom approval path where custom routing is used.
 - Enable/disable loan product.
 - Delete loan product only where it has never been used.
 - Review application.
@@ -108,6 +134,7 @@ Expected HR actions:
 - Return application for correction.
 - View repayment schedule and employee loan exposure.
 - View active, completed, rejected, and cancelled loan records.
+- View custom approval progress and current custom approver.
 
 ### Finance Layout: Employee Loans Page
 
@@ -116,6 +143,7 @@ The Finance layout will include an `Employee Loans` page.
 This page should contain:
 
 - Pending Finance approval queue.
+- Role-based finance approval queue.
 - Finance-approved loan list.
 - Active loan repayment monitoring.
 - Loan balance summary.
@@ -130,6 +158,8 @@ Expected Finance actions:
 - View deductions expected in future payroll periods.
 - View active, completed, rejected, and cancelled loan records.
 - View missed deduction flags.
+
+For loan products that use custom approval paths, Finance should still see activated loans for monitoring and payroll impact, but Finance should not receive a final approval task unless the selected custom approval path includes a Finance employee as one of its approvers.
 
 ## Loan Setup Flow
 
@@ -150,9 +180,50 @@ Loan setup should include:
 - Repayment frequency, initially monthly.
 - Eligibility rules.
 - Required supporting documents.
+- Approval route:
+  - Role-based HR then Finance.
+  - Custom approval path.
+- Custom approval path, required only when the custom route is selected.
 - Whether the loan product is active or inactive.
 
-The configured setup determines what the employee can select during application.
+The configured setup determines what the employee can select during application and which approval route the application will follow after submission.
+
+## Loan Approval Route Setup
+
+Each loan product should define how applications for that product are approved.
+
+### Role-Based HR Then Finance
+
+This is the default route.
+
+Flow:
+
+1. Employee submits the loan application.
+2. Any eligible Human Resource user can approve, reject, or return the HR approval task.
+3. If HR approves, any eligible Finance Officer can approve, reject, or return the Finance approval task.
+4. If Finance approves, the loan activates automatically.
+
+This route is best for normal loan products where HR policy review and Finance final review are always required.
+
+### Custom Approval Path
+
+This route uses an existing custom approval path configured by HR.
+
+Flow:
+
+1. Employee submits the loan application.
+2. The system snapshots the selected custom approval path from the loan product.
+3. The first employee in the custom path receives the approval task.
+4. If the first approver approves, the task moves to the next custom approver.
+5. If any custom approver rejects, the loan is rejected.
+6. If any custom approver returns the application, the employee can correct and resubmit.
+7. If the final custom approver approves, the loan activates automatically.
+
+This route is best for products that need special approval chains, for example executive loans, department-specific loans, or loan products requiring a named finance director, CEO, or committee representative.
+
+The custom approval path is employee-specific, not group-specific. If the organization wants any HR user or any Finance Officer to act, the role-based route should be used.
+
+Approval route selection should be locked onto the submitted application. Later changes to the loan product's approval route should affect only new applications, not applications already submitted.
 
 ## Loan Setup Lifecycle
 
@@ -182,8 +253,12 @@ HR should not be allowed to edit historical financial terms in a way that change
 - Interest type.
 - Interest rate.
 - Repayment calculation rules.
+- Approval route type.
+- Selected custom approval path.
 
 If HR needs different financial rules after a product has already been used, the expected action is to deactivate the old product and create a new product.
+
+If HR needs a different approval route for future applications after a product has already been used, the safest action is also to deactivate the old product and create a new product with the new approval route. This prevents in-flight or historical loan applications from appearing to have followed a route that was not valid when they were submitted.
 
 ### Disable Or Make Inactive
 
@@ -217,7 +292,8 @@ HR can reactivate an inactive loan product if the product is still valid and sho
 8. System calculates repayment schedule preview.
 9. Employee enters reason/purpose and uploads required documents if needed.
 10. Employee submits the loan application.
-11. Application enters HR approval stage.
+11. System snapshots the loan product approval route.
+12. Application enters either the role-based approval flow or the custom approval path flow.
 
 ## Loan Application Lifecycle
 
@@ -241,13 +317,17 @@ In draft status, the employee can:
 
 When draft values change, the repayment validation and repayment schedule preview should be recalculated.
 
-### Submitted And Pending HR Approval
+### Submitted And Pending Approval
 
 After submission, the employee should not be able to edit the application directly.
 
 The employee can view the application and approval status.
 
-The employee may cancel the application while it is still pending HR approval, provided HR has not approved it yet.
+The employee may cancel the application while it is still at the first approval stage, provided no approver has approved it yet.
+
+For role-based approval, this first stage is HR approval.
+
+For custom approval, this first stage is the first custom approver.
 
 HR can:
 
@@ -259,9 +339,19 @@ HR can:
 
 HR should not be allowed to change the employee-selected loan amount, repayment amount, repayment tenor, or repayment start month.
 
+For a custom approval path, the assigned custom approver can:
+
+- Review the submitted details.
+- View employee context and existing loan exposure.
+- Approve to the next custom approver.
+- Reject.
+- Return for correction.
+
+Custom approvers should not be allowed to change the employee-selected loan amount, repayment amount, repayment tenor, or repayment start month.
+
 ### Returned For Correction
 
-If HR or Finance returns the application for correction, the employee can edit only the returned application fields and resubmit.
+If HR, Finance, or a custom approver returns the application for correction, the employee can edit only the returned application fields and resubmit.
 
 Editable fields after return should include:
 
@@ -290,9 +380,25 @@ Finance can:
 
 Finance should not be allowed to change the approved amount, repayment amount, repayment tenor, or repayment start month.
 
-### Finance Approved And Active
+This lifecycle state applies only to role-based loan approval.
 
-After Finance final approval, the loan becomes active automatically.
+### Pending Custom Approval
+
+For custom approval path loans, the application remains in custom approval until every configured custom approver has acted.
+
+Each custom approval step should show:
+
+- Sequence number.
+- Approver name.
+- Pending, approved, rejected, or returned status.
+- Decision comment.
+- Decision date and time.
+
+The employee should not be able to edit or cancel the application after any custom approver has approved it. If correction is needed, the current custom approver should return the application for correction.
+
+### Final Approval And Active
+
+After Finance final approval on the role-based route, or after final custom approval on the custom route, the loan becomes active automatically.
 
 At this point:
 
@@ -369,7 +475,7 @@ The preview can change when the employee edits:
 - Repayment amount.
 - Repayment tenor.
 
-After Finance final approval, the repayment schedule becomes locked.
+After final approval, the repayment schedule becomes locked.
 
 Locked repayment schedules:
 
@@ -381,7 +487,9 @@ Locked repayment schedules:
 
 ## Approval Flow
 
-The approval flow will be role-based:
+The approval flow will support two routes.
+
+### Default Role-Based Route
 
 1. Employee submits loan application.
 2. Application goes to HR approval.
@@ -400,9 +508,29 @@ Possible approval outcomes:
 - Rejected by Finance.
 - Returned by Finance where correction is allowed.
 
+### Custom Approval Path Route
+
+1. Employee submits loan application.
+2. Application goes to the first employee in the configured custom approval path.
+3. The assigned custom approver reviews and approves, rejects, or returns the application.
+4. If approved and more custom approvers remain, the application moves to the next custom approver.
+5. If rejected, the application is rejected.
+6. If returned, the employee can correct and resubmit.
+7. If the final custom approver approves, the loan becomes active automatically.
+8. Payroll deduction begins from the repayment start month chosen by the employee.
+
+Possible custom approval outcomes:
+
+- Approved by one custom approver and sent to the next custom approver.
+- Rejected by any custom approver.
+- Returned by any custom approver for correction.
+- Approved by final custom approver and activated.
+
+The application detail page should always show which route was used, because the meaning of "final approval" differs by route.
+
 ## Automatic Payroll Deduction Flow
 
-After Finance final approval:
+After final approval:
 
 1. The loan is marked as approved/active.
 2. The system records the activation/disbursement event automatically, including timestamp and system/actor context.
@@ -431,10 +559,12 @@ Expected loan/application statuses:
 - Draft.
 - Submitted.
 - Pending HR Approval.
+- Pending Custom Approval.
 - Returned for Correction.
 - HR Approved.
 - Pending Finance Approval.
 - Finance Approved.
+- Custom Approved.
 - Active.
 - Rejected.
 - Cancelled.
@@ -458,6 +588,7 @@ Not allowed for hard deletion:
 - Returned loan applications.
 - HR-approved applications.
 - Finance-approved applications.
+- Custom-approved applications.
 - Rejected applications.
 - Cancelled submitted applications.
 - Active loans.
@@ -487,6 +618,10 @@ Activities should include:
 - HR rejected.
 - Finance approved.
 - Finance rejected.
+- Custom approval started.
+- Custom approver approved.
+- Custom approver rejected.
+- Custom approver returned.
 - Loan activated.
 - Payroll deduction applied.
 - Payroll deduction missed.
@@ -504,6 +639,8 @@ The feature should notify relevant users when:
 - HR approves, rejects, or returns an application.
 - Finance users have a pending final approval.
 - Finance approves or rejects an application.
+- A custom approver has a pending approval task.
+- A custom approver approves, rejects, or returns an application.
 - Loan becomes active.
 - Loan repayment starts.
 - Loan is fully repaid.
@@ -513,6 +650,9 @@ The feature should notify relevant users when:
 The loan pages should support basic tracking for:
 
 - Pending applications.
+- Applications pending HR approval.
+- Applications pending Finance approval.
+- Applications pending custom approval.
 - Approved applications.
 - Rejected applications.
 - Active loans.
@@ -528,6 +668,8 @@ The loan pages should support basic tracking for:
 
 HR should have visibility across employees. Finance should have visibility into loans affecting payroll and financial exposure. Employees should only see their own loans.
 
+Assigned custom approvers should be able to see only the loan applications they are assigned to approve, plus the decision context required for that approval. Being a custom approver should not grant access to all employee loans.
+
 ## Multiple Active Loans
 
 Employees will be allowed to apply for multiple loans.
@@ -538,7 +680,7 @@ The decision to approve or reject an additional loan remains with HR and Finance
 
 ## Approval Detail Context
 
-The HR and Finance loan detail pages should show enough employee context to support approval decisions.
+The HR, Finance, and assigned custom approver loan detail pages should show enough employee context to support approval decisions.
 
 This should include:
 
@@ -557,17 +699,39 @@ This should include:
 
 The system should display this information for decision support only. It should not automatically reject applications based on salary, grade, step, length of service, or existing loans.
 
+## Approval Route Visibility
+
+Every loan detail page should clearly show:
+
+- Approval route type:
+  - Role-based HR then Finance.
+  - Custom approval path.
+- Approval route snapshot captured at submission.
+- Current approval owner:
+  - HR group.
+  - Finance group.
+  - Named custom approver.
+- Completed approval steps.
+- Pending approval step.
+- Decision comments.
+
+This avoids confusion when two loan products follow different approval routes.
+
 ## Agreed Decisions
 
 - Employee Loans will have dedicated pages for Employee, HR, and Finance.
 - HR will configure loan setups.
+- HR will configure the approval route on each loan product.
+- Loan products can use either the default role-based HR then Finance route or a custom approval path.
 - Employees will apply from their own Loan page.
-- Approval will be role-based.
-- All Human Resource users can approve at HR stage.
-- All Finance Officers can approve at Finance stage.
+- The default approval route will be role-based.
+- All Human Resource users can approve at HR stage when the role-based route is used.
+- All Finance Officers can approve at Finance stage when the role-based route is used.
+- Custom approval path loans will be approved by the specific employees configured in the selected custom approval path.
+- Final custom approval activates the loan in the same way Finance final approval activates a role-based loan.
 - Employees can choose both repayment tenor and repayment amount, with validation.
 - Repayment starts from the month selected by the employee.
-- After Finance final approval, payroll deduction starts automatically from the selected repayment month.
+- After final approval, payroll deduction starts automatically from the selected repayment month.
 - HR cannot override employee-selected repayment terms during approval.
 - Finance cannot adjust the approved amount during final approval.
 - Employees can apply for multiple loans.
@@ -576,10 +740,11 @@ The system should display this information for decision support only. It should 
 - Salary, grade, step, and related employee details should be visible on HR and Finance loan detail pages.
 - Early repayment or manual repayment outside payroll is not required for this feature.
 - Missed deductions should be flagged for HR/Finance review, not automatically rolled forward.
-- Finance final approval is enough to activate the loan; the system should still record the activation/disbursement event automatically.
+- Finance final approval is enough to activate a role-based loan; final custom approval is enough to activate a custom-path loan. The system should still record the activation/disbursement event automatically.
 - Draft applications can be edited and deleted by the employee.
 - Submitted applications cannot be edited directly by the employee unless returned for correction.
 - HR and Finance cannot change employee-selected loan terms during approval.
+- Custom approvers cannot change employee-selected loan terms during approval.
 - Used loan products should be made inactive instead of deleted.
 - Active, completed, rejected, cancelled, and payroll-linked loan records should be retained for history and audit.
 
@@ -592,4 +757,5 @@ The system should display this information for decision support only. It should 
 - Loan eligibility should not be automatically determined by salary, grade, step, length of service, or existing loans.
 - Early repayment or manual repayment outside payroll is not part of the planned scope.
 - Missed deductions should be marked for HR/Finance review instead of rolling forward automatically.
-- Finance final approval should activate the loan automatically, with an activation/disbursement event recorded by the system.
+- Finance final approval should activate role-based loans automatically, with an activation/disbursement event recorded by the system.
+- Final custom approval should activate custom-path loans automatically, with an activation/disbursement event recorded by the system.

@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:flowable="http://flowable.org/bpmn"
+             targetNamespace="http://justjava.com/loan">
+
+  <process id="employeeLoanApprovalProcess" name="Employee Loan Approval" isExecutable="true">
+
+    <startEvent id="start"/>
+    <serviceTask id="initialize" name="Initialize Loan Approval"
+                 flowable:delegateExpression="${initializeLoanApprovalDelegate}"/>
+    <exclusiveGateway id="routeGateway" name="Approval route" default="toHr"/>
+
+    <!-- ROLE_BASED: HR then Finance (candidate-group tasks) -->
+    <userTask id="hrTask" name="HR Loan Approval" flowable:candidateGroups="humanresource"/>
+    <serviceTask id="recordHr" name="Record HR Decision"
+                 flowable:delegateExpression="${processHrLoanDecisionDelegate}"/>
+    <exclusiveGateway id="hrDecision" default="hrApproved"/>
+
+    <userTask id="financeTask" name="Finance Loan Approval" flowable:candidateGroups="financialofficers"/>
+    <serviceTask id="recordFinance" name="Record Finance Decision"
+                 flowable:delegateExpression="${processFinanceLoanDecisionDelegate}"/>
+    <exclusiveGateway id="financeDecision" default="financeApproved"/>
+
+    <!-- CUSTOM: one assignee task per approver, looped -->
+    <userTask id="customTask" name="Custom Loan Approval" flowable:assignee="${currentApproverId}"/>
+    <serviceTask id="recordCustom" name="Record Custom Decision"
+                 flowable:delegateExpression="${processCustomLoanDecisionDelegate}"/>
+    <exclusiveGateway id="customDecision" default="customApproved"/>
+    <exclusiveGateway id="customMore" default="customDone"/>
+
+    <!-- Outcomes -->
+    <serviceTask id="activate" name="Activate Approved Loan"
+                 flowable:delegateExpression="${activateApprovedLoanDelegate}"/>
+    <serviceTask id="rejected" name="Finalize Loan Rejection"
+                 flowable:delegateExpression="${finalizeLoanRejectionDelegate}"/>
+    <serviceTask id="returned" name="Return Loan For Correction"
+                 flowable:delegateExpression="${returnLoanForCorrectionDelegate}"/>
+    <endEvent id="activatedEnd"/>
+    <endEvent id="rejectedEnd"/>
+    <endEvent id="returnedEnd"/>
+
+    <sequenceFlow id="f1" sourceRef="start" targetRef="initialize"/>
+    <sequenceFlow id="f2" sourceRef="initialize" targetRef="routeGateway"/>
+    <sequenceFlow id="toCustom" sourceRef="routeGateway" targetRef="customTask">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${routeType == 'CUSTOM'}]]></conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="toHr" sourceRef="routeGateway" targetRef="hrTask"/>
+
+    <sequenceFlow id="h1" sourceRef="hrTask" targetRef="recordHr"/>
+    <sequenceFlow id="h2" sourceRef="recordHr" targetRef="hrDecision"/>
+    <sequenceFlow id="h3" sourceRef="hrDecision" targetRef="rejected">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${approvalDecision == 'REJECT'}]]></conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="h4" sourceRef="hrDecision" targetRef="returned">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${approvalDecision == 'RETURN'}]]></conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="hrApproved" sourceRef="hrDecision" targetRef="financeTask"/>
+
+    <sequenceFlow id="fi1" sourceRef="financeTask" targetRef="recordFinance"/>
+    <sequenceFlow id="fi2" sourceRef="recordFinance" targetRef="financeDecision"/>
+    <sequenceFlow id="fi3" sourceRef="financeDecision" targetRef="rejected">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${approvalDecision == 'REJECT'}]]></conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="fi4" sourceRef="financeDecision" targetRef="returned">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${approvalDecision == 'RETURN'}]]></conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="financeApproved" sourceRef="financeDecision" targetRef="activate"/>
+
+    <sequenceFlow id="c1" sourceRef="customTask" targetRef="recordCustom"/>
+    <sequenceFlow id="c2" sourceRef="recordCustom" targetRef="customDecision"/>
+    <sequenceFlow id="c3" sourceRef="customDecision" targetRef="rejected">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${approvalDecision == 'REJECT'}]]></conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="c4" sourceRef="customDecision" targetRef="returned">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${approvalDecision == 'RETURN'}]]></conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="customApproved" sourceRef="customDecision" targetRef="customMore"/>
+    <sequenceFlow id="c5" sourceRef="customMore" targetRef="customTask">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${hasMoreApprovers}]]></conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="customDone" sourceRef="customMore" targetRef="activate"/>
+
+    <sequenceFlow id="e1" sourceRef="activate" targetRef="activatedEnd"/>
+    <sequenceFlow id="e2" sourceRef="rejected" targetRef="rejectedEnd"/>
+    <sequenceFlow id="e3" sourceRef="returned" targetRef="returnedEnd"/>
+  </process>
+</definitions>

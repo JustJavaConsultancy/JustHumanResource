@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/employeeLayout}">
+<head>
+    <meta charset="UTF-8">
+    <title>Loan Detail</title>
+    <style>
+        .loan-page { --loan-border:#e5e7eb; --loan-muted:#64748b; --loan-surface:#ffffff; --loan-soft:#f8fafc; }
+        .dark .loan-page { --loan-border:#374151; --loan-muted:#9ca3af; --loan-surface:#1f2937; --loan-soft:#111827; }
+        .loan-hero { border:1px solid var(--loan-border); background:linear-gradient(135deg,#fff 0%,#eff6ff 100%); border-radius:16px; padding:24px; box-shadow:0 16px 40px -28px rgba(15,23,42,.45); }
+        .dark .loan-hero { background:linear-gradient(135deg,#1f2937 0%,#0f172a 100%); }
+        .loan-card { border:1px solid var(--loan-border); background:var(--loan-surface); border-radius:14px; box-shadow:0 12px 28px -24px rgba(15,23,42,.5); }
+        .loan-card-head { display:flex; align-items:center; gap:8px; padding:16px 20px; border-bottom:1px solid var(--loan-border); }
+        .loan-metric { border:1px solid var(--loan-border); background:var(--loan-surface); border-radius:14px; padding:18px; min-height:104px; display:flex; justify-content:space-between; gap:12px; }
+        .loan-metric-alert { border-color:#f59e0b; }
+        .loan-metric-danger { border-color:#ef4444; }
+        .loan-icon { width:40px; height:40px; flex:none; border-radius:12px; display:inline-flex; align-items:center; justify-content:center; }
+        .loan-control { width:100%; border:1px solid var(--loan-border); background:var(--loan-surface); border-radius:10px; padding:10px 12px; font-size:14px; outline:none; transition:border-color .15s ease, box-shadow .15s ease; }
+        .loan-control:focus { border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,.12); }
+        .loan-label { display:block; font-size:13px; font-weight:600; }
+        .loan-table-head { background:var(--loan-soft); color:var(--loan-muted); font-size:11px; text-transform:uppercase; letter-spacing:.04em; }
+        .loan-row { transition:background-color .15s ease; }
+        .loan-row:hover { background:#f8fafc; }
+        .dark .loan-row:hover { background:#111827; }
+        .loan-badge { display:inline-flex; align-items:center; border-radius:999px; padding:4px 10px; font-size:11px; font-weight:700; text-transform:uppercase; white-space:nowrap; }
+        .loan-badge-success { background:#dcfce7; color:#166534; }
+        .loan-badge-error { background:#fee2e2; color:#991b1b; }
+        .loan-badge-warning { background:#fef3c7; color:#92400e; }
+        .loan-badge-info { background:#dbeafe; color:#1e40af; }
+        .loan-badge-blue { background:#e0f2fe; color:#075985; }
+        .loan-badge-purple { background:#ede9fe; color:#5b21b6; }
+        .loan-badge-neutral { background:#f1f5f9; color:#475569; }
+        .dark .loan-badge-neutral { background:#374151; color:#d1d5db; }
+        .loan-primary-btn, .loan-secondary-btn, .loan-danger-btn, .loan-danger-solid-btn, .loan-success-btn, .loan-warning-btn { display:inline-flex; align-items:center; gap:8px; border-radius:10px; padding:10px 16px; font-size:14px; font-weight:700; white-space:nowrap; transition:background-color .15s ease, transform .15s ease; }
+        .loan-primary-btn { background:#2563eb; color:#fff; }
+        .loan-primary-btn:hover { background:#1d4ed8; transform:translateY(-1px); }
+        .loan-secondary-btn { border:1px solid var(--loan-border); background:var(--loan-surface); }
+        .loan-danger-btn { border:1px solid #fecaca; color:#b91c1c; background:#fff; }
+        .dark .loan-danger-btn { background:transparent; border-color:#7f1d1d; color:#fca5a5; }
+        .loan-danger-solid-btn { background:#dc2626; color:#fff; }
+        .loan-success-btn { background:#16a34a; color:#fff; }
+        .loan-warning-btn { background:#d97706; color:#fff; }
+        .loan-mini-btn { display:inline-flex; align-items:center; border:1px solid var(--loan-border); border-radius:8px; padding:4px 10px; font-size:12px; font-weight:600; white-space:nowrap; background:var(--loan-surface); }
+        .loan-mini-btn:hover { background:var(--loan-soft); }
+        .loan-mini-success { border-color:#bbf7d0; color:#15803d; }
+        .loan-mini-warning { border-color:#fde68a; color:#b45309; }
+        .loan-mini-danger { border-color:#fecaca; color:#b91c1c; }
+        .loan-icon-btn { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; flex:none; border-radius:8px; }
+        .loan-icon-btn:hover { background:var(--loan-soft); }
+        .loan-modal-panel { border:1px solid var(--loan-border); background:var(--loan-surface); border-radius:16px; box-shadow:0 24px 80px -28px rgba(15,23,42,.7); }
+        .loan-empty { padding:28px; text-align:center; color:var(--loan-muted); font-size:14px; }
+        .loan-toast { display:flex; align-items:flex-start; gap:10px; border-radius:10px; padding:12px 14px; font-size:13px; font-weight:600; box-shadow:0 12px 28px -12px rgba(15,23,42,.5); max-width:340px; animation:loan-toast-in .15s ease-out; }
+        @keyframes loan-toast-in { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+        .loan-tab { padding:12px 16px; font-size:14px; font-weight:600; color:var(--loan-muted); border-bottom:2px solid transparent; white-space:nowrap; }
+        .loan-tab-active { color:#2563eb; border-bottom-color:#2563eb; }
+        .loan-mini-stat { border:1px solid var(--loan-border); background:var(--loan-soft); border-radius:10px; padding:10px 12px; }
+        .loan-mini-stat p { font-size:11px; color:var(--loan-muted); text-transform:uppercase; }
+        .loan-mini-stat b { font-size:15px; }
+        .loan-attachment { display:flex; align-items:center; gap:10px; border:1px solid var(--loan-border); border-radius:10px; padding:8px 10px; }
+        .loan-kv-row { display:flex; justify-content:space-between; gap:16px; padding:8px 0; border-bottom:1px solid var(--loan-border); font-size:14px; }
+        .loan-kv-row:last-child { border-bottom:none; }
+        .loan-kv-row dt { color:var(--loan-muted); flex:none; }
+        .loan-kv-row dd { text-align:right; font-weight:600; min-width:0; overflow-wrap:anywhere; }
+        .loan-step { border:1px solid var(--loan-border); border-radius:12px; padding:12px; }
+        .loan-step-current { border-color:#2563eb; background:rgba(37,99,235,.05); }
+        .loan-progress { height:8px; border-radius:4px; background:#e5e7eb; overflow:hidden; }
+        .dark .loan-progress { background:#374151; }
+        .loan-progress > div { height:100%; background:#16a34a; }
+        .loan-activity { border-left:2px solid var(--loan-border); padding:0 0 12px 12px; }
+    </style>
+</head>
+<body>
+<main layout:fragment="content" class="loan-page">
+    <div id="detailRoot" class="space-y-6">
+
+        <!-- Header -->
+        <div class="loan-hero flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div class="flex items-start gap-4">
+                <span class="loan-icon bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-200">
+                    <span class="material-icons-round">account_balance_wallet</span>
+                </span>
+                <div class="min-w-0">
+                    <a th:href="@{/employee/loans}" class="text-sm text-primary-600 hover:underline">Back to My Loans</a>
+                    <h1 id="loanNumber" class="mt-2 break-words text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">Loan</h1>
+                    <p id="loanMeta" class="text-sm text-gray-500 dark:text-gray-400"></p>
+                    <div id="loanBadges" class="mt-2 flex flex-wrap gap-2"></div>
+                </div>
+            </div>
+            <div id="primaryActions" class="flex flex-wrap gap-2"></div>
+        </div>
+
+        <!-- Returned for correction -->
+        <div id="returnBanner" class="hidden flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100"></div>
+
+        <!-- Custom approver action panel (only when this employee is the assigned approver) -->
+        <div id="approverPanel" class="loan-card hidden border-purple-300 p-5"></div>
+
+        <section class="grid grid-cols-1 gap-6 xl:grid-cols-3">
+            <div class="space-y-6 xl:col-span-2">
+
+                <div class="loan-card">
+                    <div class="loan-card-head"><span class="material-icons-round text-primary-600">summarize</span><h2 class="text-base font-semibold">Application terms</h2></div>
+                    <dl id="terms" class="px-5 py-3"></dl>
+                </div>
+
+                <div id="contextCard" class="loan-card hidden">
+                    <div class="loan-card-head"><span class="material-icons-round text-primary-600">badge</span><h2 class="text-base font-semibold">Applicant context</h2></div>
+                    <div id="context" class="px-5 py-3"></div>
+                </div>
+
+                <div class="loan-card">
+                    <div class="loan-card-head flex-wrap">
+                        <span class="material-icons-round text-primary-600">event_note</span>
+                        <h2 class="text-base font-semibold">Repayment schedule</h2>
+                        <span id="scheduleBadge" class="ml-auto"></span>
+                    </div>
+                    <div id="schedule" class="p-3"></div>
+                </div>
+
+                <div id="missedCard" class="loan-card hidden">
+                    <div class="loan-card-head"><span class="material-icons-round text-red-600">report</span><h2 class="text-base font-semibold">Missed deduction notices</h2></div>
+                    <ul id="missed" class="space-y-2 p-4"></ul>
+                </div>
+
+                <div id="historyCard" class="loan-card hidden">
+                    <div class="loan-card-head"><span class="material-icons-round text-primary-600">history</span><h2 class="text-base font-semibold">Repayment history</h2></div>
+                    <div id="history" class="p-3"></div>
+                </div>
+            </div>
+
+            <aside class="space-y-6">
+                <div class="loan-card p-5">
+                    <h2 class="flex items-center gap-2 text-base font-semibold"><span class="material-icons-round text-primary-600">alt_route</span>Approval route</h2>
+                    <div id="routeSummary" class="mt-3"></div>
+                    <ol id="steps" class="mt-4 space-y-3 text-sm"></ol>
+                </div>
+
+                <div id="accountCard" class="loan-card hidden p-5">
+                    <h2 class="flex items-center gap-2 text-base font-semibold"><span class="material-icons-round text-primary-600">savings</span>Loan balance</h2>
+                    <div id="account" class="mt-3"></div>
+                </div>
+
+                <div class="loan-card p-5">
+                    <h2 class="flex items-center gap-2 text-base font-semibold"><span class="material-icons-round text-primary-600">attach_file</span>Attachments</h2>
+                    <div id="uploadForm" class="mt-3 hidden flex-col gap-2">
+                        <input id="attachmentFile" type="file" class="w-full text-sm">
+                        <div class="flex gap-2">
+                            <select id="attachmentType" class="loan-control min-w-0 flex-1">
+                                <option value="SUPPORTING_DOCUMENT">Supporting document</option>
+                                <option value="OTHER">Other</option>
+                            </select>
+                            <button type="button" data-action="upload-attachment" class="loan-secondary-btn">
+                                <span class="material-icons-round text-base">upload</span>Upload</button>
+                        </div>
+                    </div>
+                    <ul id="attachments" class="mt-3 space-y-2"></ul>
+                </div>
+
+                <div class="loan-card p-5">
+                    <h2 class="flex items-center gap-2 text-base font-semibold"><span class="material-icons-round text-primary-600">timeline</span>Activity</h2>
+                    <ul id="activity" class="mt-4"></ul>
+                </div>
+            </aside>
+        </section>
+    </div>
+
+    <script th:src="@{/js/employee-loans.js}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => EmployeeLoans.initDetail());
+    </script>
+</main>
+</body>
+</html>

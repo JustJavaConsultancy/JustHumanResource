@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/financialOfficerLayout}">
+<head>
+    <meta charset="UTF-8">
+    <title>Employee Loans</title>
+    <style>
+        .loan-page { --loan-border:#e5e7eb; --loan-muted:#64748b; --loan-surface:#ffffff; --loan-soft:#f8fafc; }
+        .dark .loan-page { --loan-border:#374151; --loan-muted:#9ca3af; --loan-surface:#1f2937; --loan-soft:#111827; }
+        .loan-hero { border:1px solid var(--loan-border); background:linear-gradient(135deg,#fff 0%,#eff6ff 100%); border-radius:16px; padding:24px; box-shadow:0 16px 40px -28px rgba(15,23,42,.45); }
+        .dark .loan-hero { background:linear-gradient(135deg,#1f2937 0%,#0f172a 100%); }
+        .loan-card { border:1px solid var(--loan-border); background:var(--loan-surface); border-radius:14px; box-shadow:0 12px 28px -24px rgba(15,23,42,.5); }
+        .loan-card-head { display:flex; align-items:center; gap:8px; padding:16px 20px; border-bottom:1px solid var(--loan-border); }
+        .loan-metric { border:1px solid var(--loan-border); background:var(--loan-surface); border-radius:14px; padding:18px; min-height:104px; display:flex; justify-content:space-between; gap:12px; }
+        .loan-metric-alert { border-color:#f59e0b; }
+        .loan-metric-danger { border-color:#ef4444; }
+        .loan-icon { width:40px; height:40px; flex:none; border-radius:12px; display:inline-flex; align-items:center; justify-content:center; }
+        .loan-control { width:100%; border:1px solid var(--loan-border); background:var(--loan-surface); border-radius:10px; padding:10px 12px; font-size:14px; outline:none; transition:border-color .15s ease, box-shadow .15s ease; }
+        .loan-control:focus { border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,.12); }
+        .loan-label { display:block; font-size:13px; font-weight:600; }
+        .loan-table-head { background:var(--loan-soft); color:var(--loan-muted); font-size:11px; text-transform:uppercase; letter-spacing:.04em; }
+        .loan-row { transition:background-color .15s ease; }
+        .loan-row:hover { background:#f8fafc; }
+        .dark .loan-row:hover { background:#111827; }
+        .loan-badge { display:inline-flex; align-items:center; border-radius:999px; padding:4px 10px; font-size:11px; font-weight:700; text-transform:uppercase; white-space:nowrap; }
+        .loan-badge-success { background:#dcfce7; color:#166534; }
+        .loan-badge-error { background:#fee2e2; color:#991b1b; }
+        .loan-badge-warning { background:#fef3c7; color:#92400e; }
+        .loan-badge-info { background:#dbeafe; color:#1e40af; }
+        .loan-badge-blue { background:#e0f2fe; color:#075985; }
+        .loan-badge-purple { background:#ede9fe; color:#5b21b6; }
+        .loan-badge-neutral { background:#f1f5f9; color:#475569; }
+        .dark .loan-badge-neutral { background:#374151; color:#d1d5db; }
+        .loan-primary-btn, .loan-secondary-btn, .loan-danger-btn, .loan-danger-solid-btn, .loan-success-btn, .loan-warning-btn { display:inline-flex; align-items:center; gap:8px; border-radius:10px; padding:10px 16px; font-size:14px; font-weight:700; white-space:nowrap; transition:background-color .15s ease, transform .15s ease; }
+        .loan-primary-btn { background:#2563eb; color:#fff; }
+        .loan-primary-btn:hover { background:#1d4ed8; transform:translateY(-1px); }
+        .loan-secondary-btn { border:1px solid var(--loan-border); background:var(--loan-surface); }
+        .loan-danger-btn { border:1px solid #fecaca; color:#b91c1c; background:#fff; }
+        .dark .loan-danger-btn { background:transparent; border-color:#7f1d1d; color:#fca5a5; }
+        .loan-danger-solid-btn { background:#dc2626; color:#fff; }
+        .loan-success-btn { background:#16a34a; color:#fff; }
+        .loan-warning-btn { background:#d97706; color:#fff; }
+        .loan-mini-btn { display:inline-flex; align-items:center; border:1px solid var(--loan-border); border-radius:8px; padding:4px 10px; font-size:12px; font-weight:600; white-space:nowrap; background:var(--loan-surface); }
+        .loan-mini-btn:hover { background:var(--loan-soft); }
+        .loan-mini-success { border-color:#bbf7d0; color:#15803d; }
+        .loan-mini-warning { border-color:#fde68a; color:#b45309; }
+        .loan-mini-danger { border-color:#fecaca; color:#b91c1c; }
+        .loan-icon-btn { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; flex:none; border-radius:8px; }
+        .loan-icon-btn:hover { background:var(--loan-soft); }
+        .loan-modal-panel { border:1px solid var(--loan-border); background:var(--loan-surface); border-radius:16px; box-shadow:0 24px 80px -28px rgba(15,23,42,.7); }
+        .loan-empty { padding:28px; text-align:center; color:var(--loan-muted); font-size:14px; }
+        .loan-toast { display:flex; align-items:flex-start; gap:10px; border-radius:10px; padding:12px 14px; font-size:13px; font-weight:600; box-shadow:0 12px 28px -12px rgba(15,23,42,.5); max-width:340px; animation:loan-toast-in .15s ease-out; }
+        @keyframes loan-toast-in { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+        .loan-tab { padding:12px 16px; font-size:14px; font-weight:600; color:var(--loan-muted); border-bottom:2px solid transparent; white-space:nowrap; }
+        .loan-tab-active { color:#2563eb; border-bottom-color:#2563eb; }
+        .loan-mini-stat { border:1px solid var(--loan-border); background:var(--loan-soft); border-radius:10px; padding:10px 12px; }
+        .loan-mini-stat p { font-size:11px; color:var(--loan-muted); text-transform:uppercase; }
+        .loan-mini-stat b { font-size:15px; }
+        .loan-attachment { display:flex; align-items:center; gap:10px; border:1px solid var(--loan-border); border-radius:10px; padding:8px 10px; }
+        .loan-kv-row { display:flex; justify-content:space-between; gap:16px; padding:8px 0; border-bottom:1px solid var(--loan-border); font-size:14px; }
+        .loan-kv-row:last-child { border-bottom:none; }
+        .loan-kv-row dt { color:var(--loan-muted); flex:none; }
+        .loan-kv-row dd { text-align:right; font-weight:600; min-width:0; overflow-wrap:anywhere; }
+        .loan-step { border:1px solid var(--loan-border); border-radius:12px; padding:12px; }
+        .loan-step-current { border-color:#2563eb; background:rgba(37,99,235,.05); }
+        .loan-progress { height:8px; border-radius:4px; background:#e5e7eb; overflow:hidden; }
+        .dark .loan-progress { background:#374151; }
+        .loan-progress > div { height:100%; background:#16a34a; }
+        .loan-activity { border-left:2px solid var(--loan-border); padding:0 0 12px 12px; }
+    </style>
+</head>
+<body>
+<main layout:fragment="content" class="loan-page space-y-6">
+
+    <!-- Header -->
+    <div class="loan-hero flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div class="flex items-start gap-4">
+            <span class="loan-icon bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-200">
+                <span class="material-icons-round">account_balance_wallet</span>
+            </span>
+            <div>
+                <h1 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">Employee Loans</h1>
+                <p class="mt-1 max-w-2xl text-sm text-gray-600 dark:text-gray-300">Approve loans routed to Finance, monitor active loans, and see how repayments affect upcoming payroll.</p>
+            </div>
+        </div>
+        <button type="button" data-action="refresh" class="loan-secondary-btn self-start lg:self-center">
+            <span class="material-icons-round text-base">refresh</span>Refresh
+        </button>
+    </div>
+
+    <!-- Dashboard cards -->
+    <section class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div id="mPendingCard" class="loan-metric">
+            <div class="min-w-0"><p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Awaiting Finance approval</p>
+                <p id="mPending" class="mt-3 text-3xl font-bold">0</p></div>
+            <span class="loan-icon bg-amber-50 text-amber-600"><span class="material-icons-round">pending_actions</span></span>
+        </div>
+        <div class="loan-metric">
+            <div class="min-w-0"><p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Active loans</p>
+                <p id="mActive" class="mt-3 text-3xl font-bold">0</p></div>
+            <span class="loan-icon bg-green-50 text-green-600"><span class="material-icons-round">task_alt</span></span>
+        </div>
+        <div class="loan-metric">
+            <div class="min-w-0"><p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Completed loans</p>
+                <p id="mCompleted" class="mt-3 text-3xl font-bold">0</p></div>
+            <span class="loan-icon bg-slate-100 text-slate-600"><span class="material-icons-round">done_all</span></span>
+        </div>
+        <div class="loan-metric">
+            <div class="min-w-0"><p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Total principal approved</p>
+                <p id="mPrincipal" class="mt-3 truncate text-2xl font-bold">0.00</p></div>
+            <span class="loan-icon bg-blue-50 text-blue-600"><span class="material-icons-round">request_quote</span></span>
+        </div>
+        <div class="loan-metric">
+            <div class="min-w-0"><p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Outstanding balance</p>
+                <p id="mOutstanding" class="mt-3 truncate text-2xl font-bold">0.00</p>
+                <p id="mOutstandingSplit" class="mt-1 truncate text-xs text-gray-500"></p></div>
+            <span class="loan-icon bg-indigo-50 text-indigo-600"><span class="material-icons-round">savings</span></span>
+        </div>
+        <div class="loan-metric">
+            <div class="min-w-0"><p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Total repaid</p>
+                <p id="mRepaid" class="mt-3 truncate text-2xl font-bold">0.00</p></div>
+            <span class="loan-icon bg-emerald-50 text-emerald-600"><span class="material-icons-round">paid</span></span>
+        </div>
+        <div id="mMissedCard" class="loan-metric">
+            <div class="min-w-0"><p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Missed deductions</p>
+                <p id="mMissed" class="mt-3 text-3xl font-bold">0</p>
+                <p id="mMissedAmount" class="mt-1 truncate text-xs text-gray-500"></p></div>
+            <span class="loan-icon bg-red-50 text-red-600"><span class="material-icons-round">report</span></span>
+        </div>
+        <div class="loan-metric">
+            <div class="min-w-0"><p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Next payroll deduction</p>
+                <p id="mNext" class="mt-3 truncate text-2xl font-bold">0.00</p>
+                <p id="mNextMonth" class="mt-1 truncate text-xs text-gray-500"></p></div>
+            <span class="loan-icon bg-cyan-50 text-cyan-600"><span class="material-icons-round">payments</span></span>
+        </div>
+    </section>
+
+    <div id="statusChips" class="flex flex-wrap gap-2"></div>
+
+    <!-- Tabs -->
+    <section class="loan-card overflow-hidden">
+        <div class="flex gap-1 overflow-x-auto border-b border-gray-200 px-2 dark:border-gray-700">
+            <button type="button" data-tab="pending" class="loan-tab loan-tab-active">Pending approval <span id="tabPendingCount" class="loan-badge loan-badge-warning ml-1">0</span></button>
+            <button type="button" data-tab="active" class="loan-tab">Active loans</button>
+            <button type="button" data-tab="completed" class="loan-tab">Completed loans</button>
+            <button type="button" data-tab="missed" class="loan-tab">Missed deductions <span id="tabMissedCount" class="loan-badge loan-badge-error ml-1">0</span></button>
+            <button type="button" data-tab="impact" class="loan-tab">Payroll impact</button>
+        </div>
+
+        <div id="searchBar" class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900">
+            <input id="listSearch" class="loan-control" placeholder="Search by application number, employee, department or product">
+        </div>
+
+        <!-- Pending Finance approvals -->
+        <div id="pendingPanel" class="overflow-x-auto">
+            <table class="w-full min-w-[960px] text-sm">
+                <thead class="loan-table-head"><tr>
+                    <th class="px-4 py-3 text-left">Application</th>
+                    <th class="px-4 py-3 text-left">Employee</th>
+                    <th class="px-4 py-3 text-left">Product</th>
+                    <th class="px-4 py-3 text-right">Amount</th>
+                    <th class="px-4 py-3 text-right">Monthly repayment</th>
+                    <th class="px-4 py-3 text-left">Waiting since</th>
+                    <th class="px-4 py-3 text-left">Action</th>
+                </tr></thead>
+                <tbody id="pendingRows" class="divide-y divide-gray-200 dark:divide-gray-700"></tbody>
+            </table>
+        </div>
+
+        <!-- Active loans -->
+        <div id="activePanel" class="hidden overflow-x-auto">
+            <table class="w-full min-w-[1040px] text-sm">
+                <thead class="loan-table-head"><tr>
+                    <th class="px-4 py-3 text-left">Loan</th>
+                    <th class="px-4 py-3 text-left">Employee</th>
+                    <th class="px-4 py-3 text-left">Product</th>
+                    <th class="px-4 py-3 text-right">Principal</th>
+                    <th class="px-4 py-3 text-right">Monthly deduction</th>
+                    <th class="px-4 py-3 text-right">Outstanding</th>
+                    <th class="px-4 py-3 text-left">Activated</th>
+                    <th class="px-4 py-3 text-left">Status</th>
+                    <th class="px-4 py-3 text-left">Action</th>
+                </tr></thead>
+                <tbody id="activeRows" class="divide-y divide-gray-200 dark:divide-gray-700"></tbody>
+            </table>
+        </div>
+
+        <!-- Completed loans -->
+        <div id="completedPanel" class="hidden overflow-x-auto">
+            <table class="w-full min-w-[1040px] text-sm">
+                <thead class="loan-table-head"><tr>
+                    <th class="px-4 py-3 text-left">Loan</th>
+                    <th class="px-4 py-3 text-left">Employee</th>
+                    <th class="px-4 py-3 text-left">Product</th>
+                    <th class="px-4 py-3 text-right">Principal</th>
+                    <th class="px-4 py-3 text-right">Monthly deduction</th>
+                    <th class="px-4 py-3 text-right">Outstanding</th>
+                    <th class="px-4 py-3 text-left">Activated</th>
+                    <th class="px-4 py-3 text-left">Status</th>
+                    <th class="px-4 py-3 text-left">Action</th>
+                </tr></thead>
+                <tbody id="completedRows" class="divide-y divide-gray-200 dark:divide-gray-700"></tbody>
+            </table>
+        </div>
+
+        <!-- Missed deductions -->
+        <div id="missedPanel" class="hidden overflow-x-auto">
+            <table class="w-full min-w-[1040px] text-sm">
+                <thead class="loan-table-head"><tr>
+                    <th class="px-4 py-3 text-left">Loan</th>
+                    <th class="px-4 py-3 text-left">Employee</th>
+                    <th class="px-4 py-3 text-left">Product</th>
+                    <th class="px-4 py-3 text-left">Installment</th>
+                    <th class="px-4 py-3 text-right">Expected</th>
+                    <th class="px-4 py-3 text-right">Paid</th>
+                    <th class="px-4 py-3 text-right">Outstanding</th>
+                    <th class="px-4 py-3 text-right">Loan balance</th>
+                    <th class="px-4 py-3 text-left">Flagged</th>
+                </tr></thead>
+                <tbody id="missedRows" class="divide-y divide-gray-200 dark:divide-gray-700"></tbody>
+            </table>
+        </div>
+
+        <!-- Payroll deduction impact -->
+        <div id="impactPanel" class="hidden space-y-6 p-4">
+            <div>
+                <h2 class="mb-2 text-sm font-semibold">Expected loan deductions by payroll month</h2>
+                <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+                    <table class="w-full min-w-[640px] text-sm">
+                        <thead class="loan-table-head"><tr>
+                            <th class="px-4 py-3 text-left">Payroll month</th>
+                            <th class="px-4 py-3 text-right">Expected deduction</th>
+                            <th class="px-4 py-3 text-right">Loans</th>
+                            <th class="px-4 py-3 text-right">Employees</th>
+                            <th class="px-4 py-3 text-left">Relative size</th>
+                        </tr></thead>
+                        <tbody id="impactRows" class="divide-y divide-gray-200 dark:divide-gray-700"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div>
+                <h2 class="mb-2 text-sm font-semibold">Largest employee exposures</h2>
+                <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+                    <table class="w-full min-w-[720px] text-sm">
+                        <thead class="loan-table-head"><tr>
+                            <th class="px-4 py-3 text-left">Employee</th>
+                            <th class="px-4 py-3 text-right">Active loans</th>
+                            <th class="px-4 py-3 text-right">Pending apps</th>
+                            <th class="px-4 py-3 text-right">Missed</th>
+                            <th class="px-4 py-3 text-right">Monthly deduction</th>
+                            <th class="px-4 py-3 text-right">Outstanding</th>
+                        </tr></thead>
+                        <tbody id="exposureRows" class="divide-y divide-gray-200 dark:divide-gray-700"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script th:src="@{/js/finance-loans.js}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => FinanceLoans.initMain());
+    </script>
+</main>
+</body>
+</html>

@@ -11,6 +11,7 @@ import com.justjava.humanresource.hr.entity.PayGroup;
 import com.justjava.humanresource.hr.repository.EmployeeRepository;
 import com.justjava.humanresource.kpi.entity.KpiMeasurement;
 import com.justjava.humanresource.kpi.service.KpiMeasurementService;
+import com.justjava.humanresource.loan.service.LoanPayrollDeductionService;
 import com.justjava.humanresource.payroll.calculation.PayGroupResolutionService;
 import com.justjava.humanresource.payroll.calculation.dto.ResolvedPayComponents;
 import com.justjava.humanresource.payroll.entity.*;
@@ -64,6 +65,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
     private final KpiMeasurementService kpiMeasurementService;
     private final PayrollRunKpiSnapshotService payrollRunKpiSnapshotService;
     private final PayrollAuditService payrollAuditService;
+    private final LoanPayrollDeductionService loanPayrollDeductionService;
 
     /* ============================================================
        INITIALIZE
@@ -821,6 +823,13 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
         run.setYtdPaye(previousYtdPaye.add(currentPaye));
 
         // ----------------------------------------------------
+        // 4b. Record loan repayments for the loan lines on this run
+        //     (transactions, schedule rows, balances). Same transaction as the posting.
+        // ----------------------------------------------------
+
+        loanPayrollDeductionService.recordPostedDeductions(run);
+
+        // ----------------------------------------------------
         // 5. Mark POSTED
         // ----------------------------------------------------
 
@@ -917,11 +926,24 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
         }
 
     /* ============================================================
-       RECOMPUTE TOTAL DEDUCTIONS (SAFE)
+       LOAN REPAYMENTS (after all other deductions)
+       Line items only; balances change when the run is posted.
        ============================================================ */
 
         BigDecimal statutoryDeductions =
                 payrollLineItemRepository.sumStatutoryDeductions(run.getId());
+
+        BigDecimal netBeforeLoan =
+                run.getGrossPay().add(run.getNonGrossEarnings())
+                        .subtract(statutoryDeductions)
+                        .subtract(totalOtherDeductions);
+
+        totalOtherDeductions = totalOtherDeductions.add(
+                loanPayrollDeductionService.applyLoanDeductions(run, netBeforeLoan));
+
+    /* ============================================================
+       RECOMPUTE TOTAL DEDUCTIONS (SAFE)
+       ============================================================ */
 
         BigDecimal totalDeductions =
                 statutoryDeductions.add(totalOtherDeductions);

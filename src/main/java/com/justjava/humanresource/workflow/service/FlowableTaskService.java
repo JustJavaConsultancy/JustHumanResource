@@ -7,6 +7,8 @@ import org.flowable.engine.RuntimeService;
 import org.flowable.engine.TaskService;
 import org.flowable.engine.history.HistoricProcessInstance;
 import org.flowable.task.api.Task;
+import org.flowable.identitylink.api.IdentityLink;
+import org.flowable.identitylink.api.IdentityLinkType;
 import org.flowable.task.api.history.HistoricTaskInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -94,7 +96,72 @@ public class FlowableTaskService {
                 .sorted((left, right) -> right.getCreatedTime().compareTo(left.getCreatedTime()))
                 .toList();
     }
-//    GET COMPLETED PROCESS INSTANCES
+    /* =====================================================
+       CANDIDATE-GROUP TASKS (added for loan module)
+       Candidate queries only return UNASSIGNED tasks in Flowable.
+       ===================================================== */
+
+    public List<FlowableTaskDTO> getTasksForCandidateGroup(
+            String candidateGroup,
+            String processDefinitionKey
+    ) {
+        return getTasksForCandidateGroups(List.of(candidateGroup), processDefinitionKey);
+    }
+
+    public List<FlowableTaskDTO> getTasksForCandidateGroups(
+            Collection<String> candidateGroups,
+            String processDefinitionKey
+    ) {
+        if (candidateGroups == null || candidateGroups.isEmpty()) {
+            return List.of();
+        }
+
+        return taskService.createTaskQuery()
+                .taskCandidateGroupIn(List.copyOf(candidateGroups))
+                .processDefinitionKey(processDefinitionKey)
+                .active()
+                .orderByTaskCreateTime()
+                .desc()
+                .list()
+                .stream()
+                .map(this::mapToDto)
+                .toList();
+    }
+
+    /** True if the task has the group as a candidate group (works even after the task is claimed). */
+    public boolean isTaskCandidateForGroup(String taskId, String candidateGroup) {
+        return isTaskCandidateForAnyGroup(taskId, List.of(candidateGroup));
+    }
+
+    public boolean isTaskCandidateForAnyGroup(String taskId, Collection<String> candidateGroups) {
+        if (taskId == null || candidateGroups == null || candidateGroups.isEmpty()) {
+            return false;
+        }
+        List<IdentityLink> links = taskService.getIdentityLinksForTask(taskId);
+        return links.stream()
+                .filter(l -> IdentityLinkType.CANDIDATE.equals(l.getType()))
+                .anyMatch(l -> l.getGroupId() != null && candidateGroups.contains(l.getGroupId()));
+    }
+
+    /**
+     * Claims a candidate task for a user. Completing a candidate task does not
+     * require a claim in Flowable; use this only if the task should be locked to one user.
+     */
+    @Transactional
+    public void claimTask(String taskId, String userId) {
+        Task task = taskService.createTaskQuery().taskId(taskId).singleResult();
+        if (task == null) {
+            throw new IllegalStateException("Task not found: " + taskId);
+        }
+        if (task.getAssignee() != null && !task.getAssignee().equals(userId)) {
+            throw new IllegalStateException("Task is already claimed by another user: " + taskId);
+        }
+        if (task.getAssignee() == null) {
+            taskService.claim(taskId, userId);
+        }
+    }
+
+    //    GET COMPLETED PROCESS INSTANCES
     public List<HistoricProcessInstance> getCompletedProcessInstancesForAssignee(
             String processDefinitionKey
     ) {

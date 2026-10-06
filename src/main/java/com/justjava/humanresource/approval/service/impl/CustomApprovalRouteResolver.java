@@ -24,7 +24,9 @@ public class CustomApprovalRouteResolver implements ApprovalRouteResolver {
 
     @Override
     public boolean supports(ApprovalContext context) {
-        return (context.getModuleType() == ApprovalModuleType.REQUEST || context.getModuleType() == ApprovalModuleType.EXIT)
+        return (context.getModuleType() == ApprovalModuleType.REQUEST
+                || context.getModuleType() == ApprovalModuleType.EXIT
+                || context.getModuleType() == ApprovalModuleType.LOAN)
                 && context.getRouteType() == ApprovalRouteType.CUSTOM;
     }
 

@@ -62,6 +62,14 @@ public class AuthenticationManager {
         return normalizedGroups().contains("hiringmanager");
     }
 
+    /* ---- Loan module wrappers (delegate to existing checks) ---- */
+    public boolean isLoanHrApprover() {
+        return isHumanResource();
+    }
+    public boolean isLoanFinanceApprover() {
+        return isFinancialOfficer();
+    }
+
     public Object getAllAttributes() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !(authentication.getPrincipal() instanceof DefaultOidcUser defaultOidcUser)) return null;

@@ -155,4 +155,18 @@ public interface EmployeeRepository extends JpaRepository<Employee,Long> {
        ORDER BY e.lastName, e.firstName
        """)
     List<Employee> findActiveEmployeesInGroup(@Param("groupName") String groupName);
+
+    // Active employees carrying ANY of the given Keycloak groups, compared case-insensitively
+    // (pass lower-case names, with and without the leading "/"). Used to find the HR / Finance
+    // approvers to e-mail about loan approvals. Unlike findActiveEmployeesInGroup this does not
+    // filter on restrictedVisibility: an approver must be told about their work either way.
+    @Query("""
+       SELECT DISTINCT e FROM Employee e
+       JOIN e.groups g
+       WHERE LOWER(g) IN :groupNames
+         AND e.status = com.justjava.humanresource.core.enums.RecordStatus.ACTIVE
+       ORDER BY e.lastName, e.firstName
+       """)
+    List<Employee> findActiveEmployeesInAnyGroupIgnoreCase(
+            @Param("groupNames") java.util.Collection<String> groupNames);
 }

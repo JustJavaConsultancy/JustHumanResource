@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/employeeLayout}">
+<head>
+    <meta charset="UTF-8">
+    <title>My Loans</title>
+    <style>
+        .loan-page { --loan-border:#e5e7eb; --loan-muted:#64748b; --loan-surface:#ffffff; --loan-soft:#f8fafc; }
+        .dark .loan-page { --loan-border:#374151; --loan-muted:#9ca3af; --loan-surface:#1f2937; --loan-soft:#111827; }
+        .loan-hero { border:1px solid var(--loan-border); background:linear-gradient(135deg,#fff 0%,#eff6ff 100%); border-radius:16px; padding:24px; box-shadow:0 16px 40px -28px rgba(15,23,42,.45); }
+        .dark .loan-hero { background:linear-gradient(135deg,#1f2937 0%,#0f172a 100%); }
+        .loan-card { border:1px solid var(--loan-border); background:var(--loan-surface); border-radius:14px; box-shadow:0 12px 28px -24px rgba(15,23,42,.5); }
+        .loan-card-head { display:flex; align-items:center; gap:8px; padding:16px 20px; border-bottom:1px solid var(--loan-border); }
+        .loan-metric { border:1px solid var(--loan-border); background:var(--loan-surface); border-radius:14px; padding:18px; min-height:104px; display:flex; justify-content:space-between; gap:12px; }
+        .loan-metric-alert { border-color:#f59e0b; }
+        .loan-metric-danger { border-color:#ef4444; }
+        .loan-icon { width:40px; height:40px; flex:none; border-radius:12px; display:inline-flex; align-items:center; justify-content:center; }
+        .loan-control { width:100%; border:1px solid var(--loan-border); background:var(--loan-surface); border-radius:10px; padding:10px 12px; font-size:14px; outline:none; transition:border-color .15s ease, box-shadow .15s ease; }
+        .loan-control:focus { border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,.12); }
+        .loan-label { display:block; font-size:13px; font-weight:600; }
+        .loan-table-head { background:var(--loan-soft); color:var(--loan-muted); font-size:11px; text-transform:uppercase; letter-spacing:.04em; }
+        .loan-row { transition:background-color .15s ease; }
+        .loan-row:hover { background:#f8fafc; }
+        .dark .loan-row:hover { background:#111827; }
+        .loan-badge { display:inline-flex; align-items:center; border-radius:999px; padding:4px 10px; font-size:11px; font-weight:700; text-transform:uppercase; white-space:nowrap; }
+        .loan-badge-success { background:#dcfce7; color:#166534; }
+        .loan-badge-error { background:#fee2e2; color:#991b1b; }
+        .loan-badge-warning { background:#fef3c7; color:#92400e; }
+        .loan-badge-info { background:#dbeafe; color:#1e40af; }
+        .loan-badge-blue { background:#e0f2fe; color:#075985; }
+        .loan-badge-purple { background:#ede9fe; color:#5b21b6; }
+        .loan-badge-neutral { background:#f1f5f9; color:#475569; }
+        .dark .loan-badge-neutral { background:#374151; color:#d1d5db; }
+        .loan-primary-btn, .loan-secondary-btn, .loan-danger-btn, .loan-danger-solid-btn, .loan-success-btn, .loan-warning-btn { display:inline-flex; align-items:center; gap:8px; border-radius:10px; padding:10px 16px; font-size:14px; font-weight:700; white-space:nowrap; transition:background-color .15s ease, transform .15s ease; }
+        .loan-primary-btn { background:#2563eb; color:#fff; }
+        .loan-primary-btn:hover { background:#1d4ed8; transform:translateY(-1px); }
+        .loan-secondary-btn { border:1px solid var(--loan-border); background:var(--loan-surface); }
+        .loan-danger-btn { border:1px solid #fecaca; color:#b91c1c; background:#fff; }
+        .dark .loan-danger-btn { background:transparent; border-color:#7f1d1d; color:#fca5a5; }
+        .loan-danger-solid-btn { background:#dc2626; color:#fff; }
+        .loan-success-btn { background:#16a34a; color:#fff; }
+        .loan-warning-btn { background:#d97706; color:#fff; }
+        .loan-mini-btn { display:inline-flex; align-items:center; border:1px solid var(--loan-border); border-radius:8px; padding:4px 10px; font-size:12px; font-weight:600; white-space:nowrap; background:var(--loan-surface); }
+        .loan-mini-btn:hover { background:var(--loan-soft); }
+        .loan-mini-success { border-color:#bbf7d0; color:#15803d; }
+        .loan-mini-warning { border-color:#fde68a; color:#b45309; }
+        .loan-mini-danger { border-color:#fecaca; color:#b91c1c; }
+        .loan-icon-btn { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; flex:none; border-radius:8px; }
+        .loan-icon-btn:hover { background:var(--loan-soft); }
+        .loan-modal-panel { border:1px solid var(--loan-border); background:var(--loan-surface); border-radius:16px; box-shadow:0 24px 80px -28px rgba(15,23,42,.7); }
+        .loan-empty { padding:28px; text-align:center; color:var(--loan-muted); font-size:14px; }
+        .loan-toast { display:flex; align-items:flex-start; gap:10px; border-radius:10px; padding:12px 14px; font-size:13px; font-weight:600; box-shadow:0 12px 28px -12px rgba(15,23,42,.5); max-width:340px; animation:loan-toast-in .15s ease-out; }
+        @keyframes loan-toast-in { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+        .loan-tab { padding:12px 16px; font-size:14px; font-weight:600; color:var(--loan-muted); border-bottom:2px solid transparent; white-space:nowrap; }
+        .loan-tab-active { color:#2563eb; border-bottom-color:#2563eb; }
+        .loan-mini-stat { border:1px solid var(--loan-border); background:var(--loan-soft); border-radius:10px; padding:10px 12px; }
+        .loan-mini-stat p { font-size:11px; color:var(--loan-muted); text-transform:uppercase; }
+        .loan-mini-stat b { font-size:15px; }
+        .loan-attachment { display:flex; align-items:center; gap:10px; border:1px solid var(--loan-border); border-radius:10px; padding:8px 10px; }
+        .loan-kv-row { display:flex; justify-content:space-between; gap:16px; padding:8px 0; border-bottom:1px solid var(--loan-border); font-size:14px; }
+        .loan-kv-row:last-child { border-bottom:none; }
+        .loan-kv-row dt { color:var(--loan-muted); flex:none; }
+        .loan-kv-row dd { text-align:right; font-weight:600; min-width:0; overflow-wrap:anywhere; }
+        .loan-step { border:1px solid var(--loan-border); border-radius:12px; padding:12px; }
+        .loan-step-current { border-color:#2563eb; background:rgba(37,99,235,.05); }
+        .loan-progress { height:8px; border-radius:4px; background:#e5e7eb; overflow:hidden; }
+        .dark .loan-progress { background:#374151; }
+        .loan-progress > div { height:100%; background:#16a34a; }
+        .loan-activity { border-left:2px solid var(--loan-border); padding:0 0 12px 12px; }
+    </style>
+</head>
+<body>
+<main layout:fragment="content" class="loan-page space-y-6">
+
+    <!-- Header -->
+    <div class="loan-hero flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div class="flex items-start gap-4">
+            <span class="loan-icon bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-200">
+                <span class="material-icons-round">account_balance_wallet</span>
+            </span>
+            <div>
+                <h1 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">My Loans</h1>
+                <p class="mt-1 max-w-2xl text-sm text-gray-600 dark:text-gray-300">Apply for a loan, track approvals, and follow your repayments through payroll.</p>
+            </div>
+        </div>
+        <div class="flex flex-wrap gap-2">
+            <button type="button" data-action="new" class="loan-primary-btn">
+                <span class="material-icons-round text-base">add</span>New Application
+            </button>
+            <button type="button" data-action="refresh" class="loan-secondary-btn">
+                <span class="material-icons-round text-base">refresh</span>Refresh
+            </button>
+        </div>
+    </div>
+
+    <!-- Dashboard cards -->
+    <section class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div class="loan-metric">
+            <div class="min-w-0"><p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Pending approval</p>
+                <p id="mPending" class="mt-3 text-3xl font-bold">0</p></div>
+            <span class="loan-icon bg-blue-50 text-blue-600"><span class="material-icons-round">pending_actions</span></span>
+        </div>
+        <div id="mReturnedCard" class="loan-metric">
+            <div class="min-w-0"><p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Returned to me</p>
+                <p id="mReturned" class="mt-3 text-3xl font-bold">0</p></div>
+            <span class="loan-icon bg-amber-50 text-amber-600"><span class="material-icons-round">undo</span></span>
+        </div>
+        <div class="loan-metric">
+            <div class="min-w-0"><p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Drafts</p>
+                <p id="mDraft" class="mt-3 text-3xl font-bold">0</p></div>
+            <span class="loan-icon bg-slate-100 text-slate-600"><span class="material-icons-round">edit_note</span></span>
+        </div>
+        <div class="loan-metric">
+            <div class="min-w-0"><p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Active loans</p>
+                <p id="mActive" class="mt-3 text-3xl font-bold">0</p></div>
+            <span class="loan-icon bg-green-50 text-green-600"><span class="material-icons-round">task_alt</span></span>
+        </div>
+        <div class="loan-metric">
+            <div class="min-w-0"><p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Outstanding balance</p>
+                <p id="mOutstanding" class="mt-3 truncate text-2xl font-bold">0.00</p>
+                <p id="mOutstandingSplit" class="mt-1 truncate text-xs text-gray-500"></p></div>
+            <span class="loan-icon bg-indigo-50 text-indigo-600"><span class="material-icons-round">savings</span></span>
+        </div>
+        <div class="loan-metric">
+            <div class="min-w-0"><p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Monthly deduction</p>
+                <p id="mMonthly" class="mt-3 truncate text-2xl font-bold">0.00</p>
+                <p id="mNextMonth" class="mt-1 truncate text-xs text-gray-500"></p></div>
+            <span class="loan-icon bg-cyan-50 text-cyan-600"><span class="material-icons-round">payments</span></span>
+        </div>
+        <div id="mMissedCard" class="loan-metric">
+            <div class="min-w-0"><p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Missed deductions</p>
+                <p id="mMissed" class="mt-3 text-3xl font-bold">0</p></div>
+            <span class="loan-icon bg-red-50 text-red-600"><span class="material-icons-round">report</span></span>
+        </div>
+        <div class="loan-metric">
+            <div class="min-w-0"><p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Assigned to me to approve</p>
+                <p id="mTasks" class="mt-3 text-3xl font-bold">0</p></div>
+            <span class="loan-icon bg-purple-50 text-purple-600"><span class="material-icons-round">gavel</span></span>
+        </div>
+    </section>
+
+    <!-- Custom approver tasks (hidden unless this employee is assigned as a custom approver) -->
+    <section id="tasksSection" class="loan-card hidden overflow-hidden">
+        <div class="loan-card-head">
+            <span class="material-icons-round text-purple-600">gavel</span>
+            <h2 class="text-base font-semibold">Loan applications waiting for my approval</h2>
+            <span id="taskCount" class="loan-badge loan-badge-purple">0</span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full min-w-[860px] text-sm">
+                <thead class="loan-table-head">
+                <tr>
+                    <th class="px-4 py-3 text-left">Application</th>
+                    <th class="px-4 py-3 text-left">Employee</th>
+                    <th class="px-4 py-3 text-left">Product</th>
+                    <th class="px-4 py-3 text-right">Amount</th>
+                    <th class="px-4 py-3 text-right">Monthly repayment</th>
+                    <th class="px-4 py-3 text-left">Submitted</th>
+                    <th class="px-4 py-3 text-left">Action</th>
+                </tr>
+                </thead>
+                <tbody id="taskRows" class="divide-y divide-gray-200 dark:divide-gray-700"></tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- Available products -->
+    <section class="space-y-3">
+        <h2 class="text-base font-semibold">Available loan products</h2>
+        <div id="productCards" class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"></div>
+    </section>
+
+    <!-- Applications / active loans -->
+    <section class="loan-card overflow-hidden">
+        <div class="flex gap-1 overflow-x-auto border-b border-gray-200 px-2 dark:border-gray-700">
+            <button type="button" data-tab="applications" class="loan-tab loan-tab-active">My applications</button>
+            <button type="button" data-tab="active" class="loan-tab">Active &amp; completed loans</button>
+        </div>
+
+        <div id="applicationsPanel">
+            <div class="grid gap-3 border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900 md:grid-cols-[1fr_220px]">
+                <input id="applicationSearch" class="loan-control" placeholder="Search by application number or product">
+                <select id="statusFilter" class="loan-control">
+                    <option value="">All statuses</option>
+                    <option value="DRAFT">Draft</option>
+                    <option value="PENDING_HR_APPROVAL">Pending HR</option>
+                    <option value="PENDING_CUSTOM_APPROVAL">Pending approver</option>
+                    <option value="PENDING_FINANCE_APPROVAL">Pending Finance</option>
+                    <option value="RETURNED_FOR_CORRECTION">Returned</option>
+                    <option value="ACTIVE">Active</option>
+                    <option value="COMPLETED">Completed</option>
+                    <option value="REJECTED">Rejected</option>
+                    <option value="CANCELLED">Cancelled</option>
+                </select>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full min-w-[900px] text-sm">
+                    <thead class="loan-table-head">
+                    <tr>
+                        <th class="px-4 py-3 text-left">Application</th>
+                        <th class="px-4 py-3 text-left">Product</th>
+                        <th class="px-4 py-3 text-right">Amount</th>
+                        <th class="px-4 py-3 text-right">Monthly repayment</th>
+                        <th class="px-4 py-3 text-left">Route</th>
+                        <th class="px-4 py-3 text-left">Status</th>
+                        <th class="px-4 py-3 text-left">Action</th>
+                    </tr>
+                    </thead>
+                    <tbody id="applicationRows" class="divide-y divide-gray-200 dark:divide-gray-700"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="activePanel" class="hidden overflow-x-auto">
+            <table class="w-full min-w-[900px] text-sm">
+                <thead class="loan-table-head">
+                <tr>
+                    <th class="px-4 py-3 text-left">Loan</th>
+                    <th class="px-4 py-3 text-left">Product</th>
+                    <th class="px-4 py-3 text-right">Principal</th>
+                    <th class="px-4 py-3 text-right">Monthly deduction</th>
+                    <th class="px-4 py-3 text-right">Outstanding</th>
+                    <th class="px-4 py-3 text-left">Activated</th>
+                    <th class="px-4 py-3 text-left">Status</th>
+                    <th class="px-4 py-3 text-left">Action</th>
+                </tr>
+                </thead>
+                <tbody id="activeRows" class="divide-y divide-gray-200 dark:divide-gray-700"></tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- New / edit application modal -->
+    <div id="loanFormModal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black/50" data-action="close-form"></div>
+        <div class="absolute inset-0 overflow-y-auto p-4">
+            <div class="loan-modal-panel mx-auto my-6 max-w-3xl overflow-hidden">
+                <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+                    <div class="min-w-0">
+                        <h3 id="loanFormTitle" class="text-lg font-bold">New loan application</h3>
+                        <p id="loanFormNumber" class="text-sm text-gray-500"></p>
+                    </div>
+                    <button type="button" data-action="close-form" class="loan-icon-btn" aria-label="Close">
+                        <span class="material-icons-round">close</span>
+                    </button>
+                </div>
+
+                <form id="loanForm" class="max-h-[72vh] space-y-5 overflow-y-auto p-6" onsubmit="return false;">
+                    <div id="returnBanner" class="hidden flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100">
+                        <span class="material-icons-round text-amber-600">undo</span>
+                        <div><p class="font-semibold">Returned for correction</p><p id="returnBannerText" class="mt-1"></p></div>
+                    </div>
+                    <div id="formError" class="hidden rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700"></div>
+
+                    <label class="loan-label">Loan product
+                        <select id="fProduct" class="loan-control mt-1"></select>
+                    </label>
+                    <div id="productHint" class="hidden rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-900"></div>
+
+                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <label class="loan-label">Amount requested
+                            <input id="fAmount" type="number" min="0" step="0.01" class="loan-control mt-1" placeholder="0.00">
+                        </label>
+                        <label class="loan-label">Monthly repayment
+                            <input id="fRepayment" type="number" min="0" step="0.01" class="loan-control mt-1" placeholder="0.00">
+                        </label>
+                        <label class="loan-label">Tenor (months)
+                            <input id="fTenor" type="number" min="1" step="1" class="loan-control mt-1" placeholder="e.g. 12">
+                        </label>
+                        <label class="loan-label">First deduction month
+                            <input id="fStart" type="month" class="loan-control mt-1">
+                        </label>
+                    </div>
+                    <label class="loan-label">Purpose
+                        <textarea id="fPurpose" rows="3" maxlength="2000" class="loan-control mt-1" placeholder="What is the loan for?"></textarea>
+                    </label>
+
+                    <div>
+                        <h4 class="mb-2 flex items-center gap-2 text-sm font-semibold"><span class="material-icons-round text-base text-primary-600">calculate</span>Repayment preview</h4>
+                        <div id="previewBox" class="rounded-lg border border-gray-200 p-4 dark:border-gray-700"></div>
+                    </div>
+
+                    <div>
+                        <h4 class="mb-2 flex items-center gap-2 text-sm font-semibold"><span class="material-icons-round text-base text-primary-600">attach_file</span>Supporting documents</h4>
+                        <p id="attachmentLocked" class="rounded-lg border border-dashed border-gray-300 p-3 text-sm text-gray-500 dark:border-gray-600">
+                            Save the draft first, then you can attach documents here.</p>
+                        <div id="attachmentPanel" class="hidden space-y-3">
+                            <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+                                <input id="attachmentFile" type="file" class="min-w-0 flex-1 text-sm">
+                                <select id="attachmentType" class="loan-control sm:w-52">
+                                    <option value="SUPPORTING_DOCUMENT">Supporting document</option>
+                                    <option value="OTHER">Other</option>
+                                </select>
+                                <button type="button" data-action="upload-attachment" class="loan-secondary-btn justify-center">
+                                    <span class="material-icons-round text-base">upload</span>Upload</button>
+                            </div>
+                            <ul id="modalAttachments" class="space-y-2"></ul>
+                        </div>
+                    </div>
+                </form>
+
+                <div class="flex flex-col-reverse gap-2 border-t border-gray-200 px-6 py-4 dark:border-gray-700 sm:flex-row sm:justify-end">
+                    <button type="button" data-action="close-form" class="loan-secondary-btn justify-center">Close</button>
+                    <button type="button" data-action="save-draft" class="loan-secondary-btn justify-center">
+                        <span class="material-icons-round text-base">save</span>Save draft</button>
+                    <button type="button" data-action="submit-form" class="loan-primary-btn justify-center">
+                        <span class="material-icons-round text-base">send</span>Submit for approval</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script th:src="@{/js/employee-loans.js}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => EmployeeLoans.initMain());
+    </script>
+</main>
+</body>
+</html>

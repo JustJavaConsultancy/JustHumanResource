@@ -18,7 +18,12 @@ The current app already has:
 - Payroll calculation and deduction processing under `com.justjava.humanresource.payroll`.
 - Separate Thymeleaf layouts for HR/admin, employee, and finance users.
 
-The existing generic request workflow is assignee-based. It expects specific employee IDs as approvers. Employee Loans require role-based approval where any HR user can approve the HR stage and any Finance Officer can approve the final stage. For this reason, loans should use their own Flowable process and services instead of modifying the generic request workflow.
+The existing generic request workflow is assignee-based. It expects specific employee IDs as approvers. Employee Loans require two approval options:
+
+- A default role-based approval route where any HR user can approve the HR stage and any Finance Officer can approve the final stage.
+- An optional custom approval path route where HR configures a named sequence of employee approvers for a loan product.
+
+For this reason, loans should use their own Flowable process and services instead of becoming another generic request type. The loan module should reuse the existing `com.justjava.humanresource.approval` route-resolution concepts where safe, but it should not force loan applications into `WorkflowRequest`.
 
 This avoids breaking:
 
@@ -53,6 +58,7 @@ This module will own:
 - Loan setup.
 - Loan application.
 - Role-based approval.
+- Custom approval path routing for loan products.
 - Active loan account state.
 - Repayment schedule.
 - Repayment transactions.
@@ -103,6 +109,8 @@ Key fields:
 - `interestType`
 - `interestRate`
 - `repaymentFrequency`
+- `approvalRouteType`
+- `customApprovalPathId`
 - `requiresAttachment`
 - `active`
 - `used`
@@ -115,6 +123,8 @@ Behavior:
 - HR can create loan products.
 - HR can edit unused loan products fully.
 - Once used, only non-financial/display fields and active/inactive status can be changed.
+- Approval route settings can be edited only while the product is unused, because submitted applications must preserve the route that was valid at submission time.
+- If `approvalRouteType` is `CUSTOM`, `customApprovalPathId` is required and must reference an enabled, non-empty custom approval path.
 - Used loan products cannot be deleted.
 - Inactive products cannot be selected by employees for new applications.
 
@@ -140,6 +150,9 @@ Key fields:
 - `repaymentStartMonth`
 - `interestTypeSnapshot`
 - `interestRateSnapshot`
+- `approvalRouteTypeSnapshot`
+- `customApprovalPathIdSnapshot`
+- `customApprovalPathNameSnapshot`
 - `totalRepayableAmount`
 - `totalInterestAmount`
 - `purpose`
@@ -150,6 +163,7 @@ Key fields:
 - `hrApprovedByEmployeeId`
 - `financeApprovedAt`
 - `financeApprovedByEmployeeId`
+- `customApprovalCompletedAt`
 - `rejectedAt`
 - `rejectedByEmployeeId`
 - `cancelledAt`
@@ -166,13 +180,44 @@ Behavior:
 - Submitted applications cannot be edited unless returned for correction.
 - HR/Finance cannot modify employee-selected terms.
 - Finance approval automatically activates the loan.
+- For custom approval path products, final custom approval automatically activates the loan.
 - Rejected/cancelled/submitted records are retained.
+
+### `EmployeeLoanApprovalStep`
+
+Purpose:
+
+Represents the approval steps generated for a submitted loan application.
+
+Key fields:
+
+- `id`
+- `loanApplicationId`
+- `sequenceNo`
+- `approvalStage`
+- `approverEmployeeId`
+- `approverGroup`
+- `decision`
+- `comments`
+- `flowableTaskId`
+- `decisionAt`
+- `actedByEmployeeId`
+- `createdAt`
+- `updatedAt`
+- `version`
+
+Behavior:
+
+- Role-based approvals create HR and Finance approval step records with `approverGroup` populated.
+- Custom approvals create one step per configured custom approval path employee with `approverEmployeeId` populated.
+- The table is the approval audit source for both role-based and custom loan routes.
+- Existing approval steps must not be recalculated after submission unless the loan is returned for correction and resubmitted.
 
 ### `EmployeeLoanAccount`
 
 Purpose:
 
-Represents the active loan after Finance final approval.
+Represents the active loan after Finance final approval on the role-based route or final custom approval on the custom route.
 
 Key fields:
 
@@ -358,10 +403,12 @@ Values:
 - `DRAFT`
 - `SUBMITTED`
 - `PENDING_HR_APPROVAL`
+- `PENDING_CUSTOM_APPROVAL`
 - `RETURNED_FOR_CORRECTION`
 - `HR_APPROVED`
 - `PENDING_FINANCE_APPROVAL`
 - `FINANCE_APPROVED`
+- `CUSTOM_APPROVED`
 - `ACTIVE`
 - `REJECTED`
 - `CANCELLED`
@@ -393,6 +440,26 @@ Values:
 - `REJECT`
 - `RETURN`
 
+### `LoanApprovalRouteType`
+
+Values:
+
+- `ROLE_BASED`
+- `CUSTOM`
+
+Meaning:
+
+- `ROLE_BASED` uses the standard HR approval then Finance approval route.
+- `CUSTOM` uses an enabled custom approval path selected on the loan product.
+
+### `LoanApprovalStage`
+
+Values:
+
+- `HR`
+- `FINANCE`
+- `CUSTOM`
+
 ### `LoanActivityType`
 
 Values:
@@ -411,6 +478,9 @@ Values:
 - `HR_REJECTED`
 - `FINANCE_APPROVED`
 - `FINANCE_REJECTED`
+- `CUSTOM_APPROVAL_STARTED`
+- `CUSTOM_APPROVED`
+- `CUSTOM_REJECTED`
 - `LOAN_ACTIVATED`
 - `PAYROLL_DEDUCTION_APPLIED`
 - `PAYROLL_DEDUCTION_MISSED`
@@ -456,6 +526,7 @@ Purpose:
 - `LoanApplicationSummaryResponse`
 - `LoanApplicationDetailResponse`
 - `LoanApplicationEditResponse`
+- `LoanApprovalStepResponse`
 
 Purpose:
 
@@ -468,6 +539,7 @@ Purpose:
 - `LoanApprovalActionCommand`
 - `LoanApprovalTaskResponse`
 - `LoanApprovalContextResponse`
+- `LoanApprovalRouteResponse`
 
 Purpose:
 
@@ -510,6 +582,7 @@ Repositories:
 
 - `LoanProductRepository`
 - `EmployeeLoanApplicationRepository`
+- `EmployeeLoanApprovalStepRepository`
 - `EmployeeLoanAccountRepository`
 - `LoanRepaymentScheduleRepository`
 - `LoanRepaymentTransactionRepository`
@@ -524,6 +597,7 @@ Important query needs:
 - Employee draft/submitted/active loans.
 - HR pending applications.
 - Finance pending applications.
+- Custom approval tasks assigned to a specific employee.
 - Active loan accounts due in a payroll month.
 - Repayment schedule rows due in a payroll month.
 - Missed repayment rows.
@@ -545,6 +619,7 @@ Responsibilities:
 
 - Create loan products.
 - Update loan products.
+- Validate loan approval route settings.
 - Deactivate/reactivate loan products.
 - Delete unused loan products.
 - Prevent unsafe financial edits after product usage.
@@ -566,6 +641,7 @@ Responsibilities:
 - Cancel allowed applications.
 - Return application detail for employee, HR, and Finance views.
 - Validate current user access.
+- Snapshot the selected loan product approval route at submission.
 - Start Flowable loan approval process.
 
 Implementation:
@@ -578,9 +654,12 @@ Responsibilities:
 
 - Find HR approval tasks for Human Resource users.
 - Find Finance approval tasks for Finance Officers.
+- Find custom loan approval tasks assigned to the current employee.
 - Approve, reject, or return HR-stage applications.
 - Approve, reject, or return Finance-stage applications.
+- Approve, reject, or return custom approval path applications.
 - Validate role access for each task.
+- Validate assignee access for custom approval tasks.
 - Complete Flowable tasks with loan decision variables.
 
 Implementation:
@@ -605,7 +684,7 @@ Implementation:
 
 Responsibilities:
 
-- Activate approved loan after Finance final approval.
+- Activate approved loan after Finance final approval on the role-based route or final custom approval on the custom route.
 - Create account.
 - Lock schedule.
 - Complete loan after full repayment.
@@ -695,6 +774,20 @@ Responsibilities:
 Implementation:
 
 - `LoanEmployeeContextServiceImpl`
+
+### `LoanApprovalRouteService`
+
+Responsibilities:
+
+- Resolve the approval route for a loan application at submission time.
+- Use role-based HR/Finance stages when `LoanApprovalRouteType.ROLE_BASED` is selected.
+- Use `ApprovalRouteResolverFactory` with `ApprovalModuleType.LOAN` when `LoanApprovalRouteType.CUSTOM` is selected.
+- Create `EmployeeLoanApprovalStep` rows for the resolved route.
+- Reject submission if a custom path is missing, disabled, empty, or resolves to no eligible approvers.
+
+Implementation:
+
+- `LoanApprovalRouteServiceImpl`
 
 ## Controllers To Create
 
@@ -791,6 +884,7 @@ Endpoints:
 - `GET /api/employee/loans/products`
 - `GET /api/employee/loans`
 - `GET /api/employee/loans/{id}`
+- `GET /api/employee/loans/approval-tasks`
 - `POST /api/employee/loans/drafts`
 - `PUT /api/employee/loans/{id}`
 - `DELETE /api/employee/loans/{id}`
@@ -800,10 +894,14 @@ Endpoints:
 - `POST /api/employee/loans/{id}/attachments`
 - `GET /api/employee/loans/{id}/attachments/{attachmentId}`
 - `DELETE /api/employee/loans/{id}/attachments/{attachmentId}`
+- `POST /api/employee/loans/approval-tasks/{taskId}/approve`
+- `POST /api/employee/loans/approval-tasks/{taskId}/reject`
+- `POST /api/employee/loans/approval-tasks/{taskId}/return`
 
 Purpose:
 
 - Employee application and self-service API.
+- Assigned custom loan approver task API for approvers who may not be HR or Finance users.
 
 ### `HrLoanController`
 
@@ -871,18 +969,26 @@ Flow:
 
 1. Start.
 2. Initialize loan approval.
-3. HR user task.
-4. Process HR decision.
-5. Gateway:
+3. Route gateway:
+   - `ROLE_BASED` -> HR user task.
+   - `CUSTOM` -> Custom approver user task.
+4. For role-based route, process HR decision.
+5. Role-based gateway:
    - HR approve -> Finance user task.
    - HR reject -> Finalize rejection.
    - HR return -> Return for correction.
 6. Process Finance decision.
-7. Gateway:
+7. Finance gateway:
    - Finance approve -> Activate loan.
    - Finance reject -> Finalize rejection.
    - Finance return -> Return for correction.
-8. End.
+8. For custom route, process custom approver decision.
+9. Custom route gateway:
+   - Custom approve and more approvers remain -> next custom approver user task.
+   - Custom approve and no more approvers remain -> Activate loan.
+   - Custom reject -> Finalize rejection.
+   - Custom return -> Return for correction.
+10. End.
 
 Role-based tasks:
 
@@ -890,6 +996,13 @@ Role-based tasks:
 - Finance task should be candidate group `financialofficers`.
 
 Candidate groups should match normalized Keycloak group names already used by `AuthenticationManager`.
+
+Custom route tasks:
+
+- Custom approval tasks should be assigned to the specific employee ID resolved from the selected custom approval path.
+- Custom tasks should use the existing employee-id assignee convention used by generic requests.
+- Custom task names should include the current approval level, for example `Loan Custom Approval Level 2`.
+- If the requester is listed in the custom path, the resolver should follow the existing custom resolver behavior and exclude the requester from approving their own loan.
 
 ## Workflow Delegates To Create
 
@@ -904,9 +1017,12 @@ com.justjava.humanresource.loan.workflow.delegate
 Responsibilities:
 
 - Load loan application.
-- Set status to `PENDING_HR_APPROVAL`.
+- Read the application approval route snapshot.
+- For `ROLE_BASED`, set status to `PENDING_HR_APPROVAL` and create HR/Finance approval step placeholders.
+- For `CUSTOM`, resolve and persist custom approval steps, set status to `PENDING_CUSTOM_APPROVAL`, and set the first custom approver.
 - Record activity.
-- Send HR pending notification.
+- Send HR pending notification for role-based route.
+- Send custom approver pending notification for custom route.
 
 ### `ProcessHrLoanDecisionDelegate`
 
@@ -915,6 +1031,7 @@ Responsibilities:
 - Read HR decision variables.
 - Validate decision.
 - Record HR approver.
+- Update the matching HR `EmployeeLoanApprovalStep`.
 - Update status:
   - `HR_APPROVED` then `PENDING_FINANCE_APPROVAL`.
   - `REJECTED`.
@@ -929,17 +1046,32 @@ Responsibilities:
 - Read Finance decision variables.
 - Validate decision.
 - Record Finance approver.
+- Update the matching Finance `EmployeeLoanApprovalStep`.
 - Update status:
   - `FINANCE_APPROVED`.
   - `REJECTED`.
   - `RETURNED_FOR_CORRECTION`.
 - Record activity.
 
+### `ProcessCustomLoanDecisionDelegate`
+
+Responsibilities:
+
+- Read custom approval decision variables.
+- Validate that the current user is the assigned custom approver for the active step.
+- Update the matching `EmployeeLoanApprovalStep`.
+- If approved and another custom approver remains, set the next custom approver task variables.
+- If approved and no more custom approvers remain, set status to `CUSTOM_APPROVED`.
+- If rejected, set rejection variables.
+- If returned, set return variables.
+- Record activity.
+- Send employee and next-approver notifications as applicable.
+
 ### `ActivateApprovedLoanDelegate`
 
 Responsibilities:
 
-- Create `EmployeeLoanAccount`.
+- Create `EmployeeLoanAccount` after Finance final approval or final custom approval.
 - Generate locked `LoanRepaymentSchedule`.
 - Mark application `ACTIVE`.
 - Record activation/disbursement event.
@@ -959,6 +1091,7 @@ Responsibilities:
 
 - Set application `RETURNED_FOR_CORRECTION`.
 - Clear workflow instance.
+- Keep prior approval steps for audit, and generate fresh approval steps when the employee resubmits.
 - Record return activity.
 - Notify employee.
 
@@ -1002,6 +1135,40 @@ Do not replace or alter the existing deduction resolution logic. Add loan deduct
 
 ## Existing Java Files To Edit
 
+### `com.justjava.humanresource.approval.enums.ApprovalModuleType`
+
+Reason:
+
+- Allow the existing approval route resolver infrastructure to identify loan approval contexts.
+
+Change:
+
+- Add:
+
+```java
+LOAN
+```
+
+Safety:
+
+- Add enum value only.
+- Do not rename or reorder existing values in a way that would break persisted strings.
+
+### `com.justjava.humanresource.approval.service.impl.CustomApprovalRouteResolver`
+
+Reason:
+
+- Existing custom approval paths currently support request and exit modules. Loans need to reuse the same path definition and employee-step resolver.
+
+Change:
+
+- Include `ApprovalModuleType.LOAN` in the resolver's supported module types.
+
+Safety:
+
+- Keep existing request and exit behavior unchanged.
+- Do not change how steps are ordered, deduplicated, or requester self-approval is excluded.
+
 ### `com.justjava.humanresource.core.config.AuthenticationManager`
 
 Reason:
@@ -1027,13 +1194,15 @@ Safety:
 
 Reason:
 
-- Current task service supports assignee tasks and task definition queries, but loans need candidate group queries.
+- Current task service supports assignee tasks and task definition queries, but loans need candidate group queries for role-based approvals and assignee queries for custom approval tasks.
 
 Possible additions:
 
 - `getTasksForCandidateGroup(String group, String processDefinitionKey)`
 - `getTasksForCandidateGroups(Collection<String> groups, String processDefinitionKey)`
 - `isTaskCandidateForGroup(String taskId, String group)`
+- `claimCandidateTask(String taskId, String assignee)` if Flowable requires a candidate-group task to be claimed before completion.
+- `getTask(String taskId)` or equivalent helper if the loan service needs to inspect task variables safely.
 
 Safety:
 
@@ -1189,6 +1358,7 @@ Sections:
 - Repayment preview panel.
 - Application table.
 - Active loan table.
+- Assigned custom loan approval tasks table where the logged-in employee is a configured custom approver.
 
 Actions:
 
@@ -1198,6 +1368,7 @@ Actions:
 - Submit.
 - Cancel allowed application.
 - Open detail.
+- Approve/reject/return assigned custom approval tasks.
 
 ### `employee-detail.html`
 
@@ -1209,6 +1380,7 @@ Sections:
 
 - Application details.
 - Approval status/timeline.
+- Approval route and approval step history.
 - Repayment schedule.
 - Repayment history.
 - Attachments.
@@ -1219,6 +1391,7 @@ Actions:
 - Edit if draft/returned.
 - Submit/resubmit.
 - Cancel where allowed.
+- Approve/reject/return where the logged-in user is the assigned custom approver.
 - Upload/remove attachment where allowed.
 
 ### `hr-main.html`
@@ -1231,7 +1404,12 @@ Sections:
 
 - Dashboard cards.
 - Loan product setup tab.
+- Approval route selector in product setup:
+  - `Role-based HR then Finance`
+  - `Custom approval path`
+- Custom approval path dropdown populated from enabled paths when custom route is selected.
 - Pending HR approvals tab.
+- Custom approval overview tab showing applications currently waiting on configured custom approvers.
 - All applications tab.
 - Active loans tab.
 - Missed deductions tab.
@@ -1243,6 +1421,7 @@ Actions:
 - Delete unused product.
 - Open application detail.
 - Approve/reject/return HR task.
+- Inspect custom approval progress for products configured with custom paths.
 
 ### `hr-detail.html`
 
@@ -1265,12 +1444,14 @@ Sections:
 - Repayment preview/schedule.
 - Attachments.
 - Activity history.
+- Approval route snapshot and step-by-step approval history.
 
 Actions:
 
 - Approve.
 - Reject.
 - Return for correction.
+- View custom path approvers and current custom approval owner.
 
 ### `finance-main.html`
 
@@ -1282,6 +1463,7 @@ Sections:
 
 - Dashboard cards.
 - Pending Finance approval queue.
+- Role-based approvals that have reached Finance.
 - Active loans.
 - Completed loans.
 - Missed deductions.
@@ -1302,6 +1484,7 @@ Sections:
 
 - Application terms.
 - HR approval result.
+- Approval route snapshot.
 - Employee context.
 - Existing loan exposure.
 - Repayment schedule.
@@ -1314,6 +1497,8 @@ Actions:
 - Final approve.
 - Reject.
 - Return for correction.
+
+For custom approval path loans, Finance should be able to view the approved loan after activation for monitoring and payroll impact, but Finance should not receive a final approval task unless the selected custom approval path explicitly includes a Finance employee as one of its approvers.
 
 ## Frontend Quality Expectations
 
@@ -1340,6 +1525,8 @@ The UI should include:
 - Dedicated detail pages.
 - Attachments area.
 - Approval action panels.
+- Approval route badges, for example `Role-based` or `Custom path`.
+- Custom approval step timeline showing pending, approved, rejected, and returned steps.
 - Warnings for existing active/unsettled loans.
 - Warnings for missed deductions.
 
@@ -1395,6 +1582,7 @@ Tests:
 - `LoanProductServiceTest`
 - `EmployeeLoanApplicationServiceTest`
 - `LoanApprovalServiceTest`
+- `LoanApprovalRouteServiceTest`
 - `EmployeeLoanAccountServiceTest`
 - `LoanPayrollDeductionServiceTest`
 
@@ -1412,6 +1600,12 @@ Purpose:
 - Validate HR reject.
 - Validate Finance approve -> active loan.
 - Validate return for correction.
+- Validate custom path first approver task.
+- Validate custom path multi-step approval.
+- Validate custom path rejection.
+- Validate custom path return for correction.
+- Validate final custom approval -> active loan.
+- Validate disabled or empty custom path blocks submission.
 
 ### Controller Tests
 
@@ -1443,6 +1637,8 @@ Tests:
 - Create loan number service.
 - Create product service.
 - Create repayment calculation service.
+- Add `ApprovalModuleType.LOAN`.
+- Extend custom approval route resolution to support loan contexts.
 
 ### Phase 2: Employee Application
 
@@ -1452,16 +1648,21 @@ Tests:
 - Implement draft, edit, delete draft, submit, cancel, resubmit.
 - Implement repayment preview.
 - Implement attachments.
+- Snapshot loan product approval route when submitting.
 
-### Phase 3: Role-Based Approval Workflow
+### Phase 3: Loan Approval Workflow
 
 - Create BPMN process.
 - Create workflow delegates.
+- Create approval route service.
 - Create approval service.
 - Create HR/Finance task APIs.
+- Create employee custom approval task APIs.
 - Implement HR approve/reject/return.
 - Implement Finance approve/reject/return.
+- Implement custom approver approve/reject/return.
 - Implement automatic activation after Finance approval.
+- Implement automatic activation after final custom approval.
 
 ### Phase 4: HR And Finance Pages
 
@@ -1469,6 +1670,9 @@ Tests:
 - Create Finance page and APIs.
 - Add layout links.
 - Add dashboard, approval queues, detail pages, exposure warnings.
+- Add loan product approval route controls and custom path dropdown.
+- Add approval route badges and step timelines.
+- Add custom approval task surface for assigned approvers.
 
 ### Phase 5: Payroll Integration
 
@@ -1496,6 +1700,7 @@ Tests:
 ```text
 loan/entity/LoanProduct.java
 loan/entity/EmployeeLoanApplication.java
+loan/entity/EmployeeLoanApprovalStep.java
 loan/entity/EmployeeLoanAccount.java
 loan/entity/LoanRepaymentSchedule.java
 loan/entity/LoanRepaymentTransaction.java
@@ -1509,6 +1714,8 @@ loan/enums/LoanApplicationStatus.java
 loan/enums/LoanAccountStatus.java
 loan/enums/LoanRepaymentStatus.java
 loan/enums/LoanApprovalDecision.java
+loan/enums/LoanApprovalRouteType.java
+loan/enums/LoanApprovalStage.java
 loan/enums/LoanActivityType.java
 loan/enums/LoanAttachmentType.java
 loan/enums/LoanRepaymentTransactionType.java
@@ -1521,9 +1728,11 @@ loan/dto/LoanApplicationResponse.java
 loan/dto/LoanApplicationSummaryResponse.java
 loan/dto/LoanApplicationDetailResponse.java
 loan/dto/LoanApplicationEditResponse.java
+loan/dto/LoanApprovalStepResponse.java
 loan/dto/LoanApprovalActionCommand.java
 loan/dto/LoanApprovalTaskResponse.java
 loan/dto/LoanApprovalContextResponse.java
+loan/dto/LoanApprovalRouteResponse.java
 loan/dto/LoanRepaymentPreviewRequest.java
 loan/dto/LoanRepaymentPreviewResponse.java
 loan/dto/LoanRepaymentScheduleLineResponse.java
@@ -1536,6 +1745,7 @@ loan/dto/LoanMissedDeductionResponse.java
 
 loan/repository/LoanProductRepository.java
 loan/repository/EmployeeLoanApplicationRepository.java
+loan/repository/EmployeeLoanApprovalStepRepository.java
 loan/repository/EmployeeLoanAccountRepository.java
 loan/repository/LoanRepaymentScheduleRepository.java
 loan/repository/LoanRepaymentTransactionRepository.java
@@ -1546,6 +1756,7 @@ loan/repository/LoanNumberCounterRepository.java
 loan/service/LoanProductService.java
 loan/service/EmployeeLoanApplicationService.java
 loan/service/LoanApprovalService.java
+loan/service/LoanApprovalRouteService.java
 loan/service/LoanRepaymentCalculationService.java
 loan/service/EmployeeLoanAccountService.java
 loan/service/LoanPayrollDeductionService.java
@@ -1558,6 +1769,7 @@ loan/service/LoanEmployeeContextService.java
 loan/service/impl/LoanProductServiceImpl.java
 loan/service/impl/EmployeeLoanApplicationServiceImpl.java
 loan/service/impl/LoanApprovalServiceImpl.java
+loan/service/impl/LoanApprovalRouteServiceImpl.java
 loan/service/impl/LoanRepaymentCalculationServiceImpl.java
 loan/service/impl/EmployeeLoanAccountServiceImpl.java
 loan/service/impl/LoanPayrollDeductionServiceImpl.java
@@ -1578,6 +1790,7 @@ loan/controller/FinanceLoanController.java
 loan/workflow/delegate/InitializeLoanApprovalDelegate.java
 loan/workflow/delegate/ProcessHrLoanDecisionDelegate.java
 loan/workflow/delegate/ProcessFinanceLoanDecisionDelegate.java
+loan/workflow/delegate/ProcessCustomLoanDecisionDelegate.java
 loan/workflow/delegate/ActivateApprovedLoanDelegate.java
 loan/workflow/delegate/FinalizeLoanRejectionDelegate.java
 loan/workflow/delegate/ReturnLoanForCorrectionDelegate.java
@@ -1612,6 +1825,8 @@ src/main/resources/static/js/finance-loans.js
 
 ```text
 src/main/java/com/justjava/humanresource/core/config/AuthenticationManager.java
+src/main/java/com/justjava/humanresource/approval/enums/ApprovalModuleType.java
+src/main/java/com/justjava/humanresource/approval/service/impl/CustomApprovalRouteResolver.java
 src/main/java/com/justjava/humanresource/workflow/service/FlowableTaskService.java
 src/main/java/com/justjava/humanresource/payroll/workflow/impl/PayrollOrchestrationServiceImpl.java
 src/main/java/com/justjava/humanresource/payroll/repositories/PayrollLineItemRepository.java
@@ -1631,7 +1846,8 @@ src/main/resources/application.yml
 - Do not change existing `RequestType` values.
 - Do not modify `genericRequestApprovalProcess.bpmn`.
 - Do not modify current request delegates.
-- Do not change custom approval path behavior.
+- Do not change existing request custom approval path behavior.
+- Reuse custom approval paths for loans through `ApprovalModuleType.LOAN`; do not make loans another `RequestType`.
 - Do not alter existing payroll statutory deduction logic.
 - Do not replace employee/pay group deduction resolution.
 - Do not remove or rename existing routes/templates.
@@ -1641,18 +1857,24 @@ src/main/resources/application.yml
 ## Final Expected User Flow
 
 1. HR creates active loan products from `/loans`.
+   - HR selects either `Role-based HR then Finance` or `Custom approval path`.
+   - If custom path is selected, HR chooses an enabled custom approval path.
 2. Employee opens `/employee/loans`.
 3. Employee creates a draft loan application.
 4. Employee previews repayment schedule.
 5. Employee submits the application.
-6. Application enters HR role-based approval.
-7. Any Human Resource user can approve/reject/return.
-8. If HR approves, application enters Finance role-based approval.
-9. Any Finance Officer can approve/reject/return.
-10. If Finance approves, the loan activates automatically.
-11. Repayment schedule locks.
-12. Payroll automatically deducts repayments from the selected start month.
-13. Repayment transactions update outstanding balance.
-14. Missed deductions are flagged for HR/Finance review.
-15. Loan completes automatically when fully repaid.
+6. System snapshots the loan product approval route.
+7. If the route is role-based, application enters HR approval.
+8. Any Human Resource user can approve/reject/return the HR task.
+9. If HR approves, application enters Finance approval.
+10. Any Finance Officer can approve/reject/return the Finance task.
+11. If Finance approves, the loan activates automatically.
+12. If the route is custom, the application follows the selected custom approval path employee by employee.
+13. Each assigned custom approver can approve/reject/return from their assigned loan approval task.
+14. If the final custom approver approves, the loan activates automatically.
+15. Repayment schedule locks.
+16. Payroll automatically deducts repayments from the selected start month.
+17. Repayment transactions update outstanding balance.
+18. Missed deductions are flagged for HR/Finance review.
+19. Loan completes automatically when fully repaid.
 
