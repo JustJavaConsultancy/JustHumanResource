@@ -1,6 +1,7 @@
 package com.justjava.humanresource.loan.dto;
 
 import com.justjava.humanresource.loan.enums.LoanApprovalRouteType;
+import com.justjava.humanresource.loan.enums.LoanDisbursementMethod;
 import com.justjava.humanresource.loan.enums.LoanInterestType;
 import com.justjava.humanresource.loan.enums.LoanRepaymentFrequency;
 import jakarta.validation.constraints.*;
@@ -14,6 +15,7 @@ import java.math.BigDecimal;
  * Cross-field rules (maximumAmount >= minimumAmount, interestRate required for
  * INTEREST_BEARING, customApprovalPathId required and valid for CUSTOM route, and
  * the "used product" edit restrictions) are enforced in LoanProductServiceImpl.
+ * The disbursement method is required (no default) and is part of the locked set once a product is used.
  * Active/inactive state is changed only through the deactivate/reactivate endpoints.
  */
 @Data
@@ -62,6 +64,10 @@ public class LoanProductCommand {
 
     /** Required when approvalRouteType is CUSTOM; must be null/ignored for ROLE_BASED. */
     private Long customApprovalPathId;
+
+    /** Required. How the approved principal is paid out; locked once the product is used. */
+    @NotNull
+    private LoanDisbursementMethod disbursementMethod;
 
     private boolean requiresAttachment;
 }

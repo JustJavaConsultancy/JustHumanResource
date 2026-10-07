@@ -73,7 +73,8 @@ const EmployeeLoans = (function () {
         REJECTED: 'Rejected',
         CANCELLED: 'Cancelled',
         COMPLETED: 'Completed',
-        CLOSED: 'Closed'
+        CLOSED: 'Closed',
+        PENDING_DISBURSEMENT: 'Pending disbursement'
     };
 
     function statusBadge(status) {
@@ -84,7 +85,8 @@ const EmployeeLoans = (function () {
             PENDING_HR_APPROVAL: 'loan-badge-warning', PENDING_CUSTOM_APPROVAL: 'loan-badge-warning',
             PENDING_FINANCE_APPROVAL: 'loan-badge-warning',
             SUBMITTED: 'loan-badge-info', HR_APPROVED: 'loan-badge-info',
-            FINANCE_APPROVED: 'loan-badge-info', CUSTOM_APPROVED: 'loan-badge-info'
+            FINANCE_APPROVED: 'loan-badge-info', CUSTOM_APPROVED: 'loan-badge-info',
+            PENDING_DISBURSEMENT: 'loan-badge-purple'
         }[status] || 'loan-badge-neutral';
         return `<span class="loan-badge ${cls}">${esc(STATUS_LABELS[status] || String(status || '').replaceAll('_', ' '))}</span>`;
     }
@@ -94,6 +96,78 @@ const EmployeeLoans = (function () {
         return `<span class="loan-badge ${custom ? 'loan-badge-purple' : 'loan-badge-blue'}" title="${esc(label || '')}">`
             + `<span class="material-icons-round" style="font-size:13px;margin-right:4px">${custom ? 'alt_route' : 'account_tree'}</span>`
             + `${custom ? 'Custom path' : 'Role-based'}</span>`;
+    }
+
+    // ------------------------------------------------------------------ disbursement helpers (Step 6)
+
+    const OUTSIDE_PAYROLL = 'OUTSIDE_PAYROLL';
+    const BANK_INCOMPLETE_MESSAGE = 'Complete bank details are required for this loan because it is paid outside payroll. '
+        + 'Update your bank details from your profile page, then return here to submit.';
+    const BANK_UNVERIFIED_MESSAGE = 'We could not verify your bank details. Use "Check again" in the bank details section, then try again.';
+
+    function isOutside(method) {
+        return method === OUTSIDE_PAYROLL;
+    }
+
+    function methodText(method, label) {
+        return label || (isOutside(method) ? 'Pay outside payroll system' : 'Pay inside payroll period');
+    }
+
+    function disbursementBadge(method) {
+        const outside = isOutside(method);
+        return `<span class="loan-badge ${outside ? 'loan-badge-purple' : 'loan-badge-blue'}">`
+            + `<span class="material-icons-round" style="font-size:13px;margin-right:4px">${outside ? 'account_balance' : 'payments'}</span>`
+            + `${outside ? 'Paid outside payroll' : 'Paid inside payroll'}</span>`;
+    }
+
+    function monthKey(value) {
+        return value ? String(value).substring(0, 7) : '';
+    }
+
+    /** True when the system moved the first deduction away from the month the employee picked. */
+    function repaymentAdjusted(a) {
+        return !!(a && a.effectiveRepaymentStartMonth && a.repaymentStartMonth
+            && monthKey(a.effectiveRepaymentStartMonth) !== monthKey(a.repaymentStartMonth));
+    }
+
+    /**
+     * What the employee should read about payment, from the application status and method.
+     * Returns null when disbursement status is not meaningful (draft, rejected, cancelled).
+     */
+    function disbursementState(a, method) {
+        const outside = isOutside(method);
+        switch (a.status) {
+            case 'PENDING_DISBURSEMENT':
+                return {label: 'Pending Finance payment', cls: 'loan-badge-purple'};
+            case 'ACTIVE':
+            case 'COMPLETED':
+                return outside ? {label: 'Paid / active', cls: 'loan-badge-success'}
+                    : {label: a.status === 'ACTIVE' ? 'Payroll disbursement scheduled' : 'Disbursed through payroll',
+                        cls: a.status === 'ACTIVE' ? 'loan-badge-blue' : 'loan-badge-success'};
+            case 'SUBMITTED': case 'PENDING_HR_APPROVAL': case 'PENDING_CUSTOM_APPROVAL':
+            case 'PENDING_FINANCE_APPROVAL': case 'HR_APPROVED':
+                return {label: 'Pending approval', cls: 'loan-badge-warning'};
+            case 'FINANCE_APPROVED': case 'CUSTOM_APPROVED':
+                return {label: 'Processing', cls: 'loan-badge-info'};
+            default:
+                return null;
+        }
+    }
+
+    function bankValue(value) {
+        return value ? esc(value) : '<span class="text-gray-400">Not set</span>';
+    }
+
+    /** Bank details to show for an application: the response block, or the snapshot fields as a fallback. */
+    function bankOf(a) {
+        if (a.bankDetails) return a.bankDetails;
+        if (a.bankNameSnapshot || a.accountNameSnapshot || a.accountNumberSnapshot) {
+            return {
+                bankName: a.bankNameSnapshot, accountName: a.accountNameSnapshot,
+                accountNumber: a.accountNumberSnapshot, complete: true, missingFields: []
+            };
+        }
+        return null;
     }
 
     function repaymentBadge(status) {
@@ -168,11 +242,21 @@ const EmployeeLoans = (function () {
         return result;
     }
 
-    /** Loads the edit view of an application and reports whether a required document is still missing. */
-    async function missingRequiredAttachment(id) {
+    /**
+     * Loads the edit view of an application and reports what (if anything) still blocks submission:
+     * incomplete bank details for an outside-payroll loan, or a missing required document.
+     * The server enforces both again on submit; this only gives the employee an early, clear reason.
+     */
+    async function submissionBlocker(id) {
         const e = await json(`${API}/${id}/edit`);
+        if (e.bankDetailsRequired === true && e.bankDetailsComplete !== true) {
+            return {type: 'bank', message: BANK_INCOMPLETE_MESSAGE};
+        }
         const required = e.attachmentRequired === true || !!(e.loanProduct && e.loanProduct.requiresAttachment);
-        return required && !(e.attachments || []).length;
+        if (required && !(e.attachments || []).length) {
+            return {type: 'attachment', message: ATTACHMENT_REQUIRED_MESSAGE};
+        }
+        return null;
     }
 
     // ------------------------------------------------------------------ shared shell (toast, confirm, comment modal)
@@ -436,7 +520,9 @@ const EmployeeLoans = (function () {
             dashboard: null, products: [], applications: [], tasks: [],
             tab: 'applications', search: '', status: '',
             // application form
-            editingId: null, editingProduct: null, previewTimer: null, previewSeq: 0
+            editingId: null, editingProduct: null, previewTimer: null, previewSeq: 0,
+            // employee's current bank details (read-only), needed for outside-payroll products
+            bank: null, bankLoading: false, bankError: null, bankSeq: 0
         };
 
         // ---------- loading
@@ -518,6 +604,7 @@ const EmployeeLoans = (function () {
                     ${routeBadge(p.approvalRouteType, p.approvalRouteLabel)}
                 </div>
                 <p class="mt-1 line-clamp-2 text-sm text-gray-500">${esc(p.description || 'No description provided.')}</p>
+                <div class="mt-2">${disbursementBadge(p.disbursementMethod)}</div>
                 <dl class="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                     <div><dt class="text-xs text-gray-500">Amount range</dt><dd class="font-semibold">${money(p.minimumAmount)} – ${money(p.maximumAmount)}</dd></div>
                     <div><dt class="text-xs text-gray-500">Max tenor</dt><dd class="font-semibold">${p.maximumTenorMonths} months</dd></div>
@@ -570,9 +657,9 @@ const EmployeeLoans = (function () {
             $('applicationRows').innerHTML = rows.length ? rows.map(a => `<tr class="loan-row">
                 <td class="px-4 py-3 font-semibold"><a class="text-primary-600 hover:underline" href="${PAGE}/${a.id}">${esc(a.applicationNumber)}</a>
                     <div class="text-xs font-normal text-gray-500">${date(a.submittedAt || a.createdAt)}</div></td>
-                <td class="px-4 py-3">${esc(a.loanProductName)}</td>
+                <td class="px-4 py-3">${esc(a.loanProductName)}${a.disbursementMethod ? `<div class="mt-1">${disbursementBadge(a.disbursementMethod)}</div>` : ''}</td>
                 <td class="px-4 py-3 text-right">${money(a.requestedAmount)}</td>
-                <td class="px-4 py-3 text-right">${money(a.repaymentAmount)}<div class="text-xs text-gray-500">${a.tenorMonths || '-'} mo from ${monthLabel(a.repaymentStartMonth)}</div></td>
+                <td class="px-4 py-3 text-right">${money(a.repaymentAmount)}<div class="text-xs text-gray-500">${a.tenorMonths || '-'} mo from ${monthLabel(a.effectiveRepaymentStartMonth || a.repaymentStartMonth)}</div></td>
                 <td class="px-4 py-3">${routeBadge(a.approvalRouteType, a.approvalRouteLabel)}</td>
                 <td class="px-4 py-3">${statusBadge(a.status)}${a.currentApprovalOwner ? `<div class="mt-1 text-xs text-gray-500">With ${esc(a.currentApprovalOwner)}</div>` : ''}</td>
                 <td class="px-4 py-3">${rowActions(a)}</td></tr>`).join('')
@@ -597,10 +684,11 @@ const EmployeeLoans = (function () {
 
         async function submitApplication(id, resubmit) {
             try {
-                if (await missingRequiredAttachment(id)) {
-                    // Take the employee straight to the upload area with the reason spelled out.
+                const blocker = await submissionBlocker(id);
+                if (blocker) {
+                    // Take the employee straight to the form (upload area / bank panel) with the reason spelled out.
                     await openEdit(id);
-                    formError(ATTACHMENT_REQUIRED_MESSAGE);
+                    formError(blocker.message);
                     return;
                 }
             } catch (e) { toastError(e); return; }
@@ -666,6 +754,10 @@ const EmployeeLoans = (function () {
         function resetForm(productId) {
             state.editingId = null;
             state.editingProduct = null;
+            state.bank = null;
+            state.bankError = null;
+            state.bankLoading = false;
+            state.bankSeq++;
             F('loanForm').reset();
             F('loanFormTitle').textContent = 'New loan application';
             F('loanFormNumber').textContent = '';
@@ -693,16 +785,18 @@ const EmployeeLoans = (function () {
             const hint = F('productHint');
             if (!p) {
                 hint.classList.add('hidden');
+                renderBankPanel();
                 return;
             }
             hint.classList.remove('hidden');
-            hint.innerHTML = `<div class="flex flex-wrap items-center gap-2">${routeBadge(p.approvalRouteType, p.approvalRouteLabel)}
+            hint.innerHTML = `<div class="flex flex-wrap items-center gap-2">${routeBadge(p.approvalRouteType, p.approvalRouteLabel)} ${disbursementBadge(p.disbursementMethod)}
                 <span class="text-xs text-gray-500">${esc(p.approvalRouteLabel || '')}</span></div>
                 <ul class="mt-2 grid grid-cols-1 gap-1 text-sm sm:grid-cols-2">
                     <li>Amount: <b>${money(p.minimumAmount)}</b> to <b>${money(p.maximumAmount)}</b></li>
                     <li>Max tenor: <b>${p.maximumTenorMonths} months</b></li>
                     <li>Minimum monthly repayment: <b>${money(p.minimumRepaymentAmount)}</b></li>
                     <li>Interest: <b>${p.interestType === 'INTEREST_BEARING' ? esc(p.interestRate) + '% p.a.' : 'None (interest-free)'}</b></li>
+                    <li>Payment: <b>${esc(methodText(p.disbursementMethod, p.disbursementMethodLabel))}</b></li>
                 </ul>
                 ${p.requiresAttachment ? '<p class="mt-2 flex items-center gap-1 text-xs font-semibold text-amber-700"><span class="material-icons-round text-sm">attach_file</span>A supporting document is required before you can submit.</p>' : ''}`;
             F('fAmount').min = p.minimumAmount ?? '';
@@ -710,6 +804,8 @@ const EmployeeLoans = (function () {
             F('fTenor').max = p.maximumTenorMonths ?? '';
             F('fRepayment').min = p.minimumRepaymentAmount ?? '';
             updateAttachmentNotice();
+            renderBankPanel();
+            if (isOutside(p.disbursementMethod) && !state.bank && !state.bankLoading && !state.bankError) loadBank(false);
             schedulePreview();
         }
 
@@ -732,6 +828,89 @@ const EmployeeLoans = (function () {
                 <span>${has ? 'Supporting document attached. You can submit now.'
                     : 'This loan requires a supporting document. Save the draft, upload at least one document below, then submit.'}</span>`;
             locked.textContent = 'A supporting document is required. Save the draft first, then upload it here before you submit.';
+        }
+
+        // ---------- bank details (read-only; maintained on the profile page, never edited here)
+
+        async function loadBank(force) {
+            if (state.bankLoading) return;
+            if (state.bank && !force) return;
+            const seq = ++state.bankSeq;
+            state.bankLoading = true;
+            state.bankError = null;
+            renderBankPanel();
+            try {
+                const bank = await json(`${API}/bank-details`);
+                if (seq !== state.bankSeq) return;       // the form was reset meanwhile
+                state.bank = bank;
+            } catch (e) {
+                if (seq !== state.bankSeq) return;
+                state.bank = null;
+                state.bankError = e.message;
+            }
+            state.bankLoading = false;
+            renderBankPanel();
+        }
+
+        /** Why submission is blocked by bank details right now, or null when it is fine. */
+        function bankBlocker() {
+            const p = currentProduct();
+            if (!p || !isOutside(p.disbursementMethod)) return null;
+            if (state.bankLoading) return 'Checking your bank details. Please wait a moment and try again.';
+            if (state.bankError || !state.bank) return BANK_UNVERIFIED_MESSAGE;
+            return state.bank.complete === true ? null : BANK_INCOMPLETE_MESSAGE;
+        }
+
+        function updateSubmitState() {
+            const btn = document.querySelector('[data-action="submit-form"]');
+            if (!btn) return;
+            const reason = bankBlocker();
+            btn.disabled = !!reason;
+            btn.classList.toggle('opacity-50', !!reason);
+            btn.classList.toggle('cursor-not-allowed', !!reason);
+            btn.title = reason || '';
+        }
+
+        function renderBankPanel() {
+            const box = F('bankPanel');
+            const p = currentProduct();
+            if (!p || !isOutside(p.disbursementMethod)) {
+                box.classList.add('hidden');
+                box.innerHTML = '';
+                updateSubmitState();
+                return;
+            }
+            box.classList.remove('hidden');
+            const checkAgain = '<button type="button" class="loan-mini-btn mt-2" data-action="refresh-bank">'
+                + '<span class="material-icons-round mr-1 text-sm">refresh</span>Check again</button>';
+            let body;
+            if (state.bankLoading) {
+                body = '<p class="text-sm text-gray-500">Checking your bank details...</p>';
+            } else if (state.bankError) {
+                body = `<div class="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">${esc(state.bankError)}${checkAgain}</div>`;
+            } else if (state.bank) {
+                const b = state.bank;
+                const missing = (b.missingFields || []).length
+                    ? `<p class="mt-1 text-xs">Missing or invalid: ${esc(b.missingFields.join(', '))}</p>` : '';
+                body = `<div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                        <div class="loan-mini-stat"><p>Bank name</p><b>${bankValue(b.bankName)}</b></div>
+                        <div class="loan-mini-stat"><p>Account name</p><b>${bankValue(b.accountName)}</b></div>
+                        <div class="loan-mini-stat"><p>Account number</p><b>${bankValue(b.accountNumber)}</b></div>
+                    </div>
+                    ${b.complete === true
+                        ? `<p class="mt-3 flex items-start gap-2 rounded-lg border border-green-200 bg-green-50 p-3 text-sm font-semibold text-green-800">
+                               <span class="material-icons-round text-base">check_circle</span>
+                               <span>Your bank details are complete. Finance will pay this loan to this account.</span></p>`
+                        : `<div class="mt-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm font-semibold text-amber-900">
+                               <div class="flex items-start gap-2"><span class="material-icons-round text-base">warning</span>
+                               <span>${esc(BANK_INCOMPLETE_MESSAGE)}</span></div>${missing}${checkAgain}</div>`}
+                    <p class="mt-2 text-xs text-gray-500">These details are read-only here. They are copied onto your application when you submit it.</p>`;
+            } else {
+                body = '<p class="text-sm text-gray-500">Bank details have not been loaded yet.</p>';
+            }
+            box.innerHTML = `<h4 class="mb-2 flex items-center gap-2 text-sm font-semibold">
+                    <span class="material-icons-round text-base text-primary-600">account_balance</span>Payout bank details</h4>${body}`;
+            updateSubmitState();
         }
 
         function readForm() {
@@ -820,6 +999,8 @@ const EmployeeLoans = (function () {
                 resetForm();
                 state.editingId = e.id;
                 state.editingProduct = e.loanProduct;
+                // the edit response already carries the employee's current bank details for outside-payroll products
+                state.bank = e.bankDetails || null;
                 F('loanFormTitle').textContent = e.status === 'RETURNED_FOR_CORRECTION' ? 'Revise application' : 'Edit draft';
                 F('loanFormNumber').textContent = e.applicationNumber;
                 // the product list only holds ACTIVE products; keep a deactivated product selectable while editing
@@ -875,6 +1056,12 @@ const EmployeeLoans = (function () {
         }
 
         async function submitClicked() {
+            const bankIssue = bankBlocker();
+            if (bankIssue) {
+                formError(bankIssue);
+                F('bankPanel').scrollIntoView({behavior: 'smooth', block: 'center'});
+                return;
+            }
             const saved = await save();
             if (!saved) return;
             try {
@@ -947,6 +1134,7 @@ const EmployeeLoans = (function () {
                 case 'save-draft': return saveDraftClicked();
                 case 'submit-form': return submitClicked();
                 case 'refresh': return loadAll();
+                case 'refresh-bank': return loadBank(true);
                 case 'use-minimum':
                     F('fRepayment').value = el.dataset.value;
                     return runPreview();
@@ -1019,13 +1207,16 @@ const EmployeeLoans = (function () {
             const route = detail.approvalRoute;
             $('loanNumber').textContent = a.applicationNumber;
             $('loanMeta').innerHTML = `${esc(a.loanProductName)}${viaApprover ? ' · ' + esc(a.employeeName) : ''}`;
-            $('loanBadges').innerHTML = statusBadge(a.status) + ' ' + routeBadge(a.approvalRouteType, a.approvalRouteLabel);
+            const method = a.disbursementMethod || (detail.loanProduct && detail.loanProduct.disbursementMethod) || null;
+            $('loanBadges').innerHTML = statusBadge(a.status) + ' ' + routeBadge(a.approvalRouteType, a.approvalRouteLabel)
+                + (method ? ' ' + disbursementBadge(method) : '');
             document.title = a.applicationNumber + ' | Loan Detail';
 
             renderActions();
             renderReturnBanner();
             renderApproverPanel();
             renderTerms();
+            renderDisbursement();
             renderContext();
             renderSchedule();
             renderHistory();
@@ -1110,7 +1301,7 @@ const EmployeeLoans = (function () {
                 kv('Requested amount', money(a.requestedAmount)),
                 kv('Monthly repayment', money(a.repaymentAmount)),
                 kv('Tenor', a.tenorMonths ? a.tenorMonths + ' months' : null),
-                kv('First deduction', monthLabel(a.repaymentStartMonth)),
+                kv(repaymentAdjusted(a) ? 'Selected first deduction' : 'First deduction', monthLabel(a.repaymentStartMonth)),
                 kv('Interest', a.interestType === 'INTEREST_BEARING' ? esc(a.interestRate) + '% p.a.' : 'Interest-free'),
                 kv('Total interest', money(a.totalInterestAmount)),
                 kv('Total repayable', money(a.totalRepayableAmount)),
@@ -1119,6 +1310,72 @@ const EmployeeLoans = (function () {
                 kv('Activated', dateTime(a.activatedAt)),
                 p && p.requiresAttachment ? kv('Supporting document', 'Required') : ''
             ].join('');
+        }
+
+        function renderDisbursement() {
+            const a = detail.application;
+            const p = detail.loanProduct;
+            const card = $('disbursementCard');
+            const method = a.disbursementMethod || (p && p.disbursementMethod) || null;
+            card.classList.toggle('hidden', !method);
+            if (!method) return;
+
+            const outside = isOutside(method);
+            const label = methodText(method, a.disbursementMethodLabel || (p && p.disbursementMethodLabel));
+            const pending = a.status === 'PENDING_DISBURSEMENT';
+            const adjusted = repaymentAdjusted(a);
+            const parts = [];
+
+            if (pending) {
+                parts.push(`<div class="mb-3 flex items-start gap-3 rounded-lg border border-purple-200 bg-purple-50 p-3 text-sm text-purple-900 dark:border-purple-800 dark:bg-purple-950 dark:text-purple-100">
+                    <span class="material-icons-round text-purple-600">hourglass_top</span>
+                    <div><p class="font-semibold">Pending disbursement</p>
+                    <p class="mt-1">Your loan is fully approved and is waiting for Finance to confirm payment. It becomes active, and repayments start, only after the payment is confirmed.</p></div></div>`);
+            }
+
+            const d = detail.disbursement || null;
+            const state = disbursementState(a, method);
+            const rows = [kv('Disbursement method', esc(label))];
+            if (state) rows.push(kv('Disbursement status', `<span class="loan-badge ${state.cls}">${esc(state.label)}</span>`));
+            if (outside) {
+                // paid date: the disbursement record, else the "confirmed" entry in the activity history
+                const confirmed = (detail.activities || []).find(x => x.activityType === 'EXTERNAL_DISBURSEMENT_CONFIRMED');
+                const paidAt = a.status === 'PENDING_DISBURSEMENT' ? null : ((d && d.paidAt) || (confirmed && confirmed.createdAt) || null);
+                if (paidAt) rows.push(kv('Paid on', dateTime(paidAt)));
+                if (d && d.paymentReference) rows.push(kv('Payment reference', esc(d.paymentReference)));
+            } else if (d && d.disbursementMonth) {
+                rows.push(kv('Payroll disbursement month', monthLabel(d.disbursementMonth)));
+            }
+            rows.push(kv('Selected first deduction', monthLabel(a.repaymentStartMonth)));
+            if (adjusted) rows.push(kv('Effective first deduction', `<b>${monthLabel(a.effectiveRepaymentStartMonth)}</b>`));
+            parts.push(`<dl>${rows.join('')}</dl>`);
+            if (adjusted) {
+                parts.push(`<p class="mt-2 flex items-start gap-2 rounded-lg bg-gray-50 p-3 text-sm dark:bg-gray-900">
+                    <span class="material-icons-round text-base text-primary-600">info</span>
+                    <span>Repayment cannot start in the same month the loan is paid out, so the first deduction was moved to the month after disbursement.</span></p>`);
+            }
+            if (!outside) {
+                parts.push('<p class="mt-2 text-xs text-gray-500">The approved amount is paid to you through your payroll.</p>');
+            }
+
+            // bank details: the employee's own view only, never shown in the custom-approver view
+            if (outside && !viaApprover) {
+                const bank = bankOf(a);
+                const needsAttention = a.bankDetailsRequired === true && a.bankDetailsComplete === false;
+                let bankHtml;
+                if (bank) {
+                    bankHtml = `<dl>${kv('Bank name', bankValue(bank.bankName))}${kv('Account name', bankValue(bank.accountName))}${kv('Account number', bankValue(bank.accountNumber))}</dl>`;
+                } else {
+                    bankHtml = '<p class="text-sm text-gray-500">Your bank details are copied onto the application when you submit it.</p>';
+                }
+                if (needsAttention && detail.canSubmit !== false) {
+                    bankHtml += `<p class="mt-3 flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm font-semibold text-amber-900">
+                        <span class="material-icons-round text-base">warning</span><span>${esc(BANK_INCOMPLETE_MESSAGE)}</span></p>`;
+                }
+                parts.push(`<h3 class="mt-4 flex items-center gap-2 text-sm font-semibold"><span class="material-icons-round text-base text-primary-600">account_balance</span>${detail.canEdit || detail.canSubmit ? 'Bank details for payment' : 'Bank details used for payment'}</h3>
+                    <div class="mt-1">${bankHtml}</div>`);
+            }
+            $('disbursement').innerHTML = parts.join('');
         }
 
         function renderContext() {
@@ -1143,10 +1400,13 @@ const EmployeeLoans = (function () {
         }
 
         function renderSchedule() {
-            $('scheduleBadge').innerHTML = detail.scheduleLocked
+            const awaitingPayment = detail.application.status === 'PENDING_DISBURSEMENT';
+            const locked = detail.scheduleLocked && !awaitingPayment;
+            $('scheduleBadge').innerHTML = locked
                 ? '<span class="loan-badge loan-badge-success">Final schedule</span>'
-                : '<span class="loan-badge loan-badge-neutral">Preview – not final until approved</span>';
-            $('schedule').innerHTML = scheduleTable(detail.repaymentSchedule, detail.scheduleLocked);
+                : (awaitingPayment ? '<span class="loan-badge loan-badge-neutral">Preview – final once Finance confirms payment</span>'
+                    : '<span class="loan-badge loan-badge-neutral">Preview – not final until approved</span>');
+            $('schedule').innerHTML = scheduleTable(detail.repaymentSchedule, locked);
         }
 
         function renderHistory() {
@@ -1244,6 +1504,11 @@ const EmployeeLoans = (function () {
             if (attachmentMissing()) {
                 toast(ATTACHMENT_REQUIRED_MESSAGE, 'error');
                 $('attachmentNotice').scrollIntoView({behavior: 'smooth', block: 'center'});
+                return;
+            }
+            if (detail.application.bankDetailsRequired === true && detail.application.bankDetailsComplete === false) {
+                toast(BANK_INCOMPLETE_MESSAGE, 'error');
+                $('disbursementCard').scrollIntoView({behavior: 'smooth', block: 'center'});
                 return;
             }
             const ok = await confirmDialog({

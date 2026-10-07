@@ -1,6 +1,7 @@
 package com.justjava.humanresource.loan.dto;
 
 import com.justjava.humanresource.loan.enums.LoanApplicationStatus;
+import com.justjava.humanresource.loan.enums.LoanDisbursementMethod;
 import lombok.Builder;
 import lombok.Value;
 
@@ -31,6 +32,15 @@ public class LoanApplicationEditResponse {
     /** Approver's comment when status is RETURNED_FOR_CORRECTION. */
     String latestReturnComment;
     String returnedByName;
+
+    LoanDisbursementMethod disbursementMethod;
+    String disbursementMethodLabel;
+    /** True when the method is OUTSIDE_PAYROLL: submission is blocked until bank details are complete. */
+    boolean bankDetailsRequired;
+    /** True when not required, otherwise true only if the employee's current bank details are complete. */
+    boolean bankDetailsComplete;
+    /** The employee's current bank details (read-only in the UI); null unless OUTSIDE_PAYROLL. */
+    LoanBankDetailResponse bankDetails;
 
     boolean attachmentRequired;
     @Builder.Default List<LoanAttachmentResponse> attachments = new ArrayList<>();

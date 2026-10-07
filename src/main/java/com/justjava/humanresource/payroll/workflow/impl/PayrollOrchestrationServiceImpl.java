@@ -12,6 +12,7 @@ import com.justjava.humanresource.hr.repository.EmployeeRepository;
 import com.justjava.humanresource.kpi.entity.KpiMeasurement;
 import com.justjava.humanresource.kpi.service.KpiMeasurementService;
 import com.justjava.humanresource.loan.service.LoanPayrollDeductionService;
+import com.justjava.humanresource.loan.service.LoanPayrollDisbursementService;
 import com.justjava.humanresource.payroll.calculation.PayGroupResolutionService;
 import com.justjava.humanresource.payroll.calculation.dto.ResolvedPayComponents;
 import com.justjava.humanresource.payroll.entity.*;
@@ -66,6 +67,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
     private final PayrollRunKpiSnapshotService payrollRunKpiSnapshotService;
     private final PayrollAuditService payrollAuditService;
     private final LoanPayrollDeductionService loanPayrollDeductionService;
+    private final LoanPayrollDisbursementService loanPayrollDisbursementService;
 
     /* ============================================================
        INITIALIZE
@@ -438,6 +440,13 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
         } else {
             grossPay = runningGross;
         }
+
+    /* ============================================================
+       LOAN DISBURSEMENT (net-only earning; not gross/taxable/pensionable)
+       ============================================================ */
+
+        nonGrossEarnings = nonGrossEarnings.add(
+                loanPayrollDisbursementService.applyLoanDisbursements(run));
 
     /* ============================================================
        FINAL SET VALUES
@@ -828,6 +837,9 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
         // ----------------------------------------------------
 
         loanPayrollDeductionService.recordPostedDeductions(run);
+
+        // 4c. Map loan disbursement lines on this run back to LoanDisbursement
+        loanPayrollDisbursementService.markPayrollDisbursementsPosted(run);
 
         // ----------------------------------------------------
         // 5. Mark POSTED

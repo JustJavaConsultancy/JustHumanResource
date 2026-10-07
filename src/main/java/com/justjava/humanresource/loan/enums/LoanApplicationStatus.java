@@ -10,6 +10,8 @@ public enum LoanApplicationStatus {
     PENDING_FINANCE_APPROVAL,
     FINANCE_APPROVED,
     CUSTOM_APPROVED,
+    /** Final-approved OUTSIDE_PAYROLL loan awaiting Finance payment confirmation. No loan account yet. */
+    PENDING_DISBURSEMENT,
     ACTIVE,
     REJECTED,
     CANCELLED,

@@ -4,6 +4,7 @@ import com.justjava.humanresource.loan.entity.EmployeeLoanAccount;
 import com.justjava.humanresource.loan.entity.LoanRepaymentTransaction;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -19,6 +20,15 @@ public interface EmployeeLoanAccountService {
      * Schedule maths uses the application's snapshotted terms, never the live product.
      */
     EmployeeLoanAccount activate(Long loanApplicationId);
+
+    /**
+     * Same as {@link #activate(Long)} but the schedule starts at {@code effectiveRepaymentStartMonth}
+     * (normalised to the 1st; cannot be before the employee-selected month). Also accepts applications in
+     * PENDING_DISBURSEMENT, so only the disbursement service should call it. The application keeps the
+     * employee-selected month; the effective month is stored on the application and the account.
+     * Idempotent: an existing account is never changed or duplicated.
+     */
+    EmployeeLoanAccount activate(Long loanApplicationId, LocalDate effectiveRepaymentStartMonth);
 
     /** ACTIVE accounts of an employee, newest first. */
     List<EmployeeLoanAccount> getActiveLoansByEmployee(Long employeeId);

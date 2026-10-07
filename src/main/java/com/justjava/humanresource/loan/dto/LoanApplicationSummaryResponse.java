@@ -2,6 +2,7 @@ package com.justjava.humanresource.loan.dto;
 
 import com.justjava.humanresource.loan.enums.LoanApplicationStatus;
 import com.justjava.humanresource.loan.enums.LoanApprovalRouteType;
+import com.justjava.humanresource.loan.enums.LoanDisbursementMethod;
 import lombok.Builder;
 import lombok.Value;
 
@@ -28,6 +29,12 @@ public class LoanApplicationSummaryResponse {
     BigDecimal repaymentAmount;
     Integer tenorMonths;
     LocalDate repaymentStartMonth;
+    /** First deduction month actually used at activation; null until the loan is activated. */
+    LocalDate effectiveRepaymentStartMonth;
+
+    LoanDisbursementMethod disbursementMethod;
+    String disbursementMethodLabel;
+    boolean bankDetailsRequired;
 
     LoanApprovalRouteType approvalRouteType;
     String approvalRouteLabel;

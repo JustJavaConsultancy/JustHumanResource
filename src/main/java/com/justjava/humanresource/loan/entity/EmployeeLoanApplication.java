@@ -4,6 +4,7 @@ import com.justjava.humanresource.core.entity.BaseEntity;
 import com.justjava.humanresource.hr.entity.Employee;
 import com.justjava.humanresource.loan.enums.LoanApplicationStatus;
 import com.justjava.humanresource.loan.enums.LoanApprovalRouteType;
+import com.justjava.humanresource.loan.enums.LoanDisbursementMethod;
 import com.justjava.humanresource.loan.enums.LoanInterestType;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -60,6 +61,13 @@ public class EmployeeLoanApplication extends BaseEntity {
     @Column(nullable = false)
     private LocalDate repaymentStartMonth;
 
+    /**
+     * First deduction month actually used at activation. Null until activation.
+     * repaymentStartMonth above always remains the employee-selected month.
+     * effective = max(selected, month after actual disbursement month).
+     */
+    private LocalDate effectiveRepaymentStartMonth;
+
     // ----- Product financial snapshots (set on submission) -----
     @Enumerated(EnumType.STRING)
     private LoanInterestType interestTypeSnapshot;
@@ -73,6 +81,18 @@ public class EmployeeLoanApplication extends BaseEntity {
 
     private Long customApprovalPathIdSnapshot;
     private String customApprovalPathNameSnapshot;
+
+    // ----- Disbursement snapshots (set on submission) -----
+    @Enumerated(EnumType.STRING)
+    @Column(length = 30)
+    private LoanDisbursementMethod disbursementMethodSnapshot;
+
+    /** Bank details captured at submission; only populated for OUTSIDE_PAYROLL. */
+    private String bankNameSnapshot;
+    private String accountNameSnapshot;
+
+    @Column(length = 20)
+    private String accountNumberSnapshot;
 
     // ----- Calculated totals -----
     @Column(precision = 15, scale = 2)
@@ -100,6 +120,13 @@ public class EmployeeLoanApplication extends BaseEntity {
     private Long financeApprovedByEmployeeId;
 
     private LocalDateTime customApprovalCompletedAt;
+
+    /** Set when the last approver (Finance or final custom approver) approves. */
+    private LocalDateTime finalApprovedAt;
+    private Long finalApprovedByEmployeeId;
+
+    /** Set when an OUTSIDE_PAYROLL loan enters PENDING_DISBURSEMENT. */
+    private LocalDateTime disbursementPendingAt;
 
     private LocalDateTime rejectedAt;
     private Long rejectedByEmployeeId;

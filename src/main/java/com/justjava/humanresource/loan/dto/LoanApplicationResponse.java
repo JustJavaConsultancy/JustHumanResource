@@ -2,6 +2,7 @@ package com.justjava.humanresource.loan.dto;
 
 import com.justjava.humanresource.loan.enums.LoanApplicationStatus;
 import com.justjava.humanresource.loan.enums.LoanApprovalRouteType;
+import com.justjava.humanresource.loan.enums.LoanDisbursementMethod;
 import com.justjava.humanresource.loan.enums.LoanInterestType;
 import lombok.Builder;
 import lombok.Value;
@@ -33,7 +34,10 @@ public class LoanApplicationResponse {
     BigDecimal requestedAmount;
     BigDecimal repaymentAmount;
     Integer tenorMonths;
+    /** Employee-selected first repayment month. */
     LocalDate repaymentStartMonth;
+    /** First deduction month actually used at activation; null until the loan is activated. */
+    LocalDate effectiveRepaymentStartMonth;
     LoanInterestType interestType;
     BigDecimal interestRate;
     BigDecimal totalInterestAmount;
@@ -45,6 +49,22 @@ public class LoanApplicationResponse {
     String approvalRouteLabel;
     Long customApprovalPathId;
     String customApprovalPathName;
+
+    // Disbursement
+    LoanDisbursementMethod disbursementMethod;
+    String disbursementMethodLabel;
+    /** True when the method is OUTSIDE_PAYROLL, i.e. complete bank details are mandatory. */
+    boolean bankDetailsRequired;
+    /**
+     * True when the bank-details requirement is satisfied: always true when not required,
+     * otherwise true only if the bank details are complete.
+     */
+    boolean bankDetailsComplete;
+    /**
+     * OUTSIDE_PAYROLL only (null otherwise). DRAFT / RETURNED_FOR_CORRECTION show the employee's current
+     * bank details; every later status shows the snapshot taken at submission.
+     */
+    LoanBankDetailResponse bankDetails;
 
     String workflowInstanceId;
 

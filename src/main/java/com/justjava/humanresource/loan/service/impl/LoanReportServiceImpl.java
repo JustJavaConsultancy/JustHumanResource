@@ -15,10 +15,13 @@ import com.justjava.humanresource.loan.entity.LoanRepaymentSchedule;
 import com.justjava.humanresource.loan.enums.LoanAccountStatus;
 import com.justjava.humanresource.loan.enums.LoanApplicationStatus;
 import com.justjava.humanresource.loan.enums.LoanApprovalRouteType;
+import com.justjava.humanresource.loan.enums.LoanDisbursementMethod;
+import com.justjava.humanresource.loan.enums.LoanDisbursementStatus;
 import com.justjava.humanresource.loan.enums.LoanRepaymentStatus;
 import com.justjava.humanresource.loan.repository.EmployeeLoanAccountRepository;
 import com.justjava.humanresource.loan.repository.EmployeeLoanApplicationRepository;
 import com.justjava.humanresource.loan.repository.EmployeeLoanApprovalStepRepository;
+import com.justjava.humanresource.loan.repository.LoanDisbursementRepository;
 import com.justjava.humanresource.loan.repository.LoanProductRepository;
 import com.justjava.humanresource.loan.repository.LoanRepaymentScheduleRepository;
 import com.justjava.humanresource.loan.service.LoanEmployeeContextService;
@@ -53,6 +56,7 @@ public class LoanReportServiceImpl implements LoanReportService {
             LoanApplicationStatus.PENDING_FINANCE_APPROVAL,
             LoanApplicationStatus.FINANCE_APPROVED,
             LoanApplicationStatus.CUSTOM_APPROVED,
+            LoanApplicationStatus.PENDING_DISBURSEMENT,
             LoanApplicationStatus.ACTIVE,
             LoanApplicationStatus.COMPLETED,
             LoanApplicationStatus.CLOSED);
@@ -67,6 +71,7 @@ public class LoanReportServiceImpl implements LoanReportService {
     private final LoanRepaymentScheduleRepository schedules;
     private final LoanProductRepository products;
     private final LoanEmployeeContextService contextService;
+    private final LoanDisbursementRepository disbursements;
 
     // ------------------------------------------------------------------ lists
 
@@ -172,6 +177,8 @@ public class LoanReportServiceImpl implements LoanReportService {
                 .pendingFinanceApprovalCount(byStatus.getOrDefault(LoanApplicationStatus.PENDING_FINANCE_APPROVAL, 0L))
                 .returnedCount(byStatus.getOrDefault(LoanApplicationStatus.RETURNED_FOR_CORRECTION, 0L))
                 .rejectedCount(byStatus.getOrDefault(LoanApplicationStatus.REJECTED, 0L))
+                .pendingDisbursementCount(pendingDisbursementCount())
+                .pendingDisbursementAmount(pendingDisbursementAmount())
                 .activeLoanCount(active.size())
                 .completedLoanCount(all.stream().filter(a -> a.getStatus() == LoanAccountStatus.COMPLETED).count())
                 .totalOutstandingBalance(sumBalance(active))
@@ -227,10 +234,33 @@ public class LoanReportServiceImpl implements LoanReportService {
                 .missedDeductionCount(missed.size())
                 .missedDeductionAmount(missed.stream().map(r -> nz(r.getOutstandingAmount()))
                         .reduce(BigDecimal.ZERO, BigDecimal::add))
+                .pendingDisbursementCount(pendingDisbursementCount())
+                .pendingDisbursementAmount(pendingDisbursementAmount())
+                .paidDisbursementAmountThisMonth(paidDisbursementAmountThisMonth())
                 .applicationsByStatus(countByStatus(apps))
                 .payrollImpact(payrollImpact(active))
                 .topExposures(topExposures(active))
                 .build();
+    }
+
+    // Pending disbursements are approved but not paid, so they have no loan account: they are counted here
+    // and are deliberately left out of "active" figures and the payroll deduction impact below.
+
+    private long pendingDisbursementCount() {
+        return disbursements.countByMethodAndStatus(
+                LoanDisbursementMethod.OUTSIDE_PAYROLL, LoanDisbursementStatus.PENDING_EXTERNAL_PAYMENT);
+    }
+
+    private BigDecimal pendingDisbursementAmount() {
+        return nz(disbursements.sumAmountByMethodAndStatus(
+                LoanDisbursementMethod.OUTSIDE_PAYROLL, LoanDisbursementStatus.PENDING_EXTERNAL_PAYMENT));
+    }
+
+    private BigDecimal paidDisbursementAmountThisMonth() {
+        LocalDate first = LocalDate.now().withDayOfMonth(1);
+        return nz(disbursements.sumAmountPaidBetween(
+                LoanDisbursementMethod.OUTSIDE_PAYROLL, LoanDisbursementStatus.PAID,
+                first.atStartOfDay(), first.plusMonths(1).atStartOfDay()));
     }
 
     private List<FinanceLoanDashboardResponse.PayrollImpact> payrollImpact(List<EmployeeLoanAccount> active) {

@@ -9,6 +9,7 @@ import com.justjava.humanresource.loan.dto.LoanProductResponse;
 import com.justjava.humanresource.loan.dto.LoanProductSummaryResponse;
 import com.justjava.humanresource.loan.entity.LoanProduct;
 import com.justjava.humanresource.loan.enums.LoanApprovalRouteType;
+import com.justjava.humanresource.loan.enums.LoanDisbursementMethod;
 import com.justjava.humanresource.loan.enums.LoanInterestType;
 import com.justjava.humanresource.loan.repository.EmployeeLoanApplicationRepository;
 import com.justjava.humanresource.loan.repository.LoanProductRepository;
@@ -211,6 +212,9 @@ public class LoanProductServiceImpl implements LoanProductService {
         if (cmd.getRepaymentFrequency() == null) {
             errors.add("Repayment frequency is required.");
         }
+        if (cmd.getDisbursementMethod() == null) {
+            errors.add("Disbursement method is required.");
+        }
 
         if (!errors.isEmpty()) {
             throw new IllegalArgumentException(String.join(" ", errors));
@@ -228,6 +232,7 @@ public class LoanProductServiceImpl implements LoanProductService {
         if (p.getRepaymentFrequency() != cmd.getRepaymentFrequency()) changed.add("repayment frequency");
         if (p.getApprovalRouteType() != cmd.getApprovalRouteType()) changed.add("approval route");
         if (!Objects.equals(p.getCustomApprovalPathId(), normalizedPathId(cmd))) changed.add("custom approval path");
+        if (methodOf(p) != cmd.getDisbursementMethod()) changed.add("disbursement method");
 
         if (!changed.isEmpty()) {
             throw new IllegalStateException("This loan product has already been used by loan applications, so these "
@@ -256,6 +261,7 @@ public class LoanProductServiceImpl implements LoanProductService {
         p.setRepaymentFrequency(cmd.getRepaymentFrequency());
         p.setApprovalRouteType(cmd.getApprovalRouteType());
         p.setCustomApprovalPathId(normalizedPathId(cmd));
+        p.setDisbursementMethod(cmd.getDisbursementMethod());
     }
 
     private LoanProductResponse toResponse(LoanProduct p) {
@@ -277,6 +283,8 @@ public class LoanProductServiceImpl implements LoanProductService {
                 .approvalRouteLabel(routeLabel(p.getApprovalRouteType()))
                 .customApprovalPathId(p.getCustomApprovalPathId())
                 .customApprovalPathName(pathName(p.getCustomApprovalPathId()))
+                .disbursementMethod(methodOf(p))
+                .disbursementMethodLabel(methodOf(p).getLabel())
                 .requiresAttachment(p.isRequiresAttachment())
                 .active(p.isActive())
                 .used(used)
@@ -303,6 +311,8 @@ public class LoanProductServiceImpl implements LoanProductService {
                 .interestRate(p.getInterestRate())
                 .approvalRouteType(p.getApprovalRouteType())
                 .approvalRouteLabel(routeLabel(p.getApprovalRouteType()))
+                .disbursementMethod(methodOf(p))
+                .disbursementMethodLabel(methodOf(p).getLabel())
                 .requiresAttachment(p.isRequiresAttachment())
                 .active(p.isActive())
                 .build();
@@ -331,6 +341,11 @@ public class LoanProductServiceImpl implements LoanProductService {
     private String pathName(Long pathId) {
         if (pathId == null) return null;
         return customApprovalPathRepository.findById(pathId).map(CustomApprovalPath::getName).orElse(null);
+    }
+
+    /** Legacy rows with a null method behave as PAYROLL_PERIOD. */
+    private static LoanDisbursementMethod methodOf(LoanProduct p) {
+        return p.getDisbursementMethod() == null ? LoanDisbursementMethod.PAYROLL_PERIOD : p.getDisbursementMethod();
     }
 
     private static String routeLabel(LoanApprovalRouteType type) {

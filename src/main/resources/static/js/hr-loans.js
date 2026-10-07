@@ -86,6 +86,13 @@ const HrLoans = (function () {
             + `${custom ? 'Custom path' : 'Role-based'}</span>`;
     }
 
+    function disbursementBadge(method, label) {
+        const outside = method === 'OUTSIDE_PAYROLL';
+        return `<span class="loan-badge ${outside ? 'loan-badge-warning' : 'loan-badge-blue'}" title="${esc(label || '')}">`
+            + `<span class="material-icons-round" style="font-size:13px;margin-right:4px">${outside ? 'account_balance' : 'payments'}</span>`
+            + `${outside ? 'Outside payroll' : 'In payroll'}</span>`;
+    }
+
     function repaymentBadge(status) {
         const cls = {PAID: 'loan-badge-success', PARTIALLY_PAID: 'loan-badge-info', MISSED: 'loan-badge-error'}[status]
             || 'loan-badge-neutral';
@@ -350,6 +357,9 @@ const HrLoans = (function () {
             set('mPendingHr', d.pendingHrApprovalCount ?? state.tasks.length);
             set('mPendingCustom', d.pendingCustomApprovalCount ?? 0);
             set('mPendingFinance', d.pendingFinanceApprovalCount ?? 0);
+            set('mDisbursement', d.pendingDisbursementCount ?? 0);
+            set('mDisbursementAmount', d.pendingDisbursementAmount != null ? 'Amount ' + money(d.pendingDisbursementAmount) : '');
+            $('mDisbursementCard').classList.toggle('loan-metric-alert', (d.pendingDisbursementCount || 0) > 0);
             set('mActive', d.activeLoanCount ?? 0);
             set('mActiveSub', `${d.completedLoanCount ?? 0} completed`);
             set('mOutstanding', money(d.totalOutstandingBalance ?? 0));
@@ -498,6 +508,7 @@ const HrLoans = (function () {
                 <td class="px-4 py-3">${p.interestType === 'INTEREST_BEARING' ? esc(p.interestRate) + '% p.a.' : 'Interest-free'}</td>
                 <td class="px-4 py-3">${routeBadge(p.approvalRouteType, p.approvalRouteLabel)}
                     ${p.approvalRouteType === 'CUSTOM' ? `<div class="mt-1 text-xs text-gray-500">${esc(p.customApprovalPathName || 'No path selected')}</div>` : ''}</td>
+                <td class="px-4 py-3">${disbursementBadge(p.disbursementMethod, p.disbursementMethodLabel)}</td>
                 <td class="px-4 py-3">${p.requiresAttachment ? 'Required' : 'Optional'}</td>
                 <td class="px-4 py-3">${p.applicationCount} applications<div class="text-xs text-gray-500">${p.activeLoanCount} active loans</div></td>
                 <td class="px-4 py-3">${p.active ? '<span class="loan-badge loan-badge-success">Active</span>' : '<span class="loan-badge loan-badge-neutral">Inactive</span>'}</td>
@@ -508,11 +519,11 @@ const HrLoans = (function () {
                         : `<button type="button" class="loan-mini-btn loan-mini-success" data-action="reactivate-product" data-id="${p.id}">Reactivate</button>`}
                     ${p.deletable ? `<button type="button" class="loan-mini-btn loan-mini-danger" data-action="delete-product" data-id="${p.id}">Delete</button>` : ''}
                 </div></td></tr>`).join('')
-                : `<tr><td colspan="8">${empty('No loan products yet. Create one to let employees apply.')}</td></tr>`;
+                : `<tr><td colspan="9">${empty('No loan products yet. Create one to let employees apply.')}</td></tr>`;
         }
 
         const P = id => $(id);
-        const FINANCIAL_FIELDS = ['pCode', 'pMin', 'pMax', 'pMinRepay', 'pTenor', 'pInterestType', 'pRate', 'pRoute', 'pPath'];
+        const FINANCIAL_FIELDS = ['pCode', 'pMin', 'pMax', 'pMinRepay', 'pTenor', 'pInterestType', 'pRate', 'pRoute', 'pPath', 'pDisbursement'];
 
         function pathOptions(selectedId) {
             const usable = state.paths.filter(p => p.enabled || p.id === selectedId);
@@ -529,6 +540,9 @@ const HrLoans = (function () {
                 ? 'Named employees from the chosen path approve in order. Finance only gets a task if the path includes a Finance employee.'
                 : 'HR approves first, then Finance. Any HR user or Finance officer can act on the task.';
             P('pNoPaths').classList.toggle('hidden', !custom || state.paths.some(p => p.enabled));
+            P('pDisbursementHint').textContent = P('pDisbursement').value === 'OUTSIDE_PAYROLL'
+                ? 'After final approval the loan waits in the Finance disbursement queue. It becomes active, and repayments are scheduled, only after Finance confirms payment. Employees need complete bank details to apply.'
+                : 'After final approval the loan becomes active and the approved amount is added to the employee\'s payroll. Repayment never starts in the same month as disbursement.';
         }
 
         function openProductForm(id) {
@@ -550,10 +564,12 @@ const HrLoans = (function () {
                 P('pRate').value = p.interestRate ?? '';
                 P('pRoute').value = p.approvalRouteType || 'ROLE_BASED';
                 P('pPath').value = p.customApprovalPathId ? String(p.customApprovalPathId) : '';
+                P('pDisbursement').value = p.disbursementMethod || 'PAYROLL_PERIOD';
                 P('pAttach').checked = !!p.requiresAttachment;
             } else {
                 P('pInterestType').value = 'INTEREST_FREE';
                 P('pRoute').value = 'ROLE_BASED';
+                P('pDisbursement').value = 'PAYROLL_PERIOD';
             }
             const locked = !!p && !p.financialTermsEditable;
             FINANCIAL_FIELDS.forEach(f => { P(f).disabled = locked; });
@@ -581,6 +597,7 @@ const HrLoans = (function () {
                 repaymentFrequency: 'MONTHLY',
                 approvalRouteType: P('pRoute').value,
                 customApprovalPathId: custom ? num('pPath') : null,
+                disbursementMethod: P('pDisbursement').value || null,
                 requiresAttachment: P('pAttach').checked
             };
         }
@@ -596,6 +613,7 @@ const HrLoans = (function () {
                 return 'Enter an annual interest rate between 0 and 100.';
             }
             if (c.approvalRouteType === 'CUSTOM' && !c.customApprovalPathId) return 'Select a custom approval path.';
+            if (c.disbursementMethod !== 'PAYROLL_PERIOD' && c.disbursementMethod !== 'OUTSIDE_PAYROLL') return 'Select a disbursement method.';
             return null;
         }
 
@@ -664,6 +682,7 @@ const HrLoans = (function () {
         $('routeFilter').addEventListener('change', e => { state.route = e.target.value; renderTab(); });
         P('pInterestType').addEventListener('change', syncProductForm);
         P('pRoute').addEventListener('change', syncProductForm);
+        P('pDisbursement').addEventListener('change', syncProductForm);
 
         loadAll();
     }

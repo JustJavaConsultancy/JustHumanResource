@@ -29,6 +29,12 @@ public class FinanceLoanDashboardResponse {
     long missedDeductionCount;
     BigDecimal missedDeductionAmount;
 
+    /** Outside-payroll loans fully approved and waiting for Finance to confirm payment. */
+    long pendingDisbursementCount;
+    BigDecimal pendingDisbursementAmount;
+    /** Outside-payroll amount Finance confirmed as paid in the current calendar month. */
+    BigDecimal paidDisbursementAmountThisMonth;
+
     @Builder.Default Map<LoanApplicationStatus, Long> applicationsByStatus = new LinkedHashMap<>();
     /** Expected loan deductions per upcoming payroll month. */
     @Builder.Default List<PayrollImpact> payrollImpact = new ArrayList<>();

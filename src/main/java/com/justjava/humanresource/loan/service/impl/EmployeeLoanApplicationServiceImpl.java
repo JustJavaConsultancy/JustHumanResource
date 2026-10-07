@@ -45,6 +45,7 @@ public class EmployeeLoanApplicationServiceImpl implements EmployeeLoanApplicati
     private final LoanActivityService activityService;
     private final LoanAttachmentService attachmentService;
     private final LoanApprovalRouteService approvalRouteService;
+    private final LoanBankDetailService bankDetailService;
     private final AuthenticationManager authenticationManager;
 
     // =====================================================================
@@ -131,6 +132,14 @@ public class EmployeeLoanApplicationServiceImpl implements EmployeeLoanApplicati
             throw new IllegalArgumentException("This loan product requires at least one supporting attachment.");
         }
 
+        // Disbursement method comes from the product only; the employee cannot override it. Outside-payroll
+        // loans need complete bank details, enforced here (not just in the UI). Throws before anything is
+        // changed, and a returned application is revalidated against the employee's current details.
+        LoanDisbursementMethod disbursementMethod = productMethod(product);
+        LoanBankDetailResponse bank = disbursementMethod == LoanDisbursementMethod.OUTSIDE_PAYROLL
+                ? bankDetailService.requireCompleteBankDetails(employee.getId())
+                : null;
+
         boolean resubmission = app.getStatus() == LoanApplicationStatus.RETURNED_FOR_CORRECTION;
 
         applyEmployeeSnapshot(app, contextService.snapshot(employee));
@@ -152,6 +161,13 @@ public class EmployeeLoanApplicationServiceImpl implements EmployeeLoanApplicati
             app.setCustomApprovalPathIdSnapshot(null);
             app.setCustomApprovalPathNameSnapshot(null);
         }
+
+        // Disbursement snapshots. Bank details are always replaced on (re)submission, and cleared for
+        // inside-payroll loans so a stale snapshot can never survive a product change on a returned draft.
+        app.setDisbursementMethodSnapshot(disbursementMethod);
+        app.setBankNameSnapshot(bank == null ? null : bank.getBankName());
+        app.setAccountNameSnapshot(bank == null ? null : bank.getAccountName());
+        app.setAccountNumberSnapshot(bank == null ? null : bank.getAccountNumber());
 
         app.setStatus(LoanApplicationStatus.SUBMITTED);
         app.setSubmittedAt(LocalDateTime.now());
@@ -208,6 +224,8 @@ public class EmployeeLoanApplicationServiceImpl implements EmployeeLoanApplicati
         String returnedByName = returned.map(EmployeeLoanApprovalStep::getActedByEmployeeId)
                 .map(actor -> contextService.employeeNames(List.of(actor)).get(actor)).orElse(null);
 
+        BankView bankView = bankView(app);
+
         return LoanApplicationEditResponse.builder()
                 .id(app.getId())
                 .applicationNumber(app.getApplicationNumber())
@@ -221,6 +239,11 @@ public class EmployeeLoanApplicationServiceImpl implements EmployeeLoanApplicati
                 .purpose(app.getPurpose())
                 .latestReturnComment(returned.map(EmployeeLoanApprovalStep::getComments).orElse(null))
                 .returnedByName(returnedByName)
+                .disbursementMethod(methodOf(app))
+                .disbursementMethodLabel(disbursementLabel(methodOf(app)))
+                .bankDetailsRequired(bankView.required())
+                .bankDetailsComplete(bankView.satisfied())
+                .bankDetails(bankView.details())
                 .attachmentRequired(product.isRequiresAttachment())
                 .attachments(attachmentService.list(id))
                 .preview(calculationService.preview(product, app.getRequestedAmount(), app.getRepaymentAmount(),
@@ -484,6 +507,7 @@ public class EmployeeLoanApplicationServiceImpl implements EmployeeLoanApplicati
         LoanApprovalRouteType routeType = snapshotted ? a.getApprovalRouteTypeSnapshot() : p.getApprovalRouteType();
         Long pathId = snapshotted ? a.getCustomApprovalPathIdSnapshot()
                 : (routeType == LoanApprovalRouteType.CUSTOM ? p.getCustomApprovalPathId() : null);
+        BankView bankView = bankView(a);
 
         return LoanApplicationResponse.builder()
                 .id(a.getId())
@@ -503,6 +527,7 @@ public class EmployeeLoanApplicationServiceImpl implements EmployeeLoanApplicati
                 .repaymentAmount(a.getRepaymentAmount())
                 .tenorMonths(a.getTenorMonths())
                 .repaymentStartMonth(a.getRepaymentStartMonth())
+                .effectiveRepaymentStartMonth(a.getEffectiveRepaymentStartMonth())
                 .interestType(a.getInterestTypeSnapshot() != null ? a.getInterestTypeSnapshot() : p.getInterestType())
                 .interestRate(a.getInterestTypeSnapshot() != null ? a.getInterestRateSnapshot() : p.getInterestRate())
                 .totalInterestAmount(a.getTotalInterestAmount())
@@ -512,6 +537,11 @@ public class EmployeeLoanApplicationServiceImpl implements EmployeeLoanApplicati
                 .approvalRouteLabel(routeLabel(routeType))
                 .customApprovalPathId(pathId)
                 .customApprovalPathName(snapshotted ? a.getCustomApprovalPathNameSnapshot() : pathName(pathId))
+                .disbursementMethod(methodOf(a))
+                .disbursementMethodLabel(disbursementLabel(methodOf(a)))
+                .bankDetailsRequired(bankView.required())
+                .bankDetailsComplete(bankView.satisfied())
+                .bankDetails(bankView.details())
                 .workflowInstanceId(a.getWorkflowInstanceId())
                 .submittedAt(a.getSubmittedAt())
                 .hrApprovedAt(a.getHrApprovedAt())
@@ -575,6 +605,10 @@ public class EmployeeLoanApplicationServiceImpl implements EmployeeLoanApplicati
                 .repaymentAmount(a.getRepaymentAmount())
                 .tenorMonths(a.getTenorMonths())
                 .repaymentStartMonth(a.getRepaymentStartMonth())
+                .effectiveRepaymentStartMonth(a.getEffectiveRepaymentStartMonth())
+                .disbursementMethod(methodOf(a))
+                .disbursementMethodLabel(disbursementLabel(methodOf(a)))
+                .bankDetailsRequired(methodOf(a) == LoanDisbursementMethod.OUTSIDE_PAYROLL)
                 .approvalRouteType(routeType)
                 .approvalRouteLabel(routeLabel(routeType))
                 .currentApprovalOwner(owner)
@@ -603,6 +637,8 @@ public class EmployeeLoanApplicationServiceImpl implements EmployeeLoanApplicati
                 .interestRate(p.getInterestRate())
                 .approvalRouteType(p.getApprovalRouteType())
                 .approvalRouteLabel(routeLabel(p.getApprovalRouteType()))
+                .disbursementMethod(productMethod(p))
+                .disbursementMethodLabel(disbursementLabel(productMethod(p)))
                 .requiresAttachment(p.isRequiresAttachment())
                 .active(p.isActive())
                 .build();
@@ -757,6 +793,62 @@ public class EmployeeLoanApplicationServiceImpl implements EmployeeLoanApplicati
             case FINANCE -> "Finance group";
             case CUSTOM -> s.getApproverGroup() != null ? s.getApproverGroup() : "Custom approver";
         };
+    }
+
+    // ---------------------------------------------------------------- disbursement helpers
+
+    /** Bank-details view of an application: whether they are required, satisfied, and what to show. */
+    private record BankView(LoanBankDetailResponse details, boolean required, boolean satisfied) {
+    }
+
+    /** Product method, defaulting to PAYROLL_PERIOD for rows created before the column existed. */
+    private static LoanDisbursementMethod productMethod(LoanProduct p) {
+        return p.getDisbursementMethod() != null ? p.getDisbursementMethod() : LoanDisbursementMethod.PAYROLL_PERIOD;
+    }
+
+    /**
+     * The submission snapshot once there is one; before that (or for legacy rows with no snapshot) the
+     * product's method, which is locked after first use so it cannot differ for a submitted application.
+     */
+    private static LoanDisbursementMethod methodOf(EmployeeLoanApplication a) {
+        return a.getDisbursementMethodSnapshot() != null
+                ? a.getDisbursementMethodSnapshot()
+                : productMethod(a.getLoanProduct());
+    }
+
+    private static String disbursementLabel(LoanDisbursementMethod method) {
+        return method == LoanDisbursementMethod.OUTSIDE_PAYROLL
+                ? "Pay outside payroll system"
+                : "Pay inside payroll period";
+    }
+
+    /**
+     * Editable applications (DRAFT / RETURNED_FOR_CORRECTION) show the employee's current bank details so
+     * the form reflects profile updates; every other status shows the snapshot taken at submission.
+     */
+    private BankView bankView(EmployeeLoanApplication a) {
+        if (methodOf(a) != LoanDisbursementMethod.OUTSIDE_PAYROLL) {
+            return new BankView(null, false, true);
+        }
+        LoanBankDetailResponse details = EDITABLE.contains(a.getStatus())
+                ? bankDetailService.getActiveBankDetails(a.getEmployee().getId())
+                : snapshotBankDetails(a);
+        return new BankView(details, true, details != null && details.isComplete());
+    }
+
+    private static LoanBankDetailResponse snapshotBankDetails(EmployeeLoanApplication a) {
+        if (a.getBankNameSnapshot() == null && a.getAccountNameSnapshot() == null
+                && a.getAccountNumberSnapshot() == null) {
+            return null;
+        }
+        return LoanBankDetailResponse.builder()
+                .employeeId(a.getEmployee().getId())
+                .bankName(a.getBankNameSnapshot())
+                .accountName(a.getAccountNameSnapshot())
+                .accountNumber(a.getAccountNumberSnapshot())
+                .complete(true) // only ever written after requireCompleteBankDetails passed
+                .missingFields(List.of())
+                .build();
     }
 
     private static long sum(Map<LoanApplicationStatus, Long> counts, LoanApplicationStatus... statuses) {

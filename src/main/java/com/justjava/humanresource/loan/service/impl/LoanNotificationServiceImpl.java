@@ -60,6 +60,26 @@ public class LoanNotificationServiceImpl implements LoanNotificationService {
     }
 
     @Override
+    public void notifyExternalPaymentPendingEmployee(Long loanApplicationId) {
+        schedule(loanApplicationId, () -> emails.sendExternalPaymentPendingToEmployee(loanApplicationId));
+    }
+
+    @Override
+    public void notifyExternalPaymentPendingFinance(Long loanApplicationId) {
+        schedule(loanApplicationId, () -> emails.sendExternalPaymentPendingToFinance(loanApplicationId));
+    }
+
+    @Override
+    public void notifyExternalPaymentConfirmed(Long loanApplicationId) {
+        schedule(loanApplicationId, () -> emails.sendExternalPaymentConfirmed(loanApplicationId));
+    }
+
+    @Override
+    public void notifyPayrollDisbursementScheduled(Long loanApplicationId) {
+        schedule(loanApplicationId, () -> emails.sendPayrollDisbursementScheduled(loanApplicationId));
+    }
+
+    @Override
     public void notifyLoanCompleted(Long loanApplicationId) {
         schedule(loanApplicationId, () -> emails.sendLoanCompleted(loanApplicationId));
     }

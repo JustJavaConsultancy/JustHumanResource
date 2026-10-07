@@ -36,6 +36,18 @@ public interface LoanNotificationService {
     /** Employee: the loan is active and the repayment schedule exists. */
     void notifyLoanActivated(Long loanApplicationId);
 
+    /** Employee: outside-payroll loan is fully approved and now waits for Finance to pay it. */
+    void notifyExternalPaymentPendingEmployee(Long loanApplicationId);
+
+    /** Finance approvers: an outside-payroll loan needs payment and a payment confirmation. */
+    void notifyExternalPaymentPendingFinance(Long loanApplicationId);
+
+    /** Employee: Finance confirmed the outside-payroll payment; the loan is active. */
+    void notifyExternalPaymentConfirmed(Long loanApplicationId);
+
+    /** Employee: payroll-period loan is approved and scheduled to be paid through payroll. */
+    void notifyPayrollDisbursementScheduled(Long loanApplicationId);
+
     /** Employee: the loan is fully repaid. */
     void notifyLoanCompleted(Long loanApplicationId);
 

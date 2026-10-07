@@ -2,11 +2,13 @@ package com.justjava.humanresource.loan.entity;
 
 import com.justjava.humanresource.core.entity.BaseEntity;
 import com.justjava.humanresource.loan.enums.LoanApprovalRouteType;
+import com.justjava.humanresource.loan.enums.LoanDisbursementMethod;
 import com.justjava.humanresource.loan.enums.LoanInterestType;
 import com.justjava.humanresource.loan.enums.LoanRepaymentFrequency;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.ColumnDefault;
 
 import java.math.BigDecimal;
 
@@ -60,6 +62,15 @@ public class LoanProduct extends BaseEntity {
     /** Required when approvalRouteType is CUSTOM. */
     @Column(name = "custom_approval_path_id")
     private Long customApprovalPathId;
+
+    /**
+     * How the approved principal is paid out. Locked once the product is used.
+     * The column default lets ddl-auto=update add this NOT NULL column to a table that already has rows.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 30)
+    @ColumnDefault("'PAYROLL_PERIOD'")
+    private LoanDisbursementMethod disbursementMethod = LoanDisbursementMethod.PAYROLL_PERIOD;
 
     @Column(nullable = false)
     private boolean requiresAttachment = false;

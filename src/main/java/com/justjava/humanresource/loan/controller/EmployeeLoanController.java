@@ -8,6 +8,7 @@ import com.justjava.humanresource.loan.dto.LoanApplicationResponse;
 import com.justjava.humanresource.loan.dto.LoanApplicationSummaryResponse;
 import com.justjava.humanresource.loan.dto.LoanApprovalTaskResponse;
 import com.justjava.humanresource.loan.dto.LoanAttachmentResponse;
+import com.justjava.humanresource.loan.dto.LoanBankDetailResponse;
 import com.justjava.humanresource.loan.dto.LoanProductSummaryResponse;
 import com.justjava.humanresource.loan.dto.LoanRepaymentPreviewRequest;
 import com.justjava.humanresource.loan.dto.LoanRepaymentPreviewResponse;
@@ -17,6 +18,7 @@ import com.justjava.humanresource.loan.service.EmployeeLoanApplicationService;
 import com.justjava.humanresource.loan.service.LoanApprovalService;
 import com.justjava.humanresource.loan.service.LoanAttachmentService;
 import com.justjava.humanresource.loan.service.LoanAttachmentService.LoanAttachmentDownload;
+import com.justjava.humanresource.loan.service.LoanBankDetailService;
 import com.justjava.humanresource.loan.service.LoanProductService;
 import com.justjava.humanresource.loan.service.LoanRepaymentCalculationService;
 import jakarta.validation.Valid;
@@ -47,6 +49,7 @@ public class EmployeeLoanController {
     private final LoanRepaymentCalculationService calculationService;
     private final LoanAttachmentService attachmentService;
     private final LoanApprovalService approvalService;
+    private final LoanBankDetailService bankDetailService;
 
     /** Optional comment for the task actions. Mandatory for reject/return; the service enforces it. */
     public record TaskComment(@Size(max = 2000) String comment) {
@@ -57,6 +60,15 @@ public class EmployeeLoanController {
     @GetMapping("/dashboard")
     public EmployeeLoanDashboardResponse dashboard() {
         return applicationService.getMyDashboard();
+    }
+
+    /**
+     * The logged-in employee's current bank details, read-only. Shown in the application modal for
+     * outside-payroll products; bank details are edited from the profile page, never from the loan page.
+     */
+    @GetMapping("/bank-details")
+    public LoanBankDetailResponse bankDetails() {
+        return bankDetailService.getCurrentEmployeeBankDetails();
     }
 
     @GetMapping("/products")

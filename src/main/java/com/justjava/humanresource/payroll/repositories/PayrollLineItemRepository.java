@@ -11,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 public interface PayrollLineItemRepository
         extends JpaRepository<PayrollLineItem, Long> {
@@ -94,6 +95,19 @@ public interface PayrollLineItemRepository
       AND li.componentCode IN ('PAYE', 'PENSION_EMP')
 """)
     BigDecimal sumStatutoryDeductions(@Param("runId") Long runId);
+
+    Optional<PayrollLineItem> findFirstByPayrollRunIdAndComponentCode(
+            Long payrollRunId,
+            String componentCode
+    );
+
+    @Modifying
+    @Query("""
+    DELETE FROM PayrollLineItem li
+    WHERE li.payrollRun.id = :runId
+      AND li.componentCode LIKE 'LOAN_DISBURSEMENT_%'
+""")
+    void deleteLoanDisbursementLines(@Param("runId") Long runId);
 
     @Modifying
     @Query(value = """

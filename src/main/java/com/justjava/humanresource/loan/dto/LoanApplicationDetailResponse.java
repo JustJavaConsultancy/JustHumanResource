@@ -30,6 +30,12 @@ public class LoanApplicationDetailResponse {
     @Builder.Default List<LoanRepaymentTransactionResponse> repaymentHistory = new ArrayList<>();
     @Builder.Default List<LoanMissedDeductionResponse> missedDeductions = new ArrayList<>();
 
+    /**
+     * Disbursement record (method, status, paid date/reference, payroll month, bank snapshot).
+     * Null when the application has not reached final approval yet.
+     */
+    LoanDisbursementResponse disbursement;
+
     // Loan account (null until activated)
     Long loanAccountId;
     String loanAccountStatus;

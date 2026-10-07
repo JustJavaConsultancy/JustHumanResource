@@ -1,6 +1,7 @@
 package com.justjava.humanresource.loan.dto;
 
 import com.justjava.humanresource.loan.enums.LoanApprovalRouteType;
+import com.justjava.humanresource.loan.enums.LoanDisbursementMethod;
 import com.justjava.humanresource.loan.enums.LoanInterestType;
 import com.justjava.humanresource.loan.enums.LoanRepaymentFrequency;
 import lombok.Builder;
@@ -29,6 +30,9 @@ public class LoanProductResponse {
     String approvalRouteLabel;
     Long customApprovalPathId;
     String customApprovalPathName;
+    LoanDisbursementMethod disbursementMethod;
+    /** e.g. "Pay inside payroll period" or "Pay outside payroll system". */
+    String disbursementMethodLabel;
     boolean requiresAttachment;
     boolean active;
     boolean used;

@@ -47,7 +47,11 @@ public class ProcessCustomLoanDecisionDelegate extends AbstractLoanDecisionDeleg
             execution.setVariable("currentLevel", next.get().getSequenceNo());
             execution.setVariable("currentApproverId", String.valueOf(next.get().getApproverEmployeeId()));
         } else {
-            app.setCustomApprovalCompletedAt(LocalDateTime.now());
+            LocalDateTime now = LocalDateTime.now();
+            app.setCustomApprovalCompletedAt(now);
+            // The final custom approver is the last approver on the custom route.
+            app.setFinalApprovedAt(now);
+            app.setFinalApprovedByEmployeeId(actorId);
             app.setStatus(LoanApplicationStatus.CUSTOM_APPROVED);
         }
     }

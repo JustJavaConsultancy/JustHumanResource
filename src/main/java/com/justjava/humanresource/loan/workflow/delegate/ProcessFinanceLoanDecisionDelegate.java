@@ -34,6 +34,9 @@ public class ProcessFinanceLoanDecisionDelegate extends AbstractLoanDecisionDele
                              EmployeeLoanApprovalStep step, Long actorId) {
         app.setFinanceApprovedAt(LocalDateTime.now());
         app.setFinanceApprovedByEmployeeId(actorId);
+        // Finance is the last approver on the role-based route.
+        app.setFinalApprovedAt(LocalDateTime.now());
+        app.setFinalApprovedByEmployeeId(actorId);
         app.setStatus(LoanApplicationStatus.FINANCE_APPROVED);
     }
 }

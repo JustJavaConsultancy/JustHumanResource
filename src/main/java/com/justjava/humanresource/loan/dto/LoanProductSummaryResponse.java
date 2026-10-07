@@ -1,6 +1,7 @@
 package com.justjava.humanresource.loan.dto;
 
 import com.justjava.humanresource.loan.enums.LoanApprovalRouteType;
+import com.justjava.humanresource.loan.enums.LoanDisbursementMethod;
 import com.justjava.humanresource.loan.enums.LoanInterestType;
 import lombok.Builder;
 import lombok.Value;
@@ -27,6 +28,8 @@ public class LoanProductSummaryResponse {
     BigDecimal interestRate;
     LoanApprovalRouteType approvalRouteType;
     String approvalRouteLabel;
+    LoanDisbursementMethod disbursementMethod;
+    String disbursementMethodLabel;
     boolean requiresAttachment;
     boolean active;
 }

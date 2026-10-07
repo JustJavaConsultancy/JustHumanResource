@@ -24,6 +24,10 @@ public class HrLoanDashboardResponse {
     long returnedCount;
     long rejectedCount;
 
+    /** Approved outside-payroll loans waiting for Finance payment confirmation (not active yet). */
+    long pendingDisbursementCount;
+    BigDecimal pendingDisbursementAmount;
+
     long activeLoanCount;
     long completedLoanCount;
     BigDecimal totalOutstandingBalance;

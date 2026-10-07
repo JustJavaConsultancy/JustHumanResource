@@ -26,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -48,28 +49,54 @@ public class EmployeeLoanAccountServiceImpl implements EmployeeLoanAccountServic
 
     // ------------------------------------------------------------------ activation
 
+    /**
+     * Legacy entry point: activates on the employee-selected month. Refuses PENDING_DISBURSEMENT so an
+     * outside-payroll loan can never be activated without Finance confirming payment.
+     */
     @Override
     @Transactional
     public EmployeeLoanAccount activate(Long loanApplicationId) {
         EmployeeLoanApplication app = applications.findById(loanApplicationId)
                 .orElseThrow(() -> new EntityNotFoundException("Loan application not found: " + loanApplicationId));
+        return doActivate(app, app.getRepaymentStartMonth(), false);
+    }
+
+    @Override
+    @Transactional
+    public EmployeeLoanAccount activate(Long loanApplicationId, LocalDate effectiveRepaymentStartMonth) {
+        EmployeeLoanApplication app = applications.findById(loanApplicationId)
+                .orElseThrow(() -> new EntityNotFoundException("Loan application not found: " + loanApplicationId));
+        return doActivate(app, effectiveRepaymentStartMonth, true);
+    }
+
+    private EmployeeLoanAccount doActivate(EmployeeLoanApplication app, LocalDate requestedStartMonth,
+                                           boolean allowPendingDisbursement) {
+        Long loanApplicationId = app.getId();
 
         Optional<EmployeeLoanAccount> existing = accounts.findByLoanApplicationId(loanApplicationId);
         if (existing.isPresent()) {
-            return repairIfPartial(app, existing.get());
+            return repairIfPartial(app, existing.get(), requestedStartMonth, allowPendingDisbursement);
         }
 
-        if (app.getStatus() != LoanApplicationStatus.FINANCE_APPROVED
-                && app.getStatus() != LoanApplicationStatus.CUSTOM_APPROVED) {
+        if (!isActivatable(app.getStatus(), allowPendingDisbursement)) {
             throw new IllegalStateException("Loan " + app.getApplicationNumber()
                     + " cannot be activated from status " + app.getStatus() + ".");
+        }
+        if (requestedStartMonth == null) {
+            throw new IllegalArgumentException("Repayment start month is required to activate a loan.");
+        }
+        LocalDate startMonth = requestedStartMonth.withDayOfMonth(1);
+        if (app.getRepaymentStartMonth() != null
+                && startMonth.isBefore(app.getRepaymentStartMonth().withDayOfMonth(1))) {
+            throw new IllegalArgumentException("Effective repayment start " + startMonth
+                    + " cannot be before the employee-selected month " + app.getRepaymentStartMonth() + ".");
         }
 
         // Snapshotted terms only: later product edits or a late approval cannot change the schedule.
         LoanRepaymentPreviewResponse calc = calculationService.calculate(
                 app.getInterestTypeSnapshot(), app.getInterestRateSnapshot(),
                 app.getRequestedAmount(), app.getRepaymentAmount(),
-                app.getTenorMonths(), app.getRepaymentStartMonth());
+                app.getTenorMonths(), startMonth);
         if (!calc.isValid()) {
             throw new IllegalStateException("Loan " + app.getApplicationNumber()
                     + " has invalid snapshotted terms: " + String.join(" ", calc.getErrors()));
@@ -93,7 +120,7 @@ public class EmployeeLoanAccountServiceImpl implements EmployeeLoanAccountServic
         account.setOutstandingBalance(calc.getTotalRepayableAmount());
         account.setRepaymentAmount(calc.getRepaymentAmount());
         account.setTenorMonths(calc.getTenorMonths());
-        account.setRepaymentStartMonth(calc.getRepaymentStartMonth());
+        account.setRepaymentStartMonth(calc.getRepaymentStartMonth()); // effective first deduction month
         account.setStatus(LoanAccountStatus.ACTIVE);
         account.setActivatedAt(now);
         account = accounts.save(account);
@@ -102,6 +129,7 @@ public class EmployeeLoanAccountServiceImpl implements EmployeeLoanAccountServic
 
         app.setStatus(LoanApplicationStatus.ACTIVE);
         app.setActivatedAt(now);
+        app.setEffectiveRepaymentStartMonth(calc.getRepaymentStartMonth()); // repaymentStartMonth stays as selected
         applications.save(app);
 
         activityService.recordForAccount(app.getId(), account.getId(), LoanActivityType.LOAN_ACTIVATED,
@@ -113,24 +141,42 @@ public class EmployeeLoanAccountServiceImpl implements EmployeeLoanAccountServic
         return account;
     }
 
-    /** Retry safety: account exists but the schedule or application status was not completed. */
-    private EmployeeLoanAccount repairIfPartial(EmployeeLoanApplication app, EmployeeLoanAccount account) {
+    private static boolean isActivatable(LoanApplicationStatus status, boolean allowPendingDisbursement) {
+        return status == LoanApplicationStatus.FINANCE_APPROVED
+                || status == LoanApplicationStatus.CUSTOM_APPROVED
+                || (allowPendingDisbursement && status == LoanApplicationStatus.PENDING_DISBURSEMENT);
+    }
+
+    /**
+     * Retry safety: account exists but the schedule or application status was not completed.
+     * An already-created account is never moved to a different start month; a missing schedule is rebuilt
+     * from the account's own repayment start month.
+     */
+    private EmployeeLoanAccount repairIfPartial(EmployeeLoanApplication app, EmployeeLoanAccount account,
+                                                LocalDate requestedStartMonth, boolean allowPendingDisbursement) {
+        if (requestedStartMonth != null && account.getRepaymentStartMonth() != null
+                && !requestedStartMonth.withDayOfMonth(1).equals(account.getRepaymentStartMonth().withDayOfMonth(1))) {
+            log.warn("Loan {}: account already exists with repayment start {}; ignoring requested start {}.",
+                    app.getApplicationNumber(), account.getRepaymentStartMonth(), requestedStartMonth);
+        }
         if (!schedules.existsByLoanAccountId(account.getId())) {
             LoanRepaymentPreviewResponse calc = calculationService.calculate(
                     app.getInterestTypeSnapshot(), app.getInterestRateSnapshot(),
                     app.getRequestedAmount(), app.getRepaymentAmount(),
-                    app.getTenorMonths(), app.getRepaymentStartMonth());
+                    app.getTenorMonths(), account.getRepaymentStartMonth());
             if (!calc.isValid()) {
                 throw new IllegalStateException("Loan " + app.getApplicationNumber()
                         + " has invalid snapshotted terms: " + String.join(" ", calc.getErrors()));
             }
             schedules.saveAll(buildSchedule(account.getId(), calc.getLines()));
         }
-        if (app.getStatus() == LoanApplicationStatus.FINANCE_APPROVED
-                || app.getStatus() == LoanApplicationStatus.CUSTOM_APPROVED) {
+        if (isActivatable(app.getStatus(), allowPendingDisbursement)) {
             app.setStatus(LoanApplicationStatus.ACTIVE);
             if (app.getActivatedAt() == null) {
                 app.setActivatedAt(account.getActivatedAt() != null ? account.getActivatedAt() : LocalDateTime.now());
+            }
+            if (app.getEffectiveRepaymentStartMonth() == null) {
+                app.setEffectiveRepaymentStartMonth(account.getRepaymentStartMonth());
             }
             applications.save(app);
         }
