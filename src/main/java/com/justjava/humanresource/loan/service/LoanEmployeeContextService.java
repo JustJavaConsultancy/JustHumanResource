@@ -10,6 +10,7 @@ import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /** Current-user resolution, salary snapshot, exposure and "who may see this application" rules. */
 public interface LoanEmployeeContextService {
@@ -23,6 +24,13 @@ public interface LoanEmployeeContextService {
 
     /** Employee linked to the logged-in Keycloak user (by email). */
     Employee getCurrentEmployee();
+
+    /**
+     * Same lookup, but empty (never throws) when the login has no Employee record. Use this wherever a
+     * missing record is acceptable: an exception that crosses a @Transactional proxy marks the caller's
+     * transaction rollback-only even if the caller catches it.
+     */
+    Optional<Employee> findCurrentEmployee();
 
     /** Gross salary comes from the employee's job step; zero when no job step is assigned. */
     EmployeeSnapshot snapshot(Employee employee);

@@ -50,18 +50,18 @@ public class LoanApprovalServiceImpl implements LoanApprovalService {
     @Override
     public List<LoanApprovalTaskResponse> listHrTasks() {
         requireHr();
-        Long me = contextService.getCurrentEmployee().getId();
+        Long me = currentEmployeeIdOrNull();
         return toResponses(flowableTaskService.getTasksForCandidateGroup(
-                LoanApprovalRouteService.HR_GROUP, LoanApprovalRouteService.PROCESS_KEY),
+                        LoanApprovalRouteService.HR_GROUP, LoanApprovalRouteService.PROCESS_KEY),
                 HR_TASK_KEY, LoanApprovalStage.HR, me);
     }
 
     @Override
     public List<LoanApprovalTaskResponse> listFinanceTasks() {
         requireFinance();
-        Long me = contextService.getCurrentEmployee().getId();
+        Long me = currentEmployeeIdOrNull();
         return toResponses(flowableTaskService.getTasksForCandidateGroup(
-                LoanApprovalRouteService.FINANCE_GROUP, LoanApprovalRouteService.PROCESS_KEY),
+                        LoanApprovalRouteService.FINANCE_GROUP, LoanApprovalRouteService.PROCESS_KEY),
                 FINANCE_TASK_KEY, LoanApprovalStage.FINANCE, me);
     }
 
@@ -69,7 +69,7 @@ public class LoanApprovalServiceImpl implements LoanApprovalService {
     public List<LoanApprovalTaskResponse> listMyCustomTasks() {
         Long me = contextService.getCurrentEmployee().getId();
         return toResponses(flowableTaskService.getTasksForAssignee(
-                String.valueOf(me), LoanApprovalRouteService.PROCESS_KEY),
+                        String.valueOf(me), LoanApprovalRouteService.PROCESS_KEY),
                 CUSTOM_TASK_KEY, LoanApprovalStage.CUSTOM, null);
     }
 
@@ -220,6 +220,14 @@ public class LoanApprovalServiceImpl implements LoanApprovalService {
                     .build());
         }
         return result;
+    }
+
+    /**
+     * Used only to hide a person's own loans from their approval queue. An admin or approver with no
+     * Employee record simply has no "own loan" to hide, so the queue must still load for them.
+     */
+    private Long currentEmployeeIdOrNull() {
+        return contextService.findCurrentEmployee().map(Employee::getId).orElse(null);
     }
 
     private Long applicationIdOf(FlowableTaskDTO task) {

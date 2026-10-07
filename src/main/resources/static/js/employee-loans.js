@@ -128,6 +128,12 @@ const EmployeeLoans = (function () {
             const parsed = JSON.parse(text);
             return parsed.message || parsed.detail || parsed.error || text;
         } catch (e) {
+            // The server's HTML error page: show only its detail line, never the page source.
+            if (/^\s*<(!doctype|html)/i.test(text)) {
+                const detail = new DOMParser().parseFromString(text, 'text/html').querySelector('.error-message');
+                const message = detail && detail.textContent.trim();
+                return message || 'Something went wrong. Please try again.';
+            }
             return text;
         }
     }
@@ -145,6 +151,28 @@ const EmployeeLoans = (function () {
             headers: {'Content-Type': 'application/json'},
             body: body === undefined ? undefined : JSON.stringify(body)
         });
+    }
+
+    const ATTACHMENT_REQUIRED_MESSAGE =
+        'This loan requires a supporting document. Upload at least one document before you submit.';
+
+    /**
+     * Submits an application and verifies it really left the editable state.
+     * Throws (instead of silently "succeeding") if the server answered OK but the status is unchanged.
+     */
+    async function submitRequest(id) {
+        const result = await postJson(`${API}/${id}/submit`);
+        if (result && result.status && EDITABLE_STATUSES.includes(result.status)) {
+            throw new Error('The application could not be submitted. It is still ' + pretty(result.status).toLowerCase() + '.');
+        }
+        return result;
+    }
+
+    /** Loads the edit view of an application and reports whether a required document is still missing. */
+    async function missingRequiredAttachment(id) {
+        const e = await json(`${API}/${id}/edit`);
+        const required = e.attachmentRequired === true || !!(e.loanProduct && e.loanProduct.requiresAttachment);
+        return required && !(e.attachments || []).length;
     }
 
     // ------------------------------------------------------------------ shared shell (toast, confirm, comment modal)
@@ -568,6 +596,14 @@ const EmployeeLoans = (function () {
         // ---------- row / task actions
 
         async function submitApplication(id, resubmit) {
+            try {
+                if (await missingRequiredAttachment(id)) {
+                    // Take the employee straight to the upload area with the reason spelled out.
+                    await openEdit(id);
+                    formError(ATTACHMENT_REQUIRED_MESSAGE);
+                    return;
+                }
+            } catch (e) { toastError(e); return; }
             const ok = await confirmDialog({
                 title: resubmit ? 'Resubmit application' : 'Submit application',
                 message: 'Your application will be sent for approval. You will not be able to edit it while it is under review.',
@@ -575,8 +611,7 @@ const EmployeeLoans = (function () {
             });
             if (!ok) return;
             try {
-                await postJson(`${API}/${id}/submit`);
-                toast(resubmit ? 'Application resubmitted.' : 'Application submitted.', 'success');
+                await submitRequest(id);
                 await loadAll();
             } catch (e) { toastError(e); }
         }
@@ -638,6 +673,7 @@ const EmployeeLoans = (function () {
             F('formError').classList.add('hidden');
             F('attachmentPanel').classList.add('hidden');
             F('attachmentLocked').classList.remove('hidden');
+            state.modalAttachmentCount = 0;
             F('fStart').value = defaultStartMonth();
             F('fProduct').innerHTML = '<option value="">Select a loan product</option>' + state.products.map(p =>
                 `<option value="${p.id}">${esc(p.name)}</option>`).join('');
@@ -673,7 +709,29 @@ const EmployeeLoans = (function () {
             F('fAmount').max = p.maximumAmount ?? '';
             F('fTenor').max = p.maximumTenorMonths ?? '';
             F('fRepayment').min = p.minimumRepaymentAmount ?? '';
+            updateAttachmentNotice();
             schedulePreview();
+        }
+
+        /** Shows (inside the form) that a document is mandatory and whether one has been attached yet. */
+        function updateAttachmentNotice() {
+            const p = currentProduct();
+            const box = F('attachmentNotice');
+            const locked = F('attachmentLocked');
+            if (!p || !p.requiresAttachment) {
+                box.classList.add('hidden');
+                locked.textContent = 'Save the draft first, then you can attach documents here.';
+                return;
+            }
+            const has = (state.modalAttachmentCount || 0) > 0;
+            box.classList.remove('hidden');
+            box.className = 'mb-3 flex items-start gap-2 rounded-lg border p-3 text-sm font-semibold ' + (has
+                ? 'border-green-200 bg-green-50 text-green-800'
+                : 'border-amber-300 bg-amber-50 text-amber-900');
+            box.innerHTML = `<span class="material-icons-round text-base">${has ? 'check_circle' : 'warning'}</span>
+                <span>${has ? 'Supporting document attached. You can submit now.'
+                    : 'This loan requires a supporting document. Save the draft, upload at least one document below, then submit.'}</span>`;
+            locked.textContent = 'A supporting document is required. Save the draft first, then upload it here before you submit.';
         }
 
         function readForm() {
@@ -820,8 +878,19 @@ const EmployeeLoans = (function () {
             const saved = await save();
             if (!saved) return;
             try {
-                await postJson(`${API}/${saved.id}/submit`);
-                toast('Application submitted for approval.', 'success');
+                const p = currentProduct();
+                if (p && p.requiresAttachment) {
+                    const docs = await json(`${API}/${saved.id}/attachments`) || [];
+                    renderModalAttachments(docs);
+                    if (!docs.length) {
+                        // The draft is saved; tell the employee exactly what is missing instead of submitting.
+                        formError(ATTACHMENT_REQUIRED_MESSAGE);
+                        F('attachmentPanel').scrollIntoView({behavior: 'smooth', block: 'center'});
+                        await loadAll();
+                        return;
+                    }
+                }
+                await submitRequest(saved.id);
                 closeModal();
                 await loadAll();
             } catch (err) {
@@ -840,6 +909,8 @@ const EmployeeLoans = (function () {
         }
 
         function renderModalAttachments(list) {
+            state.modalAttachmentCount = list.length;
+            updateAttachmentNotice();
             F('modalAttachments').innerHTML = list.length
                 ? list.map(a => attachmentRow(a, state.editingId, true)).join('')
                 : '<li class="text-sm text-gray-500">No documents attached yet.</li>';
@@ -1136,6 +1207,18 @@ const EmployeeLoans = (function () {
         function renderAttachments() {
             const list = detail.attachments || [];
             $('uploadForm').classList.toggle('hidden', !detail.canUploadAttachment);
+            const notice = $('attachmentNotice');
+            const needed = detail.canUploadAttachment && detail.loanProduct && detail.loanProduct.requiresAttachment;
+            notice.classList.toggle('hidden', !needed);
+            if (needed) {
+                const has = list.length > 0;
+                notice.className = 'mt-3 flex items-start gap-2 rounded-lg border p-3 text-sm font-semibold ' + (has
+                    ? 'border-green-200 bg-green-50 text-green-800'
+                    : 'border-amber-300 bg-amber-50 text-amber-900');
+                notice.innerHTML = `<span class="material-icons-round text-base">${has ? 'check_circle' : 'warning'}</span>
+                    <span>${has ? 'Supporting document attached. You can submit now.'
+                        : 'This loan requires a supporting document. Upload at least one document before you submit.'}</span>`;
+            }
             $('attachments').innerHTML = list.length
                 ? list.map(a => attachmentRow(a, appId, true)).join('')
                 : '<li class="text-sm text-gray-500">No documents attached.</li>';
@@ -1151,8 +1234,18 @@ const EmployeeLoans = (function () {
 
         // ---------- actions
 
+        function attachmentMissing() {
+            const p = detail.loanProduct;
+            return !!(p && p.requiresAttachment) && !(detail.attachments || []).length;
+        }
+
         async function doSubmit() {
             const resubmit = detail.application.status === 'RETURNED_FOR_CORRECTION';
+            if (attachmentMissing()) {
+                toast(ATTACHMENT_REQUIRED_MESSAGE, 'error');
+                $('attachmentNotice').scrollIntoView({behavior: 'smooth', block: 'center'});
+                return;
+            }
             const ok = await confirmDialog({
                 title: resubmit ? 'Resubmit application' : 'Submit application',
                 message: 'Your application will be sent for approval. You will not be able to edit it while it is under review.',
@@ -1160,8 +1253,7 @@ const EmployeeLoans = (function () {
             });
             if (!ok) return;
             try {
-                await postJson(`${API}/${appId}/submit`);
-                toast(resubmit ? 'Application resubmitted.' : 'Application submitted.', 'success');
+                await submitRequest(appId);
                 await load();
             } catch (e) { toastError(e); }
         }

@@ -332,8 +332,13 @@ public class EmployeeLoanApplicationServiceImpl implements EmployeeLoanApplicati
     // Detail assembly
     // =====================================================================
 
+    /** HR/Finance/admin logins may have no Employee record; then they simply are not an assigned approver. */
+    private Long currentEmployeeIdOrNull() {
+        return contextService.findCurrentEmployee().map(Employee::getId).orElse(null);
+    }
+
     private LoanApplicationDetailResponse buildDetail(EmployeeLoanApplication app, ViewerRole role) {
-        Long me = contextService.getCurrentEmployee().getId();
+        Long me = currentEmployeeIdOrNull();
         List<EmployeeLoanApprovalStep> steps =
                 stepRepository.findByLoanApplicationIdOrderBySequenceNoAscIdAsc(app.getId());
         Optional<EmployeeLoanAccount> account = accountRepository.findByLoanApplicationId(app.getId());

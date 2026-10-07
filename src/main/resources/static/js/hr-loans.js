@@ -118,6 +118,12 @@ const HrLoans = (function () {
             const parsed = JSON.parse(text);
             return parsed.message || parsed.detail || parsed.error || text;
         } catch (e) {
+            // The server's HTML error page: show only its detail line, never the page source.
+            if (/^\s*<(!doctype|html)/i.test(text)) {
+                const detail = new DOMParser().parseFromString(text, 'text/html').querySelector('.error-message');
+                const message = detail && detail.textContent.trim();
+                return message || 'Something went wrong. Please try again.';
+            }
             return text;
         }
     }

@@ -7,8 +7,9 @@
     <meta charset="UTF-8">
     <title>Loan Detail</title>
     <style>
-        .loan-page { --loan-border:#e5e7eb; --loan-muted:#64748b; --loan-surface:#ffffff; --loan-soft:#f8fafc; }
-        .dark .loan-page { --loan-border:#374151; --loan-muted:#9ca3af; --loan-surface:#1f2937; --loan-soft:#111827; }
+        /* :root so modals appended to <body> (outside .loan-page) still get the tokens */
+        :root, .loan-page { --loan-border:#e5e7eb; --loan-muted:#64748b; --loan-surface:#ffffff; --loan-soft:#f8fafc; }
+        .dark, .dark .loan-page { --loan-border:#374151; --loan-muted:#9ca3af; --loan-surface:#1f2937; --loan-soft:#111827; }
         .loan-hero { border:1px solid var(--loan-border); background:linear-gradient(135deg,#fff 0%,#eff6ff 100%); border-radius:16px; padding:24px; box-shadow:0 16px 40px -28px rgba(15,23,42,.45); }
         .dark .loan-hero { background:linear-gradient(135deg,#1f2937 0%,#0f172a 100%); }
         .loan-card { border:1px solid var(--loan-border); background:var(--loan-surface); border-radius:14px; box-shadow:0 12px 28px -24px rgba(15,23,42,.5); }
@@ -49,7 +50,10 @@
         .loan-mini-danger { border-color:#fecaca; color:#b91c1c; }
         .loan-icon-btn { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; flex:none; border-radius:8px; }
         .loan-icon-btn:hover { background:var(--loan-soft); }
-        .loan-modal-panel { border:1px solid var(--loan-border); background:var(--loan-surface); border-radius:16px; box-shadow:0 24px 80px -28px rgba(15,23,42,.7); }
+        .loan-modal-panel { border:1px solid var(--loan-border,#e5e7eb); background:var(--loan-surface,#ffffff); color:#111827; border-radius:16px; box-shadow:0 24px 80px -28px rgba(15,23,42,.7); -webkit-backdrop-filter:none; backdrop-filter:none; opacity:1; }
+        .dark .loan-modal-panel { background:var(--loan-surface,#1f2937); color:#f3f4f6; }
+        /* shell modals live on <body>, so make controls/buttons inside them fully styled too */
+        #loanConfirmModal, #loanCommentModal { -webkit-backdrop-filter:none; backdrop-filter:none; }
         .loan-empty { padding:28px; text-align:center; color:var(--loan-muted); font-size:14px; }
         .loan-toast { display:flex; align-items:flex-start; gap:10px; border-radius:10px; padding:12px 14px; font-size:13px; font-weight:600; box-shadow:0 12px 28px -12px rgba(15,23,42,.5); max-width:340px; animation:loan-toast-in .15s ease-out; }
         @keyframes loan-toast-in { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }

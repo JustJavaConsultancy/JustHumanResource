@@ -33,6 +33,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -63,11 +64,19 @@ public class LoanEmployeeContextServiceImpl implements LoanEmployeeContextServic
         if (email == null || email.isBlank()) {
             throw new AccessDeniedException("No authenticated user.");
         }
-        Employee employee = employeeService.getByEmail(email);
-        if (employee == null) {
-            throw new AccessDeniedException("No employee record is linked to " + email + ".");
+        return findCurrentEmployee().orElseThrow(() ->
+                new AccessDeniedException("No employee record is linked to " + email + "."));
+    }
+
+    @Override
+    public Optional<Employee> findCurrentEmployee() {
+        String email = authenticationManager.getCurrentUserEmail();
+        if (email == null || email.isBlank()) {
+            return Optional.empty();
         }
-        return employee;
+        // Repository lookup on purpose: EmployeeService.getByEmail throws when nothing matches, and an
+        // exception crossing its @Transactional proxy would mark this whole request rollback-only.
+        return employeeRepository.findByEmail(email.trim());
     }
 
     @Override
@@ -214,8 +223,9 @@ public class LoanEmployeeContextServiceImpl implements LoanEmployeeContextServic
 
     @Override
     public ViewerRole requireViewAccess(EmployeeLoanApplication application) {
-        Employee me = getCurrentEmployee();
-        if (application.getEmployee().getId().equals(me.getId())) {
+        // An HR/Finance/admin login may have no Employee record; they can still view by role.
+        Employee me = findCurrentEmployee().orElse(null);
+        if (me != null && application.getEmployee().getId().equals(me.getId())) {
             return ViewerRole.EMPLOYEE;
         }
         if (application.getStatus() != LoanApplicationStatus.DRAFT) {
@@ -225,7 +235,7 @@ public class LoanEmployeeContextServiceImpl implements LoanEmployeeContextServic
             if (authenticationManager.isFinancialOfficer()) {
                 return ViewerRole.FINANCE;
             }
-            if (isAssignedCustomApprover(application, me.getId())) {
+            if (me != null && isAssignedCustomApprover(application, me.getId())) {
                 return ViewerRole.CUSTOM_APPROVER;
             }
         }
@@ -242,7 +252,7 @@ public class LoanEmployeeContextServiceImpl implements LoanEmployeeContextServic
                 s.getApprovalStage() == LoanApprovalStage.CUSTOM
                         && Objects.equals(s.getApproverEmployeeId(), employeeId)
                         && (s.getDecision() != null
-                            || current.map(c -> c.getId().equals(s.getId())).orElse(false)));
+                        || current.map(c -> c.getId().equals(s.getId())).orElse(false)));
     }
 
     @Override
@@ -262,11 +272,13 @@ public class LoanEmployeeContextServiceImpl implements LoanEmployeeContextServic
 
     @Override
     public Map<Long, String> employeeNames(Collection<Long> employeeIds) {
-        if (employeeIds == null || employeeIds.isEmpty()) return Map.of();
+        // HashMap on purpose: callers look up nullable ids (e.g. actedBy on a pending step, or the approver
+        // of a group-routed HR/Finance step), and immutable maps such as Map.of() throw NPE on get(null).
+        if (employeeIds == null || employeeIds.isEmpty()) return new HashMap<>();
         Set<Long> ids = employeeIds.stream().filter(Objects::nonNull).collect(Collectors.toSet());
-        if (ids.isEmpty()) return Map.of();
+        if (ids.isEmpty()) return new HashMap<>();
         return employeeRepository.findAllById(ids).stream()
-                .collect(Collectors.toMap(Employee::getId, Employee::getFullName, (a, b) -> a));
+                .collect(Collectors.toMap(Employee::getId, Employee::getFullName, (a, b) -> a, HashMap::new));
     }
 
     private static BigDecimal nz(BigDecimal v) {
