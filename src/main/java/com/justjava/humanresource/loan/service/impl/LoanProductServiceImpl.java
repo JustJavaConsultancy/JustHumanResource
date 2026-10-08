@@ -8,9 +8,11 @@ import com.justjava.humanresource.loan.dto.LoanProductCommand;
 import com.justjava.humanresource.loan.dto.LoanProductResponse;
 import com.justjava.humanresource.loan.dto.LoanProductSummaryResponse;
 import com.justjava.humanresource.loan.entity.LoanProduct;
+import com.justjava.humanresource.loan.enums.LoanAccountStatus;
 import com.justjava.humanresource.loan.enums.LoanApprovalRouteType;
 import com.justjava.humanresource.loan.enums.LoanDisbursementMethod;
 import com.justjava.humanresource.loan.enums.LoanInterestType;
+import com.justjava.humanresource.loan.repository.EmployeeLoanAccountRepository;
 import com.justjava.humanresource.loan.repository.EmployeeLoanApplicationRepository;
 import com.justjava.humanresource.loan.repository.LoanProductRepository;
 import com.justjava.humanresource.loan.service.LoanProductService;
@@ -32,6 +34,7 @@ public class LoanProductServiceImpl implements LoanProductService {
 
     private final LoanProductRepository productRepository;
     private final EmployeeLoanApplicationRepository applicationRepository;
+    private final EmployeeLoanAccountRepository accountRepository;
     private final CustomApprovalPathRepository customApprovalPathRepository;
     private final CustomApprovalPathStepRepository customApprovalPathStepRepository;
     private final AuthenticationManager authenticationManager;
@@ -266,6 +269,7 @@ public class LoanProductServiceImpl implements LoanProductService {
 
     private LoanProductResponse toResponse(LoanProduct p) {
         long applicationCount = applicationRepository.countByLoanProductId(p.getId());
+        long activeLoanCount = accountRepository.countByLoanProductIdAndStatus(p.getId(), LoanAccountStatus.ACTIVE);
         boolean used = p.isUsed() || applicationCount > 0;
         return LoanProductResponse.builder()
                 .id(p.getId())
@@ -289,7 +293,7 @@ public class LoanProductServiceImpl implements LoanProductService {
                 .active(p.isActive())
                 .used(used)
                 .applicationCount(applicationCount)
-                // activeLoanCount is wired in Step 9/13 once the loan account repository query is available
+                .activeLoanCount(activeLoanCount)
                 .financialTermsEditable(!used)
                 .deletable(!used)
                 .createdAt(p.getCreatedAt())

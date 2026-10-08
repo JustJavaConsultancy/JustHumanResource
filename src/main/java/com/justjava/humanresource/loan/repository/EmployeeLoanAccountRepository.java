@@ -24,6 +24,9 @@ public interface EmployeeLoanAccountRepository extends JpaRepository<EmployeeLoa
 
     List<EmployeeLoanAccount> findAllByOrderByCreatedAtDesc();
 
+    /** Number of loan accounts of one product in the given status (used for "active loans" on product screens). */
+    long countByLoanProductIdAndStatus(Long loanProductId, LoanAccountStatus status);
+
     /** Active accounts for an employee whose repayment has started on or before the given month. */
     @Query("""
             select a from EmployeeLoanAccount a
