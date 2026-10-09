@@ -21,7 +21,8 @@
 		<azure-identity.version>1.18.5</azure-identity.version>
 		<google-cloud-meet.version>0.60.0</google-cloud-meet.version>
 		<google-auth-library-oauth2-http.version>1.37.1</google-auth-library-oauth2-http.version>
-		<embabel-agent.version>0.3.0</embabel-agent.version>
+		<embabel-agent.version>0.4.0</embabel-agent.version>
+		<spring-ai.version>1.1.5</spring-ai.version>
 	</properties>
 	<dependencyManagement>
 		<dependencies>
@@ -161,15 +162,32 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-amqp</artifactId>
 		</dependency>
-		<!-- https://mvnrepository.com/artifact/org.springframework.ai/spring-ai-openai-spring-boot-starter -->
+		<!-- Spring AI OpenAI model starter. Keep aligned with Embabel's Spring AI dependencies. -->
 		<dependency>
 			<groupId>org.springframework.ai</groupId>
-			<artifactId>spring-ai-openai-spring-boot-starter</artifactId>
-			<version>1.0.0-M6</version>
+			<artifactId>spring-ai-starter-model-openai</artifactId>
+			<version>${spring-ai.version}</version>
+			<exclusions>
+				<exclusion>
+					<groupId>org.springframework.boot</groupId>
+					<artifactId>spring-boot-starter</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 		<dependency>
 			<groupId>com.embabel.agent</groupId>
 			<artifactId>embabel-agent-starter</artifactId>
+			<version>${embabel-agent.version}</version>
+			<exclusions>
+				<exclusion>
+					<groupId>org.springframework.boot</groupId>
+					<artifactId>spring-boot-starter</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		<dependency>
+			<groupId>com.embabel.agent</groupId>
+			<artifactId>embabel-agent-starter-openai</artifactId>
 			<version>${embabel-agent.version}</version>
 		</dependency>
 		<!-- Spring Boot Starter for WebSockets -->
