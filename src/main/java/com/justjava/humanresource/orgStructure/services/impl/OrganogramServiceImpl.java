@@ -56,6 +56,7 @@ public class OrganogramServiceImpl implements OrganogramService {
                 .status(RecordStatus.ACTIVE)
                 .logoData(decodeLogo(dto.getLogoBase64()))
                 .logoContentType(dto.getLogoContentType())
+                .recruitmentAiShortlistingEnabled(dto.isRecruitmentAiShortlistingEnabled())
                 .build();
 
         companyRepository.save(company);
@@ -86,6 +87,7 @@ public class OrganogramServiceImpl implements OrganogramService {
                 company.setLogoContentType(dto.getLogoContentType());
             }
         }
+        company.setRecruitmentAiShortlistingEnabled(dto.isRecruitmentAiShortlistingEnabled());
 
         companyRepository.save(company);
         return mapToCompanyDTO(company);
@@ -357,6 +359,7 @@ public class OrganogramServiceImpl implements OrganogramService {
                 .status(RecordStatus.ACTIVE)
                 .logoData(decodeLogo(subsidiaryDTO.getLogoBase64()))
                 .logoContentType(subsidiaryDTO.getLogoContentType())
+                .recruitmentAiShortlistingEnabled(subsidiaryDTO.isRecruitmentAiShortlistingEnabled())
                 .build();
 
         companyRepository.save(subsidiary);
@@ -382,6 +385,7 @@ public class OrganogramServiceImpl implements OrganogramService {
                             .code(c.getCode())
                             .logoBase64(logoBase64)
                             .logoContentType(c.getLogoContentType())
+                            .recruitmentAiShortlistingEnabled(c.isRecruitmentAiShortlistingEnabled())
                             .subsidiaries(new ArrayList<>())
                             .build());
         }
@@ -442,6 +446,7 @@ public class OrganogramServiceImpl implements OrganogramService {
                 .status(c.getStatus())
                 .logoBase64(logoBase64)
                 .logoContentType(c.getLogoContentType())
+                .recruitmentAiShortlistingEnabled(c.isRecruitmentAiShortlistingEnabled())
                 .build();
     }
 

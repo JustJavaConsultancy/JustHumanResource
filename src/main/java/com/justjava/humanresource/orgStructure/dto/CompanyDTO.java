@@ -18,4 +18,5 @@ public class CompanyDTO {
 
     private String logoBase64;
     private String logoContentType;
+    private boolean recruitmentAiShortlistingEnabled;
 }

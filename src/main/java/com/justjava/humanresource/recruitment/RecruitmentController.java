@@ -16,12 +16,21 @@ import com.justjava.humanresource.recruitment.service.InterviewService;
 import com.justjava.humanresource.recruitment.service.OfferService;
 import com.justjava.humanresource.recruitment.service.CandidateHireService;
 import com.justjava.humanresource.recruitment.dto.HireCandidateCommand;
+import com.justjava.humanresource.recruitment.dto.ShortlistingReviewCommand;
+import com.justjava.humanresource.recruitment.service.AiShortlistingReviewService;
+import com.justjava.humanresource.recruitment.service.AiShortlistingService;
+import com.justjava.humanresource.recruitment.service.CandidateDocumentService;
 import com.justjava.humanresource.core.config.AuthenticationManager;
 import lombok.RequiredArgsConstructor;
 import org.flowable.engine.TaskService;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -45,6 +54,9 @@ public class RecruitmentController {
     private final JobStepRepository jobStepRepository;
     private final PayGroupRepository payGroupRepository;
     private final DepartmentRepository departmentRepository;
+    private final CandidateDocumentService candidateDocumentService;
+    private final AiShortlistingService aiShortlistingService;
+    private final AiShortlistingReviewService aiShortlistingReviewService;
 
     @GetMapping
     public String dashboard(Model model) {
@@ -137,6 +149,8 @@ public class RecruitmentController {
         model.addAttribute("candidate", candidateRepository.findById(application.getCandidateId()).orElseThrow());
         model.addAttribute("opening", openingRepository.findById(application.getJobOpeningId()).orElseThrow());
         model.addAttribute("history", historyRepository.findByApplicationIdOrderByCreatedAt(id));
+        model.addAttribute("candidateDocuments", candidateDocumentService.findByApplication(id));
+        model.addAttribute("documentTypes", CandidateDocumentType.values());
         model.addAttribute("interviews", interviewRepository.findByApplicationIdOrderByScheduledStartAsc(id));
         model.addAttribute("scorecards", interviewRepository.findByApplicationIdOrderByScheduledStartAsc(id).stream()
                 .collect(java.util.stream.Collectors.toMap(
@@ -153,6 +167,15 @@ public class RecruitmentController {
         model.addAttribute("canCreateOffer", hasRecruitmentAccess());
         model.addAttribute("canSendOffer", hasRecruitmentAccess());
         model.addAttribute("canStartOnboarding", hasRecruitmentAccess());
+        model.addAttribute("shortlistingEnabled", aiShortlistingService.isEnabledForApplication(id));
+        var latestShortlistingRun = aiShortlistingService.latestRun(id).orElse(null);
+        model.addAttribute("latestShortlistingRun", latestShortlistingRun);
+        model.addAttribute("shortlistingScores", latestShortlistingRun == null
+                ? List.of()
+                : aiShortlistingService.scoresForRun(latestShortlistingRun.getId()));
+        model.addAttribute("latestShortlistingDecision", aiShortlistingReviewService.latestDecision(id).orElse(null));
+        model.addAttribute("shortlistingDecisions", aiShortlistingReviewService.decisions(id));
+        model.addAttribute("shortlistingReviewCommand", new ShortlistingReviewCommand());
 
         // Dropdown data for recruitment forms
         model.addAttribute("employees", employeeRepository.findAllVisible().stream()
@@ -169,6 +192,56 @@ public class RecruitmentController {
                 .toList());
 
         return "recruitment/application-detail";
+    }
+
+    @PostMapping(value = "/applications/{id}/documents", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public String uploadCandidateDocument(@PathVariable Long id,
+                                          @RequestParam(defaultValue = "OTHER") CandidateDocumentType documentType,
+                                          @RequestParam("file") MultipartFile file) {
+        requireRecruitmentAccess();
+        var application = applicationRepository.findById(id).orElseThrow();
+        requireApplicationAccess(application);
+        candidateDocumentService.storeRecruiterUpload(application, file, documentType, currentEmployeeId());
+        return "redirect:/recruitment/applications/" + id;
+    }
+
+    @GetMapping("/applications/{id}/documents/{documentId}")
+    public ResponseEntity<Resource> viewCandidateDocument(@PathVariable Long id, @PathVariable Long documentId) {
+        var application = applicationRepository.findById(id).orElseThrow();
+        requireApplicationAccess(application);
+        var document = candidateDocumentService.requireDocumentForApplication(id, documentId);
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(document.getContentType()))
+                .contentLength(document.getFileSize())
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + document.getOriginalFilename().replace("\"", "") + "\"")
+                .body(candidateDocumentService.load(document));
+    }
+
+    @PostMapping("/applications/{id}/shortlisting/run")
+    public String runShortlisting(@PathVariable Long id) {
+        requireRecruitmentAccess();
+        var application = applicationRepository.findById(id).orElseThrow();
+        requireApplicationAccess(application);
+        aiShortlistingService.triggerShortlisting(id, currentEmployeeId());
+        return "redirect:/recruitment/applications/" + id;
+    }
+
+    @PostMapping("/applications/{id}/shortlisting/{runId}/retry")
+    public String retryShortlisting(@PathVariable Long id, @PathVariable Long runId) {
+        requireRecruitmentAccess();
+        var application = applicationRepository.findById(id).orElseThrow();
+        requireApplicationAccess(application);
+        aiShortlistingService.retryShortlisting(runId, currentEmployeeId());
+        return "redirect:/recruitment/applications/" + id;
+    }
+
+    @PostMapping("/applications/{id}/shortlisting/review")
+    public String reviewShortlisting(@PathVariable Long id, @ModelAttribute ShortlistingReviewCommand command) {
+        requireRecruitmentAccess();
+        var application = applicationRepository.findById(id).orElseThrow();
+        requireApplicationAccess(application);
+        aiShortlistingReviewService.record(id, command, currentEmployeeId());
+        return "redirect:/recruitment/applications/" + id;
     }
 
     @PostMapping("/applications/{id}/interviews")

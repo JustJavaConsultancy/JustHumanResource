@@ -1,11 +1,14 @@
 package com.justjava.humanresource.recruitment;
 
 import com.justjava.humanresource.recruitment.dto.PublicApplicationCommand;
+import com.justjava.humanresource.recruitment.enums.CandidateDocumentType;
 import com.justjava.humanresource.recruitment.enums.JobOpeningStatus;
 import com.justjava.humanresource.recruitment.repository.CandidateRepository;
 import com.justjava.humanresource.recruitment.repository.EmploymentOfferRepository;
 import com.justjava.humanresource.recruitment.repository.JobApplicationRepository;
 import com.justjava.humanresource.recruitment.repository.JobOpeningRepository;
+import com.justjava.humanresource.recruitment.service.AiShortlistingService;
+import com.justjava.humanresource.recruitment.service.CandidateDocumentService;
 import com.justjava.humanresource.recruitment.service.OfferService;
 import com.justjava.humanresource.recruitment.service.RecruitmentService;
 import jakarta.validation.Valid;
@@ -15,8 +18,10 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 
 @Controller @RequestMapping("/careers") @RequiredArgsConstructor
@@ -28,6 +33,8 @@ public class CareersController {
     private final RecruitmentService recruitmentService;
     private final OfferService offerService;
     private final TaskService taskService;
+    private final CandidateDocumentService candidateDocumentService;
+    private final AiShortlistingService aiShortlistingService;
 
     @GetMapping
     public String jobs(Model model) {
@@ -41,12 +48,51 @@ public class CareersController {
         return "careers/job-detail";
     }
     @PostMapping("/jobs/{slug}/apply")
-    public String apply(@PathVariable String slug, @Valid @ModelAttribute("application") PublicApplicationCommand command,
-                        BindingResult errors, Model model) {
+    public String apply(@PathVariable String slug,
+                        @Valid @ModelAttribute("application") PublicApplicationCommand command,
+                        BindingResult errors,
+                        @RequestParam(required = false) MultipartFile resume,
+                        @RequestParam(required = false) List<MultipartFile> supportingDocuments,
+                        Model model) {
         var job = recruitmentService.requirePubliclyAvailableOpening(slug);
+        validateResume(errors, resume);
+        validateSupportingDocuments(errors, supportingDocuments);
         if (errors.hasErrors()) { model.addAttribute("job", job); return "careers/job-detail"; }
-        model.addAttribute("result", recruitmentService.apply(slug, command));
+        var result = recruitmentService.apply(slug, command);
+        var application = applicationRepository.findById(result.applicationId()).orElseThrow();
+        var candidate = candidateRepository.findById(application.getCandidateId()).orElseThrow();
+        candidateDocumentService.storeCandidateUpload(application, candidate, resume, CandidateDocumentType.RESUME);
+        validSupportingDocuments(supportingDocuments).forEach(file ->
+                candidateDocumentService.storeCandidateUpload(application, candidate, file, CandidateDocumentType.OTHER));
+        if (aiShortlistingService.isEnabledForApplication(application.getId())) {
+            aiShortlistingService.triggerShortlisting(application.getId(), null);
+        }
+        model.addAttribute("result", result);
         return "careers/application-success";
+    }
+
+    private void validateResume(BindingResult errors, MultipartFile resume) {
+        try {
+            candidateDocumentService.validateUpload(resume);
+        } catch (IllegalArgumentException ex) {
+            errors.reject("resume", ex.getMessage());
+        }
+    }
+
+    private List<MultipartFile> validSupportingDocuments(List<MultipartFile> files) {
+        return files == null ? List.of() : files.stream()
+                .filter(file -> file != null && !file.isEmpty())
+                .toList();
+    }
+
+    private void validateSupportingDocuments(BindingResult errors, List<MultipartFile> files) {
+        for (MultipartFile file : validSupportingDocuments(files)) {
+            try {
+                candidateDocumentService.validateUpload(file);
+            } catch (IllegalArgumentException ex) {
+                errors.reject("supportingDocuments", ex.getMessage());
+            }
+        }
     }
 
     @GetMapping("/applications/{token}")

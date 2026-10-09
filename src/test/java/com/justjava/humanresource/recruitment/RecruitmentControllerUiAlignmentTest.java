@@ -12,6 +12,9 @@ import com.justjava.humanresource.recruitment.entity.JobOpening;
 import com.justjava.humanresource.recruitment.enums.OfferStatus;
 import com.justjava.humanresource.recruitment.repository.*;
 import com.justjava.humanresource.recruitment.service.CandidateHireService;
+import com.justjava.humanresource.recruitment.service.AiShortlistingReviewService;
+import com.justjava.humanresource.recruitment.service.AiShortlistingService;
+import com.justjava.humanresource.recruitment.service.CandidateDocumentService;
 import com.justjava.humanresource.recruitment.service.InterviewService;
 import com.justjava.humanresource.recruitment.service.OfferService;
 import com.justjava.humanresource.recruitment.service.RecruitmentService;
@@ -49,6 +52,9 @@ class RecruitmentControllerUiAlignmentTest {
     @Mock JobStepRepository jobStepRepository;
     @Mock PayGroupRepository payGroupRepository;
     @Mock DepartmentRepository departmentRepository;
+    @Mock CandidateDocumentService candidateDocumentService;
+    @Mock AiShortlistingService aiShortlistingService;
+    @Mock AiShortlistingReviewService aiShortlistingReviewService;
     RecruitmentController controller;
 
     @BeforeEach
@@ -57,7 +63,8 @@ class RecruitmentControllerUiAlignmentTest {
                 historyRepository, recruitmentService, interviewService, offerService, candidateHireService,
                 interviewRepository, scorecardRepository, offerRepository, conversionRepository,
                 taskService, authenticationManager, employeeRepository, jobStepRepository,
-                payGroupRepository, departmentRepository);
+                payGroupRepository, departmentRepository, candidateDocumentService,
+                aiShortlistingService, aiShortlistingReviewService);
     }
 
     @Test
@@ -79,8 +86,12 @@ class RecruitmentControllerUiAlignmentTest {
         when(candidateRepository.findById(30L)).thenReturn(Optional.of(candidate));
         when(openingRepository.findById(20L)).thenReturn(Optional.of(opening));
         when(historyRepository.findByApplicationIdOrderByCreatedAt(40L)).thenReturn(List.of());
+        when(candidateDocumentService.findByApplication(40L)).thenReturn(List.of());
         when(interviewRepository.findByApplicationIdOrderByScheduledStartAsc(40L)).thenReturn(List.of());
         when(conversionRepository.findByApplicationId(40L)).thenReturn(Optional.empty());
+        when(aiShortlistingService.latestRun(40L)).thenReturn(Optional.empty());
+        when(aiShortlistingReviewService.latestDecision(40L)).thenReturn(Optional.empty());
+        when(aiShortlistingReviewService.decisions(40L)).thenReturn(List.of());
 
         ExtendedModelMap model = new ExtendedModelMap();
         assertEquals("recruitment/application-detail", controller.application(40L, model));

@@ -40,4 +40,7 @@ public class Company extends BaseEntity {
 
     @Column(name = "logo_content_type", length = 20)
     private String logoContentType;
+
+    @Column(name = "recruitment_ai_shortlisting_enabled", nullable = false)
+    private boolean recruitmentAiShortlistingEnabled = false;
 }

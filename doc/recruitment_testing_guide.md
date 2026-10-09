@@ -13,7 +13,10 @@ Prepare these test users and test records before starting.
 | Approver or Manager user | To approve the Staff Requisition and review job publication when required. |
 | Finance Officer user | To approve an employment offer if the offer approval is assigned to Finance. |
 | Test candidate information | Use a fake name, email address, phone number, and address. Do not use a real person without permission. |
+| Test resume file | Required for public candidate application submission and shortlisting extraction. Use PDF, DOCX, or TXT. |
+| Optional supporting document | To test extra candidate document upload and extraction. Use PDF, DOCX, or TXT. |
 | Existing Department, Job Grade, Job Step, and Pay Group | These are needed when creating the staff request, preparing the job, making the offer, and starting onboarding. |
+| Company AI shortlisting flag | Turn on `recruitmentAiShortlistingEnabled` for the company when testing automatic shortlisting after application submission. |
 
 > **Note:** If the required Department, Job Grade, Job Step, or Pay Group does not exist, ask the HR setup user to create them first from the side menu of the HR role.
 
@@ -23,6 +26,8 @@ Prepare these test users and test records before starting.
 - Write down the job title used for the test.
 - Write down the application reference shown after the candidate applies.
 - Write down the candidate name and email address.
+- Write down the uploaded resume filename and extraction status.
+- Write down the AI shortlisting recommendation, score, and HR review decision if shortlisting is enabled.
 - Write down any error message exactly as it appears.
 - For every problem, record the user role, page name, button clicked, expected result, and actual result.
 
@@ -162,8 +167,10 @@ Follow these steps in order. Each step depends on the step before it.
 7. Enter the candidate address if required.
 8. Enter LinkedIn or portfolio information if available.
 9. Select how the candidate heard about the job if the field is shown.
-10. Tick the consent checkbox.
-11. Click Submit application.
+10. Upload a resume file. Use PDF, DOCX, or TXT.
+11. Upload one or more supporting documents if available.
+12. Tick the consent checkbox.
+13. Click Submit application.
 
 ### Expected Result
 
@@ -171,8 +178,10 @@ Follow these steps in order. Each step depends on the step before it.
 - A success page is shown.
 - An application reference is shown or available in the system.
 - The candidate can later check the application status if a status link is provided.
+- The uploaded resume is stored against the application.
+- If AI shortlisting is enabled for the company, the system creates a shortlisting run after the application is submitted.
 
-> **Warning:** Also test submitting without required fields and without ticking consent. The form should show a clear message and should not submit.
+> **Warning:** Also test submitting without required fields, without a resume, with an unsupported file type, and without ticking consent. The form should show a clear message and should not submit.
 
 ## Step 8. Confirm The Application Appears For HR
 
@@ -190,15 +199,46 @@ Follow these steps in order. Each step depends on the step before it.
 - The candidate name and email address are correct.
 - The role name is correct.
 - The application has a status showing it has been submitted or is ready for review.
+- The Candidate documents section shows the uploaded resume and any supporting documents.
+- Each uploaded document shows an extraction status such as EXTRACTED, FAILED, or UNREADABLE.
 
-## Step 9. Review The Candidate Application
+## Step 9. Review Candidate Documents And AI Shortlisting
+
+**Where to go:** Applications, inside Recruitment at the side menu of the HR role. Then open the candidate application.
+
+1. Open the candidate application.
+2. Find the Candidate documents section.
+3. Confirm the uploaded resume filename, type, size, and extraction status.
+4. If extraction failed, upload a readable PDF, DOCX, or TXT document from the HR upload form.
+5. Find the AI shortlisting section.
+6. If no run exists, click Run shortlisting.
+7. If a run failed, click Retry after fixing document extraction issues.
+8. Review the recommendation, overall score, summary, strengths, concerns, fairness warnings, and criterion score table.
+9. Record the HR shortlisting review decision: Advance, Hold, Reject, or No decision.
+10. Tick AI recommendation accepted only when HR agrees with the recommendation.
+11. If HR does not accept the AI recommendation, enter an override reason.
+12. Save the review.
+
+### Expected Result
+
+- Candidate documents are visible to HR.
+- Extracted documents can be used for shortlisting.
+- The AI shortlisting section shows a recommendation and score when readable document text exists.
+- Criterion scores include evidence or missing evidence.
+- HR can save a review decision without completing the Flowable workflow task.
+- The workflow action section remains available for the actual Advance, Hold, or Reject action.
+
+> **Warning:** AI shortlisting is advisory only. HR must still use the workflow action section to advance, hold, or reject the candidate.
+
+## Step 10. Review The Candidate Application
 
 **Where to go:** Applications, inside Recruitment at the side menu of the HR role. Then open the candidate application.
 
 1. Read the candidate details.
 2. Read the role details.
-3. In the action section, enter a short comment.
-4. Click Advance to move the candidate forward.
+3. Review the candidate documents and shortlisting section if available.
+4. In the workflow action section, enter a short comment.
+5. Click Advance to move the candidate forward.
 
 ### Expected Result
 
@@ -208,7 +248,7 @@ Follow these steps in order. Each step depends on the step before it.
 
 > **Warning:** Also test Hold and Reject on a separate candidate. Hold should keep the candidate for later review. Reject should stop the candidate from moving forward.
 
-## Step 10. Schedule An Interview
+## Step 11. Schedule An Interview
 
 **Where to go:** Candidate application page, inside Applications under Recruitment.
 
@@ -229,11 +269,11 @@ Follow these steps in order. Each step depends on the step before it.
 
 > **Warning:** Also test an interview end time that is earlier than the start time. The system should not allow an invalid interview time.
 
-## Step 11. Submit Interview Score
+## Step 12. Submit Interview Score
 
 **Where to go:** Interviews section on the candidate application page.
 
-1. Find the interview created in Step 10.
+1. Find the interview created in Step 11.
 2. Enter the reviewer employee number if requested.
 3. Enter the overall score.
 4. Select the recommendation, such as Hire, Strong hire, Hold, No hire, or Strong no hire.
@@ -246,7 +286,7 @@ Follow these steps in order. Each step depends on the step before it.
 - The score and recommendation are shown under the interview.
 - The application can continue to the next stage when the candidate is successful.
 
-## Step 12. Move Candidate To Offer Stage
+## Step 13. Move Candidate To Offer Stage
 
 **Where to go:** Candidate application page, inside Applications under Recruitment.
 
@@ -259,7 +299,7 @@ Follow these steps in order. Each step depends on the step before it.
 - The candidate stage changes to offer stage.
 - The Create offer section is available to HR.
 
-## Step 13. Create An Employment Offer
+## Step 14. Create An Employment Offer
 
 **Where to go:** Create offer section on the candidate application page.
 
@@ -280,7 +320,7 @@ Follow these steps in order. Each step depends on the step before it.
 
 > **Warning:** Also test an offer expiry date that is earlier than the proposed start date. The system should reject dates that do not make sense.
 
-## Step 14. Approve Or Reject The Offer
+## Step 15. Approve Or Reject The Offer
 
 **Where to go:** Offers section on the candidate application page. Use the HR role or Finance Officer role, depending on who approves offers.
 
@@ -300,7 +340,7 @@ Follow these steps in order. Each step depends on the step before it.
 
 > **Warning:** Also test Reject on a separate offer. A rejected offer should not be sent to the candidate.
 
-## Step 15. Send The Offer To The Candidate
+## Step 16. Send The Offer To The Candidate
 
 **Where to go:** Offers section on the candidate application page, inside Applications under Recruitment.
 
@@ -315,7 +355,7 @@ Follow these steps in order. Each step depends on the step before it.
 - The candidate can see the offer on the application status page if that page is enabled.
 - If email sending is enabled, the candidate receives the offer notice.
 
-## Step 16. Candidate Accepts The Offer
+## Step 17. Candidate Accepts The Offer
 
 **Where to go:** Candidate application status page from the candidate status link.
 
@@ -332,7 +372,7 @@ Follow these steps in order. Each step depends on the step before it.
 
 > **Warning:** Also test Decline offer on a separate candidate. A declined offer should not allow onboarding for that candidate.
 
-## Step 17. Start Candidate Onboarding
+## Step 18. Start Candidate Onboarding
 
 **Where to go:** Start onboarding section on the candidate application page, inside Applications under Recruitment.
 
@@ -358,7 +398,7 @@ Follow these steps in order. Each step depends on the step before it.
 - The candidate is linked to a new employee record.
 - The new employee can be found in Employees, at the side menu of the HR role.
 
-## Step 18. Confirm The New Employee Record
+## Step 19. Confirm The New Employee Record
 
 **Where to go:** Employees, at the side menu of the HR role.
 
@@ -373,7 +413,7 @@ Follow these steps in order. Each step depends on the step before it.
 - The employee details match the accepted candidate and onboarding form.
 - The recruitment application shows that the candidate has been converted to an employee.
 
-## Step 19. Close The Job Opening
+## Step 20. Close The Job Opening
 
 **Where to go:** Job openings, inside Recruitment at the side menu of the HR role. Then open the job.
 
@@ -396,6 +436,11 @@ Follow these steps in order. Each step depends on the step before it.
 | --- | --- | --- |
 | Required fields | Try to save each form with one important field left empty. | The form should not save and should show a clear message. |
 | Duplicate candidate | Apply twice to the same job using the same candidate email address. | The system should either prevent the duplicate or show both records clearly if duplicates are allowed. |
+| Missing resume | Submit a public application without selecting a resume. | The application should not submit and should show a clear validation message. |
+| Unsupported candidate document | Upload an unsupported file type as resume or supporting document. | The upload should be rejected with a clear message. |
+| Unreadable document | Upload a valid file with no readable text. | The document should be stored and marked UNREADABLE or FAILED for extraction. |
+| AI shortlisting retry | Trigger shortlisting with no extracted document, then upload a readable document and retry. | The first run should need review or fail clearly; the retry should produce a recommendation and criterion scores. |
+| AI override reason | Save a shortlisting review without accepting the AI recommendation and without an override reason. | The system should reject the review until an override reason is supplied. |
 | Closed job | Try to apply after the job is closed. | The job should not allow new applications. |
 | Wrong user access | Sign in as an Employee and try to manage recruitment records. | The employee should not be able to manage recruitment records. |
 | Finance offer approval | Sign in as Finance Officer and check if an offer waiting for finance approval is visible. | The Finance Officer should see only the offer approval items allowed for that role. |
@@ -406,8 +451,11 @@ Follow these steps in order. Each step depends on the step before it.
 - **Done** Staff Requisition was created and approved.
 - **Done** Job opening was created from the approved request.
 - **Done** Job was prepared, reviewed, and published.
-- **Done** Candidate applied from the Careers page.
-- **Done** HR reviewed and advanced the candidate.
+- **Done** Candidate applied from the Careers page with a resume.
+- **Done** Candidate documents were visible to HR with extraction status.
+- **Done** AI shortlisting was run or confirmed disabled for the company.
+- **Done** HR recorded a shortlisting review decision where applicable.
+- **Done** HR reviewed and advanced the candidate through the workflow action.
 - **Done** Interview was scheduled and scored.
 - **Done** Offer was created, approved, sent, and accepted.
 - **Done** Candidate onboarding was started.

@@ -17,6 +17,7 @@ public class CompanyTreeDTO {
 
     private String logoBase64;
     private String logoContentType;
+    private boolean recruitmentAiShortlistingEnabled;
 
     private List<CompanyTreeDTO> subsidiaries;
 }
