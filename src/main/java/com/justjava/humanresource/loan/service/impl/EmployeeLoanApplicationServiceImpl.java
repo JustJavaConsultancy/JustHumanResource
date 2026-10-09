@@ -47,6 +47,7 @@ public class EmployeeLoanApplicationServiceImpl implements EmployeeLoanApplicati
     private final LoanApprovalRouteService approvalRouteService;
     private final LoanBankDetailService bankDetailService;
     private final AuthenticationManager authenticationManager;
+    private final LoanNotificationService notifications;
 
     // =====================================================================
     // Commands
@@ -181,6 +182,9 @@ public class EmployeeLoanApplicationServiceImpl implements EmployeeLoanApplicati
         // Creates the approval steps and starts the Flowable process; an empty custom route fails here
         // and rolls the whole submission back. The initialize delegate moves the status to PENDING_*.
         approvalRouteService.startApproval(app);
+        // Employee confirmation for both first submission and resubmission. Scheduled after commit, so a
+        // submission that fails or rolls back above sends nothing; an email failure cannot undo the submit.
+        notifications.notifyApplicationSubmitted(app.getId());
         return toResponse(app);
     }
 

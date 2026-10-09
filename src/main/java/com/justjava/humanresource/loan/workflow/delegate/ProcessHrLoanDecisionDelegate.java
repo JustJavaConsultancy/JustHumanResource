@@ -9,6 +9,7 @@ import com.justjava.humanresource.loan.repository.EmployeeLoanApplicationReposit
 import com.justjava.humanresource.loan.repository.EmployeeLoanApprovalStepRepository;
 import com.justjava.humanresource.loan.service.LoanActivityService;
 import com.justjava.humanresource.loan.service.LoanApprovalRouteService;
+import com.justjava.humanresource.loan.service.LoanNotificationService;
 import org.flowable.engine.delegate.DelegateExecution;
 import org.springframework.stereotype.Component;
 
@@ -20,8 +21,9 @@ public class ProcessHrLoanDecisionDelegate extends AbstractLoanDecisionDelegate 
     public ProcessHrLoanDecisionDelegate(EmployeeLoanApplicationRepository applications,
                                          EmployeeLoanApprovalStepRepository steps,
                                          LoanApprovalRouteService routeService,
-                                         LoanActivityService activityService) {
-        super(applications, steps, routeService, activityService);
+                                         LoanActivityService activityService,
+                                         LoanNotificationService notifications) {
+        super(applications, steps, routeService, activityService, notifications);
     }
 
     @Override protected LoanApprovalStage stage() { return LoanApprovalStage.HR; }

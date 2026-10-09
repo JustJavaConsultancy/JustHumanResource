@@ -9,6 +9,7 @@ import com.justjava.humanresource.loan.repository.EmployeeLoanAccountRepository;
 import com.justjava.humanresource.loan.repository.EmployeeLoanApplicationRepository;
 import com.justjava.humanresource.loan.repository.LoanRepaymentScheduleRepository;
 import com.justjava.humanresource.loan.service.EmployeeLoanAccountService;
+import com.justjava.humanresource.loan.service.LoanNotificationService;
 import com.justjava.humanresource.loan.service.LoanPayrollDeductionService;
 import com.justjava.humanresource.payroll.entity.PayrollLineItem;
 import com.justjava.humanresource.payroll.entity.PayrollRun;
@@ -39,6 +40,7 @@ public class LoanPayrollDeductionServiceImpl implements LoanPayrollDeductionServ
     private final EmployeeLoanApplicationRepository applications;
     private final PayrollLineItemRepository lineItems;
     private final EmployeeLoanAccountService accountService;
+    private final LoanNotificationService notifications;
 
     // ------------------------------------------------------------------ calculation phase
 
@@ -136,15 +138,20 @@ public class LoanPayrollDeductionServiceImpl implements LoanPayrollDeductionServ
 
     /** Earlier installments of this employee that were never deducted (e.g. not in that month's payroll). */
     private void flagEarlierMissed(Long employeeId, LocalDate month) {
+        List<Long> newlyMissed = new ArrayList<>();
         for (EmployeeLoanAccount account : accounts.findByEmployeeIdAndStatus(employeeId, LoanAccountStatus.ACTIVE)) {
             List<LoanRepaymentSchedule> open = new ArrayList<>(
                     schedules.findByLoanAccountIdAndStatus(account.getId(), LoanRepaymentStatus.PENDING));
             open.addAll(schedules.findByLoanAccountIdAndStatus(account.getId(), LoanRepaymentStatus.PARTIALLY_PAID));
             for (LoanRepaymentSchedule row : open) {
-                if (row.getDueMonth().isBefore(month)) {
-                    accountService.markMissed(row.getId());
+                if (row.getDueMonth().isBefore(month) && accountService.markMissed(row.getId())) {
+                    newlyMissed.add(row.getId());
                 }
             }
+        }
+        // One digest for everything this posting newly flagged; rows that were already MISSED are not included.
+        if (!newlyMissed.isEmpty()) {
+            notifications.notifyMissedDeductions(newlyMissed);
         }
     }
 
@@ -154,7 +161,16 @@ public class LoanPayrollDeductionServiceImpl implements LoanPayrollDeductionServ
         LocalDate first = month.withDayOfMonth(1);
         List<LoanRepaymentSchedule> rows = schedules.findByDueMonthAndStatusIn(
                 first, List.of(LoanRepaymentStatus.PENDING, LoanRepaymentStatus.PARTIALLY_PAID));
-        rows.forEach(r -> accountService.markMissed(r.getId()));
+        List<Long> newlyMissed = new ArrayList<>();
+        for (LoanRepaymentSchedule r : rows) {
+            if (accountService.markMissed(r.getId())) {
+                newlyMissed.add(r.getId());
+            }
+        }
+        // One digest per period-close run, listing only the rows flagged by this call.
+        if (!newlyMissed.isEmpty()) {
+            notifications.notifyMissedDeductions(newlyMissed);
+        }
         return rows.size();
     }
 

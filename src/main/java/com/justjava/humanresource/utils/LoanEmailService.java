@@ -1,5 +1,6 @@
 package com.justjava.humanresource.utils;
 
+import com.justjava.humanresource.aau.keycloak.KeycloakAdminService;
 import com.justjava.humanresource.hr.entity.Employee;
 import com.justjava.humanresource.hr.repository.EmployeeRepository;
 import com.justjava.humanresource.loan.entity.EmployeeLoanAccount;
@@ -21,6 +22,7 @@ import com.justjava.humanresource.loan.repository.LoanRepaymentScheduleRepositor
 import com.justjava.humanresource.loan.service.LoanApprovalRouteService;
 import com.justjava.humanresource.orgStructure.entity.Company;
 import lombok.RequiredArgsConstructor;
+import org.keycloak.representations.idm.UserRepresentation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -54,6 +56,8 @@ public class LoanEmailService {
 
     private static final String DEFAULT_COMPANY_NAME = "Human Resources";
     private static final int MAX_DIGEST_ROWS = 50;
+    /** Realm where HR/Finance staff and their groups are managed (see AdminController). */
+    private static final String APPROVER_REALM = "humanResources";
 
     private final EmailService emailService;
     private final EmployeeRepository employees;
@@ -62,6 +66,7 @@ public class LoanEmailService {
     private final EmployeeLoanAccountRepository accounts;
     private final LoanRepaymentScheduleRepository schedules;
     private final LoanDisbursementRepository disbursements;
+    private final KeycloakAdminService keycloakAdminService;
 
     private record Line(String label, String value) {
     }
@@ -275,7 +280,7 @@ public class LoanEmailService {
 
             Employee applicant = app.getEmployee();
             List<Employee> recipients = approvers(LoanApprovalRouteService.FINANCE_GROUP).stream()
-                    .filter(e -> !Objects.equals(e.getId(), applicant.getId())) // nobody confirms their own loan
+                    .filter(e -> !isApplicant(e, applicant)) // nobody confirms their own loan
                     .toList();
             if (recipients.isEmpty()) {
                 log.warn("Loan email: no active Finance recipients found for pending payment of application {}.",
@@ -491,7 +496,7 @@ public class LoanEmailService {
     private void notifyGroup(EmployeeLoanApplication app, String group, String subject, String taskName) {
         Employee applicant = app.getEmployee();
         List<Employee> recipients = approvers(group).stream()
-                .filter(e -> !Objects.equals(e.getId(), applicant.getId())) // nobody decides their own loan
+                .filter(e -> !isApplicant(e, applicant)) // nobody decides their own loan
                 .toList();
         if (recipients.isEmpty()) {
             log.warn("Loan email: no active recipients found in group '{}' for application {}.",
@@ -509,21 +514,66 @@ public class LoanEmailService {
         }
     }
 
-    /** Active, e-mailable employees in any of the groups, de-duplicated by e-mail address. */
+    /**
+     * E-mailable approvers in any of the groups, de-duplicated by e-mail address.
+     * Keycloak ({@value #APPROVER_REALM} realm) is the source of truth, because that is where the admin puts
+     * HR/Finance users in groups and where the approval permission checks read them from. If Keycloak returns
+     * nobody or is unreachable, falls back to the local Employee.groups copy.
+     */
     private List<Employee> approvers(String... groups) {
-        Set<String> names = new java.util.LinkedHashSet<>();
-        for (String g : groups) {
-            String lower = g.toLowerCase(Locale.ROOT);
-            names.add(lower);
-            names.add("/" + lower);
-        }
         Map<String, Employee> byEmail = new LinkedHashMap<>();
-        for (Employee e : employees.findActiveEmployeesInAnyGroupIgnoreCase(names)) {
-            if (e.getEmail() != null && !e.getEmail().isBlank()) {
-                byEmail.putIfAbsent(e.getEmail().trim().toLowerCase(Locale.ROOT), e);
+
+        for (String g : groups) {
+            try {
+                for (UserRepresentation u : keycloakAdminService.getGroupMembers(APPROVER_REALM, g)) {
+                    String email = u.getEmail();
+                    if ((email == null || email.isBlank()) && u.getUsername() != null && u.getUsername().contains("@")) {
+                        email = u.getUsername();
+                    }
+                    if (email == null || email.isBlank()) {
+                        log.warn("Loan email: Keycloak user '{}' in group '{}' has no e-mail address.", u.getUsername(), g);
+                        continue;
+                    }
+                    String first = u.getFirstName() == null ? "" : u.getFirstName().trim();
+                    String last = u.getLastName() == null ? "" : u.getLastName().trim();
+                    if (first.isEmpty() && last.isEmpty()) {
+                        first = u.getUsername() == null ? "colleague" : u.getUsername();
+                    }
+                    // Transient Employee used only as an address/name holder (never saved).
+                    Employee recipient = new Employee();
+                    recipient.setFirstName(first);
+                    recipient.setLastName(last);
+                    recipient.setEmail(email.trim());
+                    byEmail.putIfAbsent(email.trim().toLowerCase(Locale.ROOT), recipient);
+                }
+            } catch (Exception e) {
+                log.warn("Loan email: could not read Keycloak group '{}': {}", g, e.getMessage());
+            }
+        }
+
+        if (byEmail.isEmpty()) {
+            Set<String> names = new java.util.LinkedHashSet<>();
+            for (String g : groups) {
+                String lower = g.toLowerCase(Locale.ROOT);
+                names.add(lower);
+                names.add("/" + lower);
+            }
+            for (Employee e : employees.findActiveEmployeesInAnyGroupIgnoreCase(names)) {
+                if (e.getEmail() != null && !e.getEmail().isBlank()) {
+                    byEmail.putIfAbsent(e.getEmail().trim().toLowerCase(Locale.ROOT), e);
+                }
             }
         }
         return new ArrayList<>(byEmail.values());
+    }
+
+    /** True when the recipient is the applicant, by employee id or (for Keycloak recipients) by e-mail. */
+    private static boolean isApplicant(Employee recipient, Employee applicant) {
+        if (recipient.getId() != null && Objects.equals(recipient.getId(), applicant.getId())) {
+            return true;
+        }
+        return recipient.getEmail() != null && applicant.getEmail() != null
+                && recipient.getEmail().trim().equalsIgnoreCase(applicant.getEmail().trim());
     }
 
     /** Latest submission only: earlier (returned) attempts restart at sequenceNo 1 and stay as audit. */
