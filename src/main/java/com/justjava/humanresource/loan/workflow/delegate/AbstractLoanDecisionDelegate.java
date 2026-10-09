@@ -3,16 +3,19 @@ package com.justjava.humanresource.loan.workflow.delegate;
 import com.justjava.humanresource.loan.entity.EmployeeLoanApplication;
 import com.justjava.humanresource.loan.entity.EmployeeLoanApprovalStep;
 import com.justjava.humanresource.loan.enums.LoanActivityType;
+import com.justjava.humanresource.loan.enums.LoanApplicationStatus;
 import com.justjava.humanresource.loan.enums.LoanApprovalDecision;
 import com.justjava.humanresource.loan.enums.LoanApprovalStage;
 import com.justjava.humanresource.loan.repository.EmployeeLoanApplicationRepository;
 import com.justjava.humanresource.loan.repository.EmployeeLoanApprovalStepRepository;
 import com.justjava.humanresource.loan.service.LoanActivityService;
 import com.justjava.humanresource.loan.service.LoanApprovalRouteService;
+import com.justjava.humanresource.loan.service.LoanNotificationService;
 import org.flowable.engine.delegate.DelegateExecution;
 import org.flowable.engine.delegate.JavaDelegate;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 /**
  * Shared decision handling for the HR, Finance and custom user tasks.
@@ -27,15 +30,18 @@ public abstract class AbstractLoanDecisionDelegate implements JavaDelegate {
     protected final EmployeeLoanApprovalStepRepository steps;
     protected final LoanApprovalRouteService routeService;
     protected final LoanActivityService activityService;
+    protected final LoanNotificationService notifications;
 
     protected AbstractLoanDecisionDelegate(EmployeeLoanApplicationRepository applications,
                                            EmployeeLoanApprovalStepRepository steps,
                                            LoanApprovalRouteService routeService,
-                                           LoanActivityService activityService) {
+                                           LoanActivityService activityService,
+                                           LoanNotificationService notifications) {
         this.applications = applications;
         this.steps = steps;
         this.routeService = routeService;
         this.activityService = activityService;
+        this.notifications = notifications;
     }
 
     protected abstract LoanApprovalStage stage();
@@ -52,6 +58,15 @@ public abstract class AbstractLoanDecisionDelegate implements JavaDelegate {
 
     /** Extra check that the actor may decide this step. */
     protected void validateActor(EmployeeLoanApprovalStep step, Long actorId) {
+    }
+
+    /**
+     * Employee id of the next approver who should be told a task now waits for them, or null for none.
+     * Called after an approval has been saved. Delegates are shared singletons, so overrides must work it out
+     * from the database and must not keep it in a field.
+     */
+    protected Long nextAssigneeToNotify(EmployeeLoanApplication app) {
+        return null;
     }
 
     @Override
@@ -101,5 +116,42 @@ public abstract class AbstractLoanDecisionDelegate implements JavaDelegate {
             }
         }
         applications.save(app);
+        sendDecisionNotifications(id, app, decision, cleanComment);
+    }
+
+    /**
+     * Employee decision e-mail. Rejections and returns are always sent. An approval is sent only while the
+     * application is still moving through approval (HR approved -> Finance next, or a custom approver with
+     * more approvers after them). The final approval (FINANCE_APPROVED / CUSTOM_APPROVED) is skipped: the
+     * disbursement step sends its own "loan approved" e-mail, so a decision e-mail would be a duplicate.
+     * Scheduled after commit, so a rolled-back decision sends nothing.
+     */
+    private void sendDecisionNotifications(Long id, EmployeeLoanApplication app, LoanApprovalDecision decision,
+                                           String comment) {
+        boolean finalApproval = decision == LoanApprovalDecision.APPROVE
+                && (app.getStatus() == LoanApplicationStatus.FINANCE_APPROVED
+                || app.getStatus() == LoanApplicationStatus.CUSTOM_APPROVED);
+        if (!finalApproval) {
+            notifications.notifyDecision(id, stage(), decision, comment);
+        }
+
+        // Role-based route: HR approval hands the loan to Finance, so tell the Finance approvers. Only the HR
+        // stage ever reaches PENDING_FINANCE_APPROVAL (custom and Finance decisions never do), so a rejection,
+        // a return, a Finance decision or the custom route can't trigger this. The status is already
+        // PENDING_FINANCE_APPROVAL here, which LoanEmailService requires before it sends.
+        if (decision == LoanApprovalDecision.APPROVE && stage() == LoanApprovalStage.HR
+                && app.getStatus() == LoanApplicationStatus.PENDING_FINANCE_APPROVAL) {
+            notifications.notifyFinanceApprovalPending(id);
+        }
+
+        // Custom route: a non-final approval passes the task to the next custom approver, so tell them.
+        // The status must still be PENDING_CUSTOM_APPROVAL (it becomes CUSTOM_APPROVED after the last approver),
+        // and nobody is told to approve their own loan.
+        if (decision == LoanApprovalDecision.APPROVE && app.getStatus() == LoanApplicationStatus.PENDING_CUSTOM_APPROVAL) {
+            Long next = nextAssigneeToNotify(app);
+            if (next != null && !Objects.equals(next, app.getEmployee().getId())) {
+                notifications.notifyCustomApprovalAssigned(id, next);
+            }
+        }
     }
 }

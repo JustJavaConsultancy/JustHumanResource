@@ -13,10 +13,12 @@ import com.justjava.humanresource.loan.enums.LoanRepaymentStatus;
 import com.justjava.humanresource.loan.enums.LoanRepaymentTransactionType;
 import com.justjava.humanresource.loan.repository.EmployeeLoanAccountRepository;
 import com.justjava.humanresource.loan.repository.EmployeeLoanApplicationRepository;
+import com.justjava.humanresource.loan.repository.LoanDisbursementRepository;
 import com.justjava.humanresource.loan.repository.LoanRepaymentScheduleRepository;
 import com.justjava.humanresource.loan.repository.LoanRepaymentTransactionRepository;
 import com.justjava.humanresource.loan.service.EmployeeLoanAccountService;
 import com.justjava.humanresource.loan.service.LoanActivityService;
+import com.justjava.humanresource.loan.service.LoanNotificationService;
 import com.justjava.humanresource.loan.service.LoanRepaymentCalculationService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -46,6 +48,8 @@ public class EmployeeLoanAccountServiceImpl implements EmployeeLoanAccountServic
     private final LoanRepaymentTransactionRepository transactions;
     private final LoanRepaymentCalculationService calculationService;
     private final LoanActivityService activityService;
+    private final LoanNotificationService notifications;
+    private final LoanDisbursementRepository disbursements;
 
     // ------------------------------------------------------------------ activation
 
@@ -138,6 +142,15 @@ public class EmployeeLoanAccountServiceImpl implements EmployeeLoanAccountServic
                         + ", " + calc.getNumberOfInstallments() + " installment(s) of "
                         + calc.getRepaymentAmount().toPlainString() + " from " + calc.getRepaymentStartMonth() + ".",
                 null);
+
+        // Generic "Loan activated" e-mail: legacy / non-disbursement activations only. Payroll-period and
+        // outside-payroll loans have a LoanDisbursement row and get their own disbursement e-mail (which already
+        // says the loan is active), so they are skipped here; LoanEmailService.sendLoanActivated applies the same
+        // check again when the mail is built. Only a newly created account reaches this point, so the
+        // repairIfPartial retry path never re-sends. Scheduled after commit and never throws.
+        if (!disbursements.existsByLoanApplicationId(app.getId())) {
+            notifications.notifyLoanActivated(app.getId());
+        }
         return account;
     }
 
@@ -293,6 +306,11 @@ public class EmployeeLoanAccountServiceImpl implements EmployeeLoanAccountServic
             });
             activityService.recordForAccount(account.getLoanApplicationId(), account.getId(),
                     LoanActivityType.LOAN_COMPLETED, "Loan fully repaid.", null);
+            // One completion e-mail, only on the ACTIVE -> COMPLETED transition. A payroll retry returns the
+            // existing transaction above, and an already-completed account is rejected above, so neither can
+            // reach this point. A partial repayment leaves the balance above zero and skips the block.
+            // Scheduled after commit and never throws.
+            notifications.notifyLoanCompleted(account.getLoanApplicationId());
         }
         accounts.save(account);
         return txn;
@@ -300,17 +318,17 @@ public class EmployeeLoanAccountServiceImpl implements EmployeeLoanAccountServic
 
     @Override
     @Transactional
-    public void markMissed(Long repaymentScheduleId) {
+    public boolean markMissed(Long repaymentScheduleId) {
         LoanRepaymentSchedule row = schedules.findById(repaymentScheduleId)
                 .orElseThrow(() -> new EntityNotFoundException("Repayment schedule row not found: " + repaymentScheduleId));
         if (row.getStatus() != LoanRepaymentStatus.PENDING
                 && row.getStatus() != LoanRepaymentStatus.PARTIALLY_PAID) {
-            return; // PAID or already MISSED
+            return false; // PAID or already MISSED
         }
         EmployeeLoanAccount account = accounts.findById(row.getLoanAccountId())
                 .orElseThrow(() -> new EntityNotFoundException("Loan account not found: " + row.getLoanAccountId()));
         if (account.getStatus() != LoanAccountStatus.ACTIVE) {
-            return;
+            return false;
         }
         row.setStatus(LoanRepaymentStatus.MISSED);
         row.setMissedAt(LocalDateTime.now());
@@ -321,5 +339,6 @@ public class EmployeeLoanAccountServiceImpl implements EmployeeLoanAccountServic
                 "Installment " + row.getSequenceNumber() + " (" + row.getDueMonth()
                         + ") was due but not deducted. Outstanding " + row.getOutstandingAmount().toPlainString() + ".",
                 null);
+        return true;
     }
 }

@@ -10,12 +10,14 @@ import com.justjava.humanresource.loan.repository.EmployeeLoanApplicationReposit
 import com.justjava.humanresource.loan.service.LoanActivityService;
 import com.justjava.humanresource.loan.service.LoanApprovalRouteService;
 import com.justjava.humanresource.loan.service.LoanEmployeeContextService;
+import com.justjava.humanresource.loan.service.LoanNotificationService;
 import lombok.RequiredArgsConstructor;
 import org.flowable.engine.delegate.DelegateExecution;
 import org.flowable.engine.delegate.JavaDelegate;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
  * First task of the process. The approval steps already exist (created by LoanApprovalRouteService);
@@ -29,6 +31,7 @@ public class InitializeLoanApprovalDelegate implements JavaDelegate {
     private final LoanApprovalRouteService routeService;
     private final LoanActivityService activityService;
     private final LoanEmployeeContextService contextService;
+    private final LoanNotificationService notifications;
 
     @Override
     public void execute(DelegateExecution execution) {
@@ -70,5 +73,16 @@ public class InitializeLoanApprovalDelegate implements JavaDelegate {
             execution.setVariable("hasMoreApprovers", false);
         }
         applications.save(app);
+
+        // Tell the first approver(s) now that the status is PENDING_*; LoanEmailService only sends while the
+        // application is still in that status. Scheduled after commit, so nothing is sent if this rolls back.
+        if (routeType == LoanApprovalRouteType.CUSTOM) {
+            // Never email the applicant as the approver of their own loan.
+            if (!Objects.equals(first.getApproverEmployeeId(), app.getEmployee().getId())) {
+                notifications.notifyCustomApprovalAssigned(app.getId(), first.getApproverEmployeeId());
+            }
+        } else {
+            notifications.notifyHrApprovalPending(app.getId());
+        }
     }
 }

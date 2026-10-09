@@ -9,6 +9,7 @@ import com.justjava.humanresource.loan.repository.EmployeeLoanApplicationReposit
 import com.justjava.humanresource.loan.repository.EmployeeLoanApprovalStepRepository;
 import com.justjava.humanresource.loan.service.LoanActivityService;
 import com.justjava.humanresource.loan.service.LoanApprovalRouteService;
+import com.justjava.humanresource.loan.service.LoanNotificationService;
 import org.flowable.engine.delegate.DelegateExecution;
 import org.springframework.stereotype.Component;
 
@@ -21,8 +22,9 @@ public class ProcessCustomLoanDecisionDelegate extends AbstractLoanDecisionDeleg
     public ProcessCustomLoanDecisionDelegate(EmployeeLoanApplicationRepository applications,
                                              EmployeeLoanApprovalStepRepository steps,
                                              LoanApprovalRouteService routeService,
-                                             LoanActivityService activityService) {
-        super(applications, steps, routeService, activityService);
+                                             LoanActivityService activityService,
+                                             LoanNotificationService notifications) {
+        super(applications, steps, routeService, activityService, notifications);
     }
 
     @Override protected LoanApprovalStage stage() { return LoanApprovalStage.CUSTOM; }
@@ -35,6 +37,15 @@ public class ProcessCustomLoanDecisionDelegate extends AbstractLoanDecisionDeleg
         if (!actorId.equals(step.getApproverEmployeeId())) {
             throw new IllegalStateException("Approval actor does not match the configured approver.");
         }
+    }
+
+    /** The decision is already saved, so the current step is the next custom approver (none after the last). */
+    @Override
+    protected Long nextAssigneeToNotify(EmployeeLoanApplication app) {
+        return routeService.getCurrentStep(app.getId())
+                .filter(next -> next.getApprovalStage() == LoanApprovalStage.CUSTOM)
+                .map(EmployeeLoanApprovalStep::getApproverEmployeeId)
+                .orElse(null);
     }
 
     @Override

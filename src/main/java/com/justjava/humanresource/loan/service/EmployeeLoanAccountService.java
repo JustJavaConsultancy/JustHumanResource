@@ -47,6 +47,9 @@ public interface EmployeeLoanAccountService {
     /**
      * Flags a due row as MISSED (visibility only: no roll-forward, no schedule change).
      * Idempotent; ignored for rows that are already PAID/MISSED.
+     *
+     * @return true when this call changed the row to MISSED; false when nothing changed (row already PAID or
+     *         MISSED, or its loan account is not ACTIVE). Callers use it to notify only newly missed rows.
      */
-    void markMissed(Long repaymentScheduleId);
+    boolean markMissed(Long repaymentScheduleId);
 }
