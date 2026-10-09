@@ -67,6 +67,22 @@ public class FlowableTaskService {
                 .toList();
     }
 
+    /**
+     * Read-only lookup of one active task by id, built exactly like the
+     * list on the lock approval page (same createdTime and variables).
+     * Returns null if the task does not exist or is no longer active.
+     */
+    public FlowableTaskDTO getActiveTaskById(String taskId) {
+        if (taskId == null || taskId.isBlank()) {
+            return null;
+        }
+        Task task = taskService.createTaskQuery()
+                .taskId(taskId)
+                .active()
+                .singleResult();
+        return task == null ? null : mapToDto(task);
+    }
+
     public List<FlowableTaskDTO> getTasksByProcessDefinition(
             String processDefinitionKey
     ) {

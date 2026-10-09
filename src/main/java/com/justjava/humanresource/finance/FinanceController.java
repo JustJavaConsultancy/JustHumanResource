@@ -2,10 +2,12 @@ package com.justjava.humanresource.finance;
 
 import com.justjava.humanresource.payroll.dto.PayrollJournalEntryDTO;
 import com.justjava.humanresource.payroll.entity.PayrollAccountingSettings;
+import com.justjava.humanresource.payroll.dto.PayrollLockChangeReportDTO;
 import com.justjava.humanresource.payroll.entity.PaySlipDTO;
 import com.justjava.humanresource.payroll.report.dto.PayrollSummaryDTO;
 import com.justjava.humanresource.payroll.repositories.PayrollAccountingSettingsRepository;
 import com.justjava.humanresource.payroll.service.PayrollJournalService;
+import com.justjava.humanresource.payroll.service.PayrollLockChangeService;
 import com.justjava.humanresource.payroll.service.PayrollRunService;
 import com.justjava.humanresource.payroll.service.impl.PaySlipServiceImpl;
 import com.justjava.humanresource.workflow.dto.FlowableTaskDTO;
@@ -22,6 +24,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -46,6 +49,9 @@ public class FinanceController {
 
     @Autowired
     PayrollRunService payrollRunService;
+
+    @Autowired
+    PayrollLockChangeService payrollLockChangeService;
 
     @GetMapping("/finance")
     public String getFinancePage(Model model) {
@@ -110,12 +116,32 @@ public class FinanceController {
         model.addAttribute("approvalRequests", approvalRequests);
         model.addAttribute("paySlips", paySlips);
         model.addAttribute("completedProcesses", completedProcess);
+        // Before/after comparison per pending approval, keyed by taskId
+        Map<String, PayrollLockChangeReportDTO> changeReports =
+                payrollLockChangeService.buildReports(approvalRequests);
+        model.addAttribute("changeReports", changeReports);
         model.addAttribute("title", "Lock Approval");
         model.addAttribute("subTitle", "Manage lock approval processes and requests");
         return "finance/lockApproval";
     }
     @PostMapping("/approve/lock")
-    public String approveLock(String taskId) {
+    public String approveLock(String taskId, RedirectAttributes redirectAttributes) {
+        FlowableTaskDTO task = flowableTaskService.getActiveTaskById(taskId);
+        if (task == null) {
+            redirectAttributes.addFlashAttribute("lockApprovalBlockedMessage",
+                    "This lock approval request no longer exists or was already processed.");
+            return "redirect:/finance/lockApproval";
+        }
+
+        // Re-check on the server so a stale page or a direct POST cannot reach
+        // the payment step with a journal that no longer matches the payroll.
+        PayrollLockChangeReportDTO report = payrollLockChangeService.buildReport(task);
+        if (report.isHasChanges()) {
+            redirectAttributes.addFlashAttribute("lockApprovalBlockedMessage", report.getSummaryMessage());
+            redirectAttributes.addFlashAttribute("lockApprovalBlockedTaskId", taskId);
+            return "redirect:/finance/lockApproval";
+        }
+
         flowableTaskService.completeTask(taskId, Map.of("approved", true));
         return "redirect:/finance/lockApproval";
     }

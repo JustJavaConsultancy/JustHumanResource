@@ -144,6 +144,16 @@
 <body>
 <main layout:fragment="content">
 
+  <!-- ===== BLOCKED-APPROVAL FLASH MESSAGE (set by POST /approve/lock) ===== -->
+  <div th:if="${lockApprovalBlockedMessage != null}"
+       class="mb-6 flex items-start gap-3 rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-4">
+    <span class="material-icons-round text-red-600 dark:text-red-400">error</span>
+    <div>
+      <p class="text-sm font-semibold text-red-700 dark:text-red-300">Approval was not completed</p>
+      <p class="text-sm text-red-700 dark:text-red-300" th:text="${lockApprovalBlockedMessage}">Blocked message</p>
+    </div>
+  </div>
+
   <!-- ===== PENDING REQUESTS SECTION ===== -->
   <th:block th:if="${approvalRequests != null and !approvalRequests.isEmpty()}">
     <div th:each="request : ${approvalRequests}" th:with="
@@ -153,7 +163,9 @@
         totalGross    = ${vars.totalGross},
         totalDeductions = ${vars.totalDeductions},
         totalNet      = ${vars.totalNet},
-        empCount      = ${vars.employeeCount}
+        empCount      = ${vars.employeeCount},
+        report        = ${changeReports != null ? changeReports[request.taskId] : null},
+        blocked       = ${report != null and report.hasChanges}
     " class="mb-8 last:mb-0"> <!-- consistent spacing between multiple requests, last one has no bottom margin -->
 
       <!-- ===== PERIOD HEADER CARD ===== -->
@@ -194,6 +206,168 @@
         </div>
       </div>
 
+      <!-- ===== PAYROLL CHANGED AFTER LOCK: NOTICE (only when something differs) ===== -->
+      <th:block th:if="${report != null and report.hasChanges}">
+        <div class="mb-4 rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-5">
+          <div class="flex items-start gap-3">
+            <span class="material-icons-round text-red-600 dark:text-red-400 mt-0.5">warning</span>
+            <div class="min-w-0 flex-1">
+              <h4 class="font-semibold text-red-700 dark:text-red-300">Payroll changed after HR locked this period</h4>
+              <p class="text-sm text-red-700 dark:text-red-300 mt-1" th:text="${report.summaryMessage}">Summary</p>
+              <p class="text-sm text-red-700 dark:text-red-300 mt-1">
+                The payslips below show the current figures. They no longer match what HR locked.
+              </p>
+            </div>
+          </div>
+
+          <!-- Totals: at lock vs now -->
+          <div class="mt-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead>
+              <tr class="bg-gray-100 dark:bg-gray-700 text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-300">
+                <th class="px-4 py-2 text-left">Totals</th>
+                <th class="px-4 py-2 text-right">At HR lock</th>
+                <th class="px-4 py-2 text-right">Now</th>
+                <th class="px-4 py-2 text-right">Difference</th>
+              </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+              <tr>
+                <td class="px-4 py-2 font-medium">Gross pay</td>
+                <td class="px-4 py-2 text-right" th:text="${'₦' + #numbers.formatDecimal(report.beforeTotalGross, 1, 'COMMA', 2, 'POINT')}">₦0.00</td>
+                <td class="px-4 py-2 text-right" th:text="${'₦' + #numbers.formatDecimal(report.afterTotalGross, 1, 'COMMA', 2, 'POINT')}">₦0.00</td>
+                <td class="px-4 py-2 text-right font-semibold"
+                    th:classappend="${report.grossTotalDiff.signum() > 0 ? 'text-red-600 dark:text-red-400' : (report.grossTotalDiff.signum() < 0 ? 'text-green-600 dark:text-green-400' : 'text-gray-500')}"
+                    th:text="${'₦' + (report.grossTotalDiff.signum() > 0 ? '+' : '') + #numbers.formatDecimal(report.grossTotalDiff, 1, 'COMMA', 2, 'POINT')}">₦0.00</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-2 font-medium">Total deductions</td>
+                <td class="px-4 py-2 text-right" th:text="${'₦' + #numbers.formatDecimal(report.beforeTotalDeductions, 1, 'COMMA', 2, 'POINT')}">₦0.00</td>
+                <td class="px-4 py-2 text-right" th:text="${'₦' + #numbers.formatDecimal(report.afterTotalDeductions, 1, 'COMMA', 2, 'POINT')}">₦0.00</td>
+                <td class="px-4 py-2 text-right font-semibold"
+                    th:classappend="${report.deductionsTotalDiff.signum() > 0 ? 'text-red-600 dark:text-red-400' : (report.deductionsTotalDiff.signum() < 0 ? 'text-green-600 dark:text-green-400' : 'text-gray-500')}"
+                    th:text="${'₦' + (report.deductionsTotalDiff.signum() > 0 ? '+' : '') + #numbers.formatDecimal(report.deductionsTotalDiff, 1, 'COMMA', 2, 'POINT')}">₦0.00</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-2 font-medium">Net pay</td>
+                <td class="px-4 py-2 text-right" th:text="${'₦' + #numbers.formatDecimal(report.beforeTotalNet, 1, 'COMMA', 2, 'POINT')}">₦0.00</td>
+                <td class="px-4 py-2 text-right" th:text="${'₦' + #numbers.formatDecimal(report.afterTotalNet, 1, 'COMMA', 2, 'POINT')}">₦0.00</td>
+                <td class="px-4 py-2 text-right font-semibold"
+                    th:classappend="${report.netTotalDiff.signum() > 0 ? 'text-red-600 dark:text-red-400' : (report.netTotalDiff.signum() < 0 ? 'text-green-600 dark:text-green-400' : 'text-gray-500')}"
+                    th:text="${'₦' + (report.netTotalDiff.signum() > 0 ? '+' : '') + #numbers.formatDecimal(report.netTotalDiff, 1, 'COMMA', 2, 'POINT')}">₦0.00</td>
+              </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Per-employee comparison -->
+          <div class="mt-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-auto max-h-96">
+            <table class="w-full text-sm min-w-[56rem]">
+              <thead class="sticky top-0 z-10">
+              <tr class="bg-gray-100 dark:bg-gray-700 text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-300">
+                <th rowspan="2" class="px-3 py-2 text-left align-bottom">Employee</th>
+                <th colspan="3" class="px-3 py-2 text-center border-l border-gray-200 dark:border-gray-600">Gross (₦)</th>
+                <th colspan="3" class="px-3 py-2 text-center border-l border-gray-200 dark:border-gray-600">Deductions (₦)</th>
+                <th colspan="3" class="px-3 py-2 text-center border-l border-gray-200 dark:border-gray-600">Net (₦)</th>
+                <th rowspan="2" class="px-3 py-2 text-left align-bottom border-l border-gray-200 dark:border-gray-600">What changed</th>
+              </tr>
+              <tr class="bg-gray-100 dark:bg-gray-700 text-xs font-medium text-gray-500 dark:text-gray-400">
+                <th class="px-3 py-1 text-right border-l border-gray-200 dark:border-gray-600">At lock</th>
+                <th class="px-3 py-1 text-right">Now</th>
+                <th class="px-3 py-1 text-right">Diff</th>
+                <th class="px-3 py-1 text-right border-l border-gray-200 dark:border-gray-600">At lock</th>
+                <th class="px-3 py-1 text-right">Now</th>
+                <th class="px-3 py-1 text-right">Diff</th>
+                <th class="px-3 py-1 text-right border-l border-gray-200 dark:border-gray-600">At lock</th>
+                <th class="px-3 py-1 text-right">Now</th>
+                <th class="px-3 py-1 text-right">Diff</th>
+              </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+              <tr th:each="emp : ${report.employees}" class="hover:bg-gray-50 dark:hover:bg-gray-750">
+                <td class="px-3 py-2">
+                  <p class="font-medium" th:text="${emp.employeeName}">Name</p>
+                  <p class="text-xs text-gray-500" th:text="${emp.employeeNumber}">EMP-000</p>
+                </td>
+                <td class="px-3 py-2 text-right whitespace-nowrap"
+                    th:classappend="${emp.grossChanged ? 'bg-amber-50 dark:bg-amber-900/20' : ''}"
+                    th:text="${emp.beforeGross != null ? #numbers.formatDecimal(emp.beforeGross, 1, 'COMMA', 2, 'POINT') : '-'}">-</td>
+                <td class="px-3 py-2 text-right whitespace-nowrap"
+                    th:classappend="${(emp.grossChanged ? 'bg-amber-50 dark:bg-amber-900/20 font-semibold ' : '')}"
+                    th:text="${emp.afterGross != null ? #numbers.formatDecimal(emp.afterGross, 1, 'COMMA', 2, 'POINT') : (emp.changeType.name() == 'REMOVED' ? '-' : 'Recalculating')}">-</td>
+                <td class="px-3 py-2 text-right whitespace-nowrap"
+                    th:classappend="${(emp.grossChanged ? 'bg-amber-50 dark:bg-amber-900/20 font-semibold ' : '') + (emp.grossDiff != null and emp.grossDiff.signum() > 0 ? 'text-red-600 dark:text-red-400' : (emp.grossDiff != null and emp.grossDiff.signum() < 0 ? 'text-green-600 dark:text-green-400' : ''))}"
+                    th:text="${emp.grossDiff != null ? ((emp.grossDiff.signum() > 0 ? '+' : '') + #numbers.formatDecimal(emp.grossDiff, 1, 'COMMA', 2, 'POINT')) : '-'}">-</td>
+                <td class="px-3 py-2 text-right whitespace-nowrap"
+                    th:classappend="${emp.deductionsChanged ? 'bg-amber-50 dark:bg-amber-900/20' : ''}"
+                    th:text="${emp.beforeDeductions != null ? #numbers.formatDecimal(emp.beforeDeductions, 1, 'COMMA', 2, 'POINT') : '-'}">-</td>
+                <td class="px-3 py-2 text-right whitespace-nowrap"
+                    th:classappend="${(emp.deductionsChanged ? 'bg-amber-50 dark:bg-amber-900/20 font-semibold ' : '')}"
+                    th:text="${emp.afterDeductions != null ? #numbers.formatDecimal(emp.afterDeductions, 1, 'COMMA', 2, 'POINT') : (emp.changeType.name() == 'REMOVED' ? '-' : 'Recalculating')}">-</td>
+                <td class="px-3 py-2 text-right whitespace-nowrap"
+                    th:classappend="${(emp.deductionsChanged ? 'bg-amber-50 dark:bg-amber-900/20 font-semibold ' : '') + (emp.deductionsDiff != null and emp.deductionsDiff.signum() > 0 ? 'text-red-600 dark:text-red-400' : (emp.deductionsDiff != null and emp.deductionsDiff.signum() < 0 ? 'text-green-600 dark:text-green-400' : ''))}"
+                    th:text="${emp.deductionsDiff != null ? ((emp.deductionsDiff.signum() > 0 ? '+' : '') + #numbers.formatDecimal(emp.deductionsDiff, 1, 'COMMA', 2, 'POINT')) : '-'}">-</td>
+                <td class="px-3 py-2 text-right whitespace-nowrap"
+                    th:classappend="${emp.netChanged ? 'bg-amber-50 dark:bg-amber-900/20' : ''}"
+                    th:text="${emp.beforeNet != null ? #numbers.formatDecimal(emp.beforeNet, 1, 'COMMA', 2, 'POINT') : '-'}">-</td>
+                <td class="px-3 py-2 text-right whitespace-nowrap"
+                    th:classappend="${(emp.netChanged ? 'bg-amber-50 dark:bg-amber-900/20 font-semibold ' : '')}"
+                    th:text="${emp.afterNet != null ? #numbers.formatDecimal(emp.afterNet, 1, 'COMMA', 2, 'POINT') : (emp.changeType.name() == 'REMOVED' ? '-' : 'Recalculating')}">-</td>
+                <td class="px-3 py-2 text-right whitespace-nowrap"
+                    th:classappend="${(emp.netChanged ? 'bg-amber-50 dark:bg-amber-900/20 font-semibold ' : '') + (emp.netDiff != null and emp.netDiff.signum() > 0 ? 'text-red-600 dark:text-red-400' : (emp.netDiff != null and emp.netDiff.signum() < 0 ? 'text-green-600 dark:text-green-400' : ''))}"
+                    th:text="${emp.netDiff != null ? ((emp.netDiff.signum() > 0 ? '+' : '') + #numbers.formatDecimal(emp.netDiff, 1, 'COMMA', 2, 'POINT')) : '-'}">-</td>
+                <td class="px-3 py-2">
+                  <span class="badge mb-1 inline-block"
+                        th:classappend="${(emp.changeType.name() == 'CHANGED' or emp.changeType.name() == 'LINE_ITEMS_CHANGED') ? 'badge-warning'
+                                          : (emp.changeType.name() == 'RECALCULATING' ? 'badge-info'
+                                          : (emp.changeType.name() == 'ADDED' ? 'badge-success' : 'badge-error'))}"
+                        th:text="${emp.changeType.name() == 'LINE_ITEMS_CHANGED' ? 'Pay items' : #strings.capitalize(#strings.toLowerCase(emp.changeType.name()))}">Changed</span>
+                  <p class="text-xs text-gray-600 dark:text-gray-300" th:text="${emp.description}">Description</p>
+                  <!-- Pay items that differ (no JavaScript needed) -->
+                  <details th:if="${emp.lineChanges != null and !emp.lineChanges.isEmpty()}" class="mt-2">
+                    <summary class="cursor-pointer text-xs font-medium text-primary-600 dark:text-primary-400"
+                             th:text="${#lists.size(emp.lineChanges) + ' pay item(s) differ'}">2 pay item(s) differ</summary>
+                    <table class="mt-2 w-full text-xs">
+                      <thead>
+                      <tr class="text-gray-500 dark:text-gray-400">
+                        <th class="py-1 pr-2 text-left font-medium">Pay item</th>
+                        <th class="py-1 px-2 text-right font-medium">At lock</th>
+                        <th class="py-1 px-2 text-right font-medium">Now</th>
+                        <th class="py-1 pl-2 text-right font-medium">Diff</th>
+                      </tr>
+                      </thead>
+                      <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                      <tr th:each="li : ${emp.lineChanges}">
+                        <td class="py-1 pr-2">
+                          <span class="font-medium" th:text="${li.description}">Housing allowance</span>
+                          <span class="block text-gray-400" th:text="${li.componentType + ' · ' + li.componentCode}">EARNING · HOUSING</span>
+                          <span class="text-gray-500" th:if="${li.changeKind == 'ADDED'}">(new)</span>
+                          <span class="text-gray-500" th:if="${li.changeKind == 'REMOVED'}">(removed)</span>
+                        </td>
+                        <td class="py-1 px-2 text-right whitespace-nowrap"
+                            th:text="${li.beforeAmount != null ? #numbers.formatDecimal(li.beforeAmount, 1, 'COMMA', 2, 'POINT') : '-'}">-</td>
+                        <td class="py-1 px-2 text-right whitespace-nowrap"
+                            th:text="${li.afterAmount != null ? #numbers.formatDecimal(li.afterAmount, 1, 'COMMA', 2, 'POINT') : '-'}">-</td>
+                        <td class="py-1 pl-2 text-right whitespace-nowrap font-semibold"
+                            th:classappend="${li.diff.signum() > 0 ? 'text-red-600 dark:text-red-400' : (li.diff.signum() < 0 ? 'text-green-600 dark:text-green-400' : '')}"
+                            th:text="${(li.diff.signum() > 0 ? '+' : '') + #numbers.formatDecimal(li.diff, 1, 'COMMA', 2, 'POINT')}">+0.00</td>
+                      </tr>
+                      </tbody>
+                    </table>
+                  </details>
+                </td>
+              </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p class="mt-2 text-xs text-red-700 dark:text-red-300"
+             th:if="${report.recalculatingEmployeeCount > 0 or !report.employees.?[afterGross == null and changeType.name() == 'ADDED'].isEmpty()}">
+            Employees still being recalculated are excluded from the Now totals.
+          </p>
+        </div>
+      </th:block>
+
       <!-- ===== APPROVAL ACTION BUTTONS (TOP) ===== -->
       <div class="flex justify-end space-x-3 mb-6">
         <button th:data-modal-id="|rejectModal-${request.taskId}|"
@@ -201,9 +375,18 @@
                 class="px-6 py-3 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center text-sm font-medium">
           <span class="material-icons-round text-sm mr-2">cancel</span> Return request
         </button>
-        <button th:data-modal-id="|approveModal-${request.taskId}|"
+        <button th:unless="${blocked}"
+                th:data-modal-id="|approveModal-${request.taskId}|"
                 onclick="openModalFromData(this)"
                 class="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg flex items-center text-sm font-medium">
+          <span class="material-icons-round text-sm mr-2">check_circle</span> Approve &amp; lock period
+        </button>
+        <!-- Blocked variant: no data-modal-id and no onclick, so it can never open the modal -->
+        <button th:if="${blocked}"
+                type="button"
+                disabled
+                title="Approval is blocked because payroll changed after the lock. Reject this request so HR can lock again."
+                class="px-6 py-3 bg-green-600 text-white rounded-lg flex items-center text-sm font-medium opacity-50 cursor-not-allowed">
           <span class="material-icons-round text-sm mr-2">check_circle</span> Approve &amp; lock period
         </button>
       </div>
@@ -409,6 +592,8 @@
                     Cancel
                   </button>
                   <button type="submit"
+                          th:disabled="${blocked}"
+                          th:classappend="${blocked} ? 'opacity-50 cursor-not-allowed'"
                           class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm font-medium">
                     Confirm &amp; lock
                   </button>

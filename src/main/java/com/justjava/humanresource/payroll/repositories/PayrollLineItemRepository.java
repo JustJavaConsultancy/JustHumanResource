@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -21,6 +22,9 @@ public interface PayrollLineItemRepository
        ============================================================ */
 
     List<PayrollLineItem> findByPayrollRunId(Long payrollRunId);
+
+    /** Read-only batch load used by the lock-approval change report (one query for many runs). */
+    List<PayrollLineItem> findByPayrollRunIdIn(Collection<Long> payrollRunIds);
 
     /* ============================================================
        FETCH BY RUN AND COMPONENT TYPE

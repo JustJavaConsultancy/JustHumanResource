@@ -14,6 +14,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -829,6 +830,41 @@ AND pr.versionNumber = (
             @Param("companyId") Long companyId,
             @Param("periodStart") LocalDate periodStart,
             @Param("periodEnd") LocalDate periodEnd
+    );
+
+    /* ============================================================
+       PAYROLL LOCK CHANGE NOTICE (read-only baseline)
+       ============================================================ */
+
+    /**
+     * For each employee, the highest-version run for the period among runs
+     * created at or before {@code cutoff}, kept only if that run is POSTED.
+     * This mirrors how the journal picked its runs at lock time: take the
+     * latest version, then keep it if POSTED. Runs created after the cutoff
+     * (HR amendments made while Finance is reviewing) are ignored.
+     */
+    @Query("""
+    SELECT pr
+    FROM PayrollRun pr
+    WHERE pr.employee.department.company.id = :companyId
+      AND pr.periodStart = :periodStart
+      AND pr.periodEnd = :periodEnd
+      AND pr.createdAt <= :cutoff
+      AND pr.status = com.justjava.humanresource.core.enums.PayrollRunStatus.POSTED
+      AND pr.versionNumber = (
+          SELECT MAX(pr2.versionNumber)
+          FROM PayrollRun pr2
+          WHERE pr2.employee.id = pr.employee.id
+            AND pr2.periodStart = pr.periodStart
+            AND pr2.periodEnd = pr.periodEnd
+            AND pr2.createdAt <= :cutoff
+      )
+    """)
+    List<PayrollRun> findLatestPostedRunsAsOf(
+            @Param("companyId") Long companyId,
+            @Param("periodStart") LocalDate periodStart,
+            @Param("periodEnd") LocalDate periodEnd,
+            @Param("cutoff") LocalDateTime cutoff
     );
 
     /* ============================================================
