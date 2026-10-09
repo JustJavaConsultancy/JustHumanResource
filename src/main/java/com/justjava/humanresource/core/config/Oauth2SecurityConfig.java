@@ -19,8 +19,6 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
 import org.springframework.security.web.authentication.logout.LogoutSuccessHandler;
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
-import org.springframework.web.servlet.handler.HandlerMappingIntrospector;
 
 import java.util.Collection;
 import java.util.Locale;
@@ -53,7 +51,7 @@ public class Oauth2SecurityConfig {
     );
 
     @Bean
-    protected SecurityFilterChain configure(HttpSecurity http, HandlerMappingIntrospector introspector,ClientRegistrationRepository repo) throws Exception {
+    protected SecurityFilterChain configure(HttpSecurity http, ClientRegistrationRepository repo) throws Exception {
         log.debug("Configuring security");
 
         http.securityMatcher("/**")
@@ -72,12 +70,12 @@ public class Oauth2SecurityConfig {
                 )
                 .authorizeHttpRequests(
                         authorize -> {
-                            authorize.requestMatchers(new AntPathRequestMatcher("/login")).permitAll();
-                            authorize.requestMatchers(new AntPathRequestMatcher("/careers/**")).permitAll();
-                            authorize.requestMatchers(new AntPathRequestMatcher("/mobile/biometric/bootstrap")).permitAll();
-                            authorize.requestMatchers(new AntPathRequestMatcher("/mobile/auth/refresh")).permitAll();
-                            authorize.requestMatchers(new AntPathRequestMatcher("/mobile/auth/session/login")).permitAll();
-                            authorize.requestMatchers(new AntPathRequestMatcher("/api/**")).permitAll();
+                            authorize.requestMatchers("/login").permitAll();
+                            authorize.requestMatchers("/careers/**").permitAll();
+                            authorize.requestMatchers("/mobile/biometric/bootstrap").permitAll();
+                            authorize.requestMatchers("/mobile/auth/refresh").permitAll();
+                            authorize.requestMatchers("/mobile/auth/session/login").permitAll();
+                            authorize.requestMatchers("/api/**").permitAll();
                             authorize.anyRequest().authenticated();
                         }
                 )

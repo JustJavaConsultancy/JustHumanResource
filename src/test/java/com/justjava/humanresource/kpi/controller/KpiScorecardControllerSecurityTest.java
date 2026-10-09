@@ -10,15 +10,15 @@ import com.justjava.humanresource.kpi.service.KpiScorecardTemplateService;
 import com.justjava.humanresource.kpi.service.KpiScoringRubricService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.data.jpa.mapping.JpaMetamodelMappingContext;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -34,25 +34,25 @@ class KpiScorecardControllerSecurityTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
+    @MockitoBean
     private KpiScorecardTemplateService templateService;
 
-    @MockBean
+    @MockitoBean
     private KpiScoringRubricService rubricService;
 
-    @MockBean
+    @MockitoBean
     private KpiScorecardImportService importService;
 
-    @MockBean(name = "kpiAuthorization")
+    @MockitoBean(name = "kpiAuthorization")
     private KpiAuthorizationService authorizationService;
 
-    @MockBean
+    @MockitoBean
     private JpaMetamodelMappingContext jpaMetamodelMappingContext;
 
-    @MockBean
+    @MockitoBean
     private AccessLogService accessLogService;
 
-    @MockBean
+    @MockitoBean
     private AuthenticationManager authenticationManager;
 
     @Test
