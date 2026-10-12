@@ -156,9 +156,27 @@ Important remaining work after the role-template split pass:
 - Reassign/delegate now use the shared action modal with protected approver selects.
 - Approval, rejection, return, cancellation, implementation, and payroll handoff comments now use a shared modal/form instead of browser `prompt()`.
 - Promotion API/action errors now render in an inline page error banner instead of browser `alert()`.
-- Employee/requester UI now has a physically limited template composition. It still needs a richer dedicated employee experience around own/requested records, status timeline/history, and allowed document/letter access only.
+- Employee/requester UI now has a physically limited template composition and scoped client behavior:
+  - `/employee/promotions` loads the request list from `/api/promotions/my` instead of probing the operational list first.
+  - Employee detail still uses authorized `/api/promotions/{id}` and renders backend salary masking as `Restricted`.
+  - Employee detail shows a `Status Timeline` and allowed document download links.
+  - Employee detail omits internal eligibility, approval-route preview, upload/remove, reassign/delegate, create, approve, implement, report, configuration, and payroll controls.
 - Click-path browser tests and rendered-link negative tests are still pending.
 - Promotion targeted Maven suite and full Maven suite have passed after the latest implementation pass, but they must be rerun after the remaining UI/template/test phases.
+
+Additional verification after the employee/requester scoped UI pass:
+
+```text
+mvnw.cmd "-Dtest=PromotionMainPageBrowserTest" test
+```
+
+Result after employee/requester scoped UI pass: passed, 7 tests.
+
+```text
+mvnw.cmd "-Dtest=PromotionControllerTest,PromotionControllerSecurityTest,PromotionApiControllerTest,PromotionMainPageBrowserTest" test
+```
+
+Result after employee/requester scoped UI pass: passed, 27 tests.
 
 ## Completion Plan To Fully Satisfy Definition Of Done
 
@@ -273,24 +291,24 @@ Goal: satisfy scoped employee/requester expectations from `promotion-testing-gui
 
 Implementation:
 
-- Build `promotion/employee.html` around:
+- [x] Build `promotion/employee.html` around:
   - `/api/promotions/my/dashboard`,
   - `/api/promotions/my`,
   - `/api/promotions/{id}`,
   - allowed attachment download endpoints.
-- Display own/requested promotion records, current status, status timeline/history, safe activity, and allowed documents/letters.
-- Hide all operational controls: create, edit, submit, approve, implement, reports, configuration, and payroll handoffs.
+- [x] Display own/requested promotion records, current status, status timeline/history, safe activity, and allowed documents/letters.
+- [x] Hide all operational controls: create, edit, submit, approve, implement, reports, configuration, and payroll handoffs.
 - Confirm direct unrelated detail links remain blocked by backend authorization.
 
 Acceptance criteria:
 
-- Employee can complete guide section 19.2 without operational access.
-- Employee/requester sees only own/requested records.
-- Salary fields remain masked according to backend `canViewSalary` behavior.
+- [x] Employee can complete guide section 19.2 without operational access.
+- [x] Employee/requester sees only own/requested records.
+- [x] Salary fields remain masked according to backend `canViewSalary` behavior.
 
 Tests:
 
-- Add employee scoped page browser test.
+- [x] Add employee scoped page browser test.
 - Add direct-link unrelated detail denied test if not already covered by service/API tests.
 
 ### Completion Phase E: Security And Link Coverage Expansion

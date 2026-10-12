@@ -217,6 +217,37 @@ class PromotionMainPageBrowserTest {
         assertFalse(employee.contains("promotionFormPanel"));
     }
 
+    @Test
+    void employeeExperienceUsesScopedPromotionDataAndShowsSafeHistoryOnly() throws Exception {
+        try (Playwright playwright = Playwright.create();
+             Browser browser = playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(true))) {
+            Page page = browser.newPage();
+
+            page.setContent(pageHtml("requests", "employee"));
+            page.waitForFunction("() => window.__promotionLoaded === true");
+
+            assertRequested(page, "GET", "/api/promotions/my");
+            assertNotRequested(page, "GET", "/api/promotions");
+            assertThat(page.locator("#promotionTableBody")).containsText("PR-2026-0001");
+            assertThat(page.locator("#promotionTableBody")).not().containsText("Submit");
+            assertThat(page.locator("#promotionTableBody")).not().containsText("Approve");
+            assertThat(page.locator("#promotionTableBody")).not().containsText("Implement");
+
+            page.locator("#promotionTableBody button", new Page.LocatorOptions().setHasText("View")).first().click();
+
+            assertThat(page.locator("#detailPanel")).not().hasClass("hidden");
+            assertThat(page.locator("#detailBody")).containsText("Current salary: Restricted");
+            assertThat(page.locator("#detailBody")).containsText("Status Timeline");
+            assertThat(page.locator("#detailBody")).containsText("Created promotion request");
+            assertThat(page.locator("#detailBody")).containsText("proposal.pdf - APPRAISAL_SUMMARY");
+            assertThat(page.locator("#detailBody")).not().containsText("Route Preview");
+            assertThat(page.locator("#detailBody")).not().containsText("Eligibility");
+            assertThat(page.locator("#detailBody")).not().containsText("Upload");
+            assertThat(page.locator("#detailBody")).not().containsText("Remove");
+            assertNotRequested(page, "GET", "/api/promotions/1/approval-route-preview");
+        }
+    }
+
     private void assertFocusedPanel(Browser browser, String initialSection, String expectedPanelId) throws Exception {
         Page page = browser.newPage();
         page.setContent(pageHtml(initialSection));
@@ -229,9 +260,13 @@ class PromotionMainPageBrowserTest {
     }
 
     private String pageHtml(String initialSection) throws Exception {
+        return pageHtml(initialSection, "admin");
+    }
+
+    private String pageHtml(String initialSection, String role) throws Exception {
         String html = Files.readString(Path.of("src/main/resources/templates/promotion/main.html"));
         html = html.replaceFirst("<main layout:fragment=\"content\" th:fragment=\"promotionContent\" th:attr=\"data-initial-section=\\$\\{initialSection\\},data-promotion-role=\\$\\{promotionRole\\}\">",
-                "<main layout:fragment=\"content\" data-initial-section=\"" + initialSection + "\" data-promotion-role=\"admin\">");
+                "<main layout:fragment=\"content\" data-initial-section=\"" + initialSection + "\" data-promotion-role=\"" + role + "\">");
         return html.replace("</head>", "<script>" + apiStub() + "</script></head>");
     }
 
@@ -249,6 +284,13 @@ class PromotionMainPageBrowserTest {
                 "([method, url]) => window.__requests.some(request => request.url === url && request.method === method)",
                 new String[]{method, url});
         assertTrue(requested, "Expected " + method + " to " + url);
+    }
+
+    private void assertNotRequested(Page page, String method, String url) {
+        Boolean requested = (Boolean) page.evaluate(
+                "([method, url]) => window.__requests.some(request => request.url === url && request.method === method)",
+                new String[]{method, url});
+        assertFalse(requested, "Did not expect " + method + " to " + url);
     }
 
     private void assertPostedBodyContains(Page page, String url, String expectedBodyContent) {
@@ -408,6 +450,9 @@ class PromotionMainPageBrowserTest {
                             attachments: [{ id: 4, fileName: 'proposal.pdf', documentType: 'APPRAISAL_SUMMARY' }],
                             activities: [{ createdAt: '2026-10-11T10:00:00', description: 'Created promotion request' }]
                         });
+                    }
+                    if (url === '/api/promotions/my' || url.startsWith('/api/promotions/my?')) {
+                        return jsonResponse(requestRows.slice(0, 1));
                     }
                     if (url === '/api/promotions' || url.startsWith('/api/promotions?')) {
                         return jsonResponse(requestRows);

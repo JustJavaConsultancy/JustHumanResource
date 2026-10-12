@@ -414,6 +414,7 @@
         const canUsePayrollHandoffs = ['admin', 'hr', 'finance'].includes(promotionRole);
         const canUseConfiguration = ['admin', 'hr'].includes(promotionRole);
         const canUseApprovalActions = ['admin', 'hr', 'finance', 'executive', 'manager'].includes(promotionRole);
+        const isEmployeeExperience = promotionRole === 'employee';
         let currentReportPage = 0;
         let actionModalResolve = null;
         const visibleSectionsByRole = {
@@ -597,10 +598,7 @@
 
         async function loadDashboard() {
             if (!byId('dashboardPanel')) return;
-            let response = await fetch(`${apiBase}/dashboard`);
-            if (!response.ok) {
-                response = await fetch(`${apiBase}/my/dashboard`);
-            }
+            const response = await fetch(isEmployeeExperience ? `${apiBase}/my/dashboard` : `${apiBase}/dashboard`);
             if (!response.ok) return;
             const data = await response.json();
             byId('pendingApprovalCount').textContent = data.pendingApprovalCount ?? 0;
@@ -768,10 +766,8 @@
         async function loadRequests() {
             if (!byId('requestPanel')) return;
             const status = byId('statusFilter')?.value || '';
-            let response = await fetch(status ? `${apiBase}?status=${status}` : apiBase);
-            if (!response.ok) {
-                response = await fetch(status ? `${apiBase}/my?status=${status}` : `${apiBase}/my`);
-            }
+            const requestBase = isEmployeeExperience ? `${apiBase}/my` : apiBase;
+            const response = await fetch(status ? `${requestBase}?status=${status}` : requestBase);
             if (!response.ok) {
                 byId('promotionTableBody').innerHTML = '<tr><td colspan="8">Promotion request list is not available for your role.</td></tr>';
                 return;
@@ -985,10 +981,14 @@
                 return;
             }
             const data = await response.json();
-            const routePreview = await loadRoutePreview(id);
+            const routePreview = isEmployeeExperience ? '' : await loadRoutePreview(id);
             const missingBeforeSubmit = formatDocumentTypes(data.missingRequiredDocumentsBeforeSubmit);
             const missingBeforeImplementation = formatDocumentTypes(data.missingRequiredDocumentsBeforeImplementation);
             document.getElementById('detailTitle').textContent = `${data.requestNumber} - ${data.employeeName}`;
+            const activityHeading = isEmployeeExperience ? 'Status Timeline' : 'Activity';
+            const activityRows = (data.activities || []).map(a =>
+                `<li>${formatDateTime(a.createdAt)} - ${escapeHtml(a.description || a.activityType || '')}</li>`
+            ).join('') || '<li>No history recorded yet.</li>';
             document.getElementById('detailBody').innerHTML = `
                 <p><strong>Status:</strong> ${escapeHtml(data.status)}</p>
                 <p><strong>Current role:</strong> ${escapeHtml(data.currentRoleName || '')}</p>
@@ -997,10 +997,11 @@
                 <p><strong>Proposed salary:</strong> ${formatMoneyOrRestricted(data.proposedSalary)}</p>
                 <p><strong>Increase:</strong> ${formatMoneyOrRestricted(data.salaryIncreaseAmount)} (${data.salaryIncreasePercent ?? 'Restricted'}%)</p>
                 <p><strong>Justification:</strong> ${escapeHtml(data.justification || '')}</p>
-                <h4>Eligibility</h4>
-                <ul>${(data.eligibilityChecks || []).map(c => `<li>${c.passed ? 'Passed' : 'Failed'} - ${escapeHtml(c.checkName)}: ${escapeHtml(c.message || '')}</li>`).join('')}</ul>
-                <h4>Approvals</h4>
-                <ul>${(data.approvalSteps || []).map(s => `
+                ${isEmployeeExperience ? '' : `
+                    <h4>Eligibility</h4>
+                    <ul>${(data.eligibilityChecks || []).map(c => `<li>${c.passed ? 'Passed' : 'Failed'} - ${escapeHtml(c.checkName)}: ${escapeHtml(c.message || '')}</li>`).join('') || '<li>No eligibility checks recorded.</li>'}</ul>
+                    <h4>Approvals</h4>
+                    <ul>${(data.approvalSteps || []).map(s => `
                     <li>
                         ${escapeHtml(s.stage)} - ${escapeHtml(s.decision)} ${s.approverName ? `(${escapeHtml(s.approverName)})` : ''}
                         ${canManagePromotions && s.decision === 'PENDING' ? `
@@ -1008,9 +1009,10 @@
                             <button class="promotion-btn" onclick="delegateApproval(${data.id}, ${s.id})">Delegate</button>
                         ` : ''}
                     </li>
-                `).join('')}</ul>
-                <h4>Route Preview</h4>
-                <ul>${routePreview}</ul>
+                    `).join('') || '<li>No approval steps recorded.</li>'}</ul>
+                    <h4>Route Preview</h4>
+                    <ul>${routePreview}</ul>
+                `}
                 <h4>Documents</h4>
                 <p><strong>Missing before submit:</strong> ${missingBeforeSubmit || 'Complete'}</p>
                 <p><strong>Missing before implementation:</strong> ${missingBeforeImplementation || 'Complete'}</p>
@@ -1034,8 +1036,8 @@
                         ${canManagePromotions ? `<button class="promotion-btn danger" onclick="deleteAttachment(${data.id}, ${a.id})">Remove</button>` : ''}
                     </li>
                 `).join('') || '<li>No documents uploaded.</li>'}</ul>
-                <h4>Activity</h4>
-                <ul>${(data.activities || []).map(a => `<li>${formatDateTime(a.createdAt)} - ${escapeHtml(a.description || '')}</li>`).join('')}</ul>
+                <h4>${activityHeading}</h4>
+                <ul>${activityRows}</ul>
             `;
             document.getElementById('detailPanel').classList.remove('hidden');
         }
