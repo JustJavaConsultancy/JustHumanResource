@@ -56,7 +56,7 @@ public class OrganogramServiceImpl implements OrganogramService {
                 .status(RecordStatus.ACTIVE)
                 .logoData(decodeLogo(dto.getLogoBase64()))
                 .logoContentType(dto.getLogoContentType())
-                .recruitmentAiShortlistingEnabled(dto.isRecruitmentAiShortlistingEnabled())
+                .recruitmentAiShortlistingEnabled(Boolean.TRUE.equals(dto.getRecruitmentAiShortlistingEnabled()))
                 .build();
 
         companyRepository.save(company);
@@ -87,7 +87,9 @@ public class OrganogramServiceImpl implements OrganogramService {
                 company.setLogoContentType(dto.getLogoContentType());
             }
         }
-        company.setRecruitmentAiShortlistingEnabled(dto.isRecruitmentAiShortlistingEnabled());
+        if (dto.getRecruitmentAiShortlistingEnabled() != null) {
+            company.setRecruitmentAiShortlistingEnabled(dto.getRecruitmentAiShortlistingEnabled());
+        }
 
         companyRepository.save(company);
         return mapToCompanyDTO(company);
@@ -359,7 +361,7 @@ public class OrganogramServiceImpl implements OrganogramService {
                 .status(RecordStatus.ACTIVE)
                 .logoData(decodeLogo(subsidiaryDTO.getLogoBase64()))
                 .logoContentType(subsidiaryDTO.getLogoContentType())
-                .recruitmentAiShortlistingEnabled(subsidiaryDTO.isRecruitmentAiShortlistingEnabled())
+                .recruitmentAiShortlistingEnabled(Boolean.TRUE.equals(subsidiaryDTO.getRecruitmentAiShortlistingEnabled()))
                 .build();
 
         companyRepository.save(subsidiary);
