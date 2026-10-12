@@ -2,11 +2,11 @@
 <html lang="en"
       xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
-      layout:decorate="~{layout}">
+      layout:decorate="~{${promotionLayout}}">
 <head>
     <meta charset="UTF-8">
     <title>Promotion Management</title>
-    <style>
+    <style th:fragment="promotionStyles">
         .promotion-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
         .promotion-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 1rem; }
         .promotion-card .label { color: #6b7280; font-size: .875rem; }
@@ -34,6 +34,12 @@
         .promotion-report-card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 1rem; min-width: 0; }
         .promotion-report-metric { display: flex; justify-content: space-between; gap: .75rem; margin: .35rem 0; font-size: .875rem; }
         .promotion-report-metric strong { color: #111827; }
+        .promotion-section-nav { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1rem; }
+        .promotion-section-nav .promotion-btn.active { background: #2563eb; border-color: #2563eb; color: #fff; }
+        .promotion-message { border: 1px solid #fecaca; background: #fef2f2; color: #991b1b; border-radius: 6px; padding: .75rem; margin-bottom: 1rem; }
+        .promotion-modal-backdrop { position: fixed; inset: 0; background: rgba(17, 24, 39, .45); z-index: 50; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+        .promotion-modal { width: min(520px, 100%); background: #fff; border-radius: 8px; border: 1px solid #e5e7eb; padding: 1rem; box-shadow: 0 24px 60px rgba(15, 23, 42, .2); }
+        .promotion-modal h3 { margin-top: 0; }
         .hidden { display: none; }
         @media (max-width: 900px) {
             .promotion-grid, .promotion-form, .promotion-report-grid { grid-template-columns: 1fr; }
@@ -42,8 +48,19 @@
     </style>
 </head>
 <body>
-<main layout:fragment="content" th:attr="data-initial-section=${initialSection}">
-    <div class="promotion-grid" id="dashboardPanel">
+<main layout:fragment="content" th:fragment="promotionContent" th:attr="data-initial-section=${initialSection},data-promotion-role=${promotionRole}">
+    <nav class="promotion-section-nav" aria-label="Promotion sections" th:fragment="promotionNavigation">
+        <button type="button" class="promotion-btn" data-section-nav="dashboard" th:if="${canUsePromotionDashboard}">Dashboard</button>
+        <button type="button" class="promotion-btn" data-section-nav="requests" th:if="${canUsePromotionRequests}">Requests</button>
+        <button type="button" class="promotion-btn" data-section-nav="approvals" th:if="${canUsePromotionApprovals}">Approval Tasks</button>
+        <button type="button" class="promotion-btn" data-section-nav="reports" th:if="${canUsePromotionReports}">Reports</button>
+        <button type="button" class="promotion-btn" data-section-nav="configuration" th:if="${canUsePromotionConfiguration}">Configuration</button>
+        <button type="button" class="promotion-btn" data-section-nav="payrollHandoffs" th:if="${canUsePromotionPayrollHandoffs}">Payroll Handoffs</button>
+    </nav>
+
+    <div id="promotionMessage" class="promotion-message hidden" role="alert" th:fragment="promotionMessage"></div>
+
+    <div class="promotion-grid" id="dashboardPanel" th:if="${canUsePromotionDashboard}" th:fragment="promotionDashboard">
         <section class="promotion-card">
             <div class="label">Pending Approvals</div>
             <div class="value" id="pendingApprovalCount">0</div>
@@ -62,7 +79,7 @@
         </section>
     </div>
 
-    <div class="promotion-toolbar">
+    <div class="promotion-toolbar" th:if="${canUsePromotionRequests}" th:fragment="promotionRequestToolbar">
         <div>
             <select id="statusFilter" class="promotion-btn">
                 <option value="">All statuses</option>
@@ -75,13 +92,43 @@
                 <option value="IMPLEMENTED">Implemented</option>
             </select>
         </div>
-        <button class="promotion-btn primary" id="newPromotionButton">New Promotion</button>
+        <button class="promotion-btn primary" id="newPromotionButton" th:if="${canManagePromotionRequests}">New Promotion</button>
     </div>
 
-    <section class="promotion-panel" id="reportsPanel">
+    <section class="promotion-panel" id="reportsPanel" th:if="${canUsePromotionReports}" th:fragment="promotionReports">
         <div class="promotion-toolbar">
             <h3>Reports</h3>
             <button class="promotion-btn" id="refreshReportsButton">Refresh</button>
+        </div>
+        <div class="promotion-form" style="margin-bottom: 1rem;">
+            <label>
+                Start Date
+                <input type="date" id="reportStartDate">
+            </label>
+            <label>
+                End Date
+                <input type="date" id="reportEndDate">
+            </label>
+            <label>
+                Detail Status
+                <select id="reportStatusFilter">
+                    <option value="">All statuses</option>
+                    <option value="DRAFT">Draft</option>
+                    <option value="LINE_MANAGER_REVIEW">Line manager review</option>
+                    <option value="HR_REVIEW">HR review</option>
+                    <option value="FINANCE_REVIEW">Finance review</option>
+                    <option value="EXECUTIVE_REVIEW">Executive review</option>
+                    <option value="APPROVED">Approved</option>
+                    <option value="REJECTED">Rejected</option>
+                    <option value="IMPLEMENTED">Implemented</option>
+                </select>
+            </label>
+            <label>
+                Department
+                <select id="reportDepartmentId">
+                    <option value="">All departments</option>
+                </select>
+            </label>
         </div>
         <div class="promotion-report-grid">
             <section class="promotion-report-card">
@@ -120,10 +167,25 @@
                 </div>
                 <div id="approvalDurationReportBody">Loading approval duration...</div>
             </section>
+            <section class="promotion-report-card">
+                <div class="promotion-toolbar">
+                    <h4>Report Detail</h4>
+                    <button class="promotion-btn" id="refreshReportDetailsButton" type="button">Load Details</button>
+                </div>
+                <table class="promotion-table">
+                    <thead><tr><th>Request</th><th>Employee</th><th>Status</th><th>Effective</th></tr></thead>
+                    <tbody id="reportDetailBody"><tr><td colspan="4">Use Load Details to fetch report rows.</td></tr></tbody>
+                </table>
+                <div class="promotion-actions" style="margin-top: .75rem;">
+                    <button class="promotion-btn" id="reportPrevPageButton" type="button">Previous</button>
+                    <span id="reportPageLabel">Page 1</span>
+                    <button class="promotion-btn" id="reportNextPageButton" type="button">Next</button>
+                </div>
+            </section>
         </div>
     </section>
 
-    <section class="promotion-panel" id="payrollHandoffPanel">
+    <section class="promotion-panel" id="payrollHandoffPanel" th:if="${canUsePromotionPayrollHandoffs}" th:fragment="promotionPayrollHandoffs">
         <div class="promotion-toolbar">
             <h3>Payroll Handoffs</h3>
             <div class="promotion-actions">
@@ -154,7 +216,7 @@
         </table>
     </section>
 
-    <section class="promotion-panel hidden" id="formPanel">
+    <section class="promotion-panel hidden" id="formPanel" th:if="${canManagePromotionRequests}" th:fragment="promotionFormPanel">
         <h3 id="formTitle">New Promotion Request</h3>
         <form id="promotionForm" class="promotion-form">
             <input type="hidden" id="promotionId">
@@ -185,12 +247,13 @@
         </form>
     </section>
 
-    <section class="promotion-panel hidden" id="configurationPanel">
+    <section class="promotion-panel hidden" id="configurationPanel" th:if="${canUsePromotionConfiguration}" th:fragment="promotionConfiguration">
         <div class="promotion-toolbar">
             <h3>Configuration</h3>
             <button class="promotion-btn" id="refreshConfigurationButton">Refresh</button>
         </div>
         <form id="configurationForm" class="promotion-form">
+            <input type="hidden" id="configurationId">
             <label>
                 Policy Name
                 <input type="text" id="configurationName" required maxlength="100">
@@ -216,12 +279,21 @@
                 <input type="number" id="approvalEscalationAfterHours" min="1" step="1">
             </label>
             <label>
-                Escalation Approver ID
-                <input type="number" id="escalationApproverId" min="1" step="1">
+                Escalation Approver
+                <select id="escalationApproverId">
+                    <option value="">No named escalation approver</option>
+                </select>
             </label>
             <label>
                 Escalation Group
-                <input type="text" id="escalationApproverGroup" maxlength="80">
+                <select id="escalationApproverGroup">
+                    <option value="">No escalation group</option>
+                    <option value="humanresource">Human Resource</option>
+                    <option value="finance">Finance</option>
+                    <option value="executive">Executive</option>
+                    <option value="departmenthead">Department Head</option>
+                    <option value="hiringmanager">Hiring Manager</option>
+                </select>
             </label>
             <label class="promotion-checkbox">
                 <input type="checkbox" id="allowProbationPromotion">
@@ -245,12 +317,23 @@
             </label>
             <div class="promotion-actions wide">
                 <button type="submit" class="promotion-btn primary">Save Configuration</button>
+                <button type="button" class="promotion-btn danger" id="deactivateConfigurationButton">Deactivate</button>
                 <span id="configurationMessage"></span>
             </div>
         </form>
+        <div style="margin-top: 1rem;">
+            <div class="promotion-toolbar">
+                <h4>Configuration History</h4>
+                <button type="button" class="promotion-btn" id="refreshConfigurationHistoryButton">Refresh History</button>
+            </div>
+            <table class="promotion-table">
+                <thead><tr><th>Name</th><th>Active</th><th>Updated</th><th>Updated By</th></tr></thead>
+                <tbody id="configurationHistoryBody"><tr><td colspan="4">Loading configuration history...</td></tr></tbody>
+            </table>
+        </div>
     </section>
 
-    <section class="promotion-panel" id="taskPanel">
+    <section class="promotion-panel" id="taskPanel" th:if="${canUsePromotionApprovals}" th:fragment="promotionTasks">
         <div class="promotion-toolbar">
             <h3>My Approval Tasks</h3>
             <button class="promotion-btn" id="refreshTasksButton">Refresh</button>
@@ -271,7 +354,7 @@
         </table>
     </section>
 
-    <section class="promotion-panel" id="requestPanel">
+    <section class="promotion-panel" id="requestPanel" th:if="${canUsePromotionRequests}" th:fragment="promotionRequests">
         <div class="promotion-toolbar">
             <h3>Promotion Requests</h3>
         </div>
@@ -294,7 +377,7 @@
         </table>
     </section>
 
-    <section class="promotion-panel hidden" id="detailPanel">
+    <section class="promotion-panel hidden" id="detailPanel" th:fragment="promotionDetail">
         <div class="promotion-toolbar">
             <h3 id="detailTitle">Promotion Detail</h3>
             <button class="promotion-btn" id="closeDetailButton">Close</button>
@@ -302,10 +385,48 @@
         <div id="detailBody"></div>
     </section>
 
-    <script>
+    <div class="promotion-modal-backdrop hidden" id="actionModalBackdrop" role="dialog" aria-modal="true" aria-labelledby="actionModalTitle" th:fragment="promotionActionModal">
+        <div class="promotion-modal">
+            <h3 id="actionModalTitle">Promotion Action</h3>
+            <form id="actionModalForm" class="promotion-form" novalidate>
+                <label id="actionApproverWrapper" class="wide hidden">
+                    Approver
+                    <select id="actionApproverId"></select>
+                </label>
+                <label class="wide">
+                    <span id="actionCommentLabel">Comment</span>
+                    <textarea id="actionComment"></textarea>
+                </label>
+                <p id="actionModalError" class="wide" style="color: #dc2626;"></p>
+                <div class="promotion-actions wide">
+                    <button type="submit" class="promotion-btn primary">Confirm</button>
+                    <button type="button" class="promotion-btn" id="actionModalCancel">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script th:fragment="promotionScripts">
         const apiBase = '/api/promotions';
+        const promotionRole = document.querySelector('main')?.dataset?.promotionRole || 'admin';
+        const canManagePromotions = ['admin', 'hr'].includes(promotionRole);
+        const canUseOperationalReports = ['admin', 'hr', 'finance'].includes(promotionRole);
+        const canUsePayrollHandoffs = ['admin', 'hr', 'finance'].includes(promotionRole);
+        const canUseConfiguration = ['admin', 'hr'].includes(promotionRole);
+        const canUseApprovalActions = ['admin', 'hr', 'finance', 'executive', 'manager'].includes(promotionRole);
+        let currentReportPage = 0;
+        let actionModalResolve = null;
+        const visibleSectionsByRole = {
+            admin: ['dashboard', 'requests', 'approvals', 'reports', 'configuration', 'payrollHandoffs'],
+            hr: ['dashboard', 'requests', 'approvals', 'reports', 'configuration', 'payrollHandoffs'],
+            finance: ['dashboard', 'requests', 'approvals', 'reports', 'payrollHandoffs'],
+            executive: ['approvals', 'requests'],
+            manager: ['approvals', 'requests'],
+            employee: ['requests']
+        };
         let employees = [];
         let jobSteps = [];
+        let departments = [];
 
         const money = new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN' });
         const attachmentTypes = [
@@ -319,24 +440,92 @@
             ['EMPLOYEE_ACKNOWLEDGEMENT', 'Employee Acknowledgement']
         ];
 
+        function byId(id) {
+            return document.getElementById(id);
+        }
+
+        function showPageError(message) {
+            const element = byId('promotionMessage');
+            if (!element) return;
+            element.textContent = message || 'The promotion action could not be completed.';
+            element.classList.remove('hidden');
+            element.scrollIntoView({ block: 'start' });
+        }
+
+        function clearPageError() {
+            const element = byId('promotionMessage');
+            if (!element) return;
+            element.textContent = '';
+            element.classList.add('hidden');
+        }
+
+        function bindClick(id, handler) {
+            const element = byId(id);
+            if (element) element.addEventListener('click', handler);
+        }
+
+        function bindChange(id, handler) {
+            const element = byId(id);
+            if (element) element.addEventListener('change', handler);
+        }
+
+        function bindSubmit(id, handler) {
+            const element = byId(id);
+            if (element) element.addEventListener('submit', handler);
+        }
+
         document.addEventListener('DOMContentLoaded', async () => {
-            await Promise.allSettled([loadReferenceData(), loadDashboard(), loadReports(), loadPayrollHandoffs(), loadTasks(), loadRequests(), loadConfiguration()]);
+            applyRoleUi();
+            const loaders = [loadDashboard(), loadTasks(), loadRequests()];
+            if (canManagePromotions || canUseOperationalReports) loaders.push(loadReferenceData());
+            if (canUseOperationalReports) loaders.push(loadReports());
+            if (canUsePayrollHandoffs) loaders.push(loadPayrollHandoffs());
+            if (canUseConfiguration) loaders.push(loadConfiguration());
+            await Promise.allSettled(loaders);
             focusInitialSection();
-            document.getElementById('statusFilter').addEventListener('change', loadRequests);
-            document.getElementById('newPromotionButton').addEventListener('click', openCreateForm);
-            document.getElementById('refreshReportsButton').addEventListener('click', loadReports);
-            document.getElementById('payrollHandoffStatusFilter').addEventListener('change', loadPayrollHandoffs);
-            document.getElementById('refreshPayrollHandoffsButton').addEventListener('click', loadPayrollHandoffs);
-            document.getElementById('refreshTasksButton').addEventListener('click', loadTasks);
-            document.getElementById('refreshConfigurationButton').addEventListener('click', loadConfiguration);
-            document.getElementById('cancelFormButton').addEventListener('click', closeForm);
-            document.getElementById('closeDetailButton').addEventListener('click', closeDetail);
-            document.getElementById('promotionForm').addEventListener('submit', savePromotion);
-            document.getElementById('configurationForm').addEventListener('submit', saveConfiguration);
+            bindChange('statusFilter', loadRequests);
+            document.querySelectorAll('[data-section-nav]').forEach(button => {
+                button.addEventListener('click', () => focusSection(button.dataset.sectionNav, true));
+            });
+            if (canManagePromotions) bindClick('newPromotionButton', openCreateForm);
+            if (canUseOperationalReports) bindClick('refreshReportsButton', loadReports);
+            if (canUseOperationalReports) bindClick('refreshReportDetailsButton', () => loadReportDetails(0));
+            if (canUseOperationalReports) bindClick('reportPrevPageButton', () => loadReportDetails(Math.max(0, currentReportPage - 1)));
+            if (canUseOperationalReports) bindClick('reportNextPageButton', () => loadReportDetails(currentReportPage + 1));
+            if (canUsePayrollHandoffs) {
+                bindChange('payrollHandoffStatusFilter', loadPayrollHandoffs);
+                bindClick('refreshPayrollHandoffsButton', loadPayrollHandoffs);
+            }
+            bindClick('refreshTasksButton', loadTasks);
+            if (canUseConfiguration) bindClick('refreshConfigurationButton', loadConfiguration);
+            if (canUseConfiguration) bindClick('refreshConfigurationHistoryButton', loadConfigurationHistory);
+            if (canUseConfiguration) bindClick('deactivateConfigurationButton', deactivateConfiguration);
+            bindClick('cancelFormButton', closeForm);
+            bindClick('closeDetailButton', closeDetail);
+            if (canManagePromotions) bindSubmit('promotionForm', savePromotion);
+            if (canUseConfiguration) bindSubmit('configurationForm', saveConfiguration);
+            bindClick('actionModalCancel', closeActionModal);
+            bindSubmit('actionModalForm', submitActionModal);
         });
+
+        function applyRoleUi() {
+            const visibleSections = new Set(visibleSectionsByRole[promotionRole] || ['dashboard']);
+            document.querySelectorAll('[data-section-nav]').forEach(button => {
+                button.classList.toggle('hidden', !visibleSections.has(button.dataset.sectionNav));
+            });
+            byId('newPromotionButton')?.classList.toggle('hidden', !canManagePromotions);
+            byId('formPanel')?.classList.toggle('hidden', true);
+            byId('configurationPanel')?.classList.toggle('hidden', !canUseConfiguration);
+            byId('reportsPanel')?.classList.toggle('hidden', !canUseOperationalReports);
+            byId('payrollHandoffPanel')?.classList.toggle('hidden', !canUsePayrollHandoffs);
+        }
 
         function focusInitialSection() {
             const section = document.querySelector('main')?.dataset?.initialSection || 'dashboard';
+            focusSection(section, false);
+        }
+
+        function focusSection(section, updateUrl) {
             const panelIds = {
                 dashboard: 'dashboardPanel',
                 requests: 'requestPanel',
@@ -346,45 +535,89 @@
                 payrollHandoffs: 'payrollHandoffPanel'
             };
             const panel = document.getElementById(panelIds[section] || panelIds.dashboard);
+            document.querySelectorAll('[data-section-nav]').forEach(button => {
+                button.classList.toggle('active', button.dataset.sectionNav === section);
+            });
             if (panel && !panel.classList.contains('hidden')) {
                 panel.scrollIntoView({ block: 'start' });
+                if (updateUrl) {
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('section', section);
+                    window.history.replaceState({}, '', url);
+                }
             }
         }
 
         async function loadReferenceData() {
-            const [employeeResponse, jobStepResponse] = await Promise.all([
-                fetch(`${apiBase}/reference/employees`),
-                fetch(`${apiBase}/reference/job-steps`)
-            ]);
-            employees = await employeeResponse.json();
-            jobSteps = await jobStepResponse.json();
+            if (!canManagePromotions && !canUseOperationalReports) return;
+            const requests = [];
+            if (canManagePromotions) {
+                requests.push(fetch(`${apiBase}/reference/employees`));
+                requests.push(fetch(`${apiBase}/reference/job-steps`));
+            }
+            if (canUseOperationalReports) {
+                requests.push(fetch(`${apiBase}/reference/departments`));
+            }
+            const responses = await Promise.all(requests);
+            if (responses.some(response => !response.ok)) return;
+            let responseIndex = 0;
+            if (canManagePromotions) {
+                employees = await responses[responseIndex++].json();
+                jobSteps = await responses[responseIndex++].json();
+            }
+            if (canUseOperationalReports) {
+                departments = await responses[responseIndex].json();
+            }
 
-            document.getElementById('employeeId').innerHTML = '<option value="">Select employee</option>' +
+            if (byId('employeeId')) byId('employeeId').innerHTML = '<option value="">Select employee</option>' +
                 employees.map(e => `<option value="${e.id}">${escapeHtml(e.name)} - ${escapeHtml(e.departmentName || '')}</option>`).join('');
-            document.getElementById('proposedRoleId').innerHTML = '<option value="">Select role</option>' +
+            if (byId('proposedRoleId')) byId('proposedRoleId').innerHTML = '<option value="">Select role</option>' +
                 jobSteps.map(j => `<option value="${j.id}">${escapeHtml(j.name)} (${escapeHtml(j.jobGradeName || 'No grade')})</option>`).join('');
+            populateApproverSelect('escalationApproverId', null);
+            populateDepartmentSelect();
+        }
+
+        function populateDepartmentSelect() {
+            const select = byId('reportDepartmentId');
+            if (!select) return;
+            select.innerHTML = '<option value="">All departments</option>' + departments.map(department =>
+                `<option value="${department.id}">${escapeHtml(department.name)}${department.code ? ` (${escapeHtml(department.code)})` : ''}</option>`
+            ).join('');
+        }
+
+        function populateApproverSelect(id, selectedId) {
+            const select = byId(id);
+            if (!select) return;
+            const selected = selectedId == null ? '' : String(selectedId);
+            select.innerHTML = '<option value="">No named approver</option>' + employees.map(employee => {
+                const value = String(employee.id);
+                return `<option value="${value}"${value === selected ? ' selected' : ''}>${escapeHtml(employee.name)} - ${escapeHtml(employee.departmentName || '')}</option>`;
+            }).join('');
         }
 
         async function loadDashboard() {
+            if (!byId('dashboardPanel')) return;
             let response = await fetch(`${apiBase}/dashboard`);
             if (!response.ok) {
                 response = await fetch(`${apiBase}/my/dashboard`);
             }
             if (!response.ok) return;
             const data = await response.json();
-            document.getElementById('pendingApprovalCount').textContent = data.pendingApprovalCount ?? 0;
-            document.getElementById('approvedCount').textContent = data.approvedCount ?? 0;
-            document.getElementById('implementedCount').textContent = data.implementedCount ?? 0;
-            document.getElementById('monthlySalaryImpact').textContent = money.format(data.monthlySalaryImpact ?? 0);
+            byId('pendingApprovalCount').textContent = data.pendingApprovalCount ?? 0;
+            byId('approvedCount').textContent = data.approvedCount ?? 0;
+            byId('implementedCount').textContent = data.implementedCount ?? 0;
+            byId('monthlySalaryImpact').textContent = money.format(data.monthlySalaryImpact ?? 0);
         }
 
         async function loadReports() {
-            const panel = document.getElementById('reportsPanel');
+            if (!canUseOperationalReports || !byId('reportsPanel')) return;
+            const panel = byId('reportsPanel');
+            const reportQuery = reportDateQuery();
             const [statusResult, departmentResult, salaryResult, durationResult] = await Promise.allSettled([
-                fetch(`${apiBase}/reports/status-summary`),
-                fetch(`${apiBase}/reports/department-summary`),
-                fetch(`${apiBase}/reports/salary-impact`),
-                fetch(`${apiBase}/reports/approval-duration`)
+                fetch(`${apiBase}/reports/status-summary${reportQuery}`),
+                fetch(`${apiBase}/reports/department-summary${reportQuery}`),
+                fetch(`${apiBase}/reports/salary-impact${reportQuery}`),
+                fetch(`${apiBase}/reports/approval-duration${reportQuery}`)
             ]);
             if ([statusResult, departmentResult, salaryResult, durationResult].some(result =>
                 result.status !== 'fulfilled' || !result.value.ok)) {
@@ -402,6 +635,54 @@
             renderDepartmentReport(departmentRows);
             renderSalaryImpactReport(salaryImpact);
             renderApprovalDurationReport(approvalDuration);
+            await loadReportDetails(currentReportPage);
+        }
+
+        function reportDateQuery() {
+            const params = new URLSearchParams();
+            const startDate = document.getElementById('reportStartDate')?.value;
+            const endDate = document.getElementById('reportEndDate')?.value;
+            if (startDate) params.set('startDate', startDate);
+            if (endDate) params.set('endDate', endDate);
+            const query = params.toString();
+            return query ? `?${query}` : '';
+        }
+
+        async function loadReportDetails(page) {
+            if (!canUseOperationalReports) return;
+            currentReportPage = Math.max(0, page || 0);
+            const params = new URLSearchParams();
+            const status = document.getElementById('reportStatusFilter')?.value;
+            const departmentId = document.getElementById('reportDepartmentId')?.value;
+            const startDate = document.getElementById('reportStartDate')?.value;
+            const endDate = document.getElementById('reportEndDate')?.value;
+            if (status) params.set('status', status);
+            if (departmentId) params.set('departmentId', departmentId);
+            if (startDate) params.set('startDate', startDate);
+            if (endDate) params.set('endDate', endDate);
+            params.set('page', currentReportPage);
+            params.set('size', 10);
+            const response = await fetch(`${apiBase}/reports/details?${params}`);
+            const body = document.getElementById('reportDetailBody');
+            document.getElementById('reportPageLabel').textContent = `Page ${currentReportPage + 1}`;
+            if (!response.ok) {
+                body.innerHTML = '<tr><td colspan="4">Report details are not available.</td></tr>';
+                return;
+            }
+            const data = await response.json();
+            const rows = data.content || data.items || data.rows || [];
+            if (!Array.isArray(rows) || rows.length === 0) {
+                body.innerHTML = '<tr><td colspan="4">No detail rows found.</td></tr>';
+                return;
+            }
+            body.innerHTML = rows.map(row => `
+                <tr>
+                    <td>${escapeHtml(row.requestNumber || '')}</td>
+                    <td>${escapeHtml(row.employeeName || '')}</td>
+                    <td>${escapeHtml(row.status || '')}</td>
+                    <td>${formatDate(row.effectiveDate)}</td>
+                </tr>
+            `).join('');
         }
 
         function renderStatusReport(rows) {
@@ -452,9 +733,10 @@
         }
 
         async function loadPayrollHandoffs() {
-            const panel = document.getElementById('payrollHandoffPanel');
-            const body = document.getElementById('payrollHandoffTableBody');
-            const status = document.getElementById('payrollHandoffStatusFilter')?.value ?? 'PENDING';
+            if (!canUsePayrollHandoffs || !byId('payrollHandoffPanel')) return;
+            const panel = byId('payrollHandoffPanel');
+            const body = byId('payrollHandoffTableBody');
+            const status = byId('payrollHandoffStatusFilter')?.value ?? 'PENDING';
             const response = await fetch(status ? `${apiBase}/payroll-handoffs?status=${status}` : `${apiBase}/payroll-handoffs`);
             if (!response.ok) {
                 panel.classList.add('hidden');
@@ -484,17 +766,18 @@
         }
 
         async function loadRequests() {
-            const status = document.getElementById('statusFilter').value;
+            if (!byId('requestPanel')) return;
+            const status = byId('statusFilter')?.value || '';
             let response = await fetch(status ? `${apiBase}?status=${status}` : apiBase);
             if (!response.ok) {
                 response = await fetch(status ? `${apiBase}/my?status=${status}` : `${apiBase}/my`);
             }
             if (!response.ok) {
-                document.getElementById('promotionTableBody').innerHTML = '<tr><td colspan="8">Promotion request list is not available for your role.</td></tr>';
+                byId('promotionTableBody').innerHTML = '<tr><td colspan="8">Promotion request list is not available for your role.</td></tr>';
                 return;
             }
             const data = await response.json();
-            const body = document.getElementById('promotionTableBody');
+            const body = byId('promotionTableBody');
             if (!Array.isArray(data) || data.length === 0) {
                 body.innerHTML = '<tr><td colspan="8">No promotion requests found.</td></tr>';
                 return;
@@ -511,10 +794,10 @@
                     <td>
                         <div class="promotion-actions">
                             <button class="promotion-btn" onclick="viewDetail(${row.id})">View</button>
-                            ${row.status === 'DRAFT' ? `<button class="promotion-btn success" onclick="submitPromotion(${row.id})">Submit</button>` : ''}
-                            ${isReviewStatus(row.status) ? `<button class="promotion-btn success" onclick="approvePromotion(${row.id})">Approve</button><button class="promotion-btn" onclick="returnPromotion(${row.id})">Return</button><button class="promotion-btn danger" onclick="rejectPromotion(${row.id})">Reject</button>` : ''}
-                            ${isCancellableStatus(row.status) ? `<button class="promotion-btn danger" onclick="cancelPromotion(${row.id})">Cancel</button>` : ''}
-                            ${row.status === 'APPROVED' ? `<button class="promotion-btn primary" onclick="implementPromotion(${row.id})">Implement</button>` : ''}
+                            ${canManagePromotions && row.status === 'DRAFT' ? `<button class="promotion-btn success" onclick="submitPromotion(${row.id})">Submit</button>` : ''}
+                            ${canUseApprovalActions && isReviewStatus(row.status) ? `<button class="promotion-btn success" onclick="approvePromotion(${row.id})">Approve</button><button class="promotion-btn" onclick="returnPromotion(${row.id})">Return</button><button class="promotion-btn danger" onclick="rejectPromotion(${row.id})">Reject</button>` : ''}
+                            ${canManagePromotions && isCancellableStatus(row.status) ? `<button class="promotion-btn danger" onclick="cancelPromotion(${row.id})">Cancel</button>` : ''}
+                            ${canManagePromotions && row.status === 'APPROVED' ? `<button class="promotion-btn primary" onclick="implementPromotion(${row.id})">Implement</button>` : ''}
                         </div>
                     </td>
                 </tr>
@@ -522,8 +805,9 @@
         }
 
         async function loadTasks() {
+            if (!byId('taskPanel')) return;
             const response = await fetch(`${apiBase}/tasks`);
-            const body = document.getElementById('taskTableBody');
+            const body = byId('taskTableBody');
             if (!response.ok) {
                 body.innerHTML = '<tr><td colspan="5">Approval tasks are not available.</td></tr>';
                 return;
@@ -555,9 +839,10 @@
         }
 
         async function loadConfiguration() {
+            if (!canUseConfiguration || !byId('configurationPanel')) return;
             const response = await fetch(`${apiBase}/configuration`);
-            const panel = document.getElementById('configurationPanel');
-            const message = document.getElementById('configurationMessage');
+            const panel = byId('configurationPanel');
+            const message = byId('configurationMessage');
             if (!response.ok) {
                 panel.classList.add('hidden');
                 return;
@@ -565,6 +850,7 @@
             const data = await response.json();
             panel.classList.remove('hidden');
             message.textContent = '';
+            document.getElementById('configurationId').value = data.id ?? '';
             document.getElementById('configurationName').value = data.name || 'Default promotion policy';
             document.getElementById('minimumMonthsInCurrentRole').value = data.minimumMonthsInCurrentRole ?? '';
             document.getElementById('minimumAppraisalScore').value = data.minimumAppraisalScore ?? '';
@@ -572,7 +858,7 @@
                 data.maximumSalaryIncreasePercentWithoutExecutiveApproval ?? '';
             document.getElementById('approvalReminderAfterHours').value = data.approvalReminderAfterHours ?? '';
             document.getElementById('approvalEscalationAfterHours').value = data.approvalEscalationAfterHours ?? '';
-            document.getElementById('escalationApproverId').value = data.escalationApproverId ?? '';
+            populateApproverSelect('escalationApproverId', data.escalationApproverId);
             document.getElementById('escalationApproverGroup').value = data.escalationApproverGroup || '';
             document.getElementById('allowProbationPromotion').checked = Boolean(data.allowProbationPromotion);
             document.getElementById('requireFinanceApproval').checked = data.requireFinanceApproval !== false;
@@ -585,6 +871,43 @@
                 'requiredDocumentsBeforeImplementation',
                 data.requiredDocumentsBeforeImplementation || []
             );
+            await loadConfigurationHistory();
+        }
+
+        async function loadConfigurationHistory() {
+            if (!canUseConfiguration || !byId('configurationHistoryBody')) return;
+            const body = byId('configurationHistoryBody');
+            const response = await fetch(`${apiBase}/configuration/history`);
+            if (!response.ok) {
+                body.innerHTML = '<tr><td colspan="4">Configuration history is not available.</td></tr>';
+                return;
+            }
+            const rows = await response.json();
+            if (!Array.isArray(rows) || rows.length === 0) {
+                body.innerHTML = '<tr><td colspan="4">No configuration history found.</td></tr>';
+                return;
+            }
+            body.innerHTML = rows.map(row => `
+                <tr>
+                    <td>${escapeHtml(row.name || '')}</td>
+                    <td>${row.active ? 'Yes' : 'No'}</td>
+                    <td>${formatDateTime(row.updatedAt || row.createdAt)}</td>
+                    <td>${escapeHtml(row.updatedByName || row.createdByName || '')}</td>
+                </tr>
+            `).join('');
+        }
+
+        async function deactivateConfiguration() {
+            const id = document.getElementById('configurationId').value;
+            if (!id || !confirm('Deactivate this promotion configuration?')) return;
+            const response = await fetch(`${apiBase}/configuration/${id}/deactivate`, { method: 'POST' });
+            const message = document.getElementById('configurationMessage');
+            if (!response.ok) {
+                message.textContent = await response.text();
+                return;
+            }
+            await loadConfiguration();
+            message.textContent = 'Deactivated';
         }
 
         async function saveConfiguration(event) {
@@ -620,18 +943,20 @@
         }
 
         function openCreateForm() {
-            document.getElementById('promotionForm').reset();
-            document.getElementById('promotionId').value = '';
-            document.getElementById('effectiveDate').valueAsDate = new Date();
-            document.getElementById('formPanel').classList.remove('hidden');
+            if (!canManagePromotions || !byId('promotionForm')) return;
+            byId('promotionForm').reset();
+            byId('promotionId').value = '';
+            byId('effectiveDate').valueAsDate = new Date();
+            byId('formPanel').classList.remove('hidden');
         }
 
         function closeForm() {
-            document.getElementById('formPanel').classList.add('hidden');
+            byId('formPanel')?.classList.add('hidden');
         }
 
         async function savePromotion(event) {
             event.preventDefault();
+            clearPageError();
             const payload = {
                 employeeId: Number(document.getElementById('employeeId').value),
                 proposedRoleId: Number(document.getElementById('proposedRoleId').value),
@@ -645,7 +970,7 @@
                 body: JSON.stringify(payload)
             });
             if (!response.ok) {
-                alert(await response.text());
+                showPageError(await response.text());
                 return;
             }
             closeForm();
@@ -653,9 +978,10 @@
         }
 
         async function viewDetail(id) {
+            clearPageError();
             const response = await fetch(`${apiBase}/${id}`);
             if (!response.ok) {
-                alert(await response.text());
+                showPageError(await response.text());
                 return;
             }
             const data = await response.json();
@@ -674,24 +1000,38 @@
                 <h4>Eligibility</h4>
                 <ul>${(data.eligibilityChecks || []).map(c => `<li>${c.passed ? 'Passed' : 'Failed'} - ${escapeHtml(c.checkName)}: ${escapeHtml(c.message || '')}</li>`).join('')}</ul>
                 <h4>Approvals</h4>
-                <ul>${(data.approvalSteps || []).map(s => `<li>${escapeHtml(s.stage)} - ${escapeHtml(s.decision)} ${s.approverName ? `(${escapeHtml(s.approverName)})` : ''}</li>`).join('')}</ul>
+                <ul>${(data.approvalSteps || []).map(s => `
+                    <li>
+                        ${escapeHtml(s.stage)} - ${escapeHtml(s.decision)} ${s.approverName ? `(${escapeHtml(s.approverName)})` : ''}
+                        ${canManagePromotions && s.decision === 'PENDING' ? `
+                            <button class="promotion-btn" onclick="reassignApproval(${data.id}, ${s.id})">Reassign</button>
+                            <button class="promotion-btn" onclick="delegateApproval(${data.id}, ${s.id})">Delegate</button>
+                        ` : ''}
+                    </li>
+                `).join('')}</ul>
                 <h4>Route Preview</h4>
                 <ul>${routePreview}</ul>
                 <h4>Documents</h4>
                 <p><strong>Missing before submit:</strong> ${missingBeforeSubmit || 'Complete'}</p>
                 <p><strong>Missing before implementation:</strong> ${missingBeforeImplementation || 'Complete'}</p>
                 <div class="promotion-actions">
-                    <select id="attachmentType-${data.id}" class="promotion-btn">
+                    ${canManagePromotions ? `<select id="attachmentType-${data.id}" class="promotion-btn">
                         ${attachmentTypeOptions([])}
                     </select>
                     <input type="file" id="attachmentFile-${data.id}">
-                    <button class="promotion-btn" onclick="uploadAttachment(${data.id})">Upload</button>
+                    <button class="promotion-btn" onclick="uploadAttachment(${data.id})">Upload</button>` : ''}
                 </div>
+                ${canManagePromotions ? `
+                    <div class="promotion-actions">
+                        <button class="promotion-btn" onclick="generateLetter(${data.id}, 'PROMOTION_LETTER')">Generate Promotion Letter</button>
+                        <button class="promotion-btn" onclick="generateLetter(${data.id}, 'SALARY_ADJUSTMENT_LETTER')">Generate Salary Adjustment Letter</button>
+                    </div>
+                ` : ''}
                 <ul>${(data.attachments || []).map(a => `
                     <li>
                         ${escapeHtml(a.fileName || '')} - ${escapeHtml(a.documentType || 'OTHER')}
                         <a href="${apiBase}/${data.id}/attachments/${a.id}" target="_blank">Download</a>
-                        <button class="promotion-btn danger" onclick="deleteAttachment(${data.id}, ${a.id})">Remove</button>
+                        ${canManagePromotions ? `<button class="promotion-btn danger" onclick="deleteAttachment(${data.id}, ${a.id})">Remove</button>` : ''}
                     </li>
                 `).join('') || '<li>No documents uploaded.</li>'}</ul>
                 <h4>Activity</h4>
@@ -723,7 +1063,62 @@
         }
 
         function closeDetail() {
-            document.getElementById('detailPanel').classList.add('hidden');
+            byId('detailPanel')?.classList.add('hidden');
+        }
+
+        function requestActionInput(options) {
+            const backdrop = byId('actionModalBackdrop');
+            if (!backdrop) {
+                return Promise.resolve({ comment: '', approverId: null });
+            }
+            byId('actionModalTitle').textContent = options.title || 'Promotion Action';
+            byId('actionCommentLabel').textContent = options.commentLabel || 'Comment';
+            byId('actionComment').value = '';
+            byId('actionComment').required = Boolean(options.requireComment);
+            byId('actionModalError').textContent = '';
+            byId('actionApproverWrapper').classList.toggle('hidden', !options.requireApprover);
+            if (options.requireApprover) {
+                populateApproverSelect('actionApproverId', null);
+                byId('actionApproverId').required = true;
+            } else if (byId('actionApproverId')) {
+                byId('actionApproverId').required = false;
+            }
+            backdrop.classList.remove('hidden');
+            return new Promise(resolve => {
+                actionModalResolve = resolve;
+            });
+        }
+
+        function submitActionModal(event) {
+            event.preventDefault();
+            const comment = byId('actionComment').value.trim();
+            const approverId = byId('actionApproverId')?.value || '';
+            const requiresComment = byId('actionComment').required;
+            const requiresApprover = !byId('actionApproverWrapper').classList.contains('hidden');
+            if (requiresComment && !comment) {
+                byId('actionModalError').textContent = 'Comment is required.';
+                return;
+            }
+            if (requiresApprover && !approverId) {
+                byId('actionModalError').textContent = 'Select an approver.';
+                return;
+            }
+            finishActionModal({
+                comment,
+                approverId: approverId ? Number(approverId) : null
+            });
+        }
+
+        function closeActionModal() {
+            finishActionModal(null);
+        }
+
+        function finishActionModal(result) {
+            byId('actionModalBackdrop')?.classList.add('hidden');
+            if (actionModalResolve) {
+                actionModalResolve(result);
+                actionModalResolve = null;
+            }
         }
 
         function populateDocumentRequirementSelect(id, selected) {
@@ -756,36 +1151,70 @@
         }
 
         async function approvePromotion(id) {
-            const comment = prompt('Approval comment (optional):');
-            await postAction(`${apiBase}/${id}/approve`, { comment });
+            const input = await requestActionInput({ title: 'Approve Promotion', commentLabel: 'Approval comment' });
+            if (!input) return;
+            await postAction(`${apiBase}/${id}/approve`, { comment: input.comment });
         }
 
         async function rejectPromotion(id) {
-            const comment = prompt('Rejection reason:');
-            if (!comment) return;
-            await postAction(`${apiBase}/${id}/reject`, { comment });
+            const input = await requestActionInput({ title: 'Reject Promotion', commentLabel: 'Rejection reason', requireComment: true });
+            if (!input) return;
+            await postAction(`${apiBase}/${id}/reject`, { comment: input.comment });
         }
 
         async function returnPromotion(id) {
-            const comment = prompt('Correction required:');
-            if (!comment) return;
-            await postAction(`${apiBase}/${id}/return`, { comment });
+            const input = await requestActionInput({ title: 'Return Promotion', commentLabel: 'Correction required', requireComment: true });
+            if (!input) return;
+            await postAction(`${apiBase}/${id}/return`, { comment: input.comment });
         }
 
         async function cancelPromotion(id) {
-            const comment = prompt('Cancellation reason (optional):');
-            await postAction(`${apiBase}/${id}/cancel`, { comment });
+            const input = await requestActionInput({ title: 'Cancel Promotion', commentLabel: 'Cancellation reason' });
+            if (!input) return;
+            await postAction(`${apiBase}/${id}/cancel`, { comment: input.comment });
         }
 
         async function implementPromotion(id) {
-            const comment = prompt('Implementation comment (optional):');
-            await postAction(`${apiBase}/${id}/implement`, { comment });
+            const input = await requestActionInput({ title: 'Implement Promotion', commentLabel: 'Implementation comment' });
+            if (!input) return;
+            await postAction(`${apiBase}/${id}/implement`, { comment: input.comment });
+        }
+
+        async function reassignApproval(id, stepId) {
+            const input = await requestActionInput({ title: 'Reassign Approval', commentLabel: 'Reassignment comment', requireApprover: true });
+            if (!input) return;
+            await postAction(`${apiBase}/${id}/approval-steps/${stepId}/reassign`, {
+                approverId: input.approverId,
+                comment: input.comment
+            });
+        }
+
+        async function delegateApproval(id, stepId) {
+            const input = await requestActionInput({ title: 'Delegate Approval', commentLabel: 'Delegation comment', requireApprover: true });
+            if (!input) return;
+            await postAction(`${apiBase}/${id}/approval-steps/${stepId}/delegate`, {
+                approverId: input.approverId,
+                comment: input.comment
+            });
+        }
+
+        async function generateLetter(id, documentType) {
+            clearPageError();
+            const response = await fetch(`${apiBase}/${id}/attachments/generate-letter?documentType=${encodeURIComponent(documentType)}`, {
+                method: 'POST'
+            });
+            if (!response.ok) {
+                showPageError(await response.text());
+                return;
+            }
+            await viewDetail(id);
         }
 
         async function uploadAttachment(id) {
+            clearPageError();
             const input = document.getElementById(`attachmentFile-${id}`);
             if (!input || !input.files || input.files.length === 0) {
-                alert('Select a document to upload.');
+                showPageError('Select a document to upload.');
                 return;
             }
             const form = new FormData();
@@ -796,47 +1225,50 @@
                 body: form
             });
             if (!response.ok) {
-                alert(await response.text());
+                showPageError(await response.text());
                 return;
             }
             await viewDetail(id);
         }
 
         async function deleteAttachment(id, attachmentId) {
+            clearPageError();
             if (!confirm('Remove this document?')) return;
             const response = await fetch(`${apiBase}/${id}/attachments/${attachmentId}`, { method: 'DELETE' });
             if (!response.ok) {
-                alert(await response.text());
+                showPageError(await response.text());
                 return;
             }
             await viewDetail(id);
         }
 
         async function approveTask(taskId) {
-            const comment = prompt('Approval comment (optional):');
-            await postAction(`${apiBase}/tasks/${encodeURIComponent(taskId)}/approve`, { comment });
+            const input = await requestActionInput({ title: 'Approve Task', commentLabel: 'Approval comment' });
+            if (!input) return;
+            await postAction(`${apiBase}/tasks/${encodeURIComponent(taskId)}/approve`, { comment: input.comment });
         }
 
         async function rejectTask(taskId) {
-            const comment = prompt('Rejection reason:');
-            if (!comment) return;
-            await postAction(`${apiBase}/tasks/${encodeURIComponent(taskId)}/reject`, { comment });
+            const input = await requestActionInput({ title: 'Reject Task', commentLabel: 'Rejection reason', requireComment: true });
+            if (!input) return;
+            await postAction(`${apiBase}/tasks/${encodeURIComponent(taskId)}/reject`, { comment: input.comment });
         }
 
         async function returnTask(taskId) {
-            const comment = prompt('Correction required:');
-            if (!comment) return;
-            await postAction(`${apiBase}/tasks/${encodeURIComponent(taskId)}/return`, { comment });
+            const input = await requestActionInput({ title: 'Return Task', commentLabel: 'Correction required', requireComment: true });
+            if (!input) return;
+            await postAction(`${apiBase}/tasks/${encodeURIComponent(taskId)}/return`, { comment: input.comment });
         }
 
         async function postAction(url, payload) {
+            clearPageError();
             const response = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
             if (!response.ok) {
-                alert(await response.text());
+                showPageError(await response.text());
                 return;
             }
             await Promise.allSettled([loadDashboard(), loadTasks(), loadRequests(), loadPayrollHandoffs()]);
@@ -845,28 +1277,32 @@
         }
 
         async function acknowledgePayrollHandoff(id) {
-            const comment = prompt('Acknowledgement note (optional):');
-            await postPayrollHandoffAction(`${apiBase}/payroll-handoffs/${id}/acknowledge`, { comment });
+            const input = await requestActionInput({ title: 'Acknowledge Payroll Handoff', commentLabel: 'Acknowledgement note' });
+            if (!input) return;
+            await postPayrollHandoffAction(`${apiBase}/payroll-handoffs/${id}/acknowledge`, { comment: input.comment });
         }
 
         async function applyPayrollHandoff(id) {
-            const comment = prompt('Payroll application note (optional):');
-            await postPayrollHandoffAction(`${apiBase}/payroll-handoffs/${id}/apply`, { comment });
+            const input = await requestActionInput({ title: 'Apply Payroll Handoff', commentLabel: 'Payroll application note' });
+            if (!input) return;
+            await postPayrollHandoffAction(`${apiBase}/payroll-handoffs/${id}/apply`, { comment: input.comment });
         }
 
         async function cancelPayrollHandoff(id) {
-            const comment = prompt('Cancellation reason (optional):');
-            await postPayrollHandoffAction(`${apiBase}/payroll-handoffs/${id}/cancel`, { comment });
+            const input = await requestActionInput({ title: 'Cancel Payroll Handoff', commentLabel: 'Cancellation reason' });
+            if (!input) return;
+            await postPayrollHandoffAction(`${apiBase}/payroll-handoffs/${id}/cancel`, { comment: input.comment });
         }
 
         async function postPayrollHandoffAction(url, payload) {
+            clearPageError();
             const response = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
             if (!response.ok) {
-                alert(await response.text());
+                showPageError(await response.text());
                 return;
             }
             await Promise.allSettled([loadDashboard(), loadPayrollHandoffs(), loadRequests()]);

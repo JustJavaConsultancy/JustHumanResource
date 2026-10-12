@@ -460,13 +460,6 @@ public class EmployeeController {
     //  MISC EMPLOYEE PAGES
     // ─────────────────────────────────────────────────────────────────────────
 
-    @GetMapping("employee/promotions")
-    public String getPromotions(Model model) {
-        model.addAttribute("title",    "Promotions");
-        model.addAttribute("subTitle", "View your promotion history and upcoming opportunities");
-        return "employees/promotions";
-    }
-
     @GetMapping("employee/payroll")
     public String getPayroll(Model model) {
         String   email         = (String) authenticationManager.get("email");

@@ -25,14 +25,14 @@ public class PromotionConfigurationService {
     private final PromotionCurrentUserService currentUserService;
 
     @Transactional(readOnly = true)
-    @PreAuthorize("@promotionSecurity.canManagePromotions()")
+    @PreAuthorize("@promotionSecurity.canConfigurePromotions()")
     public PromotionConfigurationResponse getActiveConfiguration() {
         authorizationService.requireHrOrAdmin();
         return toResponse(activeConfiguration());
     }
 
     @Transactional(readOnly = true)
-    @PreAuthorize("@promotionSecurity.canManagePromotions()")
+    @PreAuthorize("@promotionSecurity.canConfigurePromotions()")
     public List<PromotionConfigurationResponse> history() {
         authorizationService.requireHrOrAdmin();
         return configurationRepository.findAllByOrderByUpdatedAtDescIdDesc().stream()
@@ -41,7 +41,7 @@ public class PromotionConfigurationService {
     }
 
     @Transactional
-    @PreAuthorize("@promotionSecurity.canManagePromotions()")
+    @PreAuthorize("@promotionSecurity.canConfigurePromotions()")
     public PromotionConfigurationResponse saveActiveConfiguration(PromotionConfigurationCommand command) {
         authorizationService.requireHrOrAdmin();
         String actorName = currentUserService.currentUserDisplayName();
@@ -79,7 +79,7 @@ public class PromotionConfigurationService {
     }
 
     @Transactional
-    @PreAuthorize("@promotionSecurity.canManagePromotions()")
+    @PreAuthorize("@promotionSecurity.canConfigurePromotions()")
     public PromotionConfigurationResponse deactivate(Long id) {
         authorizationService.requireHrOrAdmin();
         PromotionConfiguration configuration = configurationRepository.findById(id)

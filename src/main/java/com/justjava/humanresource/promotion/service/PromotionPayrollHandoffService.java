@@ -31,7 +31,7 @@ public class PromotionPayrollHandoffService {
     private final PayrollChangeOrchestrator payrollChangeOrchestrator;
 
     @Transactional(readOnly = true)
-    @PreAuthorize("@promotionSecurity.canViewOperationalPromotions()")
+    @PreAuthorize("@promotionSecurity.canManagePromotionPayrollHandoffs()")
     public List<PromotionPayrollHandoffResponse> list(PromotionPayrollHandoffStatus status) {
         authorizationService.requireHrFinanceOrAdmin();
         List<PromotionPayrollHandoff> handoffs = status == null
@@ -41,7 +41,7 @@ public class PromotionPayrollHandoffService {
     }
 
     @Transactional
-    @PreAuthorize("@promotionSecurity.canViewOperationalPromotions()")
+    @PreAuthorize("@promotionSecurity.canManagePromotionPayrollHandoffs()")
     public PromotionPayrollHandoffResponse acknowledge(Long id, PromotionDecisionCommand command) {
         authorizationService.requireHrFinanceOrAdmin();
         PromotionPayrollHandoff handoff = handoff(id);
@@ -59,7 +59,7 @@ public class PromotionPayrollHandoffService {
     }
 
     @Transactional
-    @PreAuthorize("@promotionSecurity.canViewOperationalPromotions()")
+    @PreAuthorize("@promotionSecurity.canManagePromotionPayrollHandoffs()")
     public PromotionPayrollHandoffResponse apply(Long id, PromotionDecisionCommand command) {
         authorizationService.requireHrFinanceOrAdmin();
         PromotionPayrollHandoff handoff = handoff(id);
@@ -88,7 +88,7 @@ public class PromotionPayrollHandoffService {
     }
 
     @Transactional
-    @PreAuthorize("@promotionSecurity.canViewOperationalPromotions()")
+    @PreAuthorize("@promotionSecurity.canManagePromotionPayrollHandoffs()")
     public PromotionPayrollHandoffResponse cancel(Long id, PromotionDecisionCommand command) {
         authorizationService.requireHrFinanceOrAdmin();
         PromotionPayrollHandoff handoff = handoff(id);

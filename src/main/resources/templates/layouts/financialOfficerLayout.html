@@ -360,16 +360,13 @@
       <!-- Initials Avatar -->
       <div class="w-10 h-10 rounded-full ring-2 ring-gray-200 dark:ring-gray-700
               flex items-center justify-center bg-primary text-white font-semibold text-sm" style="background-color: rgb(37 99 235 / var(--tw-bg-opacity, 1));">
-    <span th:text="${#strings.substring(userName,0,1).toUpperCase() +
-                    (#strings.contains(userName,' ') ?
-                    #strings.substring(userName, userName.indexOf(' ') + 1, userName.indexOf(' ') + 2).toUpperCase()
-                    : '')}">
+    <span th:text="${#strings.substring((userName ?: 'Finance User'),0,1).toUpperCase()}">
       JO
     </span>
       </div>
 
       <div class="flex-1 min-w-0">
-        <p th:text="${userName}"
+        <p th:text="${userName ?: 'Finance User'}"
            class="text-sm font-semibold text-gray-900 dark:text-white truncate">
           Jane Okafor
         </p>
@@ -422,6 +419,11 @@
          th:class="${currentPath.startsWith('/finance/loans')} ? 'sidebar-item active flex items-center space-x-3 px-3 py-3 rounded-lg' : 'sidebar-item flex items-center space-x-3 px-3 py-3 rounded-lg'">
         <span class="material-icons-round text-gray-500 group-hover:text-primary-600 dark:text-gray-400">account_balance_wallet</span>
         <span class="font-medium">Employee Loans</span>
+      </a>
+      <a th:href="@{/finance/promotions}"
+         th:class="${currentPath.startsWith('/finance/promotions')} ? 'sidebar-item active flex items-center space-x-3 px-3 py-3 rounded-lg' : 'sidebar-item flex items-center space-x-3 px-3 py-3 rounded-lg'">
+        <span class="material-icons-round text-gray-500 group-hover:text-primary-600 dark:text-gray-400">trending_up</span>
+        <span class="font-medium">Promotions</span>
       </a>
       <a th:href="@{/employee-exits}"
          th:class="${currentPath.startsWith('/employee-exits')} ? 'sidebar-item active flex items-center space-x-3 px-3 py-3 rounded-lg' : 'sidebar-item flex items-center space-x-3 px-3 py-3 rounded-lg'">

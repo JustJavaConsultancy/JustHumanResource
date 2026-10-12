@@ -2,6 +2,7 @@ package com.justjava.humanresource.core.config;
 
 
 import com.justjava.humanresource.payroll.service.diagnostics.PayrollJournalImbalanceException;
+import com.justjava.humanresource.promotion.service.PromotionSecurity;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,6 +21,8 @@ import java.util.List;
 public class GlobalControllerAdvice {
     @Autowired
     AuthenticationManager authenticationManager;
+    @Autowired(required = false)
+    PromotionSecurity promotionSecurity;
 
     @ModelAttribute("currentPath")
     public String getCurrentPath(HttpServletRequest request) {
@@ -47,6 +50,16 @@ public class GlobalControllerAdvice {
                 || authenticationManager.isJobHR()
                 || authenticationManager.isRestrictedHr()
                 || authenticationManager.isAdmin();
+    }
+
+    @ModelAttribute("canAccessHrPromotionPage")
+    public boolean canAccessHrPromotionPage() {
+        return promotionSecurity != null && promotionSecurity.canAccessHrPromotionPage();
+    }
+
+    @ModelAttribute("canAccessManagerPromotionPage")
+    public boolean canAccessManagerPromotionPage() {
+        return promotionSecurity != null && promotionSecurity.canAccessManagerPromotionPage();
     }
 
 

@@ -1,7 +1,9 @@
 package com.justjava.humanresource.promotion;
 
+import com.justjava.humanresource.hr.repository.DepartmentRepository;
 import com.justjava.humanresource.hr.repository.EmployeeRepository;
 import com.justjava.humanresource.hr.repository.JobStepRepository;
+import com.justjava.humanresource.hr.repository.PayGroupRepository;
 import com.justjava.humanresource.promotion.dto.PromotionReassignmentCommand;
 import com.justjava.humanresource.promotion.entity.PromotionStatus;
 import com.justjava.humanresource.promotion.service.PromotionAttachmentService;
@@ -36,8 +38,10 @@ class PromotionApiControllerTest {
     @Mock PromotionPayrollHandoffService promotionPayrollHandoffService;
     @Mock PromotionAuthorizationService promotionAuthorizationService;
     @Mock PromotionApprovalReassignmentService promotionApprovalReassignmentService;
+    @Mock DepartmentRepository departmentRepository;
     @Mock EmployeeRepository employeeRepository;
     @Mock JobStepRepository jobStepRepository;
+    @Mock PayGroupRepository payGroupRepository;
 
     private PromotionApiController controller;
 
@@ -54,7 +58,9 @@ class PromotionApiControllerTest {
                 promotionAuthorizationService,
                 promotionApprovalReassignmentService,
                 employeeRepository,
-                jobStepRepository
+                jobStepRepository,
+                departmentRepository,
+                payGroupRepository
         );
     }
 
@@ -74,6 +80,30 @@ class PromotionApiControllerTest {
         controller.jobSteps();
 
         verify(promotionAuthorizationService).requireHrFinanceOrAdmin();
+    }
+
+    @Test
+    void departmentReferenceRequiresHrFinanceOrAdminAccess() {
+        when(departmentRepository.findAll()).thenReturn(List.of());
+
+        controller.departments();
+
+        verify(promotionAuthorizationService).requireHrFinanceOrAdmin();
+    }
+
+    @Test
+    void protectedReferenceListsRequireHrFinanceOrAdminAccess() {
+        when(employeeRepository.findAllVisible()).thenReturn(List.of());
+        when(payGroupRepository.findAll()).thenReturn(List.of());
+
+        controller.approvers();
+        controller.escalationApprovers();
+        controller.approvalGroups();
+        controller.documentTypes();
+        controller.statuses();
+        controller.payGroups();
+
+        verify(promotionAuthorizationService, org.mockito.Mockito.times(6)).requireHrFinanceOrAdmin();
     }
 
     @Test

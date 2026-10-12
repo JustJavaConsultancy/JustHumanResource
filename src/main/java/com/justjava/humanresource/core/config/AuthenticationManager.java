@@ -64,6 +64,15 @@ public class AuthenticationManager {
     public boolean isExecutive() {
         return normalizedGroups().contains("executive");
     }
+    public boolean isDepartmentHead() {
+        return normalizedGroups().contains("departmenthead");
+    }
+    public boolean isAssetManager() {
+        return normalizedGroups().contains("assetmanager");
+    }
+    public boolean isAuditor() {
+        return normalizedGroups().contains("auditor");
+    }
 
     /* ---- Loan module wrappers (delegate to existing checks) ---- */
     public boolean isLoanHrApprover() {

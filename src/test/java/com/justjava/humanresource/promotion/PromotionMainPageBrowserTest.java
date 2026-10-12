@@ -9,8 +9,10 @@ import org.junit.jupiter.api.Test;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PromotionMainPageBrowserTest {
@@ -44,24 +46,28 @@ class PromotionMainPageBrowserTest {
             assertThat(page.locator("#detailBody")).containsText("proposal.pdf - APPRAISAL_SUMMARY");
 
             page.locator("#taskTableBody button", new Page.LocatorOptions().setHasText("Approve")).click();
+            confirmAction(page);
             assertPosted(page, "/api/promotions/tasks/task-123/approve");
 
             page.locator("#promotionTableBody button", new Page.LocatorOptions().setHasText("Submit")).click();
             assertPosted(page, "/api/promotions/1/submit");
 
             page.locator("#promotionTableBody button", new Page.LocatorOptions().setHasText("Implement")).click();
+            confirmAction(page);
             assertPosted(page, "/api/promotions/3/implement");
 
             page.locator("#payrollHandoffTableBody button", new Page.LocatorOptions().setHasText("Acknowledge")).click();
+            confirmAction(page);
             assertPosted(page, "/api/promotions/payroll-handoffs/9/acknowledge");
 
             page.locator("#payrollHandoffTableBody button", new Page.LocatorOptions().setHasText("Apply to Payroll")).click();
+            confirmAction(page);
             assertPosted(page, "/api/promotions/payroll-handoffs/9/apply");
 
             page.locator("#configurationName").fill("Promotion policy 2027");
             page.locator("#approvalReminderAfterHours").fill("12");
             page.locator("#approvalEscalationAfterHours").fill("24");
-            page.locator("#escalationApproverGroup").fill("humanresource");
+            page.locator("#escalationApproverGroup").selectOption("humanresource");
             page.locator("#requiredDocumentsBeforeSubmit").selectOption("APPRAISAL_SUMMARY");
             page.locator("#configurationForm button[type='submit']").click();
             assertRequested(page, "PUT", "/api/promotions/configuration");
@@ -81,6 +87,136 @@ class PromotionMainPageBrowserTest {
         }
     }
 
+    @Test
+    void workflowModalCoversRejectReturnCancelReassignmentDelegationAndErrors() throws Exception {
+        try (Playwright playwright = Playwright.create();
+             Browser browser = playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(true))) {
+            Page page = browser.newPage();
+
+            page.setContent(pageHtml("approvals"));
+            page.waitForFunction("() => window.__promotionLoaded === true");
+
+            page.locator("#taskTableBody button", new Page.LocatorOptions().setHasText("Reject")).click();
+            page.locator("#actionModalForm button[type='submit']").click();
+            assertThat(page.locator("#actionModalError")).hasText("Comment is required.");
+            page.locator("#actionComment").fill("Rejected in browser test");
+            page.locator("#actionModalForm button[type='submit']").click();
+            assertPosted(page, "/api/promotions/tasks/task-123/reject");
+
+            page.locator("#taskTableBody button", new Page.LocatorOptions().setHasText("Return")).click();
+            page.locator("#actionComment").fill("Return in browser test");
+            page.locator("#actionModalForm button[type='submit']").click();
+            assertPosted(page, "/api/promotions/tasks/task-123/return");
+
+            page.locator("#promotionTableBody button", new Page.LocatorOptions().setHasText("Cancel")).first().click();
+            page.locator("#actionComment").fill("Cancel in browser test");
+            page.locator("#actionModalForm button[type='submit']").click();
+            assertPosted(page, "/api/promotions/1/cancel");
+
+            page.locator("#payrollHandoffTableBody button", new Page.LocatorOptions().setHasText("Cancel")).click();
+            page.locator("#actionComment").fill("Cancel payroll in browser test");
+            page.locator("#actionModalForm button[type='submit']").click();
+            assertPosted(page, "/api/promotions/payroll-handoffs/9/cancel");
+
+            page.locator("#promotionTableBody button", new Page.LocatorOptions().setHasText("View")).first().click();
+            page.locator("#detailBody button", new Page.LocatorOptions().setHasText("Reassign")).click();
+            page.locator("#actionApproverId").selectOption("10");
+            page.locator("#actionComment").fill("Reassign in browser test");
+            page.locator("#actionModalForm button[type='submit']").click();
+            assertPosted(page, "/api/promotions/1/approval-steps/8/reassign");
+            assertPostedBodyContains(page, "/api/promotions/1/approval-steps/8/reassign", "\"approverId\":10");
+
+            page.locator("#promotionTableBody button", new Page.LocatorOptions().setHasText("View")).first().click();
+            page.locator("#detailBody button", new Page.LocatorOptions().setHasText("Delegate")).click();
+            page.locator("#actionApproverId").selectOption("10");
+            page.locator("#actionComment").fill("Delegate in browser test");
+            page.locator("#actionModalForm button[type='submit']").click();
+            assertPosted(page, "/api/promotions/1/approval-steps/8/delegate");
+            assertPostedBodyContains(page, "/api/promotions/1/approval-steps/8/delegate", "\"approverId\":10");
+
+            page.evaluate("() => { window.__failNextPostUrl = '/api/promotions/3/implement'; }");
+            page.locator("#promotionTableBody button", new Page.LocatorOptions().setHasText("Implement")).click();
+            page.locator("#actionComment").fill("Implement in browser test");
+            page.locator("#actionModalForm button[type='submit']").click();
+            assertThat(page.locator("#promotionMessage")).containsText("Missing implementation document");
+        }
+    }
+
+    @Test
+    void documentUploadAndDeleteControlsPostExpectedRequests() throws Exception {
+        Path uploadFile = Path.of("target", "promotion-browser-upload.txt");
+        Files.createDirectories(uploadFile.getParent());
+        Files.writeString(uploadFile, "promotion browser upload", StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+
+        try (Playwright playwright = Playwright.create();
+             Browser browser = playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(true))) {
+            Page page = browser.newPage();
+
+            page.setContent(pageHtml("requests"));
+            page.waitForFunction("() => window.__promotionLoaded === true");
+            page.locator("#promotionTableBody button", new Page.LocatorOptions().setHasText("View")).first().click();
+
+            page.locator("#detailBody button", new Page.LocatorOptions().setHasText("Upload")).click();
+            assertThat(page.locator("#promotionMessage")).containsText("Select a document to upload.");
+
+            page.locator("#attachmentFile-1").setInputFiles(uploadFile);
+            page.locator("#detailBody button", new Page.LocatorOptions().setHasText("Upload")).click();
+            assertRequested(page, "POST", "/api/promotions/1/attachments");
+
+            page.locator("#detailBody button", new Page.LocatorOptions().setHasText("Remove")).click();
+            assertRequested(page, "DELETE", "/api/promotions/1/attachments/4");
+        }
+    }
+
+    @Test
+    void promotionPageDoesNotUsePromptOrRawOperationalIdInputs() throws Exception {
+        String html = Files.readString(Path.of("src/main/resources/templates/promotion/main.html"));
+
+        assertFalse(html.contains("prompt("));
+        assertFalse(html.contains("type=\"number\" id=\"employeeId\""));
+        assertFalse(html.contains("type=\"number\" id=\"proposedRoleId\""));
+        assertFalse(html.contains("type=\"number\" id=\"escalationApproverId\""));
+        assertFalse(html.contains("type=\"number\" id=\"actionApproverId\""));
+        assertFalse(html.contains("type=\"number\" id=\"reportDepartmentId\""));
+    }
+
+    @Test
+    void roleOwnedTemplatesComposeOnlyAllowedPromotionFragments() throws Exception {
+        String manage = Files.readString(Path.of("src/main/resources/templates/promotion/manage.html"));
+        String finance = Files.readString(Path.of("src/main/resources/templates/promotion/finance.html"));
+        String executive = Files.readString(Path.of("src/main/resources/templates/promotion/executive.html"));
+        String manager = Files.readString(Path.of("src/main/resources/templates/promotion/manager.html"));
+        String employee = Files.readString(Path.of("src/main/resources/templates/promotion/employee.html"));
+
+        assertTrue(manage.contains("promotionConfiguration"));
+        assertTrue(manage.contains("promotionFormPanel"));
+        assertTrue(manage.contains("promotionPayrollHandoffs"));
+
+        assertTrue(finance.contains("promotionPayrollHandoffs"));
+        assertTrue(finance.contains("promotionReports"));
+        assertFalse(finance.contains("promotionConfiguration"));
+        assertFalse(finance.contains("promotionFormPanel"));
+
+        assertTrue(executive.contains("promotionTasks"));
+        assertFalse(executive.contains("promotionReports"));
+        assertFalse(executive.contains("promotionPayrollHandoffs"));
+        assertFalse(executive.contains("promotionConfiguration"));
+        assertFalse(executive.contains("promotionFormPanel"));
+
+        assertTrue(manager.contains("promotionTasks"));
+        assertFalse(manager.contains("promotionReports"));
+        assertFalse(manager.contains("promotionPayrollHandoffs"));
+        assertFalse(manager.contains("promotionConfiguration"));
+        assertFalse(manager.contains("promotionFormPanel"));
+
+        assertTrue(employee.contains("promotionRequests"));
+        assertFalse(employee.contains("promotionTasks"));
+        assertFalse(employee.contains("promotionReports"));
+        assertFalse(employee.contains("promotionPayrollHandoffs"));
+        assertFalse(employee.contains("promotionConfiguration"));
+        assertFalse(employee.contains("promotionFormPanel"));
+    }
+
     private void assertFocusedPanel(Browser browser, String initialSection, String expectedPanelId) throws Exception {
         Page page = browser.newPage();
         page.setContent(pageHtml(initialSection));
@@ -94,9 +230,14 @@ class PromotionMainPageBrowserTest {
 
     private String pageHtml(String initialSection) throws Exception {
         String html = Files.readString(Path.of("src/main/resources/templates/promotion/main.html"));
-        html = html.replaceFirst("<main layout:fragment=\"content\" th:attr=\"data-initial-section=\\$\\{initialSection\\}\">",
-                "<main layout:fragment=\"content\" data-initial-section=\"" + initialSection + "\">");
+        html = html.replaceFirst("<main layout:fragment=\"content\" th:fragment=\"promotionContent\" th:attr=\"data-initial-section=\\$\\{initialSection\\},data-promotion-role=\\$\\{promotionRole\\}\">",
+                "<main layout:fragment=\"content\" data-initial-section=\"" + initialSection + "\" data-promotion-role=\"admin\">");
         return html.replace("</head>", "<script>" + apiStub() + "</script></head>");
+    }
+
+    private void confirmAction(Page page) {
+        page.locator("#actionComment").fill("Approved in browser test");
+        page.locator("#actionModalForm button[type='submit']").click();
     }
 
     private void assertPosted(Page page, String url) {
@@ -110,11 +251,19 @@ class PromotionMainPageBrowserTest {
         assertTrue(requested, "Expected " + method + " to " + url);
     }
 
+    private void assertPostedBodyContains(Page page, String url, String expectedBodyContent) {
+        Boolean requested = (Boolean) page.evaluate(
+                "([url, expected]) => window.__requests.some(request => request.url === url && request.method === 'POST' && String(request.body).includes(expected))",
+                new String[]{url, expectedBodyContent});
+        assertTrue(requested, "Expected POST body for " + url + " to contain " + expectedBodyContent);
+    }
+
     private String apiStub() {
         return """
                 window.__requests = [];
                 window.__scrollTargets = [];
                 window.__promotionLoaded = false;
+                window.__failNextPostUrl = null;
                 window.alert = (message) => { window.__lastAlert = message; };
                 window.prompt = () => 'Approved in browser test';
                 window.confirm = () => true;
@@ -163,11 +312,21 @@ class PromotionMainPageBrowserTest {
                     const url = String(input);
                     const method = init.method || 'GET';
                     window.__requests.push({ url, method, body: init.body || null });
+                    if (method === 'POST' && window.__failNextPostUrl === url) {
+                        window.__failNextPostUrl = null;
+                        return jsonResponse('Missing implementation document', false);
+                    }
+                    if (method === 'DELETE') {
+                        return jsonResponse({ ok: true });
+                    }
                     if (url === '/api/promotions/reference/employees') {
                         return jsonResponse([{ id: 10, name: 'Ada Lovelace', departmentName: 'Engineering' }]);
                     }
                     if (url === '/api/promotions/reference/job-steps') {
                         return jsonResponse([{ id: 20, name: 'Senior Engineer', jobGradeName: 'G7' }]);
+                    }
+                    if (url === '/api/promotions/reference/departments') {
+                        return jsonResponse([{ id: 30, name: 'Engineering', code: 'ENG' }]);
                     }
                     if (url === '/api/promotions/dashboard') {
                         return jsonResponse({ pendingApprovalCount: 3, approvedCount: 2, implementedCount: 1, monthlySalaryImpact: 250000 });
@@ -245,7 +404,7 @@ class PromotionMainPageBrowserTest {
                             missingRequiredDocumentsBeforeSubmit: ['APPRAISAL_SUMMARY'],
                             missingRequiredDocumentsBeforeImplementation: [],
                             eligibilityChecks: [{ passed: false, checkName: 'APPRAISAL_SCORE', message: 'Below threshold' }],
-                            approvalSteps: [{ stage: 'LINE_MANAGER', decision: 'PENDING', approverName: 'Mary Manager' }],
+                            approvalSteps: [{ id: 8, stage: 'LINE_MANAGER', decision: 'PENDING', approverName: 'Mary Manager' }],
                             attachments: [{ id: 4, fileName: 'proposal.pdf', documentType: 'APPRAISAL_SUMMARY' }],
                             activities: [{ createdAt: '2026-10-11T10:00:00', description: 'Created promotion request' }]
                         });

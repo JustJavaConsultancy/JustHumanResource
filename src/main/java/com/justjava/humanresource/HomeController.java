@@ -25,6 +25,8 @@ public class HomeController {
             return "redirect:/recruitment";
         } else if (authenticationManager.isFinancialOfficer()) {
             return "redirect:/finance/dashboard";
+        } else if (authenticationManager.isExecutive()) {
+            return "redirect:/executive/promotions";
         } else if (authenticationManager.isAdmin()) {
             return "redirect:/admin/users";
         } else if (authenticationManager.isJobHR()) {

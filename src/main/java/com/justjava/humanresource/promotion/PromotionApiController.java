@@ -2,8 +2,11 @@ package com.justjava.humanresource.promotion;
 
 import com.justjava.humanresource.hr.entity.Employee;
 import com.justjava.humanresource.hr.entity.JobStep;
+import com.justjava.humanresource.hr.entity.PayGroup;
+import com.justjava.humanresource.hr.repository.DepartmentRepository;
 import com.justjava.humanresource.hr.repository.EmployeeRepository;
 import com.justjava.humanresource.hr.repository.JobStepRepository;
+import com.justjava.humanresource.hr.repository.PayGroupRepository;
 import com.justjava.humanresource.promotion.dto.*;
 import com.justjava.humanresource.promotion.entity.PromotionStatus;
 import com.justjava.humanresource.promotion.entity.PromotionAttachment;
@@ -50,6 +53,8 @@ public class PromotionApiController {
     private final PromotionApprovalReassignmentService promotionApprovalReassignmentService;
     private final EmployeeRepository employeeRepository;
     private final JobStepRepository jobStepRepository;
+    private final DepartmentRepository departmentRepository;
+    private final PayGroupRepository payGroupRepository;
 
     @GetMapping("/dashboard")
     @PreAuthorize("@promotionSecurity.canViewOperationalPromotions()")
@@ -138,14 +143,14 @@ public class PromotionApiController {
     }
 
     @GetMapping("/payroll-handoffs")
-    @PreAuthorize("@promotionSecurity.canViewOperationalPromotions()")
+    @PreAuthorize("@promotionSecurity.canManagePromotionPayrollHandoffs()")
     public List<PromotionPayrollHandoffResponse> payrollHandoffs(
             @RequestParam(required = false) PromotionPayrollHandoffStatus status) {
         return promotionPayrollHandoffService.list(status);
     }
 
     @PostMapping("/payroll-handoffs/{handoffId}/acknowledge")
-    @PreAuthorize("@promotionSecurity.canViewOperationalPromotions()")
+    @PreAuthorize("@promotionSecurity.canManagePromotionPayrollHandoffs()")
     public PromotionPayrollHandoffResponse acknowledgePayrollHandoff(
             @PathVariable Long handoffId,
             @RequestBody(required = false) PromotionDecisionCommand command) {
@@ -153,7 +158,7 @@ public class PromotionApiController {
     }
 
     @PostMapping("/payroll-handoffs/{handoffId}/apply")
-    @PreAuthorize("@promotionSecurity.canViewOperationalPromotions()")
+    @PreAuthorize("@promotionSecurity.canManagePromotionPayrollHandoffs()")
     public PromotionPayrollHandoffResponse applyPayrollHandoff(
             @PathVariable Long handoffId,
             @RequestBody(required = false) PromotionDecisionCommand command) {
@@ -161,7 +166,7 @@ public class PromotionApiController {
     }
 
     @PostMapping("/payroll-handoffs/{handoffId}/cancel")
-    @PreAuthorize("@promotionSecurity.canViewOperationalPromotions()")
+    @PreAuthorize("@promotionSecurity.canManagePromotionPayrollHandoffs()")
     public PromotionPayrollHandoffResponse cancelPayrollHandoff(
             @PathVariable Long handoffId,
             @RequestBody(required = false) PromotionDecisionCommand command) {
@@ -298,26 +303,26 @@ public class PromotionApiController {
     }
 
     @GetMapping("/configuration")
-    @PreAuthorize("@promotionSecurity.canManagePromotions()")
+    @PreAuthorize("@promotionSecurity.canConfigurePromotions()")
     public PromotionConfigurationResponse configuration() {
         return promotionConfigurationService.getActiveConfiguration();
     }
 
     @GetMapping("/configuration/history")
-    @PreAuthorize("@promotionSecurity.canManagePromotions()")
+    @PreAuthorize("@promotionSecurity.canConfigurePromotions()")
     public List<PromotionConfigurationResponse> configurationHistory() {
         return promotionConfigurationService.history();
     }
 
     @PutMapping("/configuration")
-    @PreAuthorize("@promotionSecurity.canManagePromotions()")
+    @PreAuthorize("@promotionSecurity.canConfigurePromotions()")
     public PromotionConfigurationResponse updateConfiguration(
             @Valid @RequestBody PromotionConfigurationCommand command) {
         return promotionConfigurationService.saveActiveConfiguration(command);
     }
 
     @PostMapping("/configuration/{configurationId}/deactivate")
-    @PreAuthorize("@promotionSecurity.canManagePromotions()")
+    @PreAuthorize("@promotionSecurity.canConfigurePromotions()")
     public PromotionConfigurationResponse deactivateConfiguration(@PathVariable Long configurationId) {
         return promotionConfigurationService.deactivate(configurationId);
     }
@@ -359,14 +364,14 @@ public class PromotionApiController {
     }
 
     @PostMapping("/{id}/implement")
-    @PreAuthorize("@promotionSecurity.canManagePromotions()")
+    @PreAuthorize("@promotionSecurity.canImplementPromotions()")
     public PromotionDetailResponse implement(@PathVariable Long id,
                                              @RequestBody(required = false) PromotionImplementationCommand command) {
         return promotionService.implement(id, command);
     }
 
     @GetMapping("/reference/employees")
-    @PreAuthorize("@promotionSecurity.canViewOperationalPromotions()")
+    @PreAuthorize("@promotionSecurity.canViewPromotionReferenceData()")
     public List<EmployeeOption> employees() {
         promotionAuthorizationService.requireHrFinanceOrAdmin();
         return employeeRepository.findAllVisible().stream()
@@ -382,8 +387,20 @@ public class PromotionApiController {
                 .toList();
     }
 
+    @GetMapping("/reference/approvers")
+    @PreAuthorize("@promotionSecurity.canViewPromotionReferenceData()")
+    public List<EmployeeOption> approvers() {
+        return employees();
+    }
+
+    @GetMapping("/reference/escalation-approvers")
+    @PreAuthorize("@promotionSecurity.canViewPromotionReferenceData()")
+    public List<EmployeeOption> escalationApprovers() {
+        return employees();
+    }
+
     @GetMapping("/reference/job-steps")
-    @PreAuthorize("@promotionSecurity.canViewOperationalPromotions()")
+    @PreAuthorize("@promotionSecurity.canViewPromotionReferenceData()")
     public List<JobStepOption> jobSteps() {
         promotionAuthorizationService.requireHrFinanceOrAdmin();
         return jobStepRepository.findAllWithJobGrade().stream()
@@ -397,12 +414,88 @@ public class PromotionApiController {
                 .toList();
     }
 
+    @GetMapping("/reference/departments")
+    @PreAuthorize("@promotionSecurity.canViewPromotionReferenceData()")
+    public List<DepartmentOption> departments() {
+        promotionAuthorizationService.requireHrFinanceOrAdmin();
+        return departmentRepository.findAll().stream()
+                .map(d -> new DepartmentOption(d.getId(), d.getName(), d.getCode()))
+                .toList();
+    }
+
+    @GetMapping("/reference/approval-groups")
+    @PreAuthorize("@promotionSecurity.canViewPromotionReferenceData()")
+    public List<Option> approvalGroups() {
+        promotionAuthorizationService.requireHrFinanceOrAdmin();
+        return List.of(
+                new Option("humanresource", "Human Resource"),
+                new Option("finance", "Finance"),
+                new Option("executive", "Executive"),
+                new Option("departmenthead", "Department Head"),
+                new Option("hiringmanager", "Hiring Manager")
+        );
+    }
+
+    @GetMapping("/reference/document-types")
+    @PreAuthorize("@promotionSecurity.canViewPromotionReferenceData()")
+    public List<Option> documentTypes() {
+        promotionAuthorizationService.requireHrFinanceOrAdmin();
+        return java.util.Arrays.stream(PromotionAttachmentType.values())
+                .map(type -> new Option(type.name(), label(type.name())))
+                .toList();
+    }
+
+    @GetMapping("/reference/statuses")
+    @PreAuthorize("@promotionSecurity.canViewPromotionReferenceData()")
+    public List<Option> statuses() {
+        promotionAuthorizationService.requireHrFinanceOrAdmin();
+        return java.util.Arrays.stream(PromotionStatus.values())
+                .map(status -> new Option(status.name(), label(status.name())))
+                .toList();
+    }
+
+    @GetMapping("/reference/pay-groups")
+    @PreAuthorize("@promotionSecurity.canViewPromotionReferenceData()")
+    public List<PayGroupOption> payGroups() {
+        promotionAuthorizationService.requireHrFinanceOrAdmin();
+        return payGroupRepository.findAll().stream()
+                .map(this::payGroupOption)
+                .toList();
+    }
+
     public record EmployeeOption(Long id, String employeeNumber, String name, String email,
                                  String departmentName, String jobStepName, BigDecimal grossSalary) {
     }
 
     public record JobStepOption(Long id, String name, String jobGradeName, String departmentName,
                                 BigDecimal grossSalary) {
+    }
+
+    public record DepartmentOption(Long id, String name, String code) {
+    }
+
+    public record Option(String value, String label) {
+    }
+
+    public record PayGroupOption(Long id, String code, String name, String payFrequency, String status) {
+    }
+
+    private PayGroupOption payGroupOption(PayGroup payGroup) {
+        return new PayGroupOption(
+                payGroup.getId(),
+                payGroup.getCode(),
+                payGroup.getName(),
+                payGroup.getPayFrequency() == null ? null : payGroup.getPayFrequency().name(),
+                payGroup.getStatus() == null ? null : payGroup.getStatus().name()
+        );
+    }
+
+    private String label(String value) {
+        String[] parts = value.toLowerCase().split("_");
+        return java.util.Arrays.stream(parts)
+                .filter(part -> !part.isBlank())
+                .map(part -> Character.toUpperCase(part.charAt(0)) + part.substring(1))
+                .collect(java.util.stream.Collectors.joining(" "));
     }
 
     private ResponseEntity<String> csv(String fileName, String body) {

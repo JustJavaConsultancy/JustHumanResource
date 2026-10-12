@@ -1,0 +1,68 @@
+SCOPE (very important)
+This work covers ONLY the Promotion module that is already implemented. It is NOT a rebuild of the whole application.
+- In scope: the promotion package (controllers, services, DTOs, security), the templates under templates/promotion/, any promotion-specific JS or CSS, promotion tests, and the minimum navigation entry points needed so each role can reach Promotion by clicking.
+- Out of scope: every other module and its pages. Do not plan a new design system, new global shells, a global navigation registry, or a global role/capability rewrite. Do not change other modules' templates except to add the single Promotion link described below.
+- If you find gaps outside Promotion (weak API security, bad layouts, raw ID inputs elsewhere), list them in a short "Out-of-scope findings" section at the end of the plan for later. Do not plan fixes for them.
+
+WHAT I WANT (the product owner's requirements, for Promotion only)
+1. Every role that is allowed to use Promotion must be able to reach it by clicking from its own existing UI. No role should have to type /promotion into the browser.
+2. Role separation inside Promotion. Each role sees only its own Promotion page and actions. No role sees another role's Promotion panels.
+3. HumanResource has the same Promotion power as Admin. Anything Admin can do in Promotion, HR can do. Each reaches it from its own existing navigation, with no role forced into another role's sidebar.
+4. Promotion forms must use dropdowns, searchable selects, radios and date pickers wherever the value comes from known data. No typing of IDs.
+5. Promotion backend authorization must match what each role sees. UI hiding is never security.
+6. When finished I will test Promotion once per role and it must work.
+
+FACTS ALREADY CONFIRMED. Do not contradict them. Verify them against the code and report anything different.
+- Promotion backend is functional. PromotionController exposes GET /promotion, /promotion/requests, /promotion/approvals, /promotion/reports, /promotion/configuration, /promotion/payroll-handoffs. The UI is one catch-all template, templates/promotion/main.html, which hides panels when API calls fail instead of showing a role-appropriate page.
+- The Promotion sidebar link is commented out in templates/layout.html and in templates/layouts/employeeLayout.html. So no role can reach Promotion by clicking.
+- The Admin's landing page today is /admin/users, rendered by templates/admin/userManagement.html from AdminController (@RequestMapping("/admin")). That page has NO sidebar. It is a standalone page with its own top header. Its only navigation links are an "Employee Exits" button (/employee-exits), "Manage Groups" and "Create User" modal buttons, and search and pagination links back to /admin/users. There is no Promotion link on it.
+- AdminController has no dashboard route. /admin/dashboard does not exist.
+- Roles in use: employees, financialofficers, admin, humanresource, jobhr, restrictedhr, hiringmanager, executive, assetmanager, departmenthead, auditor. Group checks live in AuthenticationManager.
+- Promotion authorization lives in PromotionSecurity and PromotionAuthorizationService. Employees see only their own or requested records. Salary is masked except for HR, Admin-equivalent, Finance and Executive.
+- Promotion approval stages: line manager, HR, Finance, Executive. Salary-changing implementation creates payroll handoff records.
+
+YOUR TASK
+A. Before writing the plan, read the codebase and produce a factual Promotion-only inventory:
+   - Every Promotion page route and API endpoint, with its template, layout, current authorization, and the role(s) it is intended for.
+   - For EACH role, the page it lands on after login (check HomeController and the template that page uses) and what navigation that page really has. Open the actual templates. Do not assume.
+   - Every commented-out or missing Promotion link.
+   - Every raw ID text input or free-text field in templates/promotion/main.html (and any promotion JS) that should be a dropdown or selector.
+   - Any Promotion API with weak or missing authorization, and any difference between what a role can see in the UI and what the backend allows.
+B. Write the plan file from that inventory.
+
+NON-NEGOTIABLE REQUIREMENTS FOR THE PLAN
+1. Quick win first. Step 1 must give the Admin (on /admin/users) and the HR user a visible, clickable Promotion link RIGHT AWAY so I can confirm it works. Say exactly where it goes on userManagement.html (for example beside the Employee Exits button) and on the HR landing page. Say which existing route it points to. For the other roles (Finance, Employee, Executive, managers), say exactly where in their existing layout or landing page the link goes. Replace the commented-out links with working, role-conditional ones.
+2. Use these final URLs, one per role, no "X or Y":
+   Admin: /admin/promotions
+   HR: /hr/promotions
+   Finance: /finance/promotions
+   Executive: /executive/promotions
+   Manager (hiring manager, department head): /manager/promotions
+   Employee: /employee/promotions
+   Keep /promotion and /promotion/* only as role-aware redirects for old bookmarks.
+3. Do not plan around things that don't exist. The plan must NOT depend on an Admin dashboard, Admin shell or new global layouts. Admin's Promotion entry point is added to the existing /admin/users page. If a role's existing landing page has no suitable place for a link, the plan must say what minimal addition is made there and nothing more.
+4. Include a table "Role -> Landing page -> Click path to Promotion -> Final Promotion URL". Each row shows the exact click path using the existing landing page, for example "Login -> /admin/users -> 'Promotions' button in the page header -> /admin/promotions". Roles that should not have Promotion (Auditor, Asset Manager, Scoped HR such as jobhr and restrictedhr unless the business says otherwise) must be listed as explicitly excluded with a reason.
+5. Split the single main.html into role-owned Promotion pages. Give a table of exactly what each role's page contains and must not contain:
+   - HR and Admin: dashboard metrics, request list, new promotion, create/edit draft, eligibility, required document upload, submit/cancel, approval route preview, HR approval tasks, reassign/delegate, implementation, configuration, reports and CSV exports.
+   - Finance: finance approval tasks, salary-impact view, payroll handoffs (acknowledge, apply, cancel), permitted report exports. No configuration.
+   - Executive: executive approval queue, detail with salary visibility, approve/reject/return. No configuration, no payroll handoffs.
+   - Manager: assigned line-manager tasks, detail, approve/reject/return. No salary unless backend rules allow it. No HR or Finance panels.
+   - Employee: own records only, status timeline, approved and implemented history, letters or documents if allowed. No create, update, submit, approve, implement, reports or handoffs.
+   HR and Admin may share the same page template and controller logic, but each is reached from its own entry point and URL.
+6. Capability rules: HR must be able to do every Promotion action Admin can. Define the Promotion capabilities in words (for example manage, configure, implement, approve per stage, view own, view operational, view salary, payroll handoff) and a role-to-capability table. The same capability check must control the link visibility, the page route, and the API endpoints.
+7. Promotion forms must use selects fed by small reference endpoints (employees, job steps or proposed roles, approvers, escalation approvers, approval groups, document types, statuses, pay groups). Effective date must be a date picker. Salary is numeric input only for HR and Admin. Reassignment and escalation approvers are employee dropdowns, not IDs. The backend must still validate selected IDs when the frontend is bypassed. Reference endpoints must be capability-protected and must not leak all employee or salary data to Employee users.
+8. Preserve all existing Promotion business behavior: draft, eligibility, required documents, approval stages, configuration, reports and CSV, attachments and generated letters, payroll handoff, salary masking, audit history. Do not remove or rewrite working backend logic.
+9. Order the steps so the app stays working after each step. Each step must be small enough to finish in one working session and must end with a verification checklist I can follow by logging in as that role.
+10. Tests (Promotion only):
+   - A click-path acceptance test per role: starting from the login landing page, a user with no knowledge of URLs reaches the Promotion page in N clicks. It fails if a typed URL is needed.
+   - Role page security tests: Employee cannot load /hr/promotions, /finance/promotions or /admin/promotions. Finance cannot load HR or Admin Promotion pages or configuration. Manager and Executive see only their own approval queues.
+   - HR-equals-Admin test: every Promotion action Admin can perform, HR can perform.
+   - Legacy /promotion redirect test per role.
+   - Form quality test: no visible raw employeeId, jobStepId, approverId or similar text inputs in Promotion pages.
+11. Final manual QA matrix, one section per role, as checkboxes, starting at login and using only mouse clicks.
+
+OUTPUT RULES
+- No application code in the file. Describe behavior, file names, routes, capabilities and test cases in words and tables.
+- Start with Issues / Findings / Solution Summary. State "Admin has no link to Promotion from /admin/users" as the first finding.
+- Be specific. Every step must list real file paths from this codebase, and each step must say which existing files need to be read first.
+- When finished, reply with a short summary and any open questions that need my business decision (for example whether Scoped HR should see Promotion, and whether Admin should get a separate /admin/promotions route or share the HR page).

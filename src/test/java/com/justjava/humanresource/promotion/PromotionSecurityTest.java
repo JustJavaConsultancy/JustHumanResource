@@ -24,6 +24,9 @@ class PromotionSecurityTest {
     private static final String WORK_AREA = "@promotionSecurity.canAccessPromotionWorkArea()";
     private static final String MANAGE = "@promotionSecurity.canManagePromotions()";
     private static final String OPERATIONAL = "@promotionSecurity.canViewOperationalPromotions()";
+    private static final String CONFIGURE = "@promotionSecurity.canConfigurePromotions()";
+    private static final String IMPLEMENT = "@promotionSecurity.canImplementPromotions()";
+    private static final String PAYROLL_HANDOFF = "@promotionSecurity.canManagePromotionPayrollHandoffs()";
 
     @Test
     void methodSecurityIsEnabledForPromotionAnnotations() {
@@ -44,21 +47,52 @@ class PromotionSecurityTest {
     }
 
     @Test
-    void promotionControllersHaveCoarseMethodSecurityGuards() throws Exception {
-        assertPreAuthorize(PromotionController.class, WORK_AREA);
+    void excludedHrSpecialistRolesDoNotInheritPromotionAccess() {
+        AuthenticationManager authenticationManager = mock(AuthenticationManager.class);
+        PromotionSecurity security = new PromotionSecurity(authenticationManager);
+
+        when(authenticationManager.isHumanResource()).thenReturn(true);
+        when(authenticationManager.isRestrictedHr()).thenReturn(true);
+
+        assertEquals(false, security.canAccessPromotionWorkArea());
+        assertEquals(false, security.canManagePromotions());
+        assertEquals(false, security.canAccessHrPromotionPage());
+    }
+
+    @Test
+    void departmentHeadIsPromotionManager() {
+        AuthenticationManager authenticationManager = mock(AuthenticationManager.class);
+        PromotionSecurity security = new PromotionSecurity(authenticationManager);
+
+        when(authenticationManager.isDepartmentHead()).thenReturn(true);
+
+        assertTrue(security.canAccessPromotionWorkArea());
+        assertTrue(security.canAccessManagerPromotionPage());
+    }
+
+    @Test
+    void promotionControllersHaveMethodSecurityGuards() throws Exception {
         assertPreAuthorize(PromotionApiController.class, WORK_AREA);
+        assertPreAuthorize(PromotionController.class.getMethod("adminPromotions", String.class, org.springframework.ui.Model.class), "@promotionSecurity.canAccessAdminPromotionPage()");
+        assertPreAuthorize(PromotionController.class.getMethod("hrPromotions", String.class, org.springframework.ui.Model.class), "@promotionSecurity.canAccessHrPromotionPage()");
+        assertPreAuthorize(PromotionController.class.getMethod("financePromotions", String.class, org.springframework.ui.Model.class), "@promotionSecurity.canAccessFinancePromotionPage()");
+        assertPreAuthorize(PromotionController.class.getMethod("executivePromotions", String.class, org.springframework.ui.Model.class), "@promotionSecurity.canAccessExecutivePromotionPage()");
+        assertPreAuthorize(PromotionController.class.getMethod("managerPromotions", String.class, org.springframework.ui.Model.class), "@promotionSecurity.canAccessManagerPromotionPage()");
+        assertPreAuthorize(PromotionController.class.getMethod("employeePromotions", String.class, org.springframework.ui.Model.class), "@promotionSecurity.canAccessEmployeePromotionPage()");
         assertPreAuthorize(PromotionApiController.class.getMethod("create", com.justjava.humanresource.promotion.dto.PromotionRequestCommand.class), MANAGE);
         assertPreAuthorize(PromotionApiController.class.getMethod("dashboard"), OPERATIONAL);
-        assertPreAuthorize(PromotionApiController.class.getMethod("updateConfiguration", com.justjava.humanresource.promotion.dto.PromotionConfigurationCommand.class), MANAGE);
-        assertPreAuthorize(PromotionApiController.class.getMethod("applyPayrollHandoff", Long.class, com.justjava.humanresource.promotion.dto.PromotionDecisionCommand.class), OPERATIONAL);
+        assertPreAuthorize(PromotionApiController.class.getMethod("updateConfiguration", com.justjava.humanresource.promotion.dto.PromotionConfigurationCommand.class), CONFIGURE);
+        assertPreAuthorize(PromotionApiController.class.getMethod("applyPayrollHandoff", Long.class, com.justjava.humanresource.promotion.dto.PromotionDecisionCommand.class), PAYROLL_HANDOFF);
+        assertPreAuthorize(PromotionApiController.class.getMethod("implement", Long.class, com.justjava.humanresource.promotion.dto.PromotionImplementationCommand.class), IMPLEMENT);
     }
 
     @Test
     void sensitivePromotionServicesHaveMethodSecurityGuards() throws Exception {
         assertPreAuthorize(PromotionServiceImpl.class.getMethod("createDraft", com.justjava.humanresource.promotion.dto.PromotionRequestCommand.class), MANAGE);
         assertPreAuthorize(PromotionServiceImpl.class.getMethod("dashboard"), OPERATIONAL);
-        assertPreAuthorize(PromotionConfigurationService.class.getMethod("saveActiveConfiguration", com.justjava.humanresource.promotion.dto.PromotionConfigurationCommand.class), MANAGE);
-        assertPreAuthorize(PromotionPayrollHandoffService.class.getMethod("apply", Long.class, com.justjava.humanresource.promotion.dto.PromotionDecisionCommand.class), OPERATIONAL);
+        assertPreAuthorize(PromotionServiceImpl.class.getMethod("implement", Long.class, com.justjava.humanresource.promotion.dto.PromotionImplementationCommand.class), IMPLEMENT);
+        assertPreAuthorize(PromotionConfigurationService.class.getMethod("saveActiveConfiguration", com.justjava.humanresource.promotion.dto.PromotionConfigurationCommand.class), CONFIGURE);
+        assertPreAuthorize(PromotionPayrollHandoffService.class.getMethod("apply", Long.class, com.justjava.humanresource.promotion.dto.PromotionDecisionCommand.class), PAYROLL_HANDOFF);
         assertPreAuthorize(PromotionAttachmentService.class.getMethod("upload", Long.class, org.springframework.web.multipart.MultipartFile.class, com.justjava.humanresource.promotion.enums.PromotionAttachmentType.class, boolean.class), MANAGE);
     }
 

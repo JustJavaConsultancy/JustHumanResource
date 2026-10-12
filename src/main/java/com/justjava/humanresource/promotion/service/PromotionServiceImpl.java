@@ -165,7 +165,7 @@ public class PromotionServiceImpl implements PromotionService {
 
     @Override
     @Transactional
-    @PreAuthorize("@promotionSecurity.canManagePromotions()")
+    @PreAuthorize("@promotionSecurity.canImplementPromotions()")
     public PromotionDetailResponse implement(Long id, PromotionImplementationCommand command) {
         authorizationService.requireHrOrAdmin();
         PromotionRequest request = getRequest(id);
