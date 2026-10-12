@@ -20,6 +20,7 @@ import java.util.stream.Collectors;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -153,7 +154,10 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
         next.setCycleLengthDays(current.getCycleLengthDays());
         next.setStatus(PayrollPeriodStatus.OPEN);
 
-        repository.save(next);
+        PayrollPeriod savedNext = repository.save(next);
+        if (savedNext != null) {
+            next = savedNext;
+        }
 
         // ---------------------------------------------------------
         // 5. Ensure New Period Has No Existing Runs (Idempotency Guard)
@@ -176,15 +180,17 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
         // 6. Calculate payroll for the new OPEN period
         // ---------------------------------------------------------
 
+        Map<String, Object> variables = new HashMap<>();
+        variables.put("companyId", companyId);
+        variables.put("periodStart", nextStart);
+        variables.put("periodEnd", nextEnd);
+        if (next.getId() != null) {
+            variables.put("periodId", next.getId());
+        }
+
         runtimeService.startProcessInstanceByKey(
-                "batchPayrollProcess",
-                "BATCH_PERIOD_" + next.getId(),
-                Map.of(
-                        "periodId", next.getId(),
-                        "companyId", companyId,
-                        "periodStart", nextStart,
-                        "periodEnd", nextEnd
-                )
+                "payrollCarryForwardProcess",
+                variables
         );
     }
 

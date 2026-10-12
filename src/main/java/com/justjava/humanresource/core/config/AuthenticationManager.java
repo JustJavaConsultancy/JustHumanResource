@@ -61,6 +61,9 @@ public class AuthenticationManager {
     public boolean isHiringManager() {
         return normalizedGroups().contains("hiringmanager");
     }
+    public boolean isExecutive() {
+        return normalizedGroups().contains("executive");
+    }
 
     /* ---- Loan module wrappers (delegate to existing checks) ---- */
     public boolean isLoanHrApprover() {

@@ -416,7 +416,7 @@ public class DocumentLibraryService {
                 String.valueOf(attachment.getMessage().getGroup().getId()),
                 attachment.getMessage().getGroup().getName(),
                 "Group chat",
-                "Group chat attachment in " + attachment.getMessage().getGroup().getName(),
+                "Group message in " + attachment.getMessage().getGroup().getName(),
                 "/api/documents/library/group-chat/" + attachment.getId() + "/view",
                 "/api/documents/library/group-chat/" + attachment.getId()
         );

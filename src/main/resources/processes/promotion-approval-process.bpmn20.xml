@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:flowable="http://flowable.org/bpmn"
+             targetNamespace="http://justjava.com/humanresource/promotion">
+  <process id="promotionApprovalProcess" name="Promotion Approval" isExecutable="true">
+    <startEvent id="start"/>
+    <serviceTask id="initialize" name="Initialize Promotion Approval"
+                 flowable:delegateExpression="${initializePromotionApprovalDelegate}"/>
+    <serviceTask id="evaluateEligibility" name="Evaluate Promotion Eligibility"
+                 flowable:delegateExpression="${evaluatePromotionEligibilityDelegate}"/>
+    <exclusiveGateway id="managerRequired" default="skipManager"/>
+
+    <userTask id="lineManagerApproval" name="Line Manager Promotion Approval"
+              flowable:assignee="${lineManagerEmployeeId}"/>
+    <userTask id="hrApproval" name="HR Promotion Approval"
+              flowable:candidateGroups="humanresource"/>
+    <userTask id="financeApproval" name="Finance Promotion Approval"
+              flowable:candidateGroups="financialofficers"/>
+    <userTask id="executiveApproval" name="Executive Promotion Approval"
+              flowable:candidateGroups="executive"/>
+
+    <serviceTask id="recordDecision" name="Record Promotion Decision"
+                 flowable:delegateExpression="${processPromotionApprovalDecisionDelegate}"/>
+    <exclusiveGateway id="decision"/>
+    <exclusiveGateway id="nextApproval" default="approvalComplete"/>
+
+    <serviceTask id="approved" name="Finalize Promotion Approval"
+                 flowable:delegateExpression="${finalizePromotionApprovalDelegate}"/>
+    <serviceTask id="rejected" name="Finalize Promotion Rejection"
+                 flowable:delegateExpression="${finalizePromotionRejectionDelegate}"/>
+    <serviceTask id="returned" name="Return Promotion For Correction"
+                 flowable:delegateExpression="${returnPromotionForCorrectionDelegate}"/>
+    <endEvent id="approvedEnd"/>
+    <endEvent id="rejectedEnd"/>
+    <endEvent id="returnedEnd"/>
+
+    <sequenceFlow id="f1" sourceRef="start" targetRef="initialize"/>
+    <sequenceFlow id="f2" sourceRef="initialize" targetRef="evaluateEligibility"/>
+    <sequenceFlow id="f2b" sourceRef="evaluateEligibility" targetRef="managerRequired"/>
+    <sequenceFlow id="managerPath" sourceRef="managerRequired" targetRef="lineManagerApproval">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${requiresLineManagerApproval}]]></conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="skipManager" sourceRef="managerRequired" targetRef="hrApproval"/>
+
+    <sequenceFlow id="managerDecision" sourceRef="lineManagerApproval" targetRef="recordDecision"/>
+    <sequenceFlow id="hrDecision" sourceRef="hrApproval" targetRef="recordDecision"/>
+    <sequenceFlow id="financeDecision" sourceRef="financeApproval" targetRef="recordDecision"/>
+    <sequenceFlow id="executiveDecision" sourceRef="executiveApproval" targetRef="recordDecision"/>
+    <sequenceFlow id="recorded" sourceRef="recordDecision" targetRef="decision"/>
+
+    <sequenceFlow id="rejectPath" sourceRef="decision" targetRef="rejected">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${approvalDecision == 'REJECT'}]]></conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="returnPath" sourceRef="decision" targetRef="returned">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${approvalDecision == 'RETURN'}]]></conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="approvePath" sourceRef="decision" targetRef="nextApproval">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${approvalDecision == 'APPROVE'}]]></conditionExpression>
+    </sequenceFlow>
+
+    <sequenceFlow id="managerToHr" sourceRef="nextApproval" targetRef="hrApproval">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${approvalStage == 'LINE_MANAGER'}]]></conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="hrToFinance" sourceRef="nextApproval" targetRef="financeApproval">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${approvalStage == 'HR' && requiresFinanceApproval}]]></conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="hrToExecutive" sourceRef="nextApproval" targetRef="executiveApproval">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${approvalStage == 'HR' && !requiresFinanceApproval && requiresExecutiveApproval}]]></conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="financeToExecutive" sourceRef="nextApproval" targetRef="executiveApproval">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${approvalStage == 'FINANCE' && requiresExecutiveApproval}]]></conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="approvalComplete" sourceRef="nextApproval" targetRef="approved"/>
+
+    <sequenceFlow id="approvedFinished" sourceRef="approved" targetRef="approvedEnd"/>
+    <sequenceFlow id="rejectedFinished" sourceRef="rejected" targetRef="rejectedEnd"/>
+    <sequenceFlow id="returnedFinished" sourceRef="returned" targetRef="returnedEnd"/>
+  </process>
+</definitions>

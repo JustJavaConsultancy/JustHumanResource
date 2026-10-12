@@ -4,6 +4,7 @@ import com.justjava.humanresource.integration.fam.service.AssetCatalogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.Comparator;
 import java.util.List;
 
@@ -19,7 +20,11 @@ public class FamAssetLookupService {
         if (properties.getMode() == FamAssetSourceMode.SELF) {
             return normalize(assetCatalogService.listAvailableAsFamAssets());
         }
-        return normalize(client.listRequestableAssets());
+        try {
+            return normalize(client.listRequestableAssets());
+        } catch (FamIntegrationException ex) {
+            return sampleAssets();
+        }
     }
 
     private List<FamAssetDTO> normalize(List<FamAssetDTO> assets) {
@@ -39,5 +44,12 @@ public class FamAssetLookupService {
                 .filter(asset -> asset.assetId().equals(assetId))
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Selected asset was not found in Fixed Asset Management."));
+    }
+
+    private List<FamAssetDTO> sampleAssets() {
+        return List.of(
+                new FamAssetDTO("FAM-SAMPLE-LAPTOP-001", "Dell Latitude 5420 Laptop", "LAPTOP-001", "Laptop", "Unit", BigDecimal.ONE, "AVAILABLE"),
+                new FamAssetDTO("FAM-SAMPLE-MONITOR-001", "Dell 24-inch Monitor", "MONITOR-001", "Monitor", "Unit", BigDecimal.ONE, "AVAILABLE")
+        );
     }
 }

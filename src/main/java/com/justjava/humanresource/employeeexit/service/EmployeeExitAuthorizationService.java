@@ -10,9 +10,8 @@ import com.justjava.humanresource.core.config.AuthenticationManager; import com.
  public boolean canCreateFor(Long employeeId,Employee actor){return employeeId.equals(actor.getId())||isHr();}
  public boolean canSubmit(EmployeeExitCase x,Employee actor){return x.getEmployeeId().equals(actor.getId())||isHr();}
  public boolean canApprove(EmployeeExitCase x,Task task,Employee actor){return "exitApproval".equals(task.getTaskDefinitionKey())&&String.valueOf(actor.getId()).equals(task.getAssignee());}
- // HR gets the same all-clearance-types access as admin (isHr() already includes isAdmin()).
- // Department head/asset manager/finance remain scoped to their one clearance type as before.
- public boolean canCompleteClearance(ClearanceType t,Employee actor){return isHr()||switch(t){case MANAGER_HANDOVER->group("departmentHead");case ASSET_AND_FACILITIES->group("assetManager");case IT_AND_SECURITY->auth.isAdmin();case HR_AND_LEGAL->auth.isHumanResource()||auth.isJobHR()||auth.isRestrictedHr();case PAYROLL_AND_FINANCE->auth.isFinancialOfficer();};}
+ // Admin can complete all clearance types. Operational roles remain scoped to their own clearance lanes.
+ public boolean canCompleteClearance(ClearanceType t,Employee actor){if(auth.isAdmin())return true;return switch(t){case MANAGER_HANDOVER->group("departmentHead");case ASSET_AND_FACILITIES->group("assetManager");case IT_AND_SECURITY->false;case HR_AND_LEGAL->auth.isHumanResource()||auth.isJobHR()||auth.isRestrictedHr();case PAYROLL_AND_FINANCE->auth.isFinancialOfficer();};}
  public boolean canUploadDocument(EmployeeExitCase x,Employee actor,ExitDocumentVisibility visibility){return isHr()||x.getEmployeeId().equals(actor.getId())&&visibility!=ExitDocumentVisibility.HR_ONLY;}
  public boolean canViewDocument(EmployeeExitCase x,EmployeeExitDocument d,Employee actor){if(isHr())return true;if(d.getVisibility()==ExitDocumentVisibility.HR_ONLY)return false;if(d.getVisibility()==ExitDocumentVisibility.FINANCE_AND_HR)return auth.isFinancialOfficer();return x.getEmployeeId().equals(actor.getId())||auth.isFinancialOfficer();}
  public boolean canDeleteDocument(EmployeeExitCase x,EmployeeExitDocument d,Employee actor){return isHr();}
