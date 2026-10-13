@@ -53,7 +53,7 @@ public class PromotionController {
     @GetMapping("/admin/promotions")
     @PreAuthorize("@promotionSecurity.canAccessAdminPromotionPage()")
     public String adminPromotions(@RequestParam(required = false) String section, Model model) {
-        return promotionPage(model, section, "admin", "layout", "promotion/manage");
+        return promotionPage(model, section, "admin", "layouts/adminPromotionLayout", "promotion/manage");
     }
 
     @GetMapping("/hr/promotions")
