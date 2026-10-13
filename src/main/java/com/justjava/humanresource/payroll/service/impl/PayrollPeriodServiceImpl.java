@@ -20,7 +20,6 @@ import java.util.stream.Collectors;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -180,17 +179,20 @@ public class PayrollPeriodServiceImpl implements PayrollPeriodService {
         // 6. Calculate payroll for the new OPEN period
         // ---------------------------------------------------------
 
-        Map<String, Object> variables = new HashMap<>();
-        variables.put("companyId", companyId);
-        variables.put("periodStart", nextStart);
-        variables.put("periodEnd", nextEnd);
-        if (next.getId() != null) {
-            variables.put("periodId", next.getId());
+        if (next.getId() == null) {
+            throw new IllegalStateException(
+                    "New payroll period was not persisted; cannot start batch payroll.");
         }
 
         runtimeService.startProcessInstanceByKey(
-                "payrollCarryForwardProcess",
-                variables
+                "batchPayrollProcess",
+                "BATCH_PERIOD_" + next.getId(),
+                Map.of(
+                        "periodId", next.getId(),
+                        "companyId", companyId,
+                        "periodStart", nextStart,
+                        "periodEnd", nextEnd
+                )
         );
     }
 
