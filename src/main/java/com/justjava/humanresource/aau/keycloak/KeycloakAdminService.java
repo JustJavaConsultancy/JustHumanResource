@@ -307,6 +307,37 @@ public class KeycloakAdminService {
         return members;
     }
 
+    public List<UserRepresentation> getUsersInGroup(String realm, String groupName) {
+        Keycloak keycloak = realm.equals(realmName) ? adminKeycloak : baseKeycloak;
+        GroupsResource groupsResource = groups(keycloak, realm);
+
+        GroupRepresentation group = groupsResource.groups().stream()
+                .filter(g -> g.getName() != null && g.getName().equalsIgnoreCase(groupName))
+                .findFirst()
+                .orElseThrow(() ->
+                        new IllegalStateException("Group not found: " + groupName)
+                );
+
+        List<UserRepresentation> members = new ArrayList<>();
+        final int pageSize = 100;
+        int first = 0;
+
+        while (true) {
+            List<UserRepresentation> batch =
+                    groupsResource.group(group.getId()).members(first, pageSize);
+
+            if (batch == null || batch.isEmpty()) break;
+
+            members.addAll(batch);
+
+            if (batch.size() < pageSize) break;
+
+            first += pageSize;
+        }
+
+        return members;
+    }
+
     /* ============================================================
        Listing Users
        ============================================================ */
