@@ -357,12 +357,17 @@
                 <span class="material-icons-round">insights</span>
                 <span class="font-medium">KPI Reports</span>
             </a>
-            <a th:if="${canAccessHrPromotionPage}"
-               th:href="@{/hr/promotions}"
-               th:class="${currentPath.startsWith('/hr/promotions')} ? 'sidebar-item active flex items-center space-x-3 px-3 py-3 rounded-lg' : 'sidebar-item flex items-center space-x-3 px-3 py-3 rounded-lg'">
-                <span class="material-icons-round">trending_up</span>
-                <span class="font-medium">Promotions</span>
-            </a>
+            <details th:if="${canAccessHrPromotionPage}" th:attr="open=${currentPath.startsWith('/hr/promotions')} ? 'open' : null" class="promotion-sidebar-menu">
+                <summary class="sidebar-item flex items-center space-x-3 px-3 py-3 rounded-lg cursor-pointer"><span class="material-icons-round">trending_up</span><span class="font-medium">Promotions</span><span class="material-icons-round" style="margin-left:auto">expand_more</span></summary>
+                <nav aria-label="Promotion submenu" class="ml-6 pl-3 border-l border-gray-200 space-y-1">
+                    <a th:href="@{/hr/promotions}" th:class="${currentPath == '/hr/promotions'} ? 'sidebar-item active block px-3 py-2 rounded-lg text-sm' : 'sidebar-item block px-3 py-2 rounded-lg text-sm'" th:attr="aria-current=${currentPath == '/hr/promotions'} ? 'page' : null">Overview</a>
+                    <a th:href="@{/hr/promotions/requests}" th:class="${currentPath.startsWith('/hr/promotions/requests')} ? 'sidebar-item active block px-3 py-2 rounded-lg text-sm' : 'sidebar-item block px-3 py-2 rounded-lg text-sm'" th:attr="aria-current=${currentPath.startsWith('/hr/promotions/requests')} ? 'page' : null">Requests</a>
+                    <a th:href="@{/hr/promotions/approvals}" th:class="${currentPath == '/hr/promotions/approvals'} ? 'sidebar-item active block px-3 py-2 rounded-lg text-sm' : 'sidebar-item block px-3 py-2 rounded-lg text-sm'" th:attr="aria-current=${currentPath == '/hr/promotions/approvals'} ? 'page' : null">Approval Tasks</a>
+                    <a th:href="@{/hr/promotions/payroll-handoffs}" th:class="${currentPath == '/hr/promotions/payroll-handoffs'} ? 'sidebar-item active block px-3 py-2 rounded-lg text-sm' : 'sidebar-item block px-3 py-2 rounded-lg text-sm'" th:attr="aria-current=${currentPath == '/hr/promotions/payroll-handoffs'} ? 'page' : null">Payroll Handoffs</a>
+                    <a th:href="@{/hr/promotions/reports}" th:class="${currentPath == '/hr/promotions/reports'} ? 'sidebar-item active block px-3 py-2 rounded-lg text-sm' : 'sidebar-item block px-3 py-2 rounded-lg text-sm'" th:attr="aria-current=${currentPath == '/hr/promotions/reports'} ? 'page' : null">Reports</a>
+                    <a th:href="@{/hr/promotions/settings}" th:class="${currentPath == '/hr/promotions/settings'} ? 'sidebar-item active block px-3 py-2 rounded-lg text-sm' : 'sidebar-item block px-3 py-2 rounded-lg text-sm'" th:attr="aria-current=${currentPath == '/hr/promotions/settings'} ? 'page' : null">Settings</a>
+                </nav>
+            </details>
             <a th:if="${canAccessManagerPromotionPage}"
                th:href="@{/manager/promotions}"
                th:class="${currentPath.startsWith('/manager/promotions')} ? 'sidebar-item active flex items-center space-x-3 px-3 py-3 rounded-lg' : 'sidebar-item flex items-center space-x-3 px-3 py-3 rounded-lg'">

@@ -24,6 +24,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrlPattern;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 
 @WebMvcTest(controllers = PromotionController.class)
 @AutoConfigureMockMvc(addFilters = false)
@@ -50,6 +53,9 @@ class PromotionControllerSecurityTest {
     void roleOwnedPagesAreForbiddenWhenCapabilityDeniesAccess() throws Exception {
         mockMvc.perform(get("/admin/promotions")).andExpect(status().isForbidden());
         mockMvc.perform(get("/hr/promotions")).andExpect(status().isForbidden());
+        for (String path : new String[]{"requests", "approvals", "reports", "payroll-handoffs", "settings", "requests/new", "requests/42", "requests/42/edit"}) {
+            mockMvc.perform(get("/hr/promotions/" + path)).andExpect(status().isForbidden());
+        }
         mockMvc.perform(get("/finance/promotions")).andExpect(status().isForbidden());
         mockMvc.perform(get("/executive/promotions")).andExpect(status().isForbidden());
         mockMvc.perform(get("/manager/promotions")).andExpect(status().isForbidden());
@@ -67,7 +73,7 @@ class PromotionControllerSecurityTest {
         when(promotionSecurity.canAccessHrPromotionPage()).thenReturn(true);
         mockMvc.perform(get("/hr/promotions").requestAttr("userName", "Test User"))
                 .andExpect(status().isOk())
-                .andExpect(view().name("promotion/manage"));
+                .andExpect(view().name("promotion/hr"));
 
         when(promotionSecurity.canAccessFinancePromotionPage()).thenReturn(true);
         mockMvc.perform(get("/finance/promotions").requestAttr("userName", "Test User"))
@@ -88,6 +94,23 @@ class PromotionControllerSecurityTest {
         mockMvc.perform(get("/employee/promotions").requestAttr("userName", "Test User"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("promotion/employee"));
+    }
+
+    @Test
+    @WithMockUser
+    void hrSubpagesResolveTheirOwnSections() throws Exception {
+        when(promotionSecurity.canAccessHrPromotionPage()).thenReturn(true);
+        for (String section : new String[]{"requests", "approvals", "reports", "payroll-handoffs", "settings", "requests/new", "requests/42", "requests/42/edit"}) {
+            mockMvc.perform(get("/hr/promotions/" + section))
+                    .andExpect(status().isOk()).andExpect(view().name("promotion/hr"));
+        }
+        mockMvc.perform(get("/hr/promotions/requests"))
+                .andExpect(content().string(containsString("id=\"requestPanel\"")))
+                .andExpect(content().string(not(containsString("id=\"configurationPanel\""))))
+                .andExpect(content().string(not(containsString("id=\"reportsPanel\""))))
+                .andExpect(content().string(not(containsString("id=\"taskPanel\""))));
+        mockMvc.perform(get("/hr/promotions").param("section", "configuration"))
+                .andExpect(redirectedUrl("/hr/promotions/settings"));
     }
 
     @Test

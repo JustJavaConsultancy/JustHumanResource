@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout}">
+<head><title th:text="${promotionPageTitle}">Promotions</title><th:block th:replace="~{promotion/main :: promotionStyles}"></th:block></head>
+<body><main layout:fragment="content" data-focused-page="true" th:attr="data-initial-section=${initialSection},data-promotion-role=${promotionRole},data-request-id=${promotionRequestId}">
+<header class="promotion-page-header"><div><a th:href="@{/hr/promotions}" class="promotion-eyebrow">Promotions</a><h2 th:text="${promotionPageTitle}"></h2><p>Manage career progression, one step at a time.</p></div><a th:if="${initialSection == 'new' or initialSection == 'edit' or initialSection == 'detail'}" th:href="@{/hr/promotions/requests}" class="promotion-btn">Back to requests</a></header>
+<th:block th:replace="~{promotion/main :: promotionMessage}"></th:block>
+<th:block th:if="${initialSection == 'dashboard'}"><th:block th:replace="~{promotion/main :: promotionDashboard}"></th:block></th:block>
+<th:block th:if="${initialSection == 'requests'}"><th:block th:replace="~{promotion/main :: promotionRequestToolbar}"></th:block></th:block>
+<div th:if="${initialSection == 'requests'}" class="promotion-toolbar"><input id="requestSearch" type="search" class="promotion-btn" placeholder="Search employee or request number" aria-label="Search promotion requests"><span id="requestResultCount" aria-live="polite"></span></div>
+<th:block th:if="${initialSection == 'requests'}"><th:block th:replace="~{promotion/main :: promotionRequests}"></th:block></th:block>
+<div th:if="${initialSection == 'requests'}" class="promotion-toolbar" style="margin-top:1rem"><button type="button" id="requestPrevious" class="promotion-btn">Previous</button><span id="requestPageLabel" aria-live="polite"></span><button type="button" id="requestNext" class="promotion-btn">Next</button></div>
+<th:block th:if="${initialSection == 'reports'}"><th:block th:replace="~{promotion/main :: promotionReports}"></th:block></th:block>
+<th:block th:if="${initialSection == 'payrollHandoffs'}"><th:block th:replace="~{promotion/main :: promotionPayrollHandoffs}"></th:block></th:block>
+<th:block th:if="${initialSection == 'new' or initialSection == 'edit'}"><th:block th:replace="~{promotion/main :: promotionFormPanel}"></th:block></th:block>
+<th:block th:if="${initialSection == 'configuration'}"><th:block th:replace="~{promotion/main :: promotionConfiguration}"></th:block></th:block>
+<th:block th:if="${initialSection == 'approvals'}"><th:block th:replace="~{promotion/main :: promotionTasks}"></th:block></th:block>
+<th:block th:if="${initialSection == 'detail'}"><th:block th:replace="~{promotion/main :: promotionDetail}"></th:block></th:block>
+<section th:if="${initialSection == 'dashboard'}" class="promotion-panel"><h3>What would you like to do?</h3><div class="promotion-quick-links"><a href="/hr/promotions/requests"><strong>Manage requests</strong><span>Review employee promotions and start a new request.</span></a><a href="/hr/promotions/approvals"><strong>Review approval tasks</strong><span>Take action on decisions assigned to you.</span></a><a href="/hr/promotions/payroll-handoffs"><strong>Track payroll handoffs</strong><span>Follow approved salary changes through payroll.</span></a></div></section>
+<section th:if="${initialSection == 'dashboard'}" class="promotion-panel"><div class="promotion-toolbar"><h3>Recent requests</h3><a th:href="@{/hr/promotions/requests}" class="promotion-btn">View all requests</a></div><div id="recentPromotionRequests" aria-live="polite">Loading recent requests...</div></section>
+<th:block th:replace="~{promotion/main :: promotionActionModal}"></th:block>
+<th:block th:replace="~{promotion/main :: promotionScripts}"></th:block>
+</main></body></html>

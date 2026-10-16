@@ -8,6 +8,7 @@ import org.springframework.ui.Model;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.PathVariable;
 
 @Controller
 @RequiredArgsConstructor
@@ -58,8 +59,70 @@ public class PromotionController {
 
     @GetMapping("/hr/promotions")
     @PreAuthorize("@promotionSecurity.canAccessHrPromotionPage()")
-    public String hrPromotions(@RequestParam(required = false) String section, Model model) {
-        return promotionPage(model, section, "hr", "layout", "promotion/manage");
+    public Object hrPromotions(@RequestParam(required = false) String section, Model model) {
+        if (section != null && !section.isBlank()) {
+            var redirect = new org.springframework.web.servlet.view.RedirectView(hrSectionPath(allowedSection(section, "hr")), true);
+            redirect.setExposeModelAttributes(false);
+            return redirect;
+        }
+        return hrPage(model, "dashboard");
+    }
+
+    @GetMapping("/hr/promotions/{section:requests|approvals|reports|payroll-handoffs|settings}")
+    @PreAuthorize("@promotionSecurity.canAccessHrPromotionPage()")
+    public String hrSection(@PathVariable String section, Model model) {
+        return hrPage(model, switch (section) {
+            case "settings" -> "configuration";
+            case "payroll-handoffs" -> "payrollHandoffs";
+            default -> section;
+        });
+    }
+
+    @GetMapping("/hr/promotions/requests/new")
+    @PreAuthorize("@promotionSecurity.canAccessHrPromotionPage()")
+    public String hrNewRequest(Model model) {
+        return hrPage(model, "new");
+    }
+
+    @GetMapping("/hr/promotions/requests/{id:[0-9]+}")
+    @PreAuthorize("@promotionSecurity.canAccessHrPromotionPage()")
+    public String hrRequestDetail(@PathVariable Long id, Model model) {
+        model.addAttribute("promotionRequestId", id);
+        return hrPage(model, "detail");
+    }
+
+    @GetMapping("/hr/promotions/requests/{id:[0-9]+}/edit")
+    @PreAuthorize("@promotionSecurity.canAccessHrPromotionPage()")
+    public String hrEditRequest(@PathVariable Long id, Model model) {
+        model.addAttribute("promotionRequestId", id);
+        return hrPage(model, "edit");
+    }
+
+    private String hrPage(Model model, String section) {
+        promotionPage(model, "dashboard", "hr", "layout", "promotion/manage");
+        model.addAttribute("initialSection", section);
+        model.addAttribute("focusedPromotionPage", true);
+        model.addAttribute("promotionPageTitle", switch (section) {
+            case "requests" -> "Promotion Requests";
+            case "approvals" -> "Approval Tasks";
+            case "reports" -> "Promotion Reports";
+            case "payrollHandoffs" -> "Payroll Handoffs";
+            case "configuration" -> "Promotion Settings";
+            case "new" -> "New Promotion Request";
+            case "edit" -> "Edit Promotion Draft";
+            case "detail" -> "Promotion Request Details";
+            default -> "Promotion Overview";
+        });
+        return "promotion/hr";
+    }
+
+    private String hrSectionPath(String section) {
+        return "/hr/promotions" + switch (section) {
+            case "dashboard" -> "";
+            case "configuration" -> "/settings";
+            case "payrollHandoffs" -> "/payroll-handoffs";
+            default -> "/" + section;
+        };
     }
 
     @GetMapping("/finance/promotions")
