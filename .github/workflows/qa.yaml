@@ -1,4 +1,6 @@
+
 name: build-JustHumanResource
+
 on:
   push:
     branches:
@@ -16,14 +18,12 @@ jobs:
         with:
           java-version: '21'
           distribution: 'temurin'
-#          cache: maven
 
       - name: Install glibc
         run: sudo apt-get update && sudo apt-get install -y libc6
 
-
   build-image:
-    name: Build and push to docker
+    name: Build and push to Docker Hub
     runs-on: ubuntu-latest
     needs: build
     steps:
@@ -35,44 +35,35 @@ jobs:
           distribution: temurin
           java-version: '21'
 
+      
       - name: Build and Push with Jib
-        run: mvn -B clean package jib:build -DskipTests -Djib.to.image=kazeemakinrinde/justhumanresourceqa:latest -Djib.to.auth.username=${{ secrets.DOCKER_USERNAME }} -Djib.to.auth.password=${{ secrets.DOCKER_PASSWORD }}
-#        run: mvn -B clean package jib:build -Djib.to.image=kazeemakinrinde/csims:latest -Djib.to.auth.username=${{ secrets.DOCKER_USERNAME }} -Djib.to.auth.password=${{ secrets.DOCKER_PASSWORD }}
+        run: |
+          IMAGE_TAG="${GITHUB_SHA}"
+          echo "Building image: kazeemakinrinde/justhumanresourceqa:${IMAGE_TAG}"
 
+          mvn -B clean package jib:build \
+            -DskipTests \
+            -Djib.to.image=kazeemakinrinde/justhumanresourceqa:${IMAGE_TAG} \
+            -Djib.to.auth.username=${{ secrets.DOCKER_USERNAME }} \
+            -Djib.to.auth.password=${{ secrets.DOCKER_PASSWORD }}
 
   deploy:
-    name: deploy to railway
+    name: Deploy to Coolify on Contabo
     runs-on: ubuntu-latest
     needs: build-image
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up JDK
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '21'
-
-      # Install Railway CLI
-      - name: Install Railway CLI
-        run: npm install -g @railway/cli@latest
-
-      - name: Print Railway CLI version
-        run: railway --version
-
-      - name: Print Help
-        run: railway variables --help
-
-
-      - name: Deploy to Railway
+      - name: Trigger Coolify deployment
         env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-          RAILWAY_PROJECT_ID: 7edc707c-73e3-4b8b-915b-019e9d0b6114
-          RAILWAY_SERVICE_ID: justhumanresource-qa
+          COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+          COOLIFY_URL: ${{ secrets.COOLIFY_URL }}
+          COOLIFY_APP_UUID: ${{ secrets.COOLIFY_APP_UUID_QA }}
         run: |
-          IMAGE_REF="kazeemakinrinde/justhumanresourceqa:latest"
-          echo "Updating service image to: $IMAGE_REF"
-          railway variables --set "RAILWAY_SERVICE_IMAGE=$IMAGE_REF" --service $RAILWAY_SERVICE_ID
-          
-          
-          
+          echo "Triggering Coolify deployment..."
+
+          curl --fail --show-error --silent \
+                --request POST \
+                --header "Authorization: Bearer $COOLIFY_TOKEN" \
+                --header "Content-Type: application/json" \
+                "$COOLIFY_URL/api/v1/deploy?uuid=$COOLIFY_APP_UUID"
+
+          echo "Coolify accepted the deployment request."
