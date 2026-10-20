@@ -21,4 +21,9 @@ public class WorkflowRequestApprovalStep extends BaseEntity {
     // Free Route forwarding metadata (Step 1)
     private Long forwardedToEmployeeId;
     private LocalDateTime forwardedAt;
+
+    // Finance override supersession metadata (Step 3). The step row and any earlier
+    // decision data are kept; only the pending step is closed out as SUPERSEDED.
+    private Long supersededByFinanceActionId;
+    private LocalDateTime supersededAt;
 }

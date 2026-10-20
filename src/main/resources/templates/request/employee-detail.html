@@ -209,6 +209,14 @@
             if (r.status === 'RETURNED_FOR_CORRECTION') return wasFreeRoute();
             return false;
         }
+        // Finance-forward recipient: authority comes from the request itself (re-checked server-side),
+        // never from a Flowable task. Former recipients no longer match, so they see no controls.
+        const FINANCE_FORWARD = 'FINANCE_FORWARD';
+        function isFinanceRecipient() {
+            return !!(detail && context && detail.request.financeOverrideRecipientId != null
+                && Number(detail.request.financeOverrideRecipientId) === Number(context.employeeId)
+                && detail.request.status === 'IN_APPROVAL');
+        }
         function canEditAttachments() { return isOwner() && ['DRAFT','SUBMITTED','RETURNED_FOR_CORRECTION'].includes(detail.request.status); }
         function canRemoveAttachments() { return isOwner() && ['DRAFT','RETURNED_FOR_CORRECTION'].includes(detail.request.status); }
         function requiresAttachment() { return ['EXPENSE_REIMBURSEMENT','FILE_REQUEST'].includes(detail.request.requestType); }
@@ -286,7 +294,11 @@
                 return;
             }
             try {
-                await json(`${api}/approvals/${action}`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({taskId, comment})});
+                if (taskId === FINANCE_FORWARD) {
+                    await json(`${api}/finance-forward/${requestId}/${action}`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({comment})});
+                } else {
+                    await json(`${api}/approvals/${action}`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({taskId, comment})});
+                }
                 closeApprovalModal();
                 showToast(`Request ${action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : 'returned'}.`, 'success');
                 await load();
@@ -512,12 +524,19 @@
 
         function renderActions() {
             const r = detail.request;
-            const task = tasks.find(t => t.variables && Number(t.variables.workflowRequestId) === requestId);
+            // A request handed off by Finance is never decided through an ordinary configured task.
+            const financeHandoff = r.financeOverrideRecipientId != null;
+            const task = financeHandoff ? null : tasks.find(t => t.variables && Number(t.variables.workflowRequestId) === requestId);
             const actions = [];
             if (canSubmitRequest()) actions.push(`<button onclick="submitRequest()" class="request-primary-btn">Submit</button>`);
             if (canSendFreeRouteRequest()) actions.push(`<button onclick="openFreeRouteModal('send')" class="request-secondary-btn">Send To</button>`);
             if (isOwner() && !['APPROVED','REJECTED','CANCELLED','CLOSED'].includes(r.status)) actions.push(`<button onclick="cancelRequest()" class="request-danger-btn">Cancel</button>`);
             if (context.hrAdmin && r.status === 'APPROVED') actions.push(`<button onclick="closeRequest()" class="request-secondary-btn">Close</button>`);
+            if (isFinanceRecipient()) {
+                actions.push(`<button onclick="openApprovalModal('${FINANCE_FORWARD}','approve')" class="request-success-btn">Approve</button>`);
+                actions.push(`<button onclick="openApprovalModal('${FINANCE_FORWARD}','reject')" class="request-danger-btn">Reject</button>`);
+                actions.push(`<button onclick="openApprovalModal('${FINANCE_FORWARD}','return')" class="request-warning-btn">Return</button>`);
+            }
             if (task) {
                 actions.push(`<button onclick="openApprovalModal('${task.taskId}','approve')" class="request-success-btn">Approve</button>`);
                 actions.push(`<button onclick="openApprovalModal('${task.taskId}','reject')" class="request-danger-btn">Reject</button>`);

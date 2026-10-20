@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/financialOfficerLayout}">
+<head>
+    <title>Request Detail | JustHR</title>
+</head>
+<body>
+<section layout:fragment="content">
+    <div id="finance-request-root" th:attr="data-request-id=${requestId}" class="space-y-6">
+        <a href="/finance/requests" class="inline-flex items-center text-sm text-primary-600 hover:underline">
+            <span class="material-icons-round text-base mr-1">arrow_back</span>Back to requests
+        </a>
+
+        <div id="toast" role="status" aria-live="polite" class="hidden fixed top-4 right-4 z-50 max-w-sm px-4 py-3 rounded-lg shadow-lg text-sm text-white"></div>
+        <div id="confirmModal" class="hidden fixed inset-0 z-50 items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-labelledby="confirmTitle" aria-describedby="confirmMessage">
+            <div class="w-full max-w-sm rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-xl p-5">
+                <h3 id="confirmTitle" class="text-base font-semibold text-gray-800 dark:text-white mb-2">Please confirm</h3>
+                <p id="confirmMessage" class="text-sm text-gray-600 dark:text-gray-300 mb-5"></p>
+                <div class="flex justify-end gap-2">
+                    <button id="confirmCancel" type="button" class="rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">Cancel</button>
+                    <button id="confirmOk" type="button" class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white">Confirm</button>
+                </div>
+            </div>
+        </div>
+        <div id="errorBox" class="hidden p-4 rounded-lg bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300 text-sm"></div>
+        <div id="loading" class="text-sm text-gray-500 dark:text-gray-400">Loading request...</div>
+        <div id="content" class="hidden space-y-6"></div>
+    </div>
+
+    <script>
+        (function () {
+          var root = document.getElementById('finance-request-root');
+          var requestId = root.getAttribute('data-request-id');
+          var names = { employees: {}, departments: {} };
+          var CARD = 'bg-white dark:bg-gray-800 rounded-xl shadow-card border border-gray-200 dark:border-gray-700 p-5';
+          var TH = 'px-3 py-2 text-left text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400';
+          var TD = 'px-3 py-2 align-top';
+
+          function esc(v) {
+            return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) {
+              return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+            });
+          }
+          function label(v) {
+            if (v == null || v === '') return '';
+            return String(v).replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, function (c) { return c.toUpperCase(); });
+          }
+          function humanizeKey(k) {
+            return String(k).replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/_/g, ' ').replace(/^\w/, function (c) { return c.toUpperCase(); });
+          }
+          function fmtDate(v) {
+            if (!v) return '—';
+            var d = new Date(v);
+            return isNaN(d) ? esc(v) : d.toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+          }
+          function money(amount, currency) {
+            if (amount == null || amount === '') return '—';
+            var n = Number(amount);
+            if (isNaN(n)) return esc(amount);
+            try {
+              if (currency) return esc(new Intl.NumberFormat(undefined, { style: 'currency', currency: currency }).format(n));
+            } catch (e) { /* unknown currency code: fall through */ }
+            return esc(n.toLocaleString()) + (currency ? ' ' + esc(currency) : '');
+          }
+          function who(id) {
+            if (id == null) return '—';
+            return esc(names.employees[id] || ('Employee #' + id));
+          }
+          function statusBadge(s) {
+            var u = String(s || '').toUpperCase(), cls = 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200';
+            if (u.indexOf('APPROVED') >= 0 || u === 'CLOSED') cls = 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300';
+            else if (u.indexOf('REJECT') >= 0 || u === 'CANCELLED') cls = 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300';
+            else if (u.indexOf('RETURN') >= 0) cls = 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300';
+            else if (u.indexOf('SUPERSEDED') >= 0 || u === 'DELEGATED') cls = 'bg-gray-200 text-gray-600 dark:bg-gray-600 dark:text-gray-200 line-through';
+            else if (u.indexOf('APPROVAL') >= 0 || u === 'SUBMITTED' || u === 'PENDING') cls = 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300';
+            return '<span class="px-2 py-0.5 rounded-full text-xs font-medium ' + cls + '">' + esc(label(s)) + '</span>';
+          }
+          function fileSize(b) {
+            if (b == null) return '';
+            var n = Number(b);
+            if (n < 1024) return n + ' B';
+            if (n < 1048576) return (n / 1024).toFixed(1) + ' KB';
+            return (n / 1048576).toFixed(1) + ' MB';
+          }
+          function section(title, inner) {
+            return '<div class="' + CARD + '"><h3 class="text-base font-semibold text-gray-800 dark:text-white mb-3">' + esc(title) + '</h3>' + inner + '</div>';
+          }
+          function empty(msg) { return '<p class="text-sm text-gray-500 dark:text-gray-400">' + esc(msg) + '</p>'; }
+          function table(headers, rows) {
+            return '<div class="overflow-x-auto"><table class="min-w-full text-sm"><thead class="bg-gray-50 dark:bg-gray-700/50"><tr>' +
+              headers.map(function (h) { return '<th class="' + TH + '">' + esc(h) + '</th>'; }).join('') +
+              '</tr></thead><tbody class="divide-y divide-gray-100 dark:divide-gray-700">' +
+              rows.map(function (r) { return '<tr>' + r.map(function (c) { return '<td class="' + TD + '">' + c + '</td>'; }).join('') + '</tr>'; }).join('') +
+              '</tbody></table></div>';
+          }
+          function field(k, v) {
+            return '<div><dt class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">' + esc(k) + '</dt>' +
+              '<dd class="mt-0.5 text-sm text-gray-800 dark:text-gray-100 break-words">' + v + '</dd></div>';
+          }
+
+          // Generic renderer for type-specific details: scalars -> fields, arrays of objects -> tables.
+          function renderValue(v) {
+            if (v == null || v === '') return '—';
+            if (typeof v === 'boolean') return v ? 'Yes' : 'No';
+            if (typeof v === 'number') return esc(v.toLocaleString());
+            if (Array.isArray(v)) {
+              if (!v.length) return '—';
+              if (typeof v[0] === 'object' && v[0] !== null) {
+                var cols = Object.keys(v[0]).filter(function (k) { return k !== 'id'; });
+                return table(cols.map(humanizeKey), v.map(function (row) { return cols.map(function (c) { return renderValue(row[c]); }); }));
+              }
+              return esc(v.join(', '));
+            }
+            if (typeof v === 'object') return renderObject(v);
+            if (/^\d{4}-\d{2}-\d{2}(T|$)/.test(v)) return fmtDate(v);
+            return esc(v);
+          }
+          function renderObject(o) {
+            var scalars = [], blocks = [];
+            Object.keys(o).forEach(function (k) {
+              var v = o[k];
+              if (k === 'id' || k === 'workflowRequestId') return;
+              if (Array.isArray(v) || (v && typeof v === 'object')) blocks.push('<div class="mt-4"><h4 class="text-sm font-semibold mb-2">' + esc(humanizeKey(k)) + '</h4>' + renderValue(v) + '</div>');
+              else scalars.push(field(humanizeKey(k), renderValue(v)));
+            });
+            return '<dl class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">' + scalars.join('') + '</dl>' + blocks.join('');
+          }
+
+          // Mirrors the server's FINANCE_ACTIONABLE_STATUSES. Display only: the backend re-checks every action.
+          var ACTIONABLE = ['SUBMITTED', 'IN_APPROVAL', 'RETURNED_FOR_CORRECTION'];
+          var current = null; // latest request payload, used by the action handlers
+
+          function financeCanAct(r) { return !r.financeDecisionConsumed && ACTIONABLE.indexOf(r.status) >= 0; }
+
+          var toastTimer = null;
+          function toast(msg, ok) {
+            var t = document.getElementById('toast');
+            t.textContent = msg;
+            t.className = 'fixed top-4 right-4 z-50 max-w-sm px-4 py-3 rounded-lg shadow-lg text-sm text-white ' + (ok ? 'bg-green-600' : 'bg-red-600');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(function () { t.classList.add('hidden'); }, ok ? 4000 : 8000);
+          }
+          // In-page replacement for window.confirm. Resolves true (confirm) or false (cancel / Esc / backdrop click).
+          function confirmModal(opts) {
+            return new Promise(function (resolve) {
+              var m = document.getElementById('confirmModal');
+              var ok = document.getElementById('confirmOk');
+              var cancel = document.getElementById('confirmCancel');
+              document.getElementById('confirmTitle').textContent = opts.title || 'Please confirm';
+              document.getElementById('confirmMessage').textContent = opts.message || '';
+              ok.textContent = opts.confirmText || 'Confirm';
+              ok.className = 'rounded-lg px-4 py-2 text-sm font-semibold text-white ' + (opts.confirmClass || 'bg-primary-600');
+              m.classList.remove('hidden');
+              m.classList.add('flex');
+              ok.focus();
+              function onKey(e) { if (e.key === 'Escape') done(false); }
+              function done(v) {
+                m.classList.add('hidden');
+                m.classList.remove('flex');
+                ok.onclick = cancel.onclick = m.onclick = null;
+                document.removeEventListener('keydown', onKey);
+                resolve(v);
+              }
+              ok.onclick = function () { done(true); };
+              cancel.onclick = function () { done(false); };
+              m.onclick = function (e) { if (e.target === m) done(false); };
+              document.addEventListener('keydown', onKey);
+            });
+          }
+          async function postJson(url, body) {
+            var res = await fetch(url, {
+              method: 'POST', credentials: 'same-origin',
+              headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+              body: JSON.stringify(body)
+            });
+            if (res.status === 401 || res.status === 403) throw new Error('You are not authorized to perform this action.');
+            if (!res.ok) {
+              var t = await res.text(), m = t;
+              try { var j = JSON.parse(t); m = j.message || j.error || t; } catch (x) { /* plain text */ }
+              throw new Error(m || ('Request failed (' + res.status + ').'));
+            }
+            return res.json().catch(function () { return null; });
+          }
+
+          function actionLabel(t) {
+            var m = { FORWARD: 'Forwarded', APPROVE: 'Finance approved', REJECT: 'Finance rejected', RETURN: 'Finance returned',
+              RECIPIENT_APPROVE: 'Recipient approved', RECIPIENT_REJECT: 'Recipient rejected', RECIPIENT_RETURN: 'Recipient returned' };
+            return m[t] || label(t);
+          }
+
+          function forwardPanel(r) {
+            if (!financeCanAct(r)) return '';
+            var current = r.financeOverrideRecipientId != null
+              ? '<p class="text-sm mb-3">Currently forwarded to <strong>' + who(r.financeOverrideRecipientId) + '</strong>. Forwarding again replaces them.</p>' : '';
+            return '<div class="' + CARD + '"><h3 class="text-base font-semibold text-gray-800 dark:text-white mb-3">Forward request</h3>' + current +
+              '<p class="text-xs text-gray-500 dark:text-gray-400 mb-3">Forwarding hands the request to one employee. It does not use up Finance\'s own final decision.</p>' +
+              '<div class="grid grid-cols-1 md:grid-cols-2 gap-3">' +
+              '<select id="fwdEmployee" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 px-3 py-2 text-sm"><option value="">Loading employees...</option></select>' +
+              '<input id="fwdComment" maxlength="2000" placeholder="Comment (optional)" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 px-3 py-2 text-sm">' +
+              '</div><p id="fwdError" class="hidden mt-2 text-sm text-red-600"></p>' +
+              '<button id="fwdBtn" type="button" class="mt-3 inline-flex items-center rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white">Forward</button></div>';
+          }
+
+          function decisionPanel(r) {
+            if (!financeCanAct(r)) return '';
+            var recipient = r.financeOverrideRecipientId != null
+              ? '<p class="text-xs text-gray-500 dark:text-gray-400 mb-3">This request is currently with ' + who(r.financeOverrideRecipientId) +
+                '. Your decision overrides that hand-off and is final.</p>' : '';
+            return '<div class="' + CARD + '"><h3 class="text-base font-semibold text-gray-800 dark:text-white mb-1">Finance decision</h3>' +
+              '<p class="text-xs text-gray-500 dark:text-gray-400 mb-3">Approve, reject or return is final and can be made once per request. Any pending approvers are superseded. Reject and return need a comment.</p>' +
+              recipient +
+              '<textarea id="decComment" rows="3" maxlength="2000" placeholder="Comment (required to reject or return)" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 px-3 py-2 text-sm"></textarea>' +
+              '<p id="decError" class="hidden mt-2 text-sm text-red-600"></p>' +
+              '<div class="mt-3 flex flex-wrap gap-2">' +
+              '<button type="button" data-decision="approve" class="dec-btn inline-flex items-center rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Approve</button>' +
+              '<button type="button" data-decision="reject" class="dec-btn inline-flex items-center rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Reject</button>' +
+              '<button type="button" data-decision="return" class="dec-btn inline-flex items-center rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Return for correction</button>' +
+              '</div></div>';
+          }
+
+          function wireDecision(r) {
+            var btns = document.querySelectorAll('.dec-btn');
+            if (!btns.length) return;
+            var err = document.getElementById('decError');
+            var past = { approve: 'approved', reject: 'rejected', 'return': 'returned for correction' };
+            function fail(m) { err.textContent = m; err.classList.remove('hidden'); }
+            btns.forEach(function (btn) {
+              btn.addEventListener('click', async function () {
+                var action = btn.getAttribute('data-decision');
+                var comment = document.getElementById('decComment').value.trim();
+                err.classList.add('hidden');
+                if (action !== 'approve' && !comment) return fail('A comment is required to ' + action + ' a request.');
+                var confirmed = await confirmModal({
+                  title: label(action) + ' this request?',
+                  message: 'This is Finance\'s one final decision on this request and cannot be undone.',
+                  confirmText: label(action),
+                  confirmClass: action === 'approve' ? 'bg-green-600' : (action === 'reject' ? 'bg-red-600' : 'bg-amber-600')
+                });
+                if (!confirmed) return;
+                btns.forEach(function (b) { b.disabled = true; });
+                try {
+                  await postJson('/api/finance/requests/' + encodeURIComponent(r.id) + '/' + action, { comment: comment });
+                  toast('Request ' + past[action] + '.', true);
+                  await load();
+                } catch (e) {
+                  fail(e.message); toast(e.message, false);
+                  btns.forEach(function (b) { b.disabled = false; });
+                }
+              });
+            });
+          }
+
+          function stateBanner(r) {
+            var msg = '', cls = 'bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-700/40 dark:text-gray-200 dark:border-gray-600';
+            if (r.financeDecisionConsumed) {
+              msg = 'Finance decided: <strong>' + esc(label(r.financeDecisionType) || 'Decision recorded') + '</strong>' +
+                (r.financeDecisionByEmployeeId != null ? ' by ' + who(r.financeDecisionByEmployeeId) : '') +
+                (r.financeDecisionAt ? ' on ' + fmtDate(r.financeDecisionAt) : '') + '. No further Finance actions are available.';
+              cls = 'bg-blue-50 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-200 dark:border-blue-800';
+            } else if (!financeCanAct(r)) {
+              msg = 'This request is <strong>' + esc(label(r.status)) + '</strong> and is shown read-only. Finance actions are not available.';
+            } else if (r.financeOverrideRecipientId != null) {
+              msg = 'Forwarded to <strong>' + who(r.financeOverrideRecipientId) + '</strong>, who can approve, reject or return it. You can still make the final decision.';
+              cls = 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-200 dark:border-amber-800';
+            } else {
+              return '';
+            }
+            return '<div class="p-4 rounded-lg border text-sm ' + cls + '">' + msg + '</div>';
+          }
+
+          function wireForward(r) {
+            var btn = document.getElementById('fwdBtn');
+            if (!btn) return;
+            var sel = document.getElementById('fwdEmployee');
+            var err = document.getElementById('fwdError');
+            function fail(m) { err.textContent = m; err.classList.remove('hidden'); }
+            getJson('/api/finance/requests/' + encodeURIComponent(r.id) + '/forward-recipients').then(function (opts) {
+              sel.innerHTML = '<option value="">Select employee</option>' + (opts || []).map(function (o) {
+                return '<option value="' + esc(o.value) + '">' + esc(o.label) + '</option>';
+              }).join('');
+            }).catch(function (e) { sel.innerHTML = '<option value="">Select employee</option>'; fail(e.message); });
+            btn.addEventListener('click', async function () {
+              err.classList.add('hidden');
+              if (!sel.value) return fail('Select an employee.');
+              btn.disabled = true;
+              try {
+                await postJson('/api/finance/requests/' + encodeURIComponent(r.id) + '/forward',
+                  { toEmployeeId: Number(sel.value), comment: document.getElementById('fwdComment').value.trim() });
+                toast('Request forwarded to ' + (sel.options[sel.selectedIndex].text || 'the selected employee') + '.', true);
+                await load();
+              } catch (e) { fail(e.message); toast(e.message, false); btn.disabled = false; }
+            });
+          }
+
+          function render(d, actions) {
+            var r = d.request || {};
+            var base = '/api/finance/requests/' + encodeURIComponent(r.id);
+            var html = '';
+
+            html += '<div class="' + CARD + '"><div class="flex flex-wrap items-start justify-between gap-3 mb-4"><div>' +
+              '<p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">' + esc(r.requestNumber) + ' · ' + esc(label(r.requestType)) + '</p>' +
+              '<h3 class="text-xl font-bold text-gray-800 dark:text-white">' + esc(r.title) + '</h3></div>' + statusBadge(r.status) + '</div>' +
+              '<dl class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">' +
+              field('Requester', who(r.requesterEmployeeId)) +
+              field('Department', r.departmentId != null ? esc(names.departments[r.departmentId] || '—') : '—') +
+              field('Priority', esc(label(r.priority) || '—')) +
+              field('Approval route', esc(label(r.approvalRouteType) || '—')) +
+              field('Created', fmtDate(r.createdAt)) +
+              field('Submitted', fmtDate(r.submittedAt)) +
+              (r.approvedAt ? field('Approved', fmtDate(r.approvedAt)) : '') +
+              (r.closedAt ? field('Closed', fmtDate(r.closedAt)) : '') +
+              '</dl>' +
+              (r.description ? '<div class="mt-4"><dt class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Description</dt><p class="mt-0.5 text-sm whitespace-pre-line text-gray-800 dark:text-gray-100">' + esc(r.description) + '</p></div>' : '') +
+              '</div>';
+
+            html += stateBanner(r);
+
+            if (d.typeDetails) html += section(label(r.requestType) + ' details', renderObject(d.typeDetails));
+
+            var items = d.items || [];
+            if (items.length) {
+              html += section('Items', table(['Item', 'Category', 'Qty', 'Unit', 'Unit cost', 'Total', 'Vendor / remarks'],
+                items.map(function (i) {
+                  return [esc(i.itemName) + (i.externalAssetCode ? '<div class="text-xs text-gray-500">' + esc(i.externalAssetCode) + '</div>' : '') +
+                      (i.description ? '<div class="text-xs text-gray-500">' + esc(i.description) + '</div>' : ''),
+                    esc(i.category || '—'), esc(i.quantity != null ? i.quantity : '—'), esc(i.unitOfMeasure || '—'),
+                    money(i.estimatedUnitCost, i.currency), money(i.estimatedTotalCost, i.currency),
+                    esc([i.vendorName, i.remarks].filter(Boolean).join(' · ') || '—')];
+                })));
+            }
+
+            var atts = d.attachments || [];
+            html += section('Attachments', atts.length ? table(['File', 'Type', 'Size', 'Uploaded', ''],
+              atts.map(function (a) {
+                var u = base + '/attachments/' + encodeURIComponent(a.id);
+                return [esc(a.originalFilename) + (a.description ? '<div class="text-xs text-gray-500">' + esc(a.description) + '</div>' : ''),
+                  esc(label(a.attachmentType) || esc(a.contentType || '—')), esc(fileSize(a.fileSize)), fmtDate(a.createdAt),
+                  '<a class="text-primary-600 hover:underline mr-3" target="_blank" rel="noopener" href="' + u + '/view">View</a>' +
+                  '<a class="text-primary-600 hover:underline" href="' + u + '">Download</a>'];
+              })) : empty('No attachments.'));
+
+            var steps = d.approvalSteps || [];
+            html += section('Approval history', steps.length ? table(['#', 'Approver', 'Decision', 'Comment', 'Decided'],
+              steps.map(function (s) {
+                var sup = String(s.decision || '').toUpperCase() === 'SUPERSEDED' || s.supersededByFinanceActionId != null;
+                return [esc(s.sequenceNo), (sup ? '<span class="text-gray-500 line-through">' + who(s.approverEmployeeId) + '</span>' : who(s.approverEmployeeId)),
+                  statusBadge(s.decision) + (sup ? '<div class="text-xs text-gray-500 mt-1">Superseded by Finance. This approver can no longer act.</div>' : '') +
+                    (s.forwardedToEmployeeId ? '<div class="text-xs text-gray-500 mt-1">Forwarded to ' + who(s.forwardedToEmployeeId) + '</div>' : ''),
+                  esc(s.comments || '—'), fmtDate(s.decisionAt)];
+              })) : empty('No approval steps yet.'));
+
+            var events = d.freeRouteEvents || [];
+            if (events.length) {
+              html += section('Free Route events', table(['Event', 'From', 'To', 'Comment', 'When'],
+                events.map(function (e) {
+                  return [esc(label(e.eventType)), who(e.fromEmployeeId), who(e.toEmployeeId), esc(e.comment || '—'), fmtDate(e.createdAt)];
+                })));
+            }
+
+            var comments = d.comments || [];
+            html += section('Comments', comments.length ? '<ul class="space-y-3">' + comments.map(function (c) {
+              return '<li class="border border-gray-100 dark:border-gray-700 rounded-lg p-3"><div class="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1"><span>' +
+                who(c.commentedByEmployeeId) + '</span><span>' + fmtDate(c.createdAt) + '</span></div><p class="text-sm whitespace-pre-line">' + esc(c.comment) + '</p></li>';
+            }).join('') + '</ul>' : empty('No comments.'));
+
+            var acts = d.activities || [];
+            html += section('Activity', acts.length ? table(['When', 'Activity', 'Details', 'By'],
+              acts.map(function (a) {
+                var type = a.activityType || a.type;
+                var text = a.description || a.message || a.details || a.note || '';
+                var by = a.performedByEmployeeId || a.actorEmployeeId || a.createdByEmployeeId || a.employeeId;
+                return [fmtDate(a.createdAt), esc(label(type) || '—'), esc(text || '—'), by != null ? who(by) : '—'];
+              })) : empty('No activity recorded.'));
+
+            html += decisionPanel(r) + forwardPanel(r);
+
+            actions = actions || [];
+            html += section('Finance action history', actions.length ? table(['Action', 'By', 'To', 'Status change', 'Comment', 'When'],
+              actions.map(function (a) {
+                return [esc(actionLabel(a.actionType)), who(a.actorEmployeeId), a.targetEmployeeId != null ? who(a.targetEmployeeId) : '—',
+                  esc(label(a.statusBefore) || '—') + ' → ' + esc(label(a.statusAfter) || '—') +
+                    (a.supersededStepCount ? '<div class="text-xs text-gray-500">' + esc(a.supersededStepCount) + ' pending step(s) superseded</div>' : ''),
+                  esc(a.comment || '—'), fmtDate(a.createdAt)];
+              })) : empty('No Finance actions yet.'));
+
+            document.getElementById('content').innerHTML = html;
+            document.getElementById('content').classList.remove('hidden');
+            wireDecision(r);
+            wireForward(r);
+          }
+
+          async function getJson(url) {
+            var res = await fetch(url, { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' });
+            if (res.status === 401 || res.status === 403) throw new Error('You are not authorized to view this request.');
+            if (res.status === 404) throw new Error('Request not found.');
+            if (!res.ok) throw new Error('Request failed (' + res.status + ').');
+            return res.json();
+          }
+
+          async function load() {
+            var errBox = document.getElementById('errorBox');
+            errBox.classList.add('hidden');
+            try {
+              var results = await Promise.all([
+                getJson('/api/finance/requests/' + encodeURIComponent(requestId)),
+                getJson('/api/finance/requests/lookups'),
+                getJson('/api/finance/requests/' + encodeURIComponent(requestId) + '/actions')
+              ]);
+              names = results[1] || names;
+              current = results[0];
+              render(results[0], results[2]);
+            } catch (e) {
+              errBox.textContent = e.message || 'Unable to load request.';
+              errBox.classList.remove('hidden');
+            } finally {
+              document.getElementById('loading').classList.add('hidden');
+            }
+          }
+          load();
+        })();
+    </script>
+</section>
+</body>
+</html>

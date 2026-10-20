@@ -57,6 +57,10 @@ public class WorkflowRequestController {
  @PostMapping("/approvals/approve") public void approve(@Valid @RequestBody RequestApprovalActionCommand c){service.approve(c.getTaskId(),c.getComment());}
  @PostMapping("/approvals/reject") public void reject(@Valid @RequestBody RequestApprovalActionCommand c){service.reject(c.getTaskId(),c.getComment());}
  @PostMapping("/approvals/return") public void returnRequest(@Valid @RequestBody RequestApprovalActionCommand c){service.returnForCorrection(c.getTaskId(),c.getComment());}
+ @GetMapping("/finance-forward/pending") public List<WorkflowRequest> financeForwardedToMe(){return service.financeForwardedToMe();}
+ @PostMapping("/finance-forward/{id}/approve") public WorkflowRequest financeForwardApprove(@PathVariable Long id,@Valid @RequestBody(required=false) FinanceRequestActionCommand c){return service.financeForwardApprove(id,c==null?null:c.getComment());}
+ @PostMapping("/finance-forward/{id}/reject") public WorkflowRequest financeForwardReject(@PathVariable Long id,@Valid @RequestBody(required=false) FinanceRequestActionCommand c){return service.financeForwardReject(id,c==null?null:c.getComment());}
+ @PostMapping("/finance-forward/{id}/return") public WorkflowRequest financeForwardReturn(@PathVariable Long id,@Valid @RequestBody(required=false) FinanceRequestActionCommand c){return service.financeForwardReturn(id,c==null?null:c.getComment());}
  @PostMapping("/{id}/cancel") public WorkflowRequest cancel(@PathVariable Long id){return service.cancel(id);}
  @PostMapping("/{id}/close") public WorkflowRequest close(@PathVariable Long id){return service.close(id);}
  @PostMapping("/{id}/comments") public WorkflowRequestComment comment(@PathVariable Long id,@Valid @RequestBody CommentCommand c){return service.addComment(id,c.getComment(),c.isInternalOnly());}
