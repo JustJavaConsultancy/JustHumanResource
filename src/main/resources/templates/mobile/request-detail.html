@@ -216,6 +216,12 @@
             if (r.status === 'RETURNED_FOR_CORRECTION') return rdWasFreeRoute();
             return false;
         }
+        const RD_FINANCE_FORWARD = 'FINANCE_FORWARD';
+        function rdIsFinanceRecipient() {
+            return !!(rdDetail && rdContext && rdDetail.request.financeOverrideRecipientId != null
+                && Number(rdDetail.request.financeOverrideRecipientId) === Number(rdContext.employeeId)
+                && rdDetail.request.status === 'IN_APPROVAL');
+        }
         function rdCanEditAttachments() { return rdIsOwner() && ['DRAFT','SUBMITTED','RETURNED_FOR_CORRECTION'].includes(rdDetail.request.status); }
         function rdCanRemoveAttachments() { return rdIsOwner() && ['DRAFT','RETURNED_FOR_CORRECTION'].includes(rdDetail.request.status); }
         function rdRequiresAttachment() { return ['EXPENSE_REIMBURSEMENT','FILE_REQUEST'].includes(rdDetail.request.requestType); }
@@ -274,7 +280,11 @@
             const err = document.getElementById('rdApprovalError');
             if (action !== 'approve' && !comment) { err.textContent = 'A comment is required.'; err.classList.remove('hidden'); return; }
             try {
-                await rdJson(`${rdApi}/approvals/${action}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({taskId, comment}) });
+                if (taskId === RD_FINANCE_FORWARD) {
+                    await rdJson(`${rdApi}/finance-forward/${rdRequestId}/${action}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({comment}) });
+                } else {
+                    await rdJson(`${rdApi}/approvals/${action}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({taskId, comment}) });
+                }
                 rdCloseApproval();
                 rdShowToast(`Request ${action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : 'returned'}.`);
                 await rdLoad();
@@ -445,13 +455,19 @@
         }
         function rdRenderActions() {
             const r = rdDetail.request;
-            const task = rdTasks.find(t => t.variables && Number(t.variables.workflowRequestId) === rdRequestId);
+            const financeHandoff = r.financeOverrideRecipientId != null;
+            const task = financeHandoff ? null : rdTasks.find(t => t.variables && Number(t.variables.workflowRequestId) === rdRequestId);
             const btns = [];
             if (rdCanSubmit()) btns.push(`<button onclick="rdSubmitRequest()" class="rd-primary">Submit</button>`);
             if (rdCanSendFree()) btns.push(`<button onclick="rdOpenFree('send')" class="rd-secondary">Send To</button>`);
             if (rdIsOwner() && rdCanEditAttachments()) btns.push(`<a href="/mobile/employee/requests?edit=${r.id}" class="rd-secondary">Edit</a>`);
             if (rdIsOwner() && !['APPROVED','REJECTED','CANCELLED','CLOSED'].includes(r.status)) btns.push(`<button onclick="rdCancelRequest()" class="rd-danger">Cancel</button>`);
             if (rdContext && rdContext.hrAdmin && r.status === 'APPROVED') btns.push(`<button onclick="rdCloseRequest()" class="rd-secondary">Close</button>`);
+            if (rdIsFinanceRecipient()) {
+                btns.push(`<button onclick="rdOpenApproval('${RD_FINANCE_FORWARD}','approve')" class="rd-success">Approve</button>`);
+                btns.push(`<button onclick="rdOpenApproval('${RD_FINANCE_FORWARD}','reject')" class="rd-danger">Reject</button>`);
+                btns.push(`<button onclick="rdOpenApproval('${RD_FINANCE_FORWARD}','return')" class="rd-warning">Return</button>`);
+            }
             if (task) {
                 btns.push(`<button onclick="rdOpenApproval('${rdEsc(task.taskId)}','approve')" class="rd-success">Approve</button>`);
                 btns.push(`<button onclick="rdOpenApproval('${rdEsc(task.taskId)}','reject')" class="rd-danger">Reject</button>`);

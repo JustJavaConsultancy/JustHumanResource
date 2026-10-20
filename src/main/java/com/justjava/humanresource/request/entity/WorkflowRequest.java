@@ -41,7 +41,7 @@ public class WorkflowRequest extends BaseEntity {
     /** Current Finance-forward recipient; null when no Finance handoff is pending. */
     private Long financeOverrideRecipientId;
 
-    /** True once Finance has made its single final decision (approve/reject/return). Forwards never set it. */
+    /** True once Finance has approved or rejected the request. A return is not final. */
     @Column(nullable = false, columnDefinition = "boolean default false")
     private boolean financeDecisionConsumed = false;
 

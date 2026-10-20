@@ -12,11 +12,11 @@ import lombok.Setter;
  * Rows are only ever inserted; they are never updated or deleted, so repeated forwards
  * keep their full history.
  *
- * One-final-decision invariant (database level):
- *  - {@code finalDecisionFlag} is set to TRUE only on APPROVE / REJECT / RETURN rows and is
- *    left NULL on FORWARD rows.
+ * Final-decision invariant (database level):
+ *  - {@code finalDecisionFlag} is set to TRUE only on Finance APPROVE / REJECT rows and is
+ *    left NULL on FORWARD / RETURN rows.
  *  - The unique constraint on (workflow_request_id, final_decision_flag) therefore allows any
- *    number of FORWARD rows (NULLs are distinct in PostgreSQL) but at most ONE final decision
+ *    number of non-final actions (NULLs are distinct in PostgreSQL) but at most ONE final decision
  *    row per request. A concurrent second decision fails on insert even if the application
  *    level lock/flag check were bypassed.
  */
@@ -57,6 +57,6 @@ public class WorkflowRequestFinanceAction extends BaseEntity {
     @Column(nullable = false, columnDefinition = "integer default 0")
     private Integer supersededStepCount = 0;
 
-    /** TRUE for a final decision row, NULL for FORWARD rows. Never set to FALSE. */
+    /** TRUE for Finance APPROVE / REJECT rows; NULL for FORWARD and RETURN rows. */
     private Boolean finalDecisionFlag;
 }

@@ -232,7 +232,7 @@
     <script>
         const mrApi = '/api/requests';
         const mrPageBase = '/mobile/employee/requests';
-        let mrRequests = [], mrTasks = [], mrTypes = [], mrStaffOptions = {}, mrFileOptions = {}, mrExpenseOptions = {}, mrContext = {}, mrAssetCatalog = [], mrAssetCatalogLoaded = false;
+        let mrRequests = [], mrTasks = [], mrFinanceForwarded = [], mrTypes = [], mrStaffOptions = {}, mrFileOptions = {}, mrExpenseOptions = {}, mrContext = {}, mrAssetCatalog = [], mrAssetCatalogLoaded = false;
         let mrMode = 'create', mrEditingId = null;
 
         function mrEscape(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -266,16 +266,17 @@
 
         async function loadData() {
             try {
-                [mrRequests, mrTasks, mrTypes, mrStaffOptions, mrFileOptions, mrExpenseOptions, mrContext] = await Promise.all([
+                [mrRequests, mrTasks, mrFinanceForwarded, mrTypes, mrStaffOptions, mrFileOptions, mrExpenseOptions, mrContext] = await Promise.all([
                     mrJson(mrApi + '/visible'),
                     mrJson(mrApi + '/approvals/tasks'),
+                    mrJson(mrApi + '/finance-forward/pending'),
                     mrJson(mrApi + '/types'),
                     mrJson(mrApi + '/staff-requisition-options'),
                     mrJson(mrApi + '/file-options'),
                     mrJson(mrApi + '/expense-reimbursement-options'),
                     mrJson(mrApi + '/context')
                 ]);
-                mrRequests = mrRequests || []; mrTasks = mrTasks || []; mrTypes = mrTypes || [];
+                mrRequests = mrRequests || []; mrTasks = mrTasks || []; mrFinanceForwarded = mrFinanceForwarded || []; mrTypes = mrTypes || [];
                 mrStaffOptions = mrStaffOptions || {}; mrFileOptions = mrFileOptions || {};
                 mrExpenseOptions = mrExpenseOptions || {}; mrContext = mrContext || {};
                 renderTypeOptions();
@@ -367,10 +368,11 @@
 
         function renderTasks() {
             const pill = document.getElementById('approvalCountPill');
-            if (mrTasks.length) { pill.classList.remove('hidden'); pill.textContent = mrTasks.length; } else { pill.classList.add('hidden'); }
+            const approvalCount = mrTasks.length + mrFinanceForwarded.length;
+            if (approvalCount) { pill.classList.remove('hidden'); pill.textContent = approvalCount; } else { pill.classList.add('hidden'); }
             const wrap = document.getElementById('mrTasksList');
-            if (!mrTasks.length) { wrap.innerHTML = `<div class="mr-empty"><span class="material-symbols-outlined text-3xl">task_alt</span><p class="mt-2 text-sm">No pending approvals.</p></div>`; return; }
-            wrap.innerHTML = mrTasks.map(t => {
+            if (!approvalCount) { wrap.innerHTML = `<div class="mr-empty"><span class="material-symbols-outlined text-3xl">task_alt</span><p class="mt-2 text-sm">No pending approvals.</p></div>`; return; }
+            const taskCards = mrTasks.map(t => {
                 const rid = t.variables && t.variables.workflowRequestId ? t.variables.workflowRequestId : '';
                 const matched = rid ? mrRequests.find(r => Number(r.id) === Number(rid)) : null;
                 const isFree = matched && matched.approvalRouteType === 'FREE_ROUTE';
@@ -389,12 +391,24 @@
                         <button onclick="openApprovalSheet('${mrEscape(t.taskId)}','return')" class="flex-1 text-xs py-2 rounded-lg bg-orange-600 text-white font-semibold">Return</button>
                     </div>
                 </div>`;
-            }).join('');
+            });
+            const financeCards = mrFinanceForwarded.map(r => `
+                <a href="${mrPageBase}/${encodeURIComponent(r.id)}" class="mr-card block p-3 space-y-2">
+                    <div class="flex items-start justify-between gap-2">
+                        <div class="min-w-0 flex-1">
+                            <p class="text-[10px] text-slate-500 font-semibold">${mrEscape(r.requestNumber || `Request #${r.id}`)} · FORWARDED BY FINANCE</p>
+                            <p class="text-sm font-semibold truncate">${mrEscape(r.title || '')}</p>
+                            <p class="text-[11px] text-slate-500">${mrEscape((r.createdAt || '').replace('T', ' '))}</p>
+                        </div>
+                        <span class="text-primary text-xs font-semibold">Review</span>
+                    </div>
+                </a>`);
+            wrap.innerHTML = taskCards.concat(financeCards).join('');
         }
 
         function renderStats() {
             document.getElementById('statOpen').textContent = mrRequests.filter(r => ['DRAFT','SUBMITTED','IN_APPROVAL','RETURNED_FOR_CORRECTION'].includes(r.status)).length;
-            document.getElementById('statApproval').textContent = mrTasks.length;
+            document.getElementById('statApproval').textContent = mrTasks.length + mrFinanceForwarded.length;
             document.getElementById('statApproved').textContent = mrRequests.filter(r => r.status === 'APPROVED').length;
             document.getElementById('statException').textContent = mrRequests.filter(r => ['RETURNED_FOR_CORRECTION','REJECTED'].includes(r.status)).length;
         }

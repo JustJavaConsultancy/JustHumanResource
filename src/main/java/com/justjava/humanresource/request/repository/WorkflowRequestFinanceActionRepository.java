@@ -1,7 +1,11 @@
 package com.justjava.humanresource.request.repository;
 
 import com.justjava.humanresource.request.entity.WorkflowRequestFinanceAction;
+import com.justjava.humanresource.request.enums.FinanceActionType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -14,4 +18,10 @@ public interface WorkflowRequestFinanceActionRepository extends JpaRepository<Wo
     Optional<WorkflowRequestFinanceAction> findByWorkflowRequestIdAndFinalDecisionFlagTrue(Long workflowRequestId);
 
     boolean existsByWorkflowRequestIdAndFinalDecisionFlagTrue(Long workflowRequestId);
+
+    @Modifying
+    @Query("update WorkflowRequestFinanceAction a set a.finalDecisionFlag = null " +
+            "where a.workflowRequestId = :requestId and a.actionType = :actionType and a.finalDecisionFlag = true")
+    int clearLegacyReturnFinalFlags(@Param("requestId") Long requestId,
+                                    @Param("actionType") FinanceActionType actionType);
 }

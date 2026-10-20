@@ -131,7 +131,10 @@
           var ACTIONABLE = ['SUBMITTED', 'IN_APPROVAL', 'RETURNED_FOR_CORRECTION'];
           var current = null; // latest request payload, used by the action handlers
 
-          function financeCanAct(r) { return !r.financeDecisionConsumed && ACTIONABLE.indexOf(r.status) >= 0; }
+          function financeCanAct(r) {
+            var legacyReturn = r.financeDecisionType === 'RETURN';
+            return (!r.financeDecisionConsumed || legacyReturn) && ACTIONABLE.indexOf(r.status) >= 0;
+          }
 
           var toastTimer = null;
           function toast(msg, ok) {
@@ -208,7 +211,7 @@
               ? '<p class="text-xs text-gray-500 dark:text-gray-400 mb-3">This request is currently with ' + who(r.financeOverrideRecipientId) +
                 '. Your decision overrides that hand-off and is final.</p>' : '';
             return '<div class="' + CARD + '"><h3 class="text-base font-semibold text-gray-800 dark:text-white mb-1">Finance decision</h3>' +
-              '<p class="text-xs text-gray-500 dark:text-gray-400 mb-3">Approve, reject or return is final and can be made once per request. Any pending approvers are superseded. Reject and return need a comment.</p>' +
+              '<p class="text-xs text-gray-500 dark:text-gray-400 mb-3">Approve and reject are final. Return sends the request back for correction and Finance may act again when it is returned or resubmitted. Any pending approvers are superseded. Reject and return need a comment.</p>' +
               recipient +
               '<textarea id="decComment" rows="3" maxlength="2000" placeholder="Comment (required to reject or return)" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 px-3 py-2 text-sm"></textarea>' +
               '<p id="decError" class="hidden mt-2 text-sm text-red-600"></p>' +
@@ -233,7 +236,9 @@
                 if (action !== 'approve' && !comment) return fail('A comment is required to ' + action + ' a request.');
                 var confirmed = await confirmModal({
                   title: label(action) + ' this request?',
-                  message: 'This is Finance\'s one final decision on this request and cannot be undone.',
+                  message: action === 'return'
+                    ? 'This returns the request for correction. Finance may act again when the request is returned or resubmitted.'
+                    : 'This is Finance\'s final decision on this request and cannot be undone.',
                   confirmText: label(action),
                   confirmClass: action === 'approve' ? 'bg-green-600' : (action === 'reject' ? 'bg-red-600' : 'bg-amber-600')
                 });
@@ -253,7 +258,7 @@
 
           function stateBanner(r) {
             var msg = '', cls = 'bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-700/40 dark:text-gray-200 dark:border-gray-600';
-            if (r.financeDecisionConsumed) {
+            if (r.financeDecisionConsumed && r.financeDecisionType !== 'RETURN') {
               msg = 'Finance decided: <strong>' + esc(label(r.financeDecisionType) || 'Decision recorded') + '</strong>' +
                 (r.financeDecisionByEmployeeId != null ? ' by ' + who(r.financeDecisionByEmployeeId) : '') +
                 (r.financeDecisionAt ? ' on ' + fmtDate(r.financeDecisionAt) : '') + '. No further Finance actions are available.';

@@ -392,6 +392,7 @@
         const pageBase = '/employee/requests';
         let requests = [];
         let tasks = [];
+        let financeForwardedRequests = [];
         let types = [];
         let staffOptions = {};
         let fileOptions = {};
@@ -631,9 +632,10 @@
 
         async function loadData() {
             try {
-                [requests, tasks, types, staffOptions, fileOptions, expenseOptions, context] = await Promise.all([
+                [requests, tasks, financeForwardedRequests, types, staffOptions, fileOptions, expenseOptions, context] = await Promise.all([
                     json(api + '/visible'),
                     json(api + '/approvals/tasks'),
+                    json(api + '/finance-forward/pending'),
                     json(api + '/types'),
                     json(api + '/staff-requisition-options'),
                     json(api + '/file-options'),
@@ -642,6 +644,7 @@
                 ]);
                 requests = requests || [];
                 tasks = tasks || [];
+                financeForwardedRequests = financeForwardedRequests || [];
                 types = types || [];
                 staffOptions = staffOptions || {};
                 fileOptions = fileOptions || {};
@@ -774,7 +777,7 @@
         }
 
         function renderTasks() {
-            document.getElementById('taskRows').innerHTML = tasks.length ? tasks.map(t => {
+            const rows = tasks.map(t => {
                 const requestId = t.variables && t.variables.workflowRequestId ? t.variables.workflowRequestId : '';
                 const matchedRequest = requestId ? requests.find(r => Number(r.id) === Number(requestId)) : null;
                 const isFreeRoute = matchedRequest && matchedRequest.approvalRouteType === 'FREE_ROUTE';
@@ -789,14 +792,32 @@
                         <button onclick="openApprovalModal('${t.taskId}','return')" class="rounded bg-orange-600 px-3 py-1 text-xs text-white">Return</button>
                     </td>
                 </tr>`;
-            }).join('') : '<tr><td colspan="4"><div class="request-empty"><span class="material-icons-round mb-2 block text-3xl">task_alt</span>No pending approval tasks.</div></td></tr>';
+            });
+            const financeRows = financeForwardedRequests.map(r => `
+                <tr class="request-row">
+                    <td class="px-4 py-3">${escapeHtml(r.requestNumber || `Request #${r.id}`)}<div class="text-xs text-gray-500">${escapeHtml(r.title || '')}</div></td>
+                    <td class="px-4 py-3">Forwarded by Finance</td>
+                    <td class="px-4 py-3">${escapeHtml((r.createdAt || '').replace('T', ' '))}</td>
+                    <td class="px-4 py-3"><a href="${pageBase}/${encodeURIComponent(r.id)}" class="rounded border border-gray-300 px-3 py-1 text-xs text-gray-700 dark:border-gray-600 dark:text-gray-200">Open to review</a></td>
+                </tr>`);
+            const allRows = rows.concat(financeRows);
+            document.getElementById('taskRows').innerHTML = allRows.length ? allRows.join('') : '<tr><td colspan="4"><div class="request-empty"><span class="material-icons-round mb-2 block text-3xl">task_alt</span>No pending approval tasks.</div></td></tr>';
         }
 
         function renderStats() {
             document.getElementById('openCount').textContent = requests.filter(r => ['DRAFT','SUBMITTED','IN_APPROVAL','RETURNED_FOR_CORRECTION'].includes(r.status)).length;
-            document.getElementById('approvalCount').textContent = tasks.length;
+            document.getElementById('approvalCount').textContent = tasks.length + financeForwardedRequests.length;
             document.getElementById('approvedCount').textContent = requests.filter(r => r.status === 'APPROVED').length;
             document.getElementById('exceptionCount').textContent = requests.filter(r => ['RETURNED_FOR_CORRECTION','REJECTED'].includes(r.status)).length;
+        }
+
+        function escapeHtml(value) {
+            return String(value == null ? '' : value)
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#39;');
         }
 
         function updateTypeFields() {
