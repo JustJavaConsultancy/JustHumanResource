@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -18,6 +19,10 @@ public interface WorkflowRequestFinanceActionRepository extends JpaRepository<Wo
     Optional<WorkflowRequestFinanceAction> findByWorkflowRequestIdAndFinalDecisionFlagTrue(Long workflowRequestId);
 
     boolean existsByWorkflowRequestIdAndFinalDecisionFlagTrue(Long workflowRequestId);
+
+    boolean existsByWorkflowRequestIdAndActorEmployeeIdAndActionTypeIn(Long workflowRequestId,
+                                                                       Long actorEmployeeId,
+                                                                       Collection<FinanceActionType> actionTypes);
 
     @Modifying
     @Query("update WorkflowRequestFinanceAction a set a.finalDecisionFlag = null " +
