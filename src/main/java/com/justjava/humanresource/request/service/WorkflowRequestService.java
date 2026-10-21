@@ -39,14 +39,105 @@ import java.util.*;
 
 @Service @RequiredArgsConstructor
 public class WorkflowRequestService {
- private final WorkflowRequestRepository requestRepository; private final WorkflowRequestTypeRepository typeRepository; private final WorkflowRequestItemRepository itemRepository; private final WorkflowRequestAttachmentRepository attachmentRepository; private final WorkflowRequestApprovalStepRepository stepRepository; private final WorkflowRequestCommentRepository commentRepository; private final WorkflowRequestActivityRepository activityRepository; private final StaffRequisitionDetailRepository staffRepository; private final FileRequestDetailRepository fileRepository; private final AssetRequestDetailRepository assetRepository; private final ExpenseReimbursementDetailRepository expenseRepository; private final ExpenseReimbursementItemRepository expenseItemRepository; private final WorkflowRequestHandlerRegistry handlers; private final RequestNumberService numberService; private final WorkflowRequestActivityService activityService; private final EmployeeService employeeService; private final AuthenticationManager auth; private final ApprovalRouteResolverFactory routeFactory; private final RuntimeService runtimeService; private final FlowableTaskService taskService; private final TaskService flowableTaskService; private final FamAssetLookupService famAssetLookupService; private final DepartmentRepository departmentRepository; private final JobGradeRepository jobGradeRepository; private final EmployeeRepository employeeRepository; private final RequestEmailService requestEmailService; private final AfterCommitExecutor afterCommitExecutor; private final WorkflowRequestFreeRouteEventRepository freeRouteEventRepository; private final WorkflowRequestFinanceActionRepository financeActionRepository; private final com.justjava.humanresource.utils.FinanceRequestEmailService financeRequestEmailService;
- @Transactional public WorkflowRequest createDraft(CreateWorkflowRequestCommand command){Employee actor=currentEmployee();WorkflowRequestType config=type(command.getRequestType());handlers.get(command.getRequestType()).validate(command);WorkflowRequest r=new WorkflowRequest();r.setRequestNumber(numberService.next(command.getRequestType()));r.setRequestType(command.getRequestType());r.setTitle(command.getTitle().trim());r.setDescription(command.getDescription());r.setPriority(command.getPriority()==null?RequestPriority.NORMAL:command.getPriority());r.setRequesterEmployeeId(actor.getId());r.setDepartmentId(command.getDepartmentId()!=null?command.getDepartmentId():actor.getDepartment()==null?null:actor.getDepartment().getId());r.setStatus(RequestStatus.DRAFT);r=requestRepository.save(r);handlers.get(r.getRequestType()).saveDetails(r,command);saveItems(r,command.getItems());activityService.record(r.getId(),RequestActivityType.CREATED,"Request draft created",actor.getId());return r;}
+ private final WorkflowRequestRepository requestRepository; private final WorkflowRequestTypeRepository typeRepository; private final WorkflowRequestItemRepository itemRepository; private final WorkflowRequestAttachmentRepository attachmentRepository; private final WorkflowRequestApprovalStepRepository stepRepository; private final WorkflowRequestCommentRepository commentRepository; private final WorkflowRequestActivityRepository activityRepository; private final StaffRequisitionDetailRepository staffRepository; private final FileRequestDetailRepository fileRepository; private final AssetRequestDetailRepository assetRepository; private final ExpenseReimbursementDetailRepository expenseRepository; private final ExpenseReimbursementItemRepository expenseItemRepository; private final WorkflowRequestHandlerRegistry handlers; private final RequestNumberService numberService; private final WorkflowRequestActivityService activityService; private final EmployeeService employeeService; private final AuthenticationManager auth; private final ApprovalRouteResolverFactory routeFactory; private final RuntimeService runtimeService; private final FlowableTaskService taskService; private final TaskService flowableTaskService; private final FamAssetLookupService famAssetLookupService; private final DepartmentRepository departmentRepository; private final JobGradeRepository jobGradeRepository; private final EmployeeRepository employeeRepository; private final RequestEmailService requestEmailService; private final AfterCommitExecutor afterCommitExecutor; private final WorkflowRequestFreeRouteEventRepository freeRouteEventRepository; private final WorkflowRequestFinanceActionRepository financeActionRepository; private final WorkflowRequestCopiedEmployeeRepository copiedEmployeeRepository; private final WorkflowRequestRecommendationRepository recommendationRepository; private final com.justjava.humanresource.utils.FinanceRequestEmailService financeRequestEmailService;
+ @Transactional
+ public WorkflowRequest createDraft(CreateWorkflowRequestCommand command) {
+  Employee actor = currentEmployee();
+  WorkflowRequestType config = type(command.getRequestType());
+  handlers.get(command.getRequestType()).validate(command);
+  List<Long> copiedEmployeeIds = validateCopiedEmployeeIds(command.getCopiedEmployeeIds(), actor.getId());
+
+  WorkflowRequest request = new WorkflowRequest();
+  request.setRequestNumber(numberService.next(command.getRequestType()));
+  request.setRequestType(command.getRequestType());
+  request.setTitle(command.getTitle().trim());
+  request.setDescription(command.getDescription());
+  request.setPriority(command.getPriority() == null ? RequestPriority.NORMAL : command.getPriority());
+  request.setRequesterEmployeeId(actor.getId());
+  request.setDepartmentId(command.getDepartmentId() != null
+          ? command.getDepartmentId()
+          : actor.getDepartment() == null ? null : actor.getDepartment().getId());
+  request.setStatus(RequestStatus.DRAFT);
+  request = requestRepository.save(request);
+  handlers.get(request.getRequestType()).saveDetails(request, command);
+  saveItems(request, command.getItems());
+  replaceCopiedEmployees(request.getId(), copiedEmployeeIds);
+  activityService.record(request.getId(), RequestActivityType.CREATED, "Request draft created", actor.getId());
+  return request;
+ }
  @Transactional public WorkflowRequest createAndSubmit(CreateWorkflowRequestCommand command){WorkflowRequest r=createDraft(command);return submit(r.getId());}
  @Transactional public WorkflowRequest submit(Long id){WorkflowRequest r=owned(id);if(!canSubmit(r,r.getRequesterEmployeeId()))throw new IllegalStateException("This request cannot be submitted on this route.");clearLegacyFinanceReturnDecision(r);WorkflowRequestType config=type(r.getRequestType());if(config.isRequiresAttachment()&&attachmentRepository.countByWorkflowRequestId(id)==0)throw new IllegalStateException("An attachment is required before submission.");if(config.isSupportsItems()&&itemRepository.countByWorkflowRequestId(id)==0)throw new IllegalStateException("At least one item is required before submission.");handlers.get(r.getRequestType()).beforeSubmit(r);boolean firstSubmission=r.getSubmittedAt()==null;r.setStatus(RequestStatus.SUBMITTED);r.setSubmittedAt(LocalDateTime.now());r=requestRepository.save(r);if(firstSubmission)financeRequestEmailService.enqueueInitialSubmission(r);if(!config.isRequiresApproval()){r.setStatus(RequestStatus.APPROVED);r.setApprovedAt(LocalDateTime.now());handlers.get(r.getRequestType()).afterApproved(r);activityService.record(id,RequestActivityType.APPROVED,"Request automatically approved",r.getRequesterEmployeeId());WorkflowRequest saved=requestRepository.save(r);afterCommitExecutor.runAfterCommit(()->requestEmailService.notifyRequestApproved(saved));return saved;}ApprovalRouteType routeType=config.getApprovalRouteType()==null?ApprovalRouteType.LINE_MANAGER:config.getApprovalRouteType();if(routeType==ApprovalRouteType.CUSTOM&&config.getCustomApprovalPathId()==null)throw new IllegalStateException("A custom approval path must be selected for this request type.");r.setApprovalRouteType(routeType);ApprovalContext context=ApprovalContext.builder().moduleType(ApprovalModuleType.REQUEST).routeType(routeType).requesterEmployeeId(r.getRequesterEmployeeId()).moduleRefId(r.getId()).requestTypeCode(r.getRequestType().name()).customApprovalPathId(config.getCustomApprovalPathId()).build();List<ApproverRef> route=routeFactory.getResolver(context).resolveApprovers(context);if(route.isEmpty())throw new IllegalStateException("No approval route is configured for this requester.");List<String> approvers=route.stream().map(a->String.valueOf(a.getEmployeeId())).toList();r.setCurrentApprovalLevel(1);r.setTotalApprovalLevels(approvers.size());r.setStatus(RequestStatus.IN_APPROVAL);r=requestRepository.save(r);Map<String,Object> vars=new HashMap<>(handlers.get(r.getRequestType()).buildWorkflowVariables(r));vars.put("workflowRequestId",r.getId());vars.put("requestType",r.getRequestType().name());vars.put("requesterEmployeeId",r.getRequesterEmployeeId());vars.put("approvalRouteType",routeType.name());vars.put("customApprovalPathId",config.getCustomApprovalPathId());vars.put("approverIds",approvers);vars.put("totalLevels",approvers.size());var pi=runtimeService.startProcessInstanceByKey(config.getProcessDefinitionKey(),"REQUEST_"+r.getId(),vars);r.setWorkflowInstanceId(pi.getProcessInstanceId());activityService.record(id,RequestActivityType.SUBMITTED,"Request submitted for approval",r.getRequesterEmployeeId());WorkflowRequest saved=requestRepository.save(r);Long firstApproverId=route.get(0).getEmployeeId();afterCommitExecutor.runAfterCommit(()->{requestEmailService.notifyRequestSubmitted(saved,firstApproverId);requestEmailService.notifyPendingApproval(saved,firstApproverId);});return saved;}
  @Transactional public WorkflowRequest sendFreeRoute(Long id,Long toEmployeeId,String comment){WorkflowRequest r=owned(id);if(!canSendFreeRoute(r,r.getRequesterEmployeeId()))throw new IllegalStateException("This request cannot be sent through Free Route.");if(r.getWorkflowInstanceId()!=null)throw new IllegalStateException("This request already has an active approval process.");WorkflowRequestType config=type(r.getRequestType());if(config.isRequiresAttachment()&&attachmentRepository.countByWorkflowRequestId(id)==0)throw new IllegalStateException("An attachment is required before submission.");if(config.isSupportsItems()&&itemRepository.countByWorkflowRequestId(id)==0)throw new IllegalStateException("At least one item is required before submission.");handlers.get(r.getRequestType()).beforeSubmit(r);if(toEmployeeId==null)throw new IllegalArgumentException("A recipient employee must be selected.");Employee actor=currentEmployee();if(toEmployeeId.equals(r.getRequesterEmployeeId()))throw new IllegalArgumentException("You cannot send a request to the original requester.");if(toEmployeeId.equals(actor.getId()))throw new IllegalArgumentException("You cannot send a request to yourself.");requireSelectableFreeRouteEmployee(toEmployeeId);boolean firstSend=r.getSubmittedAt()==null;LocalDateTime now=LocalDateTime.now();r.setApprovalRouteType(ApprovalRouteType.FREE_ROUTE);r.setStatus(RequestStatus.IN_APPROVAL);if(r.getSubmittedAt()==null)r.setSubmittedAt(now);r.setCurrentApprovalLevel(1);r.setTotalApprovalLevels(1);r.setFreeRouteCurrentApproverEmployeeId(toEmployeeId);if(r.getFreeRouteStartedAt()==null)r.setFreeRouteStartedAt(now);r=requestRepository.save(r);if(firstSend)financeRequestEmailService.enqueueInitialSubmission(r);Map<String,Object> vars=new HashMap<>(handlers.get(r.getRequestType()).buildWorkflowVariables(r));vars.put("workflowRequestId",r.getId());vars.put("requestType",r.getRequestType().name());vars.put("requesterEmployeeId",r.getRequesterEmployeeId());vars.put("approvalRouteType",ApprovalRouteType.FREE_ROUTE.name());vars.put("approverIds",List.of(String.valueOf(toEmployeeId)));vars.put("totalLevels",1);var pi=runtimeService.startProcessInstanceByKey(config.getProcessDefinitionKey(),"REQUEST_"+r.getId(),vars);r.setWorkflowInstanceId(pi.getProcessInstanceId());WorkflowRequest saved=requestRepository.save(r);WorkflowRequestFreeRouteEvent event=new WorkflowRequestFreeRouteEvent();event.setWorkflowRequestId(id);event.setEventType(FreeRouteEventType.SENT);event.setFromEmployeeId(actor.getId());event.setToEmployeeId(toEmployeeId);event.setComment(comment==null||comment.isBlank()?null:comment.trim());freeRouteEventRepository.save(event);activityService.record(id,RequestActivityType.FREE_ROUTE_SENT,"Request sent by Free Route to employee id: "+toEmployeeId,actor.getId());afterCommitExecutor.runAfterCommit(()->{requestEmailService.notifyRequestSubmitted(saved,toEmployeeId);requestEmailService.notifyPendingApproval(saved,toEmployeeId);});return saved;}
  @Transactional public WorkflowRequest forwardFreeRoute(String taskId,Long toEmployeeId,String comment){if(taskId==null||taskId.isBlank())throw new IllegalArgumentException("Task id is required.");Employee actor=currentEmployee();if(!taskService.isTaskAssignedTo(taskId,String.valueOf(actor.getId())))throw new IllegalStateException("Task is not assigned to current user.");Task task=flowableTaskService.createTaskQuery().taskId(taskId).singleResult();if(task==null)throw new IllegalStateException("Task not found: "+taskId);Object rawId=runtimeService.getVariable(task.getProcessInstanceId(),"workflowRequestId");if(rawId==null)throw new IllegalStateException("Task is not linked to a workflow request.");Long requestId=rawId instanceof Number?((Number)rawId).longValue():Long.valueOf(String.valueOf(rawId));WorkflowRequest r=requestRepository.findById(requestId).orElseThrow(()->new IllegalArgumentException("Request not found."));if(r.getStatus()!=RequestStatus.IN_APPROVAL)throw new IllegalStateException("Only requests in approval can be forwarded.");if(r.getApprovalRouteType()!=ApprovalRouteType.FREE_ROUTE)throw new IllegalStateException("Only Free Route requests can be forwarded.");if(!actor.getId().equals(r.getFreeRouteCurrentApproverEmployeeId()))throw new IllegalStateException("Only the current assigned approver can forward this request.");if(toEmployeeId==null)throw new IllegalArgumentException("A recipient employee must be selected.");if(toEmployeeId.equals(r.getRequesterEmployeeId()))throw new IllegalArgumentException("You cannot forward a request to the original requester.");if(toEmployeeId.equals(actor.getId()))throw new IllegalArgumentException("You cannot forward a request to yourself.");requireSelectableFreeRouteEmployee(toEmployeeId);List<WorkflowRequestApprovalStep> steps=stepRepository.findByWorkflowRequestIdOrderBySequenceNo(r.getId());WorkflowRequestApprovalStep currentStep=steps.stream().filter(s->s.getSequenceNo().equals(r.getCurrentApprovalLevel())).findFirst().or(()->steps.stream().filter(s->s.getDecision()==ApprovalDecision.PENDING).reduce((a,b)->b)).orElseThrow(()->new IllegalStateException("No pending approval step found for this request."));int nextSequence=steps.stream().mapToInt(WorkflowRequestApprovalStep::getSequenceNo).max().orElse(0)+1;LocalDateTime now=LocalDateTime.now();currentStep.setDecision(ApprovalDecision.DELEGATED);currentStep.setComments(comment);currentStep.setDecisionAt(now);currentStep.setFlowableTaskId(taskId);currentStep.setForwardedToEmployeeId(toEmployeeId);currentStep.setForwardedAt(now);stepRepository.save(currentStep);WorkflowRequestApprovalStep nextStep=new WorkflowRequestApprovalStep();nextStep.setWorkflowRequestId(r.getId());nextStep.setSequenceNo(nextSequence);nextStep.setApproverEmployeeId(toEmployeeId);nextStep.setDecision(ApprovalDecision.PENDING);stepRepository.save(nextStep);r.setCurrentApprovalLevel(nextSequence);r.setTotalApprovalLevels(nextSequence);r.setFreeRouteCurrentApproverEmployeeId(toEmployeeId);r.setFreeRouteLastForwardedAt(now);WorkflowRequest saved=requestRepository.save(r);flowableTaskService.setAssignee(taskId,String.valueOf(toEmployeeId));Map<String,Object> vars=new HashMap<>();vars.put("currentLevel",nextSequence);vars.put("approvalSequenceBase",0);vars.put("currentApproverId",String.valueOf(toEmployeeId));vars.put("approverIds",List.of(String.valueOf(toEmployeeId)));vars.put("hasMoreApprovers",false);vars.put("totalLevels",1);runtimeService.setVariables(task.getProcessInstanceId(),vars);runtimeService.removeVariables(task.getProcessInstanceId(),List.of("approvalDecision","approvalComment","approvalActorId","flowableTaskId"));WorkflowRequestFreeRouteEvent event=new WorkflowRequestFreeRouteEvent();event.setWorkflowRequestId(r.getId());event.setEventType(FreeRouteEventType.FORWARDED);event.setFromEmployeeId(actor.getId());event.setToEmployeeId(toEmployeeId);event.setComment(comment==null||comment.isBlank()?null:comment.trim());freeRouteEventRepository.save(event);activityService.record(r.getId(),RequestActivityType.FREE_ROUTE_FORWARDED,"Request forwarded by Free Route from employee "+actor.getId()+" to employee "+toEmployeeId,actor.getId());afterCommitExecutor.runAfterCommit(()->{requestEmailService.notifyRequestMovedToApprover(saved,toEmployeeId);requestEmailService.notifyPendingApproval(saved,toEmployeeId);});return saved;}
  @Transactional(readOnly=true) public List<WorkflowRequest> myRequests(){return requestRepository.findByRequesterEmployeeIdOrderByCreatedAtDesc(currentEmployee().getId());}
  @Transactional(readOnly=true) public List<WorkflowRequest> visibleRequests(){return isHrAdmin()?requestRepository.findAllByOrderByCreatedAtDesc():myRequests();}
+ @Transactional(readOnly=true)
+ public List<WorkflowRequestInboxItemDTO> employeeInbox(){
+  Employee actor=currentEmployee();
+  Long actorId=actor.getId();
+  List<WorkflowRequest> ownedRequests=requestRepository.findByRequesterEmployeeIdOrderByCreatedAtDesc(actorId);
+  List<WorkflowRequestCopiedEmployee> copiedMemberships=copiedEmployeeRepository.findByEmployeeIdIn(List.of(actorId));
+  List<FlowableTaskDTO> assignedTasks=pendingTasks().stream()
+          .filter(task->String.valueOf(actorId).equals(task.getAssignee()))
+          .toList();
+  List<WorkflowRequest> financeForwardedRequests=financeForwardedToMe();
+
+  Set<Long> requestIds=new LinkedHashSet<>();
+  ownedRequests.stream().map(WorkflowRequest::getId).forEach(requestIds::add);
+  copiedMemberships.stream().map(WorkflowRequestCopiedEmployee::getWorkflowRequestId).forEach(requestIds::add);
+  assignedTasks.stream().map(this::taskWorkflowRequestId).filter(Objects::nonNull).forEach(requestIds::add);
+  financeForwardedRequests.stream().map(WorkflowRequest::getId).forEach(requestIds::add);
+  if(requestIds.isEmpty())return List.of();
+
+  Map<Long,WorkflowRequest> requestsById=new HashMap<>();
+  requestRepository.findAllById(requestIds).forEach(request->requestsById.put(request.getId(),request));
+  Set<Long> ownedIds=new HashSet<>();
+  ownedRequests.stream().map(WorkflowRequest::getId).forEach(ownedIds::add);
+  Set<Long> copiedIds=new HashSet<>();
+  copiedMemberships.stream().map(WorkflowRequestCopiedEmployee::getWorkflowRequestId).forEach(copiedIds::add);
+  Set<Long> financeForwardedIds=new HashSet<>();
+  financeForwardedRequests.stream().map(WorkflowRequest::getId).forEach(financeForwardedIds::add);
+  Map<Long,List<WorkflowRequestInboxTaskDTO>> tasksByRequestId=new HashMap<>();
+  for(FlowableTaskDTO task:assignedTasks){
+   Long requestId=taskWorkflowRequestId(task);
+   WorkflowRequest request=requestId==null?null:requestsById.get(requestId);
+   if(request==null||request.getStatus()!=RequestStatus.IN_APPROVAL)continue;
+   tasksByRequestId.computeIfAbsent(requestId,key->new ArrayList<>()).add(
+           WorkflowRequestInboxTaskDTO.builder()
+                   .taskId(task.getTaskId())
+                   .taskName(task.getTaskName())
+                   .createdTime(task.getCreatedTime())
+                   .build());
+  }
+  return requestsById.values().stream()
+          .filter(request->ownedIds.contains(request.getId())
+                  ||!isTerminalRequestStatus(request.getStatus())&&copiedIds.contains(request.getId())
+                  ||tasksByRequestId.containsKey(request.getId())
+                  ||request.getStatus()==RequestStatus.IN_APPROVAL&&financeForwardedIds.contains(request.getId()))
+          .sorted(Comparator.comparing(WorkflowRequest::getCreatedAt,
+                  Comparator.nullsLast(Comparator.reverseOrder()))
+                  .thenComparing(WorkflowRequest::getId,Comparator.reverseOrder()))
+          .map(request->{
+           List<WorkflowRequestInboxTaskDTO> requestTasks=tasksByRequestId.getOrDefault(request.getId(),List.of());
+           return WorkflowRequestInboxItemDTO.builder()
+                   .request(request)
+                   .requester(ownedIds.contains(request.getId()))
+                   .copied(!isTerminalRequestStatus(request.getStatus())&&copiedIds.contains(request.getId()))
+                   .approvalRequired(!requestTasks.isEmpty())
+                   .financeForwardRecipient(request.getStatus()==RequestStatus.IN_APPROVAL
+                           &&financeForwardedIds.contains(request.getId()))
+                   .approvalTasks(requestTasks)
+                   .build();
+          })
+          .toList();
+ }
+ private Long taskWorkflowRequestId(FlowableTaskDTO task){
+  if(task.getVariables()==null)return null;
+  Object rawRequestId=task.getVariables().get("workflowRequestId");
+  if(rawRequestId instanceof Number number)return number.longValue();
+  if(rawRequestId instanceof String value&&!value.isBlank())return Long.valueOf(value);
+  return null;
+ }
  @Transactional(readOnly=true) public List<WorkflowRequest> allRequests(){requireHrAdmin();return requestRepository.findAllByOrderByCreatedAtDesc();}
  @Transactional(readOnly=true) public List<WorkflowRequest> financeRequests(){requireFinance();return requestRepository.findAllByOrderByCreatedAtDesc();}
  @Transactional(readOnly=true) public WorkflowRequest requireFinanceRead(Long id){requireFinance();return requestRepository.findById(id).orElseThrow(()->new IllegalArgumentException("Request not found."));}
@@ -65,6 +156,29 @@ public class WorkflowRequestService {
   };
   List<WorkflowRequestComment> comments=commentRepository.findByWorkflowRequestIdOrderByCreatedAt(id);
   if(!includeInternalComments)comments=comments.stream().filter(c->!c.isInternalOnly()).toList();
+  List<WorkflowRequestCopiedEmployee> copiedRows =
+          copiedEmployeeRepository.findByWorkflowRequestIdOrderByCreatedAtAscIdAsc(id);
+  List<WorkflowRequestRecommendation> recommendationRows =
+          recommendationRepository.findByWorkflowRequestIdOrderByCreatedAtAscIdAsc(id);
+  Set<Long> peopleIds = new LinkedHashSet<>();
+  copiedRows.stream().map(WorkflowRequestCopiedEmployee::getEmployeeId).forEach(peopleIds::add);
+  recommendationRows.stream().map(WorkflowRequestRecommendation::getAuthorEmployeeId).forEach(peopleIds::add);
+  Map<Long, Employee> peopleById = new HashMap<>();
+  if (!peopleIds.isEmpty()) {
+   employeeRepository.findAllById(peopleIds).forEach(employee -> peopleById.put(employee.getId(), employee));
+  }
+  List<RequestLookupOption> copiedEmployees = copiedRows.stream()
+          .map(row -> new RequestLookupOption(row.getEmployeeId(), employeeLabel(row.getEmployeeId(), peopleById)))
+          .toList();
+  List<WorkflowRequestRecommendationDTO> recommendations = recommendationRows.stream()
+          .map(row -> new WorkflowRequestRecommendationDTO(
+                  row.getId(),
+                  row.getAuthorEmployeeId(),
+                  employeeLabel(row.getAuthorEmployeeId(), peopleById),
+                  row.getText(),
+                  row.getCreatedAt()))
+          .toList();
+  Long actorEmployeeId = currentEmployee().getId();
   return WorkflowRequestDetailDTO.builder()
           .request(r)
           .typeDetails(typed)
@@ -75,7 +189,60 @@ public class WorkflowRequestService {
           .activities(activityRepository.findByWorkflowRequestIdOrderByCreatedAt(id))
           .freeRouteEvents(freeRouteEventRepository.findByWorkflowRequestIdOrderByCreatedAt(id))
           .financeActions(financeActionHistory(id))
+          .copiedEmployees(copiedEmployees)
+          .recommendations(recommendations)
+          .canRecommend(canRecommend(r, actorEmployeeId))
+          .canManageCopiedEmployees(canEdit(r, actorEmployeeId))
           .build();
+ }
+
+ private String employeeLabel(Long employeeId, Map<Long, Employee> peopleById) {
+  Employee employee = peopleById.get(employeeId);
+  if (employee == null) {
+   return "Employee #" + employeeId;
+  }
+  String department = employee.getDepartment() == null ? "" : " - " + employee.getDepartment().getName();
+  return employee.getEmployeeNumber() + " - " + employee.getFullName() + department;
+ }
+
+ private boolean canRecommend(WorkflowRequest request, Long employeeId) {
+  return !isTerminalRequestStatus(request.getStatus())
+          && copiedEmployeeRepository.existsByWorkflowRequestIdAndEmployeeId(request.getId(), employeeId);
+ }
+
+ private boolean isTerminalRequestStatus(RequestStatus status) {
+  return EnumSet.of(RequestStatus.APPROVED, RequestStatus.REJECTED,
+          RequestStatus.CANCELLED, RequestStatus.CLOSED).contains(status);
+ }
+
+ @Transactional
+ public WorkflowRequestRecommendationDTO addRecommendation(Long requestId, String rawText) {
+  if (rawText == null || rawText.isBlank()) {
+   throw new IllegalArgumentException("Recommendation is required.");
+  }
+  String text = rawText.trim();
+  if (text.length() > 3000) {
+   throw new IllegalArgumentException("Recommendation must not exceed 3000 characters.");
+  }
+
+  WorkflowRequest request = visible(requestId);
+  Employee actor = currentEmployee();
+  if (!canRecommend(request, actor.getId())) {
+   throw new IllegalStateException("Only copied employees can recommend on an active request.");
+  }
+
+  WorkflowRequestRecommendation recommendation = new WorkflowRequestRecommendation();
+  recommendation.setWorkflowRequestId(requestId);
+  recommendation.setAuthorEmployeeId(actor.getId());
+  recommendation.setText(text);
+  recommendation = recommendationRepository.save(recommendation);
+
+  return new WorkflowRequestRecommendationDTO(
+          recommendation.getId(),
+          recommendation.getAuthorEmployeeId(),
+          actor.getFullName(),
+          recommendation.getText(),
+          recommendation.getCreatedAt());
  }
  @Transactional public void approve(String taskId,String comment){complete(taskId,"APPROVE",comment);}
  @Transactional public void reject(String taskId,String comment){if(comment==null||comment.isBlank())throw new IllegalArgumentException("A rejection comment is required.");complete(taskId,"REJECT",comment);}
@@ -84,8 +251,46 @@ public class WorkflowRequestService {
  @Transactional public WorkflowRequest close(Long id){requireHrAdmin();WorkflowRequest r=requestRepository.findById(id).orElseThrow(()->new IllegalArgumentException("Request not found."));if(r.getStatus()!=RequestStatus.APPROVED)throw new IllegalStateException("Only approved requests can be closed.");r.setStatus(RequestStatus.CLOSED);r.setClosedAt(LocalDateTime.now());activityService.record(id,RequestActivityType.CLOSED,"Request closed",currentEmployee().getId());return requestRepository.save(r);}
  @Transactional public WorkflowRequestComment addComment(Long id,String text,boolean internal){if(text==null||text.isBlank())throw new IllegalArgumentException("Comment is required.");WorkflowRequest r=visible(id);Employee actor=currentEmployee();if(internal&&!isHrAdmin())throw new IllegalStateException("Only HR or administrators may add internal comments.");WorkflowRequestComment c=new WorkflowRequestComment();c.setWorkflowRequestId(id);c.setComment(text.trim());c.setCommentedByEmployeeId(actor.getId());c.setInternalOnly(internal);c=commentRepository.save(c);activityService.record(id,RequestActivityType.COMMENTED,"Comment added",actor.getId());return c;}
  public Employee currentEmployee(){Object email=auth.get("email");if(email==null)throw new IllegalStateException("Authenticated user has no email claim.");return employeeService.getByEmail(String.valueOf(email));}
- public WorkflowRequest visible(Long id){WorkflowRequest r=requestRepository.findById(id).orElseThrow(()->new IllegalArgumentException("Request not found."));Long actor=currentEmployee().getId();boolean priorFinanceRecipient=financeActionRepository.existsByWorkflowRequestIdAndActorEmployeeIdAndActionTypeIn(id,actor,List.of(FinanceActionType.RECIPIENT_APPROVE,FinanceActionType.RECIPIENT_REJECT,FinanceActionType.RECIPIENT_RETURN));if(r.getRequesterEmployeeId().equals(actor)||isHrAdmin()||actor.equals(r.getFinanceOverrideRecipientId())||priorFinanceRecipient||stepRepository.findByWorkflowRequestIdOrderBySequenceNo(id).stream().anyMatch(s->s.getApproverEmployeeId().equals(actor)))return r;throw new IllegalStateException("You are not authorized to view this request.");}
+ public WorkflowRequest visible(Long id){
+  WorkflowRequest request=requestRepository.findById(id)
+          .orElseThrow(()->new IllegalArgumentException("Request not found."));
+  Long actorId=currentEmployee().getId();
+  boolean priorFinanceRecipient=financeActionRepository
+          .existsByWorkflowRequestIdAndActorEmployeeIdAndActionTypeIn(id,actorId,List.of(
+                  FinanceActionType.RECIPIENT_APPROVE,
+                  FinanceActionType.RECIPIENT_REJECT,
+                  FinanceActionType.RECIPIENT_RETURN));
+  boolean copiedEmployee= !isTerminalRequestStatus(request.getStatus())
+          && copiedEmployeeRepository.existsByWorkflowRequestIdAndEmployeeId(id,actorId);
+  boolean approvalStep=stepRepository.findByWorkflowRequestIdOrderBySequenceNo(id).stream()
+          .anyMatch(step->step.getApproverEmployeeId().equals(actorId));
+  if(request.getRequesterEmployeeId().equals(actorId)
+          ||isHrAdmin()
+          ||actorId.equals(request.getFinanceOverrideRecipientId())
+          ||priorFinanceRecipient
+          ||approvalStep
+          ||copiedEmployee){
+   return request;
+  }
+  throw new IllegalStateException("You are not authorized to view this request.");
+ }
  @Transactional(readOnly=true) public List<RequestLookupOption> freeRouteRecipients(Long requestId){Employee actor=currentEmployee();Set<Long> excluded=new HashSet<>();excluded.add(actor.getId());if(requestId!=null){WorkflowRequest r=visible(requestId);excluded.add(r.getRequesterEmployeeId());}return employeeRepository.findAllVisible().stream().filter(e->e.getEmploymentStatus()==EmploymentStatus.ACTIVE).filter(e->e.getStatus()==RecordStatus.ACTIVE).filter(e->!excluded.contains(e.getId())).sorted(Comparator.comparing(Employee::getFullName,String.CASE_INSENSITIVE_ORDER)).map(e->new RequestLookupOption(e.getId(),e.getEmployeeNumber()+" - "+e.getFullName()+(e.getDepartment()==null?"":" - "+e.getDepartment().getName()))).toList();}
+ @Transactional(readOnly=true)
+ public List<RequestLookupOption> copiedEmployeeOptions(){
+  if(!auth.isEmployee()){
+   throw new org.springframework.security.access.AccessDeniedException("Employee access is required.");
+  }
+  Long actorId=currentEmployee().getId();
+  return employeeRepository.findAllVisible().stream()
+          .filter(employee->employee.getEmploymentStatus()==EmploymentStatus.ACTIVE)
+          .filter(employee->employee.getStatus()==RecordStatus.ACTIVE)
+          .filter(employee->!employee.getId().equals(actorId))
+          .sorted(Comparator.comparing(Employee::getFullName,String.CASE_INSENSITIVE_ORDER))
+          .map(employee->new RequestLookupOption(employee.getId(),
+                  employee.getEmployeeNumber()+" - "+employee.getFullName()
+                          +(employee.getDepartment()==null?"":" - "+employee.getDepartment().getName())))
+          .toList();
+ }
  private void complete(String taskId,String decision,String comment){Employee actor=currentEmployee();if(!taskService.isTaskAssignedTo(taskId,String.valueOf(actor.getId())))throw new IllegalStateException("Task is not assigned to current user.");Map<String,Object> vars=new HashMap<>();vars.put("approvalDecision",decision);vars.put("approvalComment",comment);vars.put("approvalActorId",actor.getId());vars.put("flowableTaskId",taskId);taskService.completeTask(taskId,vars);}
  private WorkflowRequest owned(Long id){WorkflowRequest r=requestRepository.findById(id).orElseThrow(()->new IllegalArgumentException("Request not found."));if(!r.getRequesterEmployeeId().equals(currentEmployee().getId()))throw new IllegalStateException("You do not own this request.");return r;}
  private boolean isEditableStatus(WorkflowRequest request){return request.getStatus()==RequestStatus.DRAFT||request.getStatus()==RequestStatus.RETURNED_FOR_CORRECTION;}
@@ -93,8 +298,117 @@ public class WorkflowRequestService {
  private boolean canSubmit(WorkflowRequest request,Long actorEmployeeId){if(!request.getRequesterEmployeeId().equals(actorEmployeeId))return false;if(request.getStatus()==RequestStatus.DRAFT)return true;if(request.getStatus()==RequestStatus.RETURNED_FOR_CORRECTION)return !wasFreeRoute(request);return false;}
  private boolean canSendFreeRoute(WorkflowRequest request,Long actorEmployeeId){if(!request.getRequesterEmployeeId().equals(actorEmployeeId))return false;if(request.getStatus()==RequestStatus.DRAFT)return true;if(request.getStatus()==RequestStatus.RETURNED_FOR_CORRECTION)return wasFreeRoute(request);return false;}
  private boolean canEdit(WorkflowRequest request,Long actorEmployeeId){return isEditableStatus(request)&&(canSubmit(request,actorEmployeeId)||canSendFreeRoute(request,actorEmployeeId));}
+ @Transactional
+ public void updateCopiedEmployees(Long requestId, List<Long> employeeIds) {
+  WorkflowRequest request = owned(requestId);
+  Employee actor = currentEmployee();
+  if (!canEdit(request, actor.getId())) {
+   throw new IllegalStateException("Copied employees can only be changed on drafts or returned requests.");
+  }
+  List<Long> existingEmployeeIds = copiedEmployeeRepository
+          .findByWorkflowRequestIdOrderByCreatedAtAscIdAsc(requestId).stream()
+          .map(WorkflowRequestCopiedEmployee::getEmployeeId)
+          .distinct()
+          .toList();
+  List<Long> validatedEmployeeIds = validateCopiedEmployeeIdsForUpdate(
+          employeeIds, actor.getId(), existingEmployeeIds);
+  replaceCopiedEmployees(requestId, validatedEmployeeIds);
+  activityService.record(requestId, RequestActivityType.UPDATED, "Copied employees updated", actor.getId());
+ }
  private WorkflowRequestType type(RequestType type){WorkflowRequestType t=typeRepository.findByCode(type.name()).orElseThrow(()->new IllegalStateException("Request type is not configured: "+type));if(!t.isEnabled())throw new IllegalStateException("Request type is disabled.");return t;}
  private Employee requireSelectableFreeRouteEmployee(Long employeeId){Employee e=employeeRepository.findById(employeeId).orElseThrow(()->new IllegalArgumentException("Selected employee not found."));if(e.isRestrictedVisibility())throw new IllegalArgumentException("Selected employee is not available for selection.");if(e.getEmploymentStatus()!=EmploymentStatus.ACTIVE||e.getStatus()!=RecordStatus.ACTIVE)throw new IllegalArgumentException("Selected employee is not active.");return e;}
+ private List<Long> validateCopiedEmployeeIds(List<Long> employeeIds, Long requesterEmployeeId) {
+  if (employeeIds == null || employeeIds.isEmpty()) {
+   return List.of();
+  }
+  if (employeeIds.size() > 50) {
+   throw new IllegalArgumentException("No more than 50 employees can be copied on a request.");
+  }
+  if (employeeIds.stream().anyMatch(Objects::isNull)) {
+   throw new IllegalArgumentException("Copied employee IDs must not be null.");
+  }
+  if (employeeIds.stream().anyMatch(employeeId -> employeeId <= 0)) {
+   throw new IllegalArgumentException("Copied employee IDs must be positive.");
+  }
+
+  Set<Long> uniqueIds = new LinkedHashSet<>(employeeIds);
+  if (uniqueIds.size() != employeeIds.size()) {
+   throw new IllegalArgumentException("An employee cannot be copied more than once.");
+  }
+  if (uniqueIds.contains(requesterEmployeeId)) {
+   throw new IllegalArgumentException("You cannot copy yourself on your request.");
+  }
+
+  List<Employee> selectedEmployees = employeeRepository.findAllById(uniqueIds);
+  Map<Long, Employee> employeesById = new HashMap<>();
+  selectedEmployees.forEach(employee -> employeesById.put(employee.getId(), employee));
+  for (Long employeeId : uniqueIds) {
+   Employee employee = employeesById.get(employeeId);
+   if (employee == null) {
+    throw new IllegalArgumentException("Selected copied employee was not found: " + employeeId);
+   }
+   if (employee.isRestrictedVisibility()) {
+    throw new IllegalArgumentException("Selected employee is not available for copying: " + employeeId);
+   }
+   if (employee.getEmploymentStatus() != EmploymentStatus.ACTIVE
+           || employee.getStatus() != RecordStatus.ACTIVE) {
+    throw new IllegalArgumentException("Selected copied employee is not active: " + employeeId);
+   }
+  }
+  return List.copyOf(employeeIds);
+ }
+
+ private List<Long> validateCopiedEmployeeIdsForUpdate(
+         List<Long> employeeIds,
+         Long requesterEmployeeId,
+         List<Long> existingEmployeeIds) {
+  if (employeeIds == null || employeeIds.isEmpty()) {
+   return List.of();
+  }
+  if (employeeIds.size() > 50) {
+   throw new IllegalArgumentException("No more than 50 employees can be copied on a request.");
+  }
+  if (employeeIds.stream().anyMatch(Objects::isNull)) {
+   throw new IllegalArgumentException("Copied employee IDs must not be null.");
+  }
+  if (employeeIds.stream().anyMatch(employeeId -> employeeId <= 0)) {
+   throw new IllegalArgumentException("Copied employee IDs must be positive.");
+  }
+  if (new HashSet<>(employeeIds).size() != employeeIds.size()) {
+   throw new IllegalArgumentException("An employee cannot be copied more than once.");
+  }
+  if (employeeIds.contains(requesterEmployeeId)) {
+   throw new IllegalArgumentException("You cannot copy yourself on your request.");
+  }
+  Set<Long> existing = new HashSet<>(existingEmployeeIds);
+  List<Long> additions = employeeIds.stream()
+          .filter(employeeId -> !existing.contains(employeeId))
+          .toList();
+  validateCopiedEmployeeIds(additions, requesterEmployeeId);
+  return List.copyOf(employeeIds);
+ }
+
+ private void replaceCopiedEmployees(Long requestId, List<Long> employeeIds) {
+  List<WorkflowRequestCopiedEmployee> existing =
+          copiedEmployeeRepository.findByWorkflowRequestIdOrderByCreatedAtAscIdAsc(requestId);
+  Set<Long> desiredIds = new LinkedHashSet<>(employeeIds);
+  Set<Long> existingIds = new HashSet<>();
+  List<WorkflowRequestCopiedEmployee> removed = existing.stream()
+          .filter(membership -> !desiredIds.contains(membership.getEmployeeId()))
+          .toList();
+  existing.stream().map(WorkflowRequestCopiedEmployee::getEmployeeId).forEach(existingIds::add);
+  copiedEmployeeRepository.deleteAll(removed);
+
+  List<WorkflowRequestCopiedEmployee> added = desiredIds.stream()
+          .filter(employeeId -> !existingIds.contains(employeeId))
+          .map(employeeId -> {
+   WorkflowRequestCopiedEmployee membership = new WorkflowRequestCopiedEmployee();
+   membership.setWorkflowRequestId(requestId);
+   membership.setEmployeeId(employeeId);
+   return membership;
+  }).toList();
+  copiedEmployeeRepository.saveAll(added);
+ }
  private void saveItems(WorkflowRequest r,List<CreateWorkflowRequestCommand.Item> items){if(items==null)return;for(var p:items){WorkflowRequestItem i=new WorkflowRequestItem();i.setWorkflowRequestId(r.getId());if(r.getRequestType()==RequestType.ASSET_REQUEST){FamAssetDTO asset=famAssetLookupService.findRequestableAsset(p.getFamAssetId());i.setExternalSourceSystem("FAM");i.setExternalAssetId(asset.assetId());i.setExternalAssetCode(asset.assetCode());i.setItemName(asset.assetName());i.setCategory(asset.category());i.setUnitOfMeasure(asset.unitOfMeasure());i.setQuantity(p.getQuantity());}else{i.setItemName(p.getItemName());i.setDescription(p.getDescription());i.setCategory(p.getCategory());i.setQuantity(p.getQuantity());i.setUnitOfMeasure(p.getUnitOfMeasure());i.setEstimatedUnitCost(p.getEstimatedUnitCost());i.setEstimatedTotalCost(p.getEstimatedUnitCost()==null?null:p.getEstimatedUnitCost().multiply(p.getQuantity()));i.setCurrency(p.getCurrency()==null?null:p.getCurrency().toUpperCase(Locale.ROOT));i.setVendorName(p.getVendorName());i.setRemarks(p.getRemarks());}itemRepository.save(i);}}
  private Set<String> requestProcessKeys(){Set<String> keys=typeRepository.findByEnabledTrueOrderByName().stream().map(WorkflowRequestType::getProcessDefinitionKey).filter(Objects::nonNull).filter(k->!k.isBlank()).collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));return keys.isEmpty()?Set.of("genericRequestApprovalProcess"):keys;}
  public boolean isHrAdmin(){return auth.isHumanResource()||auth.isJobHR()||auth.isAdmin()||auth.isRestrictedHr();} private void requireFinance(){if(!auth.isFinancialOfficer())throw new org.springframework.security.access.AccessDeniedException("Financial officer access is required.");} private void requireHrAdmin(){if(!isHrAdmin())throw new IllegalStateException("HR or administrator access is required.");}
@@ -180,6 +494,22 @@ public class WorkflowRequestService {
    case GENERAL_REQUEST -> { }
   }
 
+  List<RequestLookupOption> copiedEmployeeOptions = List.of();
+  if (canEdit) {
+   List<Long> copiedEmployeeIds = copiedEmployeeRepository
+           .findByWorkflowRequestIdOrderByCreatedAtAscIdAsc(id).stream()
+           .map(WorkflowRequestCopiedEmployee::getEmployeeId)
+           .distinct()
+           .toList();
+   Map<Long, Employee> copiedEmployeesById = new HashMap<>();
+   employeeRepository.findAllById(copiedEmployeeIds)
+           .forEach(employee -> copiedEmployeesById.put(employee.getId(), employee));
+   copiedEmployeeOptions = copiedEmployeeIds.stream()
+           .map(employeeId -> new RequestLookupOption(employeeId,
+                   employeeLabel(employeeId, copiedEmployeesById)))
+           .toList();
+  }
+
   return WorkflowRequestEditDTO.builder()
           .id(r.getId())
           .requestNumber(r.getRequestNumber())
@@ -199,6 +529,8 @@ public class WorkflowRequestService {
           .assetRequest(assetPayload)
           .expenseReimbursement(expensePayload)
           .items(items)
+          .copiedEmployeeIds(copiedEmployeeOptions.stream().map(RequestLookupOption::value).toList())
+          .copiedEmployeeOptions(copiedEmployeeOptions)
           .build();
  }
 
@@ -213,6 +545,16 @@ public class WorkflowRequestService {
    throw new IllegalStateException("Request type cannot be changed while editing.");
   }
   handlers.get(r.getRequestType()).validate(command);
+  List<Long> copiedEmployeeIds = null;
+  if (command.getCopiedEmployeeIds() != null) {
+   List<Long> existingCopiedEmployeeIds = copiedEmployeeRepository
+           .findByWorkflowRequestIdOrderByCreatedAtAscIdAsc(id).stream()
+           .map(WorkflowRequestCopiedEmployee::getEmployeeId)
+           .distinct()
+           .toList();
+   copiedEmployeeIds = validateCopiedEmployeeIdsForUpdate(
+           command.getCopiedEmployeeIds(), actor.getId(), existingCopiedEmployeeIds);
+  }
 
   r.setTitle(command.getTitle().trim());
   r.setDescription(command.getDescription());
@@ -229,6 +571,9 @@ public class WorkflowRequestService {
 
   r = requestRepository.save(r);
   handlers.get(r.getRequestType()).updateDetails(r, command);
+  if (copiedEmployeeIds != null) {
+   replaceCopiedEmployees(r.getId(), copiedEmployeeIds);
+  }
 
   if (r.getRequestType() == RequestType.ASSET_REQUEST) {
    itemRepository.deleteByWorkflowRequestId(r.getId());

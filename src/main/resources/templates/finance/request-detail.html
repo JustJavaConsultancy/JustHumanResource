@@ -369,6 +369,33 @@
                 who(c.commentedByEmployeeId) + '</span><span>' + fmtDate(c.createdAt) + '</span></div><p class="text-sm whitespace-pre-line">' + esc(c.comment) + '</p></li>';
             }).join('') + '</ul>' : empty('No comments.'));
 
+            var copiedEmployees = d.copiedEmployees || [];
+            html += section('Copied employees', '<p class="mb-3 text-xs text-gray-500 dark:text-gray-400">Being copied allows viewing and recommending only; it does not grant approval authority.</p>' +
+              (copiedEmployees.length
+                ? '<ul class="space-y-2">' + copiedEmployees.map(function (employee) {
+                    return '<li class="rounded-lg border border-gray-100 dark:border-gray-700 p-2">' + esc(employee.label || ('Employee #' + employee.value)) + '</li>';
+                  }).join('') + '</ul>'
+                : empty('No copied employees.')));
+
+            var recommendations = d.recommendations || [];
+            var recommendationForm = d.canRecommend
+              ? '<form id="financeRecommendationForm" class="mb-4 space-y-2">' +
+                  '<label for="financeRecommendationText" class="block text-sm font-medium">Add a recommendation</label>' +
+                  '<textarea id="financeRecommendationText" rows="3" maxlength="3000" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 px-3 py-2 text-sm" placeholder="Share a recommendation for this request"></textarea>' +
+                  '<p id="financeRecommendationError" class="hidden text-sm text-red-600" role="alert"></p>' +
+                  '<button class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white">Submit Recommendation</button>' +
+                '</form>'
+              : '';
+            html += section('Recommendations', recommendationForm + (recommendations.length
+              ? '<ul class="space-y-3">' + recommendations.map(function (recommendation) {
+                  return '<li class="rounded-lg border border-gray-100 dark:border-gray-700 p-3">' +
+                    '<div class="mb-1 flex flex-wrap justify-between gap-2 text-xs text-gray-500 dark:text-gray-400"><span>' +
+                    esc(recommendation.authorEmployeeName || ('Employee #' + recommendation.authorEmployeeId)) + '</span><time>' +
+                    fmtDate(recommendation.createdAt) + '</time></div><p class="text-sm whitespace-pre-line">' +
+                    esc(recommendation.text) + '</p></li>';
+                }).join('') + '</ul>'
+              : empty('No recommendations yet.')));
+
             var acts = d.activities || [];
             html += section('Activity', acts.length ? table(['When', 'Activity', 'Details', 'By'],
               acts.map(function (a) {
@@ -393,6 +420,25 @@
             document.getElementById('content').classList.remove('hidden');
             wireDecision(r);
             wireForward(r);
+            wireRecommendation(r);
+          }
+
+          function wireRecommendation(request) {
+            var form = document.getElementById('financeRecommendationForm');
+            if (!form) return;
+            form.addEventListener('submit', async function (event) {
+              event.preventDefault();
+              var error = document.getElementById('financeRecommendationError');
+              error.classList.add('hidden');
+              try {
+                await postJson('/api/requests/' + encodeURIComponent(request.id) + '/recommendations',
+                  { text: document.getElementById('financeRecommendationText').value });
+                await load();
+              } catch (e) {
+                error.textContent = e.message || 'Unable to submit recommendation.';
+                error.classList.remove('hidden');
+              }
+            });
           }
 
           async function getJson(url) {

@@ -41,11 +41,20 @@ public class WorkflowRequestController {
  @PostMapping("/free-route/forward") public WorkflowRequest forwardFreeRoute(@Valid @RequestBody FreeRouteForwardCommand command){return service.forwardFreeRoute(command.getTaskId(),command.getToEmployeeId(),command.getComment());}
  @GetMapping("/me") public List<WorkflowRequest> mine(){return service.myRequests();}
  @GetMapping("/visible") public List<WorkflowRequest> visible(){return service.visibleRequests();}
+ @GetMapping("/inbox") public List<WorkflowRequestInboxItemDTO> inbox(){return service.employeeInbox();}
  @GetMapping("/all") public List<WorkflowRequest> all(){return service.allRequests();}
  @GetMapping("/context") public java.util.Map<String,Object> context(){return service.context();}
+ @GetMapping("/copy-employees/options") public List<RequestLookupOption> copiedEmployeeOptions(){return service.copiedEmployeeOptions();}
  @GetMapping("/employees/names") public Map<Long,String> employeeNames(@RequestParam List<Long> ids){Set<Long> idSet=new HashSet<>(ids);return employeeRepository.findAllVisible().stream().filter(e->idSet.contains(e.getId())).collect(Collectors.toMap(Employee::getId,Employee::getFullName));}
  @GetMapping("/{id}") public WorkflowRequestDetailDTO details(@PathVariable Long id){return service.details(id);}
  @GetMapping("/{id}/edit") public WorkflowRequestEditDTO editDetails(@PathVariable Long id){return service.editDetails(id);}
+ @PutMapping("/{id}/copied-employees")
+ public WorkflowRequestDetailDTO updateCopiedEmployees(
+         @PathVariable Long id,
+         @Valid @RequestBody WorkflowRequestCopiedEmployeesCommand command) {
+  service.updateCopiedEmployees(id, command.employeeIds());
+  return service.details(id);
+ }
  @PutMapping("/{id}") public WorkflowRequest update(@PathVariable Long id,@Valid @RequestBody CreateWorkflowRequestCommand command){return service.updateEditableRequest(id,command);}
  @GetMapping("/types") public List<WorkflowRequestType> requestTypes(){return types.findByEnabledTrueOrderByName();}
  @GetMapping("/types/{code}") public WorkflowRequestType requestType(@PathVariable String code){return types.findByCode(code.toUpperCase()).orElseThrow(()->new IllegalArgumentException("Request type not found."));}
@@ -64,6 +73,12 @@ public class WorkflowRequestController {
  @PostMapping("/{id}/cancel") public WorkflowRequest cancel(@PathVariable Long id){return service.cancel(id);}
  @PostMapping("/{id}/close") public WorkflowRequest close(@PathVariable Long id){return service.close(id);}
  @PostMapping("/{id}/comments") public WorkflowRequestComment comment(@PathVariable Long id,@Valid @RequestBody CommentCommand c){return service.addComment(id,c.getComment(),c.isInternalOnly());}
+ @PostMapping("/{id}/recommendations")
+ public WorkflowRequestRecommendationDTO recommend(
+         @PathVariable Long id,
+         @Valid @RequestBody WorkflowRequestRecommendationCommand command) {
+  return service.addRecommendation(id, command.text());
+ }
  @PostMapping(value="/{id}/attachments",consumes=MediaType.MULTIPART_FORM_DATA_VALUE) public ResponseEntity<WorkflowRequestAttachment> upload(@PathVariable Long id,@RequestPart("file") MultipartFile file,@RequestParam(defaultValue="OTHER") AttachmentType attachmentType,@RequestParam(required=false) String description){return ResponseEntity.status(HttpStatus.CREATED).body(attachments.store(id,file,attachmentType,description,service.currentEmployee().getId()));}
  @GetMapping("/{id}/attachments/{attachmentId}") public ResponseEntity<Resource> download(@PathVariable Long id,@PathVariable Long attachmentId){service.visible(id);WorkflowRequestAttachment a=attachments.get(id,attachmentId);return ResponseEntity.ok().contentType(MediaType.parseMediaType(a.getContentType())).contentLength(a.getFileSize()).header(HttpHeaders.CONTENT_DISPOSITION,ContentDisposition.attachment().filename(a.getOriginalFilename()).build().toString()).body(attachments.load(id,attachmentId));}
  @GetMapping("/{id}/attachments/{attachmentId}/view") public ResponseEntity<Resource> view(@PathVariable Long id,@PathVariable Long attachmentId){service.visible(id);WorkflowRequestAttachment a=attachments.get(id,attachmentId);return ResponseEntity.ok().contentType(MediaType.parseMediaType(a.getContentType())).contentLength(a.getFileSize()).header(HttpHeaders.CONTENT_DISPOSITION,ContentDisposition.inline().filename(a.getOriginalFilename()).build().toString()).body(attachments.load(id,attachmentId));}
