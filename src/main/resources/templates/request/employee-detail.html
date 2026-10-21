@@ -84,6 +84,7 @@
             <div class="request-card p-5">
                 <h2 class="flex items-center gap-2 text-base font-semibold"><span class="material-icons-round text-primary-600">timeline</span>Approval Timeline</h2>
                 <ol id="approvalSteps" class="mt-4 space-y-3 text-sm"></ol>
+                <ol id="financeActions" class="mt-3 space-y-3 text-sm"></ol>
                 <div id="freeRouteEvents" class="mt-4 space-y-2 text-xs"></div>
             </div>
 
@@ -404,6 +405,10 @@
                 if (s.approverEmployeeId != null) ids.add(s.approverEmployeeId);
                 if (s.forwardedToEmployeeId != null) ids.add(s.forwardedToEmployeeId);
             });
+            (detail.financeActions || []).forEach(a => {
+                if (a.actorEmployeeId != null) ids.add(a.actorEmployeeId);
+                if (a.targetEmployeeId != null) ids.add(a.targetEmployeeId);
+            });
             if (!ids.size) { employeeNames = {}; return; }
             try {
                 employeeNames = await json(`${api}/employees/names?ids=${[...ids].join(',')}`);
@@ -487,7 +492,28 @@
                     ${s.decision === 'DELEGATED' ? `<p>Forwarded to employee ID: ${s.forwardedToEmployeeId}</p><p>Forwarded to: ${employeeName(s.forwardedToEmployeeId)}</p>` : ''}
                     <p>Approver employee comment: ${text(s.comments)}</p>
                 </li>`).join('') : '<li class="text-gray-500">Not submitted.</li>';
+            const financeActions = detail.financeActions || [];
+            document.getElementById('financeActions').innerHTML = financeActions.map(a => `
+                <li class="request-timeline-item">
+                    <p><b>${financeActionLabel(a.actionType)}</b></p>
+                    <p>By: ${escapeHtml(employeeName(a.actorEmployeeId))}</p>
+                    ${a.targetEmployeeId != null ? `<p>Forwarded to: ${escapeHtml(employeeName(a.targetEmployeeId))}</p>` : ''}
+                    ${a.comment ? `<p>Comment: ${escapeHtml(a.comment)}</p>` : ''}
+                    <p class="text-xs text-gray-500">${escapeHtml(a.createdAt || '')}</p>
+                </li>`).join('');
             renderFreeRouteEvents();
+        }
+
+        function financeActionLabel(actionType) {
+            return ({
+                FORWARD: 'Finance forwarded the request',
+                APPROVE: 'Finance approved the request',
+                REJECT: 'Finance rejected the request',
+                RETURN: 'Finance returned the request',
+                RECIPIENT_APPROVE: 'Finance-forward recipient approved the request',
+                RECIPIENT_REJECT: 'Finance-forward recipient rejected the request',
+                RECIPIENT_RETURN: 'Finance-forward recipient returned the request'
+            })[actionType] || fmt(actionType);
         }
 
         function escapeHtml(value) {

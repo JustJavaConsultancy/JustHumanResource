@@ -54,7 +54,29 @@ public class WorkflowRequestService {
  @Transactional(readOnly=true) public Map<String,Object> context(){Employee e=currentEmployee();return Map.of("employeeId",e.getId(),"hrAdmin",isHrAdmin(),"canCreate",true);}
  @Transactional(readOnly=true) public WorkflowRequestDetailDTO details(Long id){return buildDetails(visible(id),isHrAdmin());}
  @Transactional(readOnly=true) public WorkflowRequestDetailDTO financeDetails(Long id){return buildDetails(requireFinanceRead(id),false);}
- private WorkflowRequestDetailDTO buildDetails(WorkflowRequest r,boolean includeInternalComments){Long id=r.getId();Object typed=switch(r.getRequestType()){case STAFF_REQUISITION->staffRequisitionDetail(id);case FILE_REQUEST->fileRepository.findByWorkflowRequestId(id).orElse(null);case ASSET_REQUEST->assetRepository.findByWorkflowRequestId(id).orElse(null);case EXPENSE_REIMBURSEMENT->expenseReimbursementDetail(id);case GENERAL_REQUEST->null;};List<WorkflowRequestComment> comments=commentRepository.findByWorkflowRequestIdOrderByCreatedAt(id);if(!includeInternalComments)comments=comments.stream().filter(c->!c.isInternalOnly()).toList();return WorkflowRequestDetailDTO.builder().request(r).typeDetails(typed).items(itemRepository.findByWorkflowRequestIdOrderById(id)).attachments(attachmentRepository.findByWorkflowRequestIdOrderByCreatedAt(id)).approvalSteps(stepRepository.findByWorkflowRequestIdOrderBySequenceNo(id)).comments(comments).activities(activityRepository.findByWorkflowRequestIdOrderByCreatedAt(id)).freeRouteEvents(freeRouteEventRepository.findByWorkflowRequestIdOrderByCreatedAt(id)).build();}
+ private WorkflowRequestDetailDTO buildDetails(WorkflowRequest r,boolean includeInternalComments){
+  Long id=r.getId();
+  Object typed=switch(r.getRequestType()){
+   case STAFF_REQUISITION->staffRequisitionDetail(id);
+   case FILE_REQUEST->fileRepository.findByWorkflowRequestId(id).orElse(null);
+   case ASSET_REQUEST->assetRepository.findByWorkflowRequestId(id).orElse(null);
+   case EXPENSE_REIMBURSEMENT->expenseReimbursementDetail(id);
+   case GENERAL_REQUEST->null;
+  };
+  List<WorkflowRequestComment> comments=commentRepository.findByWorkflowRequestIdOrderByCreatedAt(id);
+  if(!includeInternalComments)comments=comments.stream().filter(c->!c.isInternalOnly()).toList();
+  return WorkflowRequestDetailDTO.builder()
+          .request(r)
+          .typeDetails(typed)
+          .items(itemRepository.findByWorkflowRequestIdOrderById(id))
+          .attachments(attachmentRepository.findByWorkflowRequestIdOrderByCreatedAt(id))
+          .approvalSteps(stepRepository.findByWorkflowRequestIdOrderBySequenceNo(id))
+          .comments(comments)
+          .activities(activityRepository.findByWorkflowRequestIdOrderByCreatedAt(id))
+          .freeRouteEvents(freeRouteEventRepository.findByWorkflowRequestIdOrderByCreatedAt(id))
+          .financeActions(financeActionHistory(id))
+          .build();
+ }
  @Transactional public void approve(String taskId,String comment){complete(taskId,"APPROVE",comment);}
  @Transactional public void reject(String taskId,String comment){if(comment==null||comment.isBlank())throw new IllegalArgumentException("A rejection comment is required.");complete(taskId,"REJECT",comment);}
  @Transactional public void returnForCorrection(String taskId,String comment){if(comment==null||comment.isBlank())throw new IllegalArgumentException("A return comment is required.");complete(taskId,"RETURN",comment);}
@@ -412,20 +434,45 @@ public class WorkflowRequestService {
   Employee actor = currentEmployee();
   WorkflowRequest r = requestRepository.findById(requestId)
           .orElseThrow(() -> new IllegalArgumentException("Request not found."));
+  Long currentHolderId = currentApprovalHolder(r);
   return employeeRepository.findAllVisible().stream()
           .filter(e -> e.getEmploymentStatus() == EmploymentStatus.ACTIVE)
           .filter(e -> e.getStatus() == RecordStatus.ACTIVE)
-          .filter(e -> !e.getId().equals(actor.getId()) && !e.getId().equals(r.getRequesterEmployeeId()))
+          .filter(e -> !e.getId().equals(actor.getId())
+                  && !e.getId().equals(r.getRequesterEmployeeId())
+                  && !e.getId().equals(currentHolderId))
           .sorted(Comparator.comparing(Employee::getFullName, String.CASE_INSENSITIVE_ORDER))
           .map(e -> new RequestLookupOption(e.getId(), e.getEmployeeNumber() + " - " + e.getFullName()
                   + (e.getDepartment() == null ? "" : " - " + e.getDepartment().getName())))
           .toList();
  }
 
+ private Long currentApprovalHolder(WorkflowRequest request) {
+  if (request.getFinanceOverrideRecipientId() != null) {
+   return request.getFinanceOverrideRecipientId();
+  }
+  String instanceId = request.getWorkflowInstanceId();
+  if (instanceId == null || instanceId.isBlank()) {
+   return null;
+  }
+  Task activeTask = flowableTaskService.createTaskQuery()
+          .processInstanceId(instanceId)
+          .active()
+          .singleResult();
+  if (activeTask == null || activeTask.getAssignee() == null || activeTask.getAssignee().isBlank()) {
+   return null;
+  }
+  return Long.valueOf(activeTask.getAssignee());
+ }
+
  /** Append-only Finance/forward audit history for the Finance detail page. */
  @Transactional(readOnly = true)
  public List<WorkflowRequestFinanceActionDTO> financeActions(Long id) {
   requireFinanceRead(id);
+  return financeActionHistory(id);
+ }
+
+ private List<WorkflowRequestFinanceActionDTO> financeActionHistory(Long id) {
   return financeActionRepository.findByWorkflowRequestIdOrderByCreatedAtAscIdAsc(id).stream()
           .map(a -> new WorkflowRequestFinanceActionDTO(a.getId(), a.getActionType(), a.getActorEmployeeId(),
                   a.getTargetEmployeeId(), a.getComment(), a.getStatusBefore(), a.getStatusAfter(),
@@ -469,6 +516,9 @@ public class WorkflowRequestService {
   }
   if (toEmployeeId.equals(r.getFinanceOverrideRecipientId())) {
    throw new IllegalStateException("This employee is already the current recipient of the request.");
+  }
+  if (toEmployeeId.equals(currentApprovalHolder(r))) {
+   throw new IllegalArgumentException("You cannot forward a request to the employee currently holding it.");
   }
   requireSelectableFreeRouteEmployee(toEmployeeId);
 
