@@ -56,6 +56,24 @@ class PromotionMapperTest {
     }
 
     @Test
+    void draftDetailRetainsIdentifiersRequiredForEditing() {
+        PromotionRequest request = salaryRequest();
+        var role = new com.justjava.humanresource.hr.entity.JobStep();
+        role.setId(23L);
+        request.setProposedRole(role);
+        var department = new com.justjava.humanresource.hr.entity.Department();
+        department.setId(24L);
+        request.setProposedDepartment(department);
+        var manager = new com.justjava.humanresource.hr.entity.Employee();
+        manager.setId(25L);
+        request.setProposedManager(manager);
+        var detail = mapper.toDetail(request);
+        assertThat(detail.getProposedRoleId()).isEqualTo(23L);
+        assertThat(detail.getProposedDepartmentId()).isEqualTo(24L);
+        assertThat(detail.getProposedManagerId()).isEqualTo(25L);
+    }
+
+    @Test
     void hidesSalaryFieldsWhenCurrentUserCannotViewSalary() {
         PromotionRequest request = salaryRequest();
         when(authorizationService.canViewSalary()).thenReturn(false);

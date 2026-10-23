@@ -24,6 +24,9 @@ public class PromotionDetailResponse {
     String currentDepartmentName;
     String proposedDepartmentName;
     String currentRoleName;
+    Long proposedRoleId;
+    Long proposedDepartmentId;
+    Long proposedManagerId;
     String proposedRoleName;
     BigDecimal currentSalary;
     BigDecimal proposedSalary;

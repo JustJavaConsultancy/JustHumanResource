@@ -7,6 +7,22 @@
     <meta charset="UTF-8">
     <title>Promotion Management</title>
     <style th:fragment="promotionStyles">
+        .promotion-page-header { display:flex; justify-content:space-between; align-items:center; gap:1rem; margin-bottom:1.5rem; }
+        .promotion-page-header h2 { font-size:1.65rem; font-weight:700; color:#172033; margin:.35rem 0; }
+        .promotion-page-header p, .promotion-eyebrow { color:#64748b; font-size:.875rem; }
+        .promotion-panel h3 { font-size:1.1rem; font-weight:650; margin-bottom:1rem; }
+        .promotion-panel { overflow-x:auto; border-radius:12px; padding:1.25rem; }
+        .promotion-btn:disabled { opacity:.45; cursor:default; }
+        .promotion-card { box-shadow:0 2px 8px rgba(15,23,42,.03); }
+        .promotion-quick-links { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:1rem; }
+        .promotion-quick-links a { display:flex; flex-direction:column; gap:.6rem; border:1px solid #e2e8f0; border-radius:12px; padding:1.25rem; }
+        .promotion-quick-links span { font-size:.875rem; color:#64748b; }
+        .promotion-btn:focus-visible, .promotion-quick-links a:focus-visible { outline:3px solid #93c5fd; outline-offset:3px; }
+        .promotion-settings-layout { display:grid; grid-template-columns:190px minmax(0,1fr); gap:1.5rem; }
+        .promotion-local-nav { display:flex; flex-direction:column; gap:.5rem; }
+        .promotion-local-nav button { text-align:left; }
+        .promotion-local-nav button[aria-pressed="true"] { background:#eff6ff; color:#1d4ed8; border-color:#bfdbfe; }
+        @media(max-width:900px) { .promotion-settings-layout { grid-template-columns:1fr; } .promotion-local-nav { flex-direction:row; flex-wrap:wrap; } .promotion-page-header { align-items:flex-start; } }
         .promotion-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
         .promotion-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 1rem; }
         .promotion-card .label { color: #6b7280; font-size: .875rem; }
@@ -40,7 +56,7 @@
         .promotion-modal-backdrop { position: fixed; inset: 0; background: rgba(17, 24, 39, .45); z-index: 50; display: flex; align-items: center; justify-content: center; padding: 1rem; }
         .promotion-modal { width: min(520px, 100%); background: #fff; border-radius: 8px; border: 1px solid #e5e7eb; padding: 1rem; box-shadow: 0 24px 60px rgba(15, 23, 42, .2); }
         .promotion-modal h3 { margin-top: 0; }
-        .hidden { display: none; }
+        .hidden, .promotion-form label.hidden { display: none; }
         @media (max-width: 900px) {
             .promotion-grid, .promotion-form, .promotion-report-grid { grid-template-columns: 1fr; }
             .promotion-toolbar { align-items: stretch; flex-direction: column; }
@@ -81,7 +97,7 @@
 
     <div class="promotion-toolbar" th:if="${canUsePromotionRequests}" th:fragment="promotionRequestToolbar">
         <div>
-            <select id="statusFilter" class="promotion-btn">
+            <select id="statusFilter" class="promotion-btn" aria-label="Filter requests by status">
                 <option value="">All statuses</option>
                 <option value="DRAFT">Draft</option>
                 <option value="LINE_MANAGER_REVIEW">Line manager review</option>
@@ -408,7 +424,7 @@
 
     <script th:fragment="promotionScripts">
         const apiBase = '/api/promotions';
-        const promotionRole = document.querySelector('main')?.dataset?.promotionRole || 'admin';
+        const promotionRole = document.querySelector('[data-promotion-role]')?.dataset?.promotionRole || 'admin';
         const canManagePromotions = ['admin', 'hr'].includes(promotionRole);
         const canUseOperationalReports = ['admin', 'hr', 'finance'].includes(promotionRole);
         const canUsePayrollHandoffs = ['admin', 'hr', 'finance'].includes(promotionRole);
@@ -425,6 +441,8 @@
             manager: ['approvals', 'requests'],
             employee: ['requests']
         };
+        let promotionRequestRows = [];
+        let editingDraft = null;
         let employees = [];
         let jobSteps = [];
         let departments = [];
@@ -478,13 +496,31 @@
         document.addEventListener('DOMContentLoaded', async () => {
             applyRoleUi();
             const loaders = [loadDashboard(), loadTasks(), loadRequests()];
-            if (canManagePromotions || canUseOperationalReports) loaders.push(loadReferenceData());
+            if (!isFocusedPage() || byId('promotionForm') || byId('configurationPanel') || byId('reportsPanel')) {
+                try { await loadReferenceData(); } catch (error) { showPageError('Reference data could not be loaded. Refresh to try again.'); }
+            }
             if (canUseOperationalReports) loaders.push(loadReports());
             if (canUsePayrollHandoffs) loaders.push(loadPayrollHandoffs());
             if (canUseConfiguration) loaders.push(loadConfiguration());
-            await Promise.allSettled(loaders);
+            const results = await Promise.allSettled(loaders);
+            if (results.some(result => result.status === 'rejected')) showPageError('Some promotion data could not be loaded. Refresh to try again.');
             focusInitialSection();
-            bindChange('statusFilter', loadRequests);
+            if (isFocusedPage()) {
+                if (byId('promotionForm')) openCreateForm();
+                const requestId = document.querySelector('main[data-focused-page]')?.dataset.requestId;
+                if (requestId && byId('promotionForm')) await loadDraft(Number(requestId));
+                else if (requestId) await viewDetail(Number(requestId));
+                setupSettingsNavigation();
+                document.querySelectorAll('a[href="/hr/promotions/requests"]').forEach(link => link.href += window.location.search);
+            }
+            bindChange('statusFilter', () => { if (isFocusedPage()) { const url = new URL(window.location.href); url.searchParams.delete('page'); history.replaceState({}, '', url); } loadRequests(); });
+            if (byId('requestSearch')) {
+                byId('requestSearch').value = new URL(window.location.href).searchParams.get('q') || '';
+                byId('requestSearch').addEventListener('input', () => updateRequestPage(1));
+                bindClick('requestPrevious', () => updateRequestPage(Number(new URL(window.location.href).searchParams.get('page') || 1) - 1));
+                bindClick('requestNext', () => updateRequestPage(Number(new URL(window.location.href).searchParams.get('page') || 1) + 1));
+                renderRequestRows();
+            }
             document.querySelectorAll('[data-section-nav]').forEach(button => {
                 button.addEventListener('click', () => focusSection(button.dataset.sectionNav, true));
             });
@@ -521,8 +557,50 @@
             byId('payrollHandoffPanel')?.classList.toggle('hidden', !canUsePayrollHandoffs);
         }
 
+        function isFocusedPage() { return Boolean(document.querySelector('main[data-focused-page="true"]')); }
+
+        function setupSettingsNavigation() {
+            if (!isFocusedPage() || !byId('configurationForm')) return;
+            const form = byId('configurationForm');
+            const groups = {
+                policy: ['configurationName', 'minimumMonthsInCurrentRole', 'minimumAppraisalScore', 'maximumSalaryIncreasePercentWithoutExecutiveApproval', 'allowProbationPromotion'],
+                approvals: ['requireFinanceApproval', 'requireExecutiveApproval'],
+                documents: ['requiredDocumentsBeforeSubmit', 'requiredDocumentsBeforeImplementation'],
+                reminders: ['approvalReminderAfterHours', 'approvalEscalationAfterHours', 'escalationApproverId', 'escalationApproverGroup']
+            };
+            const history = byId('configurationHistoryBody').closest('table').parentElement;
+            const wrapper = document.createElement('div');
+            wrapper.className = 'promotion-settings-layout';
+            form.before(wrapper);
+            const nav = document.createElement('nav');
+            nav.className = 'promotion-local-nav';
+            nav.setAttribute('aria-label', 'Settings sections');
+            const content = document.createElement('div');
+            wrapper.append(nav, content);
+            content.append(form, history);
+            const labels = {policy:'Policy rules', approvals:'Approval requirements', documents:'Required documents', reminders:'Reminders & escalation', history:'Configuration history'};
+            const select = key => {
+                Object.entries(groups).forEach(([group, ids]) => ids.forEach(id => byId(id)?.closest('label').classList.toggle('hidden', group !== key)));
+                form.classList.toggle('hidden', key === 'history');
+                history.classList.toggle('hidden', key !== 'history');
+                nav.querySelectorAll('button').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.group === key)));
+            };
+            Object.entries(labels).forEach(([key, label]) => {
+                const button = document.createElement('button');
+                button.type = 'button'; button.className = 'promotion-btn'; button.textContent = label; button.dataset.group = key;
+                button.addEventListener('click', () => select(key)); nav.append(button);
+            });
+            // Saving submits the complete policy, including values in other groups.
+            form.addEventListener('invalid', event => {
+                const key = Object.keys(groups).find(group => groups[group].includes(event.target.id));
+                if (key) select(key);
+            }, true);
+            select('policy');
+        }
+
         function focusInitialSection() {
-            const section = document.querySelector('main')?.dataset?.initialSection || 'dashboard';
+            if (isFocusedPage()) return;
+            const section = document.querySelector('[data-initial-section]')?.dataset?.initialSection || 'dashboard';
             focusSection(section, false);
         }
 
@@ -552,21 +630,21 @@
         async function loadReferenceData() {
             if (!canManagePromotions && !canUseOperationalReports) return;
             const requests = [];
-            if (canManagePromotions) {
+            if (canManagePromotions && (!isFocusedPage() || byId('promotionForm') || byId('configurationPanel'))) {
                 requests.push(fetch(`${apiBase}/reference/employees`));
                 requests.push(fetch(`${apiBase}/reference/job-steps`));
             }
-            if (canUseOperationalReports) {
+            if (canUseOperationalReports && (!isFocusedPage() || byId('reportsPanel'))) {
                 requests.push(fetch(`${apiBase}/reference/departments`));
             }
             const responses = await Promise.all(requests);
             if (responses.some(response => !response.ok)) return;
             let responseIndex = 0;
-            if (canManagePromotions) {
+            if (canManagePromotions && (!isFocusedPage() || byId('promotionForm') || byId('configurationPanel'))) {
                 employees = await responses[responseIndex++].json();
                 jobSteps = await responses[responseIndex++].json();
             }
-            if (canUseOperationalReports) {
+            if (canUseOperationalReports && (!isFocusedPage() || byId('reportsPanel'))) {
                 departments = await responses[responseIndex].json();
             }
 
@@ -605,6 +683,13 @@
             byId('approvedCount').textContent = data.approvedCount ?? 0;
             byId('implementedCount').textContent = data.implementedCount ?? 0;
             byId('monthlySalaryImpact').textContent = money.format(data.monthlySalaryImpact ?? 0);
+            if (byId('recentPromotionRequests')) {
+                byId('recentPromotionRequests').innerHTML = (data.recentRequests || []).slice(0, 5).map(row => `
+                    <div class="promotion-toolbar" style="border-bottom:1px solid #e2e8f0;padding:.75rem 0">
+                        <div><strong>${escapeHtml(row.employeeName)}</strong><p class="promotion-eyebrow">${escapeHtml(row.requestNumber)} · ${escapeHtml(row.proposedRoleName || '')}</p></div>
+                        <div class="promotion-actions"><span class="promotion-status">${escapeHtml((row.status || '').replaceAll('_', ' '))}</span><button type="button" class="promotion-btn" onclick="viewDetail(${row.id})">View</button></div>
+                    </div>`).join('') || '<p class="promotion-eyebrow">No promotion requests yet. Create a request to get started.</p>';
+            }
         }
 
         async function loadReports() {
@@ -765,7 +850,16 @@
 
         async function loadRequests() {
             if (!byId('requestPanel')) return;
+            if (isFocusedPage() && !byId('statusFilter').dataset.initialized) {
+                byId('statusFilter').value = new URL(window.location.href).searchParams.get('status') || '';
+                byId('statusFilter').dataset.initialized = 'true';
+            }
             const status = byId('statusFilter')?.value || '';
+            if (isFocusedPage()) {
+                const url = new URL(window.location.href);
+                status ? url.searchParams.set('status', status) : url.searchParams.delete('status');
+                window.history.replaceState({}, '', url);
+            }
             const requestBase = isEmployeeExperience ? `${apiBase}/my` : apiBase;
             const response = await fetch(status ? `${requestBase}?status=${status}` : requestBase);
             if (!response.ok) {
@@ -775,10 +869,43 @@
             const data = await response.json();
             const body = byId('promotionTableBody');
             if (!Array.isArray(data) || data.length === 0) {
+                promotionRequestRows = [];
+                if (isFocusedPage()) { renderRequestRows(); return; }
                 body.innerHTML = '<tr><td colspan="8">No promotion requests found.</td></tr>';
                 return;
             }
-            body.innerHTML = data.map(row => `
+            promotionRequestRows = data;
+            renderRequestRows();
+        }
+
+        function updateRequestPage(page) {
+            const url = new URL(window.location.href);
+            url.searchParams.set('page', Math.max(1, page));
+            const query = byId('requestSearch').value.trim();
+            query ? url.searchParams.set('q', query) : url.searchParams.delete('q');
+            history.replaceState({}, '', url); renderRequestRows();
+        }
+
+        function renderRequestRows() {
+            const body = byId('promotionTableBody');
+            if (!body) return;
+            let rows = promotionRequestRows;
+            if (byId('requestSearch')) {
+                const params = new URL(window.location.href).searchParams;
+                const query = (params.get('q') || '').toLowerCase();
+                rows = rows.filter(row => `${row.requestNumber} ${row.employeeName} ${row.departmentName}`.toLowerCase().includes(query));
+                const count = rows.length;
+                const pages = Math.max(1, Math.ceil(count / 15));
+                const page = Math.max(1, Math.min(pages, Number(params.get('page')) || 1));
+                if (params.get('page') && Number(params.get('page')) !== page) { const url = new URL(window.location.href); url.searchParams.set('page', page); history.replaceState({}, '', url); }
+                byId('requestResultCount').textContent = `${count} requests`;
+                byId('requestPageLabel').textContent = `Page ${page} of ${pages}`;
+                byId('requestPrevious').disabled = page === 1;
+                byId('requestNext').disabled = page === pages;
+                rows = rows.slice((page - 1) * 15, page * 15);
+            }
+            if (!rows.length) { body.innerHTML = '<tr><td colspan="8">No promotion requests found.</td></tr>'; return; }
+            body.innerHTML = rows.map(row => `
                 <tr>
                     <td>${escapeHtml(row.requestNumber || '')}</td>
                     <td>${escapeHtml(row.employeeName || '')}<br><small>${escapeHtml(row.departmentName || '')}</small></td>
@@ -790,9 +917,12 @@
                     <td>
                         <div class="promotion-actions">
                             <button class="promotion-btn" onclick="viewDetail(${row.id})">View</button>
+                            ${isFocusedPage() && canManagePromotions && row.status === 'DRAFT' ? `<a class="promotion-btn" href="/hr/promotions/requests/${row.id}/edit${escapeHtml(window.location.search)}">Edit</a>` : ''}
                             ${canManagePromotions && row.status === 'DRAFT' ? `<button class="promotion-btn success" onclick="submitPromotion(${row.id})">Submit</button>` : ''}
+                            ${isFocusedPage() && (isReviewStatus(row.status) || isCancellableStatus(row.status)) ? '<details><summary class="promotion-btn">Actions</summary><div class="promotion-actions" style="padding:.5rem 0">' : ''}
                             ${canUseApprovalActions && isReviewStatus(row.status) ? `<button class="promotion-btn success" onclick="approvePromotion(${row.id})">Approve</button><button class="promotion-btn" onclick="returnPromotion(${row.id})">Return</button><button class="promotion-btn danger" onclick="rejectPromotion(${row.id})">Reject</button>` : ''}
                             ${canManagePromotions && isCancellableStatus(row.status) ? `<button class="promotion-btn danger" onclick="cancelPromotion(${row.id})">Cancel</button>` : ''}
+                            ${isFocusedPage() && (isReviewStatus(row.status) || isCancellableStatus(row.status)) ? '</div></details>' : ''}
                             ${canManagePromotions && row.status === 'APPROVED' ? `<button class="promotion-btn primary" onclick="implementPromotion(${row.id})">Implement</button>` : ''}
                         </div>
                     </td>
@@ -939,6 +1069,7 @@
         }
 
         function openCreateForm() {
+            if (isFocusedPage() && !byId('promotionForm')) { window.location.assign('/hr/promotions/requests/new'); return; }
             if (!canManagePromotions || !byId('promotionForm')) return;
             byId('promotionForm').reset();
             byId('promotionId').value = '';
@@ -946,7 +1077,24 @@
             byId('formPanel').classList.remove('hidden');
         }
 
+        async function loadDraft(id) {
+            const response = await fetch(`${apiBase}/${id}`);
+            if (!response.ok) { byId('formPanel').classList.add('hidden'); showPageError('Unable to load this promotion request.'); return; }
+            const data = await response.json();
+            if (data.status !== 'DRAFT') {
+                byId('formPanel').classList.add('hidden');
+                showPageError('Only draft requests can be edited.'); return;
+            }
+            editingDraft = data;
+            byId('formTitle').textContent = 'Edit Promotion Draft';
+            byId('promotionId').value = id;
+            ['employeeId', 'proposedRoleId', 'effectiveDate', 'proposedSalary', 'justification'].forEach(key => {
+                byId(key).value = data[key] ?? '';
+            });
+        }
+
         function closeForm() {
+            if (isFocusedPage()) { window.location.assign('/hr/promotions/requests' + window.location.search); return; }
             byId('formPanel')?.classList.add('hidden');
         }
 
@@ -958,10 +1106,12 @@
                 proposedRoleId: Number(document.getElementById('proposedRoleId').value),
                 effectiveDate: document.getElementById('effectiveDate').value,
                 proposedSalary: optionalNumber(document.getElementById('proposedSalary').value),
-                justification: document.getElementById('justification').value
+                justification: document.getElementById('justification').value,
+                ...(editingDraft ? { proposedDepartmentId: editingDraft.proposedDepartmentId, proposedManagerId: editingDraft.proposedManagerId, requestSource: editingDraft.requestSource } : {})
             };
-            const response = await fetch(apiBase, {
-                method: 'POST',
+            const draftId = byId('promotionId').value;
+            const response = await fetch(draftId ? `${apiBase}/${draftId}` : apiBase, {
+                method: draftId ? 'PUT' : 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
@@ -974,6 +1124,10 @@
         }
 
         async function viewDetail(id) {
+            if (isFocusedPage() && !document.querySelector('main[data-request-id]')?.dataset.requestId) {
+                window.location.assign(`/hr/promotions/requests/${id}` + window.location.search);
+                return;
+            }
             clearPageError();
             const response = await fetch(`${apiBase}/${id}`);
             if (!response.ok) {
@@ -1040,6 +1194,42 @@
                 <ul>${activityRows}</ul>
             `;
             document.getElementById('detailPanel').classList.remove('hidden');
+            if (isFocusedPage()) {
+                setupDetailNavigation();
+                const actions = document.createElement('div'); actions.className = 'promotion-actions';
+                actions.style.cssText = 'position:sticky;bottom:0;background:white;padding:1rem 0;margin-top:1rem;border-top:1px solid #e2e8f0';
+                actions.innerHTML = `${canManagePromotions && data.status === 'DRAFT' ? `<a class="promotion-btn" href="/hr/promotions/requests/${id}/edit${escapeHtml(window.location.search)}">Edit draft</a><button class="promotion-btn primary" onclick="submitPromotion(${id})">Submit</button>` : ''}
+                    ${canUseApprovalActions && isReviewStatus(data.status) ? `<button class="promotion-btn success" onclick="approvePromotion(${id})">Approve</button><button class="promotion-btn" onclick="returnPromotion(${id})">Return</button><button class="promotion-btn danger" onclick="rejectPromotion(${id})">Reject</button>` : ''}
+                    ${canManagePromotions && data.status === 'APPROVED' ? `<button class="promotion-btn primary" onclick="implementPromotion(${id})">Implement</button>` : ''}
+                    ${canManagePromotions && isCancellableStatus(data.status) ? `<button class="promotion-btn danger" onclick="cancelPromotion(${id})">Cancel</button>` : ''}`;
+                byId('detailBody').append(actions);
+            }
+        }
+
+        function setupDetailNavigation() {
+            const body = byId('detailBody');
+            const wrapper = document.createElement('div'); wrapper.className = 'promotion-settings-layout';
+            const nav = document.createElement('nav'); nav.className = 'promotion-local-nav'; nav.setAttribute('aria-label', 'Request detail sections');
+            const content = document.createElement('div');
+            let section = document.createElement('section'); content.append(section);
+            const sections = [{title:'Summary', element:section}];
+            [...body.children].forEach(child => {
+                if (child.tagName === 'H4') {
+                    section = document.createElement('section'); content.append(section);
+                    sections.push({title:child.textContent, element:section});
+                }
+                section.append(child);
+            });
+            sections.forEach((item, index) => {
+                const button = document.createElement('button'); button.type = 'button'; button.className = 'promotion-btn'; button.textContent = item.title;
+                button.addEventListener('click', () => {
+                    sections.forEach(entry => entry.element.classList.toggle('hidden', entry !== item));
+                    nav.querySelectorAll('button').forEach(entry => entry.setAttribute('aria-pressed', String(entry === button)));
+                });
+                nav.append(button); if (index) item.element.classList.add('hidden');
+                button.setAttribute('aria-pressed', String(index === 0));
+            });
+            wrapper.append(nav, content); body.replaceChildren(wrapper);
         }
 
         async function loadRoutePreview(id) {
@@ -1065,6 +1255,7 @@
         }
 
         function closeDetail() {
+            if (isFocusedPage() && byId('detailPanel')) { window.location.assign('/hr/promotions/requests' + window.location.search); return; }
             byId('detailPanel')?.classList.add('hidden');
         }
 
