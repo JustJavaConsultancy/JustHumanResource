@@ -77,7 +77,7 @@
             <span class="request-icon bg-blue-50 text-blue-600"><span class="material-icons-round">pending_actions</span></span>
         </div>
         <div class="request-metric">
-            <div><p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Pending My Approval</p><p id="approvalCount" class="mt-3 text-3xl font-bold">0</p></div>
+            <div><p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Needs My Action</p><p id="approvalCount" class="mt-3 text-3xl font-bold">0</p></div>
             <span class="request-icon bg-amber-50 text-amber-600"><span class="material-icons-round">approval</span></span>
         </div>
         <div class="request-metric">
@@ -91,7 +91,7 @@
     </section>
 
     <section class="request-card overflow-hidden">
-        <div class="request-toolbar md:grid-cols-[1fr_180px_180px_180px]">
+        <div class="request-toolbar md:grid-cols-[1fr_180px_180px_180px_180px]">
             <input id="requestSearch" placeholder="Search number or title" class="request-control">
             <select id="typeFilter" class="request-control">
                 <option value="">All types</option>
@@ -113,6 +113,10 @@
                 <option>HIGH</option>
                 <option>URGENT</option>
             </select>
+            <select id="inboxFilter" class="request-control">
+                <option value="">All requests</option>
+                <option value="action">Needs my action</option>
+            </select>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full min-w-[760px] text-sm">
@@ -123,30 +127,11 @@
                     <th class="px-4 py-3 text-left">Type</th>
                     <th class="px-4 py-3 text-left">Priority</th>
                     <th class="px-4 py-3 text-left">Status</th>
+                    <th class="px-4 py-3 text-left">My role</th>
                     <th class="px-4 py-3 text-left">Action</th>
                 </tr>
                 </thead>
                 <tbody id="requestRows" class="divide-y divide-gray-200 dark:divide-gray-700"></tbody>
-            </table>
-        </div>
-    </section>
-
-    <section class="request-card overflow-hidden">
-        <div class="flex items-center justify-between border-b border-gray-200 p-4 dark:border-gray-700">
-            <h2 class="text-base font-semibold">Pending My Approval</h2>
-            <button type="button" onclick="loadData()" class="request-secondary-btn px-3 py-1.5 text-xs"><span class="material-icons-round text-sm">refresh</span>Refresh</button>
-        </div>
-        <div class="overflow-x-auto">
-            <table class="w-full min-w-[620px] text-sm">
-                <thead class="request-table-head">
-                <tr>
-                    <th class="px-4 py-3 text-left">Request</th>
-                    <th class="px-4 py-3 text-left">Task</th>
-                    <th class="px-4 py-3 text-left">Created</th>
-                    <th class="px-4 py-3 text-left">Action</th>
-                </tr>
-                </thead>
-                <tbody id="taskRows" class="divide-y divide-gray-200 dark:divide-gray-700"></tbody>
             </table>
         </div>
     </section>
@@ -184,7 +169,6 @@
                     <label class="block text-sm font-medium">Description
                         <textarea id="description" rows="3" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-900"></textarea>
                     </label>
-
                     <div id="staffFields" class="request-type-panel hidden space-y-4">
                         <h4 class="flex items-center gap-2 font-semibold"><span class="material-icons-round text-primary-600">groups</span>Staff Requisition Details</h4>
                         <div class="space-y-3">
@@ -390,8 +374,7 @@
         const api = '/api/requests';
         const assetApi = '/api/assets';
         const pageBase = '/employee/requests';
-        let requests = [];
-        let tasks = [];
+        let inboxItems = [];
         let types = [];
         let staffOptions = {};
         let fileOptions = {};
@@ -631,17 +614,15 @@
 
         async function loadData() {
             try {
-                [requests, tasks, types, staffOptions, fileOptions, expenseOptions, context] = await Promise.all([
-                    json(api + '/visible'),
-                    json(api + '/approvals/tasks'),
+                [inboxItems, types, staffOptions, fileOptions, expenseOptions, context] = await Promise.all([
+                    json(api + '/inbox'),
                     json(api + '/types'),
                     json(api + '/staff-requisition-options'),
                     json(api + '/file-options'),
                     json(api + '/expense-reimbursement-options'),
                     json(api + '/context')
                 ]);
-                requests = requests || [];
-                tasks = tasks || [];
+                inboxItems = inboxItems || [];
                 types = types || [];
                 staffOptions = staffOptions || {};
                 fileOptions = fileOptions || {};
@@ -652,7 +633,6 @@
                 renderFileOptions();
                 renderExpenseOptions();
                 renderRequests();
-                renderTasks();
                 renderStats();
             } catch (e) { showError(e.message); }
         }
@@ -746,22 +726,41 @@
             const type = document.getElementById('typeFilter').value;
             const status = document.getElementById('statusFilter').value;
             const priority = document.getElementById('priorityFilter').value;
+            const inboxFilter = document.getElementById('inboxFilter').value;
             const search = document.getElementById('requestSearch').value.toLowerCase();
-            const filtered = requests.filter(r =>
+            const filtered = inboxItems.filter(item => {
+                const r = item.request;
+                return (!inboxFilter || item.approvalRequired || item.financeForwardRecipient) &&
                 (!type || r.requestType === type) &&
                 (!status || r.status === status) &&
                 (!priority || r.priority === priority) &&
                 (!search || (r.requestNumber || '').toLowerCase().includes(search) || (r.title || '').toLowerCase().includes(search))
-            );
-            document.getElementById('requestRows').innerHTML = filtered.length ? filtered.map(r => `
+            });
+            document.getElementById('requestRows').innerHTML = filtered.length ? filtered.map(item => {
+                const r = item.request;
+                const roles = [
+                    item.requester ? '<span class="request-badge request-badge-neutral">Requester</span>' : '',
+                    item.copied ? '<span class="request-badge request-badge-info">Copied</span>' : '',
+                    item.approvalRequired ? '<span class="request-badge request-badge-warning">Approval required</span>' : '',
+                    item.financeForwardRecipient ? '<span class="request-badge request-badge-success">Finance-forward recipient</span>' : ''
+                ].filter(Boolean).join(' ');
+                const taskActions = (item.approvalTasks || []).map(task => `
+                    <button onclick="openApprovalModal('${escapeHtml(task.taskId)}','approve')" class="rounded bg-green-600 px-2 py-1 text-xs text-white">Approve</button>
+                    <button onclick="openApprovalModal('${escapeHtml(task.taskId)}','reject')" class="rounded bg-red-600 px-2 py-1 text-xs text-white">Reject</button>
+                    <button onclick="openApprovalModal('${escapeHtml(task.taskId)}','return')" class="rounded bg-orange-600 px-2 py-1 text-xs text-white">Return</button>
+                `).join('');
+                return `
                 <tr class="request-row">
                     <td class="px-4 py-3">${r.requestNumber || ''}</td>
                     <td class="px-4 py-3">${r.title || ''}</td>
                     <td class="px-4 py-3">${fmtType(r.requestType)}</td>
                     <td class="px-4 py-3">${r.priority || ''}</td>
                     <td class="px-4 py-3">${badge(r.status)}</td>
+                    <td class="px-4 py-3"><div class="flex flex-wrap gap-1">${roles}</div></td>
                     <td class="px-4 py-3 space-x-1 whitespace-nowrap">
                         <a class="text-primary-600 hover:underline" href="${pageBase}/${r.id}">Open</a>
+                        ${item.financeForwardRecipient ? `<a class="text-primary-600 hover:underline" href="${pageBase}/${r.id}">Review</a>` : ''}
+                        ${taskActions}
                         ${canEditRequestRow(r) ? `<button type="button"
                                 onclick="openEditRequestModal(${r.id})"
                                 class="rounded border border-gray-300 px-2 py-1 text-xs text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200"
@@ -770,33 +769,24 @@
                             <span class="material-icons-round text-sm">edit</span>
                         </button>` : ''}
                     </td>
-                </tr>`).join('') : '<tr><td colspan="6"><div class="request-empty"><span class="material-icons-round mb-2 block text-3xl">inbox</span>No requests found.</div></td></tr>';
-        }
-
-        function renderTasks() {
-            document.getElementById('taskRows').innerHTML = tasks.length ? tasks.map(t => {
-                const requestId = t.variables && t.variables.workflowRequestId ? t.variables.workflowRequestId : '';
-                const matchedRequest = requestId ? requests.find(r => Number(r.id) === Number(requestId)) : null;
-                const isFreeRoute = matchedRequest && matchedRequest.approvalRouteType === 'FREE_ROUTE';
-                return `<tr class="request-row">
-                    <td class="px-4 py-3">${requestId ? `<a class="text-primary-600 hover:underline" href="${pageBase}/${requestId}">Request #${requestId}</a>` : '-'}${isFreeRoute ? ' <span class="request-badge request-badge-info">Free Route</span>' : ''}</td>
-                    <td class="px-4 py-3">${t.taskName || t.taskDefinitionKey || ''}</td>
-                    <td class="px-4 py-3">${(t.createdTime || '').replace('T', ' ')}</td>
-                    <td class="px-4 py-3">
-                        ${requestId ? `<a href="${pageBase}/${requestId}" class="rounded border border-gray-300 px-3 py-1 text-xs text-gray-700 dark:border-gray-600 dark:text-gray-200">Open</a>` : ''}
-                        <button onclick="openApprovalModal('${t.taskId}','approve')" class="rounded bg-green-600 px-3 py-1 text-xs text-white">Approve</button>
-                        <button onclick="openApprovalModal('${t.taskId}','reject')" class="rounded bg-red-600 px-3 py-1 text-xs text-white">Reject</button>
-                        <button onclick="openApprovalModal('${t.taskId}','return')" class="rounded bg-orange-600 px-3 py-1 text-xs text-white">Return</button>
-                    </td>
                 </tr>`;
-            }).join('') : '<tr><td colspan="4"><div class="request-empty"><span class="material-icons-round mb-2 block text-3xl">task_alt</span>No pending approval tasks.</div></td></tr>';
+            }).join('') : '<tr><td colspan="7"><div class="request-empty"><span class="material-icons-round mb-2 block text-3xl">inbox</span>No requests found.</div></td></tr>';
         }
 
         function renderStats() {
-            document.getElementById('openCount').textContent = requests.filter(r => ['DRAFT','SUBMITTED','IN_APPROVAL','RETURNED_FOR_CORRECTION'].includes(r.status)).length;
-            document.getElementById('approvalCount').textContent = tasks.length;
-            document.getElementById('approvedCount').textContent = requests.filter(r => r.status === 'APPROVED').length;
-            document.getElementById('exceptionCount').textContent = requests.filter(r => ['RETURNED_FOR_CORRECTION','REJECTED'].includes(r.status)).length;
+            document.getElementById('openCount').textContent = inboxItems.filter(item => ['DRAFT','SUBMITTED','IN_APPROVAL','RETURNED_FOR_CORRECTION'].includes(item.request.status)).length;
+            document.getElementById('approvalCount').textContent = inboxItems.filter(item => item.approvalRequired || item.financeForwardRecipient).length;
+            document.getElementById('approvedCount').textContent = inboxItems.filter(item => item.request.status === 'APPROVED').length;
+            document.getElementById('exceptionCount').textContent = inboxItems.filter(item => ['RETURNED_FOR_CORRECTION','REJECTED'].includes(item.request.status)).length;
+        }
+
+        function escapeHtml(value) {
+            return String(value == null ? '' : value)
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#39;');
         }
 
         function updateTypeFields() {
@@ -1065,7 +1055,7 @@
                 requestType,
                 title: document.getElementById('title').value,
                 description: document.getElementById('description').value,
-                priority: document.getElementById('priority').value
+                priority: document.getElementById('priority').value,
             };
             if (requestType === 'STAFF_REQUISITION') {
                 data.staffRequisition = {
@@ -1141,7 +1131,7 @@
 
         document.getElementById('requestType').addEventListener('change', updateTypeFields);
         document.getElementById('staffRequisitionReason').addEventListener('change', toggleReplacementEmployee);
-        ['typeFilter','statusFilter','priorityFilter','requestSearch'].forEach(id => document.getElementById(id).addEventListener('input', renderRequests));
+        ['typeFilter','statusFilter','priorityFilter','requestSearch','inboxFilter'].forEach(id => document.getElementById(id).addEventListener('input', renderRequests));
         document.getElementById('requestForm').addEventListener('submit', async event => {
             event.preventDefault();
             const wasCreateMode = requestModalMode === 'create';

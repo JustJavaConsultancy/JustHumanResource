@@ -21,6 +21,8 @@ public class CreateWorkflowRequestCommand {
  @Valid private AssetRequestPayload assetRequest;
  @Valid private ExpenseReimbursementPayload expenseReimbursement;
  @Valid private List<Item> items = new ArrayList<>();
+ @Size(max = 50)
+ private List<@NotNull @Positive Long> copiedEmployeeIds;
  @Data public static class Item { private String famAssetId; private String itemName; private String description; private String category; @NotNull @DecimalMin(value="0.0001") private BigDecimal quantity; private String unitOfMeasure; @DecimalMin("0") private BigDecimal estimatedUnitCost; @Size(min=3,max=3) private String currency; private String vendorName; private String remarks; }
  @Data public static class StaffRequisitionPayload { @NotBlank private String jobTitle; @NotNull private Long departmentId; private Long jobGradeId; @NotNull @Min(1) private Integer numberOfPositions; @NotNull private StaffEmploymentType employmentType; @NotNull private RequisitionReason requisitionReason; @FutureOrPresent private LocalDate targetStartDate; private boolean budgeted; @DecimalMin("0") private BigDecimal estimatedMonthlyCost; @NotBlank private String reasonForHire; private Long replacementEmployeeId; }
  @Data public static class FileRequestPayload { @NotNull private FileCategory fileCategory; @NotNull private FileConfidentialityLevel confidentialityLevel; @NotNull private FileAccessType requestedAccessType; private boolean retentionRequired; @NotBlank private String purpose; }

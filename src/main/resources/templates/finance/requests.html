@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/financialOfficerLayout}">
+<head>
+    <title>Requests | JustHR</title>
+</head>
+<body>
+<section layout:fragment="content">
+    <div id="finance-requests-root" class="space-y-4">
+
+        <!-- Filters (list only: no route configuration; actions live on the detail page and are enforced server-side) -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-card border border-gray-200 dark:border-gray-700 p-4">
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+                <input id="fSearch" type="text" placeholder="Search number or title..."
+                       class="md:col-span-2 px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 focus:ring-2 focus:ring-primary-500 focus:outline-none"/>
+                <select id="fType" class="px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700"><option value="">All types</option></select>
+                <select id="fStatus" class="px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700"><option value="">All statuses</option></select>
+                <select id="fPriority" class="px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700"><option value="">All priorities</option></select>
+            </div>
+            <div class="flex items-center justify-between mt-3 text-sm text-gray-500 dark:text-gray-400">
+                <span id="resultCount">Loading...</span>
+                <button id="clearFilters" type="button" class="text-primary-600 hover:underline">Clear filters</button>
+            </div>
+        </div>
+
+        <div id="errorBox" class="hidden p-4 rounded-lg bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300 text-sm"></div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-card border border-gray-200 dark:border-gray-700 overflow-x-auto">
+            <table class="min-w-full text-sm">
+                <thead class="bg-gray-50 dark:bg-gray-700/50 text-left text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                <tr>
+                    <th class="px-4 py-3">Number</th>
+                    <th class="px-4 py-3">Title</th>
+                    <th class="px-4 py-3">Type</th>
+                    <th class="px-4 py-3">Requester</th>
+                    <th class="px-4 py-3">Department</th>
+                    <th class="px-4 py-3">Priority</th>
+                    <th class="px-4 py-3">Status</th>
+                    <th class="px-4 py-3">Submitted</th>
+                    <th class="px-4 py-3"></th>
+                </tr>
+                </thead>
+                <tbody id="rows" class="divide-y divide-gray-100 dark:divide-gray-700"></tbody>
+            </table>
+        </div>
+
+        <div class="flex items-center justify-between text-sm">
+            <button id="prevPage" type="button" class="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 disabled:opacity-40">Previous</button>
+            <span id="pageInfo" class="text-gray-500 dark:text-gray-400"></span>
+            <button id="nextPage" type="button" class="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 disabled:opacity-40">Next</button>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+          var PAGE_SIZE = 25;
+          var all = [], filtered = [], page = 0;
+          var names = { employees: {}, departments: {} };
+          var $ = function (id) { return document.getElementById(id); };
+
+          function esc(v) {
+            return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) {
+              return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+            });
+          }
+          function label(v) {
+            if (!v) return '';
+            return String(v).replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, function (c) { return c.toUpperCase(); });
+          }
+          function fmtDate(v) {
+            if (!v) return '—';
+            var d = new Date(v);
+            return isNaN(d) ? esc(v) : d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+          }
+          function statusBadge(s) {
+            var u = String(s || '').toUpperCase(), cls = 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200';
+            if (u.indexOf('APPROVED') >= 0 || u === 'CLOSED') cls = 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300';
+            else if (u.indexOf('REJECT') >= 0 || u === 'CANCELLED') cls = 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300';
+            else if (u.indexOf('RETURN') >= 0) cls = 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300';
+            else if (u.indexOf('APPROVAL') >= 0 || u === 'SUBMITTED') cls = 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300';
+            return '<span class="px-2 py-0.5 rounded-full text-xs font-medium ' + cls + '">' + esc(label(s)) + '</span>';
+          }
+          function fillSelect(id, values) {
+            var sel = $(id);
+            Array.from(new Set(values.filter(Boolean))).sort().forEach(function (v) {
+              var o = document.createElement('option');
+              o.value = v; o.textContent = label(v);
+              sel.appendChild(o);
+            });
+          }
+          function showError(msg) {
+            var b = $('errorBox'); b.textContent = msg; b.classList.remove('hidden');
+            $('resultCount').textContent = '';
+          }
+
+          function applyFilters() {
+            var q = $('fSearch').value.trim().toLowerCase();
+            var t = $('fType').value, s = $('fStatus').value, p = $('fPriority').value;
+            filtered = all.filter(function (r) {
+              if (t && r.requestType !== t) return false;
+              if (s && r.status !== s) return false;
+              if (p && r.priority !== p) return false;
+              if (q && (String(r.requestNumber || '') + ' ' + String(r.title || '')).toLowerCase().indexOf(q) < 0) return false;
+              return true;
+            });
+            page = 0;
+            render();
+          }
+
+          function render() {
+            var pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+            if (page >= pages) page = pages - 1;
+            var slice = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+            $('resultCount').textContent = filtered.length + ' of ' + all.length + ' requests';
+            $('pageInfo').textContent = 'Page ' + (page + 1) + ' of ' + pages;
+            $('prevPage').disabled = page === 0;
+            $('nextPage').disabled = page >= pages - 1;
+            if (!slice.length) {
+              $('rows').innerHTML = '<tr><td colspan="9" class="px-4 py-10 text-center text-gray-500 dark:text-gray-400">No requests match your filters.</td></tr>';
+              return;
+            }
+            $('rows').innerHTML = slice.map(function (r) {
+              var requester = names.employees[r.requesterEmployeeId] || ('Employee #' + r.requesterEmployeeId);
+              var dept = r.departmentId != null ? (names.departments[r.departmentId] || '—') : '—';
+              return '<tr class="hover:bg-gray-50 dark:hover:bg-gray-700/40">' +
+                '<td class="px-4 py-3 font-medium whitespace-nowrap">' + esc(r.requestNumber) + '</td>' +
+                '<td class="px-4 py-3 max-w-xs truncate" title="' + esc(r.title) + '">' + esc(r.title) + '</td>' +
+                '<td class="px-4 py-3 whitespace-nowrap">' + esc(label(r.requestType)) + '</td>' +
+                '<td class="px-4 py-3 whitespace-nowrap">' + esc(requester) + '</td>' +
+                '<td class="px-4 py-3 whitespace-nowrap">' + esc(dept) + '</td>' +
+                '<td class="px-4 py-3 whitespace-nowrap">' + esc(label(r.priority)) + '</td>' +
+                '<td class="px-4 py-3 whitespace-nowrap">' + statusBadge(r.status) +
+                  (r.financeOverrideRecipientId != null && r.status === 'IN_APPROVAL' ? '<div class="text-xs text-gray-500 dark:text-gray-400 mt-1">With ' + esc(names.employees[r.financeOverrideRecipientId] || ('Employee #' + r.financeOverrideRecipientId)) + '</div>' : '') + '</td>' +
+                '<td class="px-4 py-3 whitespace-nowrap">' + fmtDate(r.submittedAt || r.createdAt) + '</td>' +
+                '<td class="px-4 py-3 text-right"><a class="text-primary-600 hover:underline" href="/finance/requests/' + encodeURIComponent(r.id) + '">View</a></td>' +
+                '</tr>';
+            }).join('');
+          }
+
+          async function getJson(url) {
+            var res = await fetch(url, { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' });
+            if (res.status === 401 || res.status === 403) throw new Error('You are not authorized to view Finance requests.');
+            if (!res.ok) throw new Error('Request failed (' + res.status + ').');
+            return res.json();
+          }
+
+          async function init() {
+            try {
+              var results = await Promise.all([getJson('/api/finance/requests'), getJson('/api/finance/requests/lookups')]);
+              all = results[0] || [];
+              names = results[1] || names;
+              fillSelect('fType', all.map(function (r) { return r.requestType; }));
+              fillSelect('fStatus', all.map(function (r) { return r.status; }));
+              fillSelect('fPriority', all.map(function (r) { return r.priority; }));
+              applyFilters();
+            } catch (e) {
+              showError(e.message || 'Unable to load requests.');
+            }
+          }
+
+          ['fSearch', 'fType', 'fStatus', 'fPriority'].forEach(function (id) {
+            $(id).addEventListener(id === 'fSearch' ? 'input' : 'change', applyFilters);
+          });
+          $('clearFilters').addEventListener('click', function () {
+            $('fSearch').value = ''; $('fType').value = ''; $('fStatus').value = ''; $('fPriority').value = '';
+            applyFilters();
+          });
+          $('prevPage').addEventListener('click', function () { if (page > 0) { page--; render(); } });
+          $('nextPage').addEventListener('click', function () { page++; render(); });
+          init();
+        })();
+    </script>
+</section>
+</body>
+</html>

@@ -259,6 +259,83 @@ class PromotionMainPageBrowserTest {
         page.close();
     }
 
+    @Test
+    void focusedOverviewLoadsOnlyDashboardData() throws Exception {
+        try (Playwright playwright = Playwright.create();
+             Browser browser = playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(true))) {
+            Page page = browser.newPage();
+            String html = pageHtml("dashboard", "hr").replace("<script th:fragment=\"promotionScripts\">", """
+                    <script>
+                    document.querySelector('main').dataset.focusedPage = 'true';
+                    ['requestPanel','taskPanel','reportsPanel','configurationPanel','payrollHandoffPanel','formPanel','detailPanel'].forEach(id => document.getElementById(id).remove());
+                    </script><script>
+                    """);
+            page.setContent(html);
+            assertThat(page.locator("#pendingApprovalCount")).hasText("3");
+            assertNotRequested(page, "GET", "/api/promotions");
+            assertNotRequested(page, "GET", "/api/promotions/tasks");
+            assertNotRequested(page, "GET", "/api/promotions/configuration");
+            assertNotRequested(page, "GET", "/api/promotions/reference/employees");
+        }
+    }
+
+    @Test
+    void focusedSettingsSwitchesGroupsWithoutLosingPolicyValues() throws Exception {
+        try (Playwright playwright = Playwright.create();
+             Browser browser = playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(true))) {
+            Page page = browser.newPage();
+            String html = pageHtml("configuration", "hr").replace("<script th:fragment=\"promotionScripts\">", """
+                    <script>
+                    document.querySelector('main').dataset.focusedPage = 'true';
+                    ['dashboardPanel','requestPanel','taskPanel','reportsPanel','payrollHandoffPanel','formPanel','detailPanel'].forEach(id => document.getElementById(id).remove());
+                    </script><script>
+                    """);
+            page.setContent(html);
+            assertThat(page.locator(".promotion-local-nav")).isVisible();
+            page.locator("#configurationName").fill("Updated policy");
+            page.locator(".promotion-local-nav button", new Page.LocatorOptions().setHasText("Required documents")).click();
+            assertThat(page.locator("#requiredDocumentsBeforeSubmit")).isVisible();
+            assertThat(page.locator("#configurationName")).isHidden();
+            page.locator(".promotion-local-nav button", new Page.LocatorOptions().setHasText("Policy rules")).click();
+            assertThat(page.locator("#configurationName")).hasValue("Updated policy");
+        }
+    }
+
+    @Test
+    void focusedRequestListSearchesAndPaginatesWithoutFetchingOtherWorkAreas() throws Exception {
+        try (Playwright playwright = Playwright.create();
+             Browser browser = playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(true))) {
+            Page page = browser.newPage();
+            page.route("http://promotion.test/**", route -> route.fulfill(new com.microsoft.playwright.Route.FulfillOptions().setBody("<html></html>")));
+            page.navigate("http://promotion.test/hr/promotions/requests");
+            String html = pageHtml("requests", "hr").replace("<script th:fragment=\"promotionScripts\">", """
+                    <input id="requestSearch"><span id="requestResultCount"></span><span id="requestPageLabel"></span><button id="requestPrevious">Previous</button><button id="requestNext">Next</button>
+                    <script>
+                    document.querySelector('main').dataset.focusedPage = 'true';
+                    ['dashboardPanel','taskPanel','reportsPanel','configurationPanel','payrollHandoffPanel','formPanel','detailPanel'].forEach(id => document.getElementById(id).remove());
+                    const originalFetch = window.fetch;
+                    window.fetch = async (url, options) => {
+                        if (String(url) === '/api/promotions') {
+                            window.__requests.push({url:String(url), method:'GET'});
+                            return {ok:true, json:async () => Array.from({length:31}, (_, i) => ({id:i+1,requestNumber:'PR-'+(i+1),employeeName:'Employee '+(i+1),status:'DRAFT'}))};
+                        }
+                        return originalFetch(url, options);
+                    };
+                    </script><script>
+                    """);
+            page.setContent(html);
+            assertThat(page.locator("#requestPageLabel")).hasText("Page 1 of 3");
+            assertThat(page.locator("#promotionTableBody tr")).hasCount(15);
+            page.locator("#requestNext").click();
+            assertThat(page.locator("#requestPageLabel")).hasText("Page 2 of 3");
+            page.locator("#requestSearch").fill("Employee 31");
+            assertThat(page.locator("#promotionTableBody tr")).hasCount(1);
+            assertThat(page.locator("#requestResultCount")).hasText("1 requests");
+            assertNotRequested(page, "GET", "/api/promotions/dashboard");
+            assertNotRequested(page, "GET", "/api/promotions/tasks");
+        }
+    }
+
     private String pageHtml(String initialSection) throws Exception {
         return pageHtml(initialSection, "admin");
     }

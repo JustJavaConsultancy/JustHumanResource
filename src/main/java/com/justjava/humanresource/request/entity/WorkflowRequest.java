@@ -36,4 +36,19 @@ public class WorkflowRequest extends BaseEntity {
     private Long freeRouteCurrentApproverEmployeeId;
     private LocalDateTime freeRouteStartedAt;
     private LocalDateTime freeRouteLastForwardedAt;
+
+    // Finance override state (Step 3). Event history lives in WorkflowRequestFinanceAction.
+    /** Current Finance-forward recipient; null when no Finance handoff is pending. */
+    private Long financeOverrideRecipientId;
+
+    /** True once Finance has approved or rejected the request. A return is not final. */
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private boolean financeDecisionConsumed = false;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private FinanceActionType financeDecisionType;
+
+    private Long financeDecisionByEmployeeId;
+    private LocalDateTime financeDecisionAt;
 }

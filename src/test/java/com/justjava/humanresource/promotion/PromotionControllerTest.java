@@ -16,7 +16,7 @@ class PromotionControllerTest {
     @Test
     void roleOwnedPromotionRoutesRenderSharedPageWithRoleContext() {
         assertPage("promotion/manage", "dashboard", "admin");
-        assertPage("promotion/manage", "dashboard", "hr");
+        assertPage("promotion/hr", "dashboard", "hr");
         assertPage("promotion/finance", "approvals", "finance");
         assertPage("promotion/executive", "approvals", "executive");
         assertPage("promotion/manager", "approvals", "manager");
@@ -56,11 +56,29 @@ class PromotionControllerTest {
         assertEquals("redirect:/", controller.getPromotions(new ConcurrentModel()));
     }
 
+    @Test
+    void hrPagesExposeOnlyTheirSelectedWorkArea() {
+        for (String section : new String[]{"requests", "approvals", "reports", "payroll-handoffs", "settings"}) {
+            var model = new ConcurrentModel();
+            assertEquals("promotion/hr", controller.hrSection(section, model));
+            assertEquals(true, model.getAttribute("focusedPromotionPage"));
+            assertEquals(section.equals("settings") ? "configuration" : section.equals("payroll-handoffs") ? "payrollHandoffs" : section, model.getAttribute("initialSection"));
+        }
+        var model = new ConcurrentModel();
+        assertEquals("promotion/hr", controller.hrNewRequest(model));
+        assertEquals("new", model.getAttribute("initialSection"));
+        assertEquals("promotion/hr", controller.hrRequestDetail(42L, model));
+        assertEquals(42L, model.getAttribute("promotionRequestId"));
+        assertEquals("detail", model.getAttribute("initialSection"));
+        assertEquals("promotion/hr", controller.hrEditRequest(42L, model));
+        assertEquals("edit", model.getAttribute("initialSection"));
+    }
+
     private void assertPage(String expectedView, String expectedSection, String expectedRole) {
         ConcurrentModel model = new ConcurrentModel();
         String actualView = switch (expectedRole) {
             case "admin" -> controller.adminPromotions(null, model);
-            case "hr" -> controller.hrPromotions(null, model);
+            case "hr" -> String.valueOf(controller.hrPromotions(null, model));
             case "finance" -> controller.financePromotions(null, model);
             case "executive" -> controller.executivePromotions(null, model);
             case "manager" -> controller.managerPromotions(null, model);
@@ -91,8 +109,7 @@ class PromotionControllerTest {
     void roleOwnedRoutesPreserveAllowedRequestedSection() {
         ConcurrentModel model = new ConcurrentModel();
 
-        assertEquals("promotion/manage", controller.hrPromotions("configuration", model));
-        assertEquals("configuration", model.getAttribute("initialSection"));
+        assertEquals("/hr/promotions/settings", ((org.springframework.web.servlet.view.RedirectView) controller.hrPromotions("configuration", model)).getUrl());
     }
 
     @Test

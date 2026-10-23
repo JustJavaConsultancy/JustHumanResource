@@ -63,7 +63,7 @@
             <p id="statOpen" class="mt-1 text-2xl font-bold">0</p>
         </div>
         <div class="mr-card mr-stat">
-            <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Pending My Approval</p>
+            <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Needs My Action</p>
             <p id="statApproval" class="mt-1 text-2xl font-bold">0</p>
         </div>
         <div class="mr-card mr-stat">
@@ -98,17 +98,14 @@
         </div>
     </div>
 
-    <!-- Tabs: My Requests / Approvals -->
+    <!-- Inbox filters -->
     <div class="flex gap-2 border-b border-slate-200 dark:border-slate-700">
-        <button id="tabMine" onclick="switchTab('mine')" class="px-3 py-2 text-sm font-semibold border-b-2 border-primary text-primary">My Requests</button>
-        <button id="tabApprovals" onclick="switchTab('approvals')" class="px-3 py-2 text-sm font-semibold border-b-2 border-transparent text-slate-500">Pending Approvals <span id="approvalCountPill" class="ml-1 hidden text-[10px] bg-amber-100 text-amber-700 rounded-full px-1.5 py-0.5">0</span></button>
+        <button id="tabMine" onclick="switchTab('mine')" class="px-3 py-2 text-sm font-semibold border-b-2 border-primary text-primary">All requests</button>
+        <button id="tabApprovals" onclick="switchTab('approvals')" class="px-3 py-2 text-sm font-semibold border-b-2 border-transparent text-slate-500">Needs my action <span id="approvalCountPill" class="ml-1 hidden text-[10px] bg-amber-100 text-amber-700 rounded-full px-1.5 py-0.5">0</span></button>
     </div>
 
     <!-- My requests list -->
     <div id="mrRequestsList" class="space-y-2"></div>
-
-    <!-- Approvals list -->
-    <div id="mrTasksList" class="space-y-2 hidden"></div>
 
     <!-- FAB: new request -->
     <button type="button" onclick="openRequestSheet()" class="mr-fab">
@@ -146,7 +143,6 @@
                 <label class="mr-field-label">Description</label>
                 <textarea id="description" rows="2" class="mr-input"></textarea>
             </div>
-
             <!-- Staff Requisition -->
             <div id="staffFields" class="hidden space-y-3">
                 <p class="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1"><span class="material-symbols-outlined text-primary text-base">groups</span>Staff Requisition</p>
@@ -232,8 +228,9 @@
     <script>
         const mrApi = '/api/requests';
         const mrPageBase = '/mobile/employee/requests';
-        let mrRequests = [], mrTasks = [], mrTypes = [], mrStaffOptions = {}, mrFileOptions = {}, mrExpenseOptions = {}, mrContext = {}, mrAssetCatalog = [], mrAssetCatalogLoaded = false;
+        let mrRequests = [], mrTypes = [], mrStaffOptions = {}, mrFileOptions = {}, mrExpenseOptions = {}, mrContext = {}, mrAssetCatalog = [], mrAssetCatalogLoaded = false;
         let mrMode = 'create', mrEditingId = null;
+        let mrActiveInboxFilter = 'mine';
 
         function mrEscape(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
         function fmtType(v) { return (v || '').replaceAll('_', ' '); }
@@ -266,16 +263,15 @@
 
         async function loadData() {
             try {
-                [mrRequests, mrTasks, mrTypes, mrStaffOptions, mrFileOptions, mrExpenseOptions, mrContext] = await Promise.all([
-                    mrJson(mrApi + '/visible'),
-                    mrJson(mrApi + '/approvals/tasks'),
+                [mrRequests, mrTypes, mrStaffOptions, mrFileOptions, mrExpenseOptions, mrContext] = await Promise.all([
+                    mrJson(mrApi + '/inbox'),
                     mrJson(mrApi + '/types'),
                     mrJson(mrApi + '/staff-requisition-options'),
                     mrJson(mrApi + '/file-options'),
                     mrJson(mrApi + '/expense-reimbursement-options'),
                     mrJson(mrApi + '/context')
                 ]);
-                mrRequests = mrRequests || []; mrTasks = mrTasks || []; mrTypes = mrTypes || [];
+                mrRequests = mrRequests || []; mrTypes = mrTypes || [];
                 mrStaffOptions = mrStaffOptions || {}; mrFileOptions = mrFileOptions || {};
                 mrExpenseOptions = mrExpenseOptions || {}; mrContext = mrContext || {};
                 renderTypeOptions();
@@ -283,7 +279,7 @@
                 renderFileOptions();
                 renderExpenseOptions();
                 renderRequests();
-                renderTasks();
+                renderInboxCounts();
                 renderStats();
             } catch (e) { showToast('Load failed: ' + (e.message || e)); }
         }
@@ -341,16 +337,31 @@
             const status = document.getElementById('mrStatusFilter').value;
             const priority = document.getElementById('mrPriorityFilter').value;
             const search = document.getElementById('mrSearch').value.toLowerCase();
-            const filtered = mrRequests.filter(r =>
+            const filtered = mrRequests.filter(item => {
+                const r = item.request;
+                return (mrActiveInboxFilter !== 'approvals' || item.approvalRequired || item.financeForwardRecipient) &&
                 (!type || r.requestType === type) &&
                 (!status || r.status === status) &&
                 (!priority || r.priority === priority) &&
                 (!search || (r.requestNumber || '').toLowerCase().includes(search) || (r.title || '').toLowerCase().includes(search))
-            );
+            });
             const wrap = document.getElementById('mrRequestsList');
             if (!filtered.length) { wrap.innerHTML = `<div class="mr-empty"><span class="material-symbols-outlined text-3xl">inbox</span><p class="mt-2 text-sm">No requests found.</p></div>`; return; }
-            wrap.innerHTML = filtered.map(r => `
-                <a href="${mrPageBase}/${r.id}" class="mr-card block p-3 space-y-2 active:bg-slate-50 dark:active:bg-slate-800">
+            wrap.innerHTML = filtered.map(item => {
+                const r = item.request;
+                const roles = [
+                    item.requester ? '<span class="mr-badge mr-badge-neutral">Requester</span>' : '',
+                    item.copied ? '<span class="mr-badge mr-badge-info">Copied</span>' : '',
+                    item.approvalRequired ? '<span class="mr-badge mr-badge-warning">Approval required</span>' : '',
+                    item.financeForwardRecipient ? '<span class="mr-badge mr-badge-success">Finance-forward recipient</span>' : ''
+                ].filter(Boolean).join(' ');
+                const taskActions = (item.approvalTasks || []).map(task => `
+                    <button type="button" onclick="event.stopPropagation(); openApprovalSheet('${mrEscape(task.taskId)}','approve')" class="text-xs py-2 px-3 rounded-lg bg-green-600 text-white font-semibold">Approve</button>
+                    <button type="button" onclick="event.stopPropagation(); openApprovalSheet('${mrEscape(task.taskId)}','reject')" class="text-xs py-2 px-3 rounded-lg bg-red-600 text-white font-semibold">Reject</button>
+                    <button type="button" onclick="event.stopPropagation(); openApprovalSheet('${mrEscape(task.taskId)}','return')" class="text-xs py-2 px-3 rounded-lg bg-orange-600 text-white font-semibold">Return</button>
+                `).join('');
+                return `
+                <div class="mr-card block p-3 space-y-2">
                     <div class="flex items-start justify-between gap-2">
                         <div class="min-w-0 flex-1">
                             <p class="text-[10px] text-slate-500 font-semibold">${mrEscape(r.requestNumber || '')} · ${mrEscape(fmtType(r.requestType))}</p>
@@ -358,61 +369,44 @@
                         </div>
                         ${mrBadge(r.status)}
                     </div>
+                    <div class="flex flex-wrap gap-1">${roles}</div>
                     <div class="flex items-center justify-between text-[11px] text-slate-500">
                         <span>Priority: ${mrEscape(r.priority || 'NORMAL')}</span>
-                        ${canEditRequestRow(r) ? `<button type="button" onclick="event.preventDefault(); event.stopPropagation(); openEditRequestSheet(${r.id})" class="text-primary font-semibold flex items-center gap-1"><span class="material-symbols-outlined text-sm">edit</span>Edit</button>` : ''}
-                    </div>
-                </a>`).join('');
-        }
-
-        function renderTasks() {
-            const pill = document.getElementById('approvalCountPill');
-            if (mrTasks.length) { pill.classList.remove('hidden'); pill.textContent = mrTasks.length; } else { pill.classList.add('hidden'); }
-            const wrap = document.getElementById('mrTasksList');
-            if (!mrTasks.length) { wrap.innerHTML = `<div class="mr-empty"><span class="material-symbols-outlined text-3xl">task_alt</span><p class="mt-2 text-sm">No pending approvals.</p></div>`; return; }
-            wrap.innerHTML = mrTasks.map(t => {
-                const rid = t.variables && t.variables.workflowRequestId ? t.variables.workflowRequestId : '';
-                const matched = rid ? mrRequests.find(r => Number(r.id) === Number(rid)) : null;
-                const isFree = matched && matched.approvalRouteType === 'FREE_ROUTE';
-                return `<div class="mr-card p-3 space-y-2">
-                    <div class="flex items-start justify-between gap-2">
-                        <div class="min-w-0 flex-1">
-                            <p class="text-[10px] text-slate-500 font-semibold">${rid ? `Request #${mrEscape(rid)}` : ''}${isFree ? ' · <span class="mr-badge mr-badge-info">FREE ROUTE</span>' : ''}</p>
-                            <p class="text-sm font-semibold truncate">${mrEscape(t.taskName || t.taskDefinitionKey || '')}</p>
-                            <p class="text-[11px] text-slate-500">${mrEscape((t.createdTime || '').replace('T', ' '))}</p>
+                        <div class="flex items-center gap-3">
+                            <a href="${mrPageBase}/${encodeURIComponent(r.id)}" class="text-primary font-semibold">Open</a>
+                            ${canEditRequestRow(r) ? `<button type="button" onclick="openEditRequestSheet(${r.id})" class="text-primary font-semibold flex items-center gap-1"><span class="material-symbols-outlined text-sm">edit</span>Edit</button>` : ''}
                         </div>
-                        ${rid ? `<a href="${mrPageBase}/${rid}" class="text-primary text-xs font-semibold">Open</a>` : ''}
                     </div>
-                    <div class="flex gap-2">
-                        <button onclick="openApprovalSheet('${mrEscape(t.taskId)}','approve')" class="flex-1 text-xs py-2 rounded-lg bg-green-600 text-white font-semibold">Approve</button>
-                        <button onclick="openApprovalSheet('${mrEscape(t.taskId)}','reject')" class="flex-1 text-xs py-2 rounded-lg bg-red-600 text-white font-semibold">Reject</button>
-                        <button onclick="openApprovalSheet('${mrEscape(t.taskId)}','return')" class="flex-1 text-xs py-2 rounded-lg bg-orange-600 text-white font-semibold">Return</button>
-                    </div>
+                    ${taskActions ? `<div class="flex flex-wrap gap-2 border-t border-slate-100 pt-2 dark:border-slate-700">${taskActions}</div>` : ''}
                 </div>`;
             }).join('');
         }
 
+        function renderInboxCounts() {
+            const pill = document.getElementById('approvalCountPill');
+            const approvalCount = mrRequests.filter(item => item.approvalRequired || item.financeForwardRecipient).length;
+            if (approvalCount) { pill.classList.remove('hidden'); pill.textContent = approvalCount; } else { pill.classList.add('hidden'); }
+        }
+
         function renderStats() {
-            document.getElementById('statOpen').textContent = mrRequests.filter(r => ['DRAFT','SUBMITTED','IN_APPROVAL','RETURNED_FOR_CORRECTION'].includes(r.status)).length;
-            document.getElementById('statApproval').textContent = mrTasks.length;
-            document.getElementById('statApproved').textContent = mrRequests.filter(r => r.status === 'APPROVED').length;
-            document.getElementById('statException').textContent = mrRequests.filter(r => ['RETURNED_FOR_CORRECTION','REJECTED'].includes(r.status)).length;
+            document.getElementById('statOpen').textContent = mrRequests.filter(item => ['DRAFT','SUBMITTED','IN_APPROVAL','RETURNED_FOR_CORRECTION'].includes(item.request.status)).length;
+            document.getElementById('statApproval').textContent = mrRequests.filter(item => item.approvalRequired || item.financeForwardRecipient).length;
+            document.getElementById('statApproved').textContent = mrRequests.filter(item => item.request.status === 'APPROVED').length;
+            document.getElementById('statException').textContent = mrRequests.filter(item => ['RETURNED_FOR_CORRECTION','REJECTED'].includes(item.request.status)).length;
         }
 
         function switchTab(t) {
-            const mine = document.getElementById('mrRequestsList');
-            const tasks = document.getElementById('mrTasksList');
             const tabMine = document.getElementById('tabMine');
             const tabApp = document.getElementById('tabApprovals');
+            mrActiveInboxFilter = t;
             if (t === 'mine') {
-                mine.classList.remove('hidden'); tasks.classList.add('hidden');
                 tabMine.classList.add('text-primary','border-primary'); tabMine.classList.remove('text-slate-500','border-transparent');
                 tabApp.classList.remove('text-primary','border-primary'); tabApp.classList.add('text-slate-500','border-transparent');
             } else {
-                mine.classList.add('hidden'); tasks.classList.remove('hidden');
                 tabApp.classList.add('text-primary','border-primary'); tabApp.classList.remove('text-slate-500','border-transparent');
                 tabMine.classList.remove('text-primary','border-primary'); tabMine.classList.add('text-slate-500','border-transparent');
             }
+            renderRequests();
         }
 
         function updateTypeFields() {
@@ -604,7 +598,7 @@
                 requestType: type,
                 priority: document.getElementById('priority').value,
                 title: document.getElementById('title').value,
-                description: document.getElementById('description').value
+                description: document.getElementById('description').value,
             };
             if (type === 'STAFF_REQUISITION') {
                 payload.staffRequisition = {

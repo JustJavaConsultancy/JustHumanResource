@@ -98,6 +98,42 @@
         </div>
     </div>
 
+    <!-- Copied employees -->
+    <div class="rd-card">
+        <div class="rd-head justify-between">
+            <span class="flex items-center gap-2"><span class="material-symbols-outlined text-primary text-base">group</span>Copied employees</span>
+            <button id="rdManageCopiedEmployeesButton" type="button" onclick="rdOpenCopiedEmployeeManager()" class="rd-secondary hidden">Manage</button>
+        </div>
+        <div class="rd-body">
+            <p class="mb-2 text-[11px] text-slate-500">Being copied allows viewing and recommending only; it does not grant approval authority.</p>
+            <ul id="rdCopiedEmployees" class="space-y-2 text-xs"></ul>
+            <div id="rdCopiedEmployeeManager" class="mt-3 hidden border-t border-slate-200 pt-3 dark:border-slate-700">
+                <label for="rdCopiedEmployeeSearch" class="text-xs font-semibold">Choose employees to copy</label>
+                <p class="mt-1 text-[11px] text-slate-500">Select up to 50 employees. Changes are available while this request is a draft or returned for correction.</p>
+                <input id="rdCopiedEmployeeSearch" type="search" class="rd-input mt-2" placeholder="Search employees">
+                <p id="rdCopiedEmployeeManagerError" class="mt-2 hidden text-xs text-red-600" role="alert"></p>
+                <div id="rdCopiedEmployeeChoices" class="mt-2 max-h-56 space-y-2 overflow-y-auto"></div>
+                <div class="mt-3 flex flex-wrap gap-2">
+                    <button id="rdSaveCopiedEmployeesButton" type="button" onclick="rdSaveCopiedEmployees()" class="rd-primary">Save</button>
+                    <button type="button" onclick="rdCloseCopiedEmployeeManager()" class="rd-secondary">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="rd-card">
+        <div class="rd-head"><span class="material-symbols-outlined text-primary text-base">recommend</span>Recommendations</div>
+        <div class="rd-body space-y-2 text-xs">
+            <form id="rdRecommendationForm" class="hidden space-y-2">
+                <label for="rdRecommendationText" class="rd-field-label">Add a recommendation</label>
+                <textarea id="rdRecommendationText" rows="3" maxlength="3000" class="rd-input" placeholder="Share a recommendation for this request"></textarea>
+                <p id="rdRecommendationError" class="hidden text-red-600" role="alert"></p>
+                <button class="rd-primary w-full">Submit Recommendation</button>
+            </form>
+            <ul id="rdRecommendations" class="space-y-2"></ul>
+        </div>
+    </div>
+
     <!-- Comments -->
     <div class="rd-card">
         <div class="rd-head"><span class="material-symbols-outlined text-primary text-base">comment</span>Comments</div>
@@ -174,6 +210,7 @@
         const rdApi = '/api/requests';
         const rdRequestId = Number(document.getElementById('rdRequestId').value);
         let rdDetail = null, rdContext = null, rdTasks = [], rdEmpNames = {};
+        let rdCopiedEmployeeOptions = [], rdSelectedCopiedEmployeeIds = new Set();
 
         function rdText(v) { return v == null || v === '' ? '-' : v; }
         function rdFmt(v) { return (v || '').replaceAll('_', ' '); }
@@ -215,6 +252,12 @@
             if (r.status === 'DRAFT') return true;
             if (r.status === 'RETURNED_FOR_CORRECTION') return rdWasFreeRoute();
             return false;
+        }
+        const RD_FINANCE_FORWARD = 'FINANCE_FORWARD';
+        function rdIsFinanceRecipient() {
+            return !!(rdDetail && rdContext && rdDetail.request.financeOverrideRecipientId != null
+                && Number(rdDetail.request.financeOverrideRecipientId) === Number(rdContext.employeeId)
+                && rdDetail.request.status === 'IN_APPROVAL');
         }
         function rdCanEditAttachments() { return rdIsOwner() && ['DRAFT','SUBMITTED','RETURNED_FOR_CORRECTION'].includes(rdDetail.request.status); }
         function rdCanRemoveAttachments() { return rdIsOwner() && ['DRAFT','RETURNED_FOR_CORRECTION'].includes(rdDetail.request.status); }
@@ -274,7 +317,11 @@
             const err = document.getElementById('rdApprovalError');
             if (action !== 'approve' && !comment) { err.textContent = 'A comment is required.'; err.classList.remove('hidden'); return; }
             try {
-                await rdJson(`${rdApi}/approvals/${action}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({taskId, comment}) });
+                if (taskId === RD_FINANCE_FORWARD) {
+                    await rdJson(`${rdApi}/finance-forward/${rdRequestId}/${action}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({comment}) });
+                } else {
+                    await rdJson(`${rdApi}/approvals/${action}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({taskId, comment}) });
+                }
                 rdCloseApproval();
                 rdShowToast(`Request ${action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : 'returned'}.`);
                 await rdLoad();
@@ -368,6 +415,8 @@
             rdRenderItems();
             rdRenderAttachments();
             rdRenderApprovals();
+            rdRenderCopiedEmployees();
+            rdRenderRecommendations();
             rdRenderComments();
             rdRenderActivity();
             rdRenderActions();
@@ -437,6 +486,108 @@
                 rows.map(c => `<li class="border border-slate-200 dark:border-slate-700 rounded-lg p-2">${rdEsc(c.comment)}</li>`).join('')
                 : '<li class="text-slate-400">No comments.</li>';
         }
+        function rdRecommendationDate(value) {
+            if (!value) return '—';
+            const date = new Date(value);
+            return Number.isNaN(date.getTime()) ? rdEsc(value) :
+                rdEsc(date.toLocaleString(undefined, {year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'}));
+        }
+        function rdRenderCopiedEmployees() {
+            const employees = rdDetail.copiedEmployees || [];
+            document.getElementById('rdCopiedEmployees').innerHTML = employees.length
+                ? employees.map(employee => `<li class="rounded-lg border border-slate-200 p-2 dark:border-slate-700">${rdEsc(employee.label || `Employee #${employee.value}`)}</li>`).join('')
+                : '<li class="text-slate-400">No copied employees.</li>';
+            document.getElementById('rdManageCopiedEmployeesButton').classList.toggle('hidden', !rdDetail.canManageCopiedEmployees);
+        }
+        function rdRenderCopiedEmployeeChoices() {
+            const search = document.getElementById('rdCopiedEmployeeSearch').value.trim().toLowerCase();
+            const availableIds = new Set(rdCopiedEmployeeOptions.map(option => Number(option.value)));
+            const unavailableSelected = (rdDetail.copiedEmployees || [])
+                .filter(employee => rdSelectedCopiedEmployeeIds.has(Number(employee.value)) && !availableIds.has(Number(employee.value)))
+                .map(employee => ({value: employee.value, label: `${employee.label || `Employee #${employee.value}`} (unavailable)`}));
+            const options = [...rdCopiedEmployeeOptions, ...unavailableSelected]
+                .filter(option => String(option.label || '').toLowerCase().includes(search));
+            document.getElementById('rdCopiedEmployeeChoices').innerHTML = options.length
+                ? options.map(option => {
+                    const id = Number(option.value);
+                    return `<label class="flex cursor-pointer items-start gap-2 rounded-lg border border-slate-200 p-2 dark:border-slate-700">
+                        <input type="checkbox" class="mt-0.5 rd-copied-employee-choice" value="${id}" ${rdSelectedCopiedEmployeeIds.has(id) ? 'checked' : ''}>
+                        <span class="text-xs">${rdEsc(option.label)}</span>
+                    </label>`;
+                }).join('')
+                : '<p class="text-slate-400">No employees match your search.</p>';
+        }
+        async function rdOpenCopiedEmployeeManager() {
+            const error = document.getElementById('rdCopiedEmployeeManagerError');
+            error.classList.add('hidden');
+            document.getElementById('rdCopiedEmployeeManager').classList.remove('hidden');
+            rdSelectedCopiedEmployeeIds = new Set((rdDetail.copiedEmployees || []).map(employee => Number(employee.value)));
+            document.getElementById('rdCopiedEmployeeSearch').value = '';
+            try {
+                rdCopiedEmployeeOptions = await rdJson(`${rdApi}/copy-employees/options`);
+                rdRenderCopiedEmployeeChoices();
+            } catch (e) {
+                error.textContent = e.message || String(e);
+                error.classList.remove('hidden');
+            }
+        }
+        function rdCloseCopiedEmployeeManager() {
+            document.getElementById('rdCopiedEmployeeManager').classList.add('hidden');
+            rdSelectedCopiedEmployeeIds = new Set();
+        }
+        async function rdSaveCopiedEmployees() {
+            const error = document.getElementById('rdCopiedEmployeeManagerError');
+            const saveButton = document.getElementById('rdSaveCopiedEmployeesButton');
+            error.classList.add('hidden');
+            saveButton.disabled = true;
+            try {
+                await rdJson(`${rdApi}/${rdRequestId}/copied-employees`, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({employeeIds: [...rdSelectedCopiedEmployeeIds]})
+                });
+                rdCloseCopiedEmployeeManager();
+                await rdLoad();
+                rdShowToast('Copied employees updated.');
+            } catch (e) {
+                error.textContent = e.message || String(e);
+                error.classList.remove('hidden');
+            } finally {
+                saveButton.disabled = false;
+            }
+        }
+        document.getElementById('rdCopiedEmployeeSearch').addEventListener('input', rdRenderCopiedEmployeeChoices);
+        document.getElementById('rdCopiedEmployeeChoices').addEventListener('change', event => {
+            if (!event.target.matches('.rd-copied-employee-choice')) return;
+            const employeeId = Number(event.target.value);
+            if (event.target.checked) {
+                if (rdSelectedCopiedEmployeeIds.size >= 50) {
+                    event.target.checked = false;
+                    const error = document.getElementById('rdCopiedEmployeeManagerError');
+                    error.textContent = 'No more than 50 employees can be copied on a request.';
+                    error.classList.remove('hidden');
+                    return;
+                }
+                rdSelectedCopiedEmployeeIds.add(employeeId);
+            } else {
+                rdSelectedCopiedEmployeeIds.delete(employeeId);
+            }
+            document.getElementById('rdCopiedEmployeeManagerError').classList.add('hidden');
+            rdRenderCopiedEmployeeChoices();
+        });
+        function rdRenderRecommendations() {
+            const rows = rdDetail.recommendations || [];
+            document.getElementById('rdRecommendationForm').classList.toggle('hidden', !rdDetail.canRecommend);
+            document.getElementById('rdRecommendations').innerHTML = rows.length
+                ? rows.map(recommendation => `<li class="rounded-lg border border-slate-200 p-2 dark:border-slate-700">
+                    <div class="mb-1 flex flex-wrap justify-between gap-1 text-[10px] text-slate-500">
+                        <span>${rdEsc(recommendation.authorEmployeeName || `Employee #${recommendation.authorEmployeeId}`)}</span>
+                        <time>${rdRecommendationDate(recommendation.createdAt)}</time>
+                    </div>
+                    <p class="whitespace-pre-line">${rdEsc(recommendation.text)}</p>
+                </li>`).join('')
+                : '<li class="text-slate-400">No recommendations yet.</li>';
+        }
         function rdRenderActivity() {
             const rows = rdDetail.activities || [];
             document.getElementById('rdActivity').innerHTML = rows.length ?
@@ -445,13 +596,19 @@
         }
         function rdRenderActions() {
             const r = rdDetail.request;
-            const task = rdTasks.find(t => t.variables && Number(t.variables.workflowRequestId) === rdRequestId);
+            const financeHandoff = r.financeOverrideRecipientId != null;
+            const task = financeHandoff ? null : rdTasks.find(t => t.variables && Number(t.variables.workflowRequestId) === rdRequestId);
             const btns = [];
             if (rdCanSubmit()) btns.push(`<button onclick="rdSubmitRequest()" class="rd-primary">Submit</button>`);
             if (rdCanSendFree()) btns.push(`<button onclick="rdOpenFree('send')" class="rd-secondary">Send To</button>`);
             if (rdIsOwner() && rdCanEditAttachments()) btns.push(`<a href="/mobile/employee/requests?edit=${r.id}" class="rd-secondary">Edit</a>`);
             if (rdIsOwner() && !['APPROVED','REJECTED','CANCELLED','CLOSED'].includes(r.status)) btns.push(`<button onclick="rdCancelRequest()" class="rd-danger">Cancel</button>`);
             if (rdContext && rdContext.hrAdmin && r.status === 'APPROVED') btns.push(`<button onclick="rdCloseRequest()" class="rd-secondary">Close</button>`);
+            if (rdIsFinanceRecipient()) {
+                btns.push(`<button onclick="rdOpenApproval('${RD_FINANCE_FORWARD}','approve')" class="rd-success">Approve</button>`);
+                btns.push(`<button onclick="rdOpenApproval('${RD_FINANCE_FORWARD}','reject')" class="rd-danger">Reject</button>`);
+                btns.push(`<button onclick="rdOpenApproval('${RD_FINANCE_FORWARD}','return')" class="rd-warning">Return</button>`);
+            }
             if (task) {
                 btns.push(`<button onclick="rdOpenApproval('${rdEsc(task.taskId)}','approve')" class="rd-success">Approve</button>`);
                 btns.push(`<button onclick="rdOpenApproval('${rdEsc(task.taskId)}','reject')" class="rd-danger">Reject</button>`);
@@ -512,6 +669,23 @@
                 e.target.reset();
                 await rdLoad();
             } catch (err) { rdShowToast(err.message || String(err)); }
+        });
+        document.getElementById('rdRecommendationForm').addEventListener('submit', async e => {
+            e.preventDefault();
+            const error = document.getElementById('rdRecommendationError');
+            error.classList.add('hidden');
+            try {
+                await rdJson(`${rdApi}/${rdRequestId}/recommendations`, {
+                    method:'POST',
+                    headers:{'Content-Type':'application/json'},
+                    body: JSON.stringify({text: document.getElementById('rdRecommendationText').value})
+                });
+                e.target.reset();
+                await rdLoad();
+            } catch (err) {
+                error.textContent = err.message || String(err);
+                error.classList.remove('hidden');
+            }
         });
 
         rdLoad();

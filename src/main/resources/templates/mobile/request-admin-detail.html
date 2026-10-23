@@ -104,6 +104,34 @@
         </div>
     </div>
 
+    <!-- Copied employees -->
+    <div class="rd-card mb-2">
+        <div class="rd-head">
+            <span class="material-symbols-outlined text-blue-600 text-base">group</span>
+            <span class="font-semibold text-sm">Copied employees</span>
+        </div>
+        <div class="rd-body">
+            <p class="mb-2 text-xs text-gray-500">Being copied allows viewing and recommending only; it does not grant approval authority.</p>
+            <ul id="copiedEmployees" class="space-y-2 text-sm"></ul>
+        </div>
+    </div>
+
+    <div class="rd-card mb-2">
+        <div class="rd-head">
+            <span class="material-symbols-outlined text-blue-600 text-base">recommend</span>
+            <span class="font-semibold text-sm">Recommendations</span>
+        </div>
+        <div class="rd-body">
+            <form id="recommendationForm" class="hidden space-y-2 mb-3">
+                <label for="recommendationText" class="text-sm font-medium">Add a recommendation</label>
+                <textarea id="recommendationText" rows="3" maxlength="3000" class="rd-input" placeholder="Share a recommendation for this request"></textarea>
+                <p id="recommendationError" class="hidden text-sm text-red-600" role="alert"></p>
+                <button class="w-full py-2.5 bg-blue-900 text-white rounded-xl text-sm font-bold">Submit Recommendation</button>
+            </form>
+            <ul id="recommendations" class="text-sm space-y-2"></ul>
+        </div>
+    </div>
+
     <!-- Comments -->
     <div class="rd-card mb-2">
         <div class="rd-head">
@@ -211,6 +239,8 @@
             renderItems();
             renderAttachments();
             renderApprovals();
+            renderCopiedEmployees();
+            renderRecommendations();
             renderComments();
             renderActivity();
             renderActions();
@@ -306,6 +336,31 @@
                 ? rows.map(c => `<li class="bg-gray-50 rounded-lg p-3 text-sm">${c.comment}</li>`).join('')
                 : '<li class="text-gray-400">No comments.</li>';
         }
+        function recommendationDate(value) {
+            if (!value) return '—';
+            const date = new Date(value);
+            return Number.isNaN(date.getTime()) ? escapeHtml(value) :
+                escapeHtml(date.toLocaleString(undefined, {year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'}));
+        }
+        function renderCopiedEmployees() {
+            const employees = detail.copiedEmployees || [];
+            document.getElementById('copiedEmployees').innerHTML = employees.length
+                ? employees.map(employee => `<li class="border border-gray-100 rounded-lg p-2">${escapeHtml(employee.label || `Employee #${employee.value}`)}</li>`).join('')
+                : '<li class="text-gray-400">No copied employees.</li>';
+        }
+        function renderRecommendations() {
+            const rows = detail.recommendations || [];
+            document.getElementById('recommendationForm').classList.toggle('hidden', !detail.canRecommend);
+            document.getElementById('recommendations').innerHTML = rows.length
+                ? rows.map(recommendation => `<li class="border border-gray-100 rounded-lg p-3">
+                    <div class="mb-1 flex flex-wrap justify-between gap-2 text-xs text-gray-500">
+                        <span>${escapeHtml(recommendation.authorEmployeeName || `Employee #${recommendation.authorEmployeeId}`)}</span>
+                        <time>${recommendationDate(recommendation.createdAt)}</time>
+                    </div>
+                    <p class="whitespace-pre-line">${escapeHtml(recommendation.text)}</p>
+                </li>`).join('')
+                : '<li class="text-gray-400">No recommendations yet.</li>';
+        }
 
         function renderActivity() {
             const rows = detail.activities || [];
@@ -378,6 +433,22 @@
                 ev.target.reset();
                 await load();
             } catch (e) { alert(e.message); }
+        });
+        document.getElementById('recommendationForm').addEventListener('submit', async ev => {
+            ev.preventDefault();
+            const error = document.getElementById('recommendationError');
+            error.classList.add('hidden');
+            try {
+                await json(`${api}/${requestId}/recommendations`, {
+                    method:'POST', headers:{'Content-Type':'application/json'},
+                    body: JSON.stringify({text: document.getElementById('recommendationText').value})
+                });
+                ev.target.reset();
+                await load();
+            } catch (e) {
+                error.textContent = e.message || String(e);
+                error.classList.remove('hidden');
+            }
         });
 
         document.addEventListener('DOMContentLoaded', load);
