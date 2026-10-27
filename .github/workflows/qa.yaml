@@ -47,23 +47,38 @@ jobs:
             -Djib.to.auth.username=${{ secrets.DOCKER_USERNAME }} \
             -Djib.to.auth.password=${{ secrets.DOCKER_PASSWORD }}
 
+  
   deploy:
     name: Deploy to Coolify on Contabo
     runs-on: ubuntu-latest
     needs: build-image
+  
     steps:
+      - name: Update Coolify image tag
+        env:
+          COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+          COOLIFY_URL: ${{ secrets.COOLIFY_URL }}
+          COOLIFY_APP_UUID_QA: ${{ secrets.COOLIFY_APP_UUID_QA }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+  
+          curl --fail-with-body --show-error --silent \
+            --request PATCH \
+            --header "Authorization: Bearer $COOLIFY_TOKEN" \
+            --header "Content-Type: application/json" \
+            "$COOLIFY_URL/api/v1/applications/$COOLIFY_APP_UUID" \
+            --data "{\"docker_registry_image_tag\":\"$IMAGE_TAG\"}"
+  
       - name: Trigger Coolify deployment
         env:
           COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
           COOLIFY_URL: ${{ secrets.COOLIFY_URL }}
           COOLIFY_APP_UUID: ${{ secrets.COOLIFY_APP_UUID_QA }}
         run: |
-          echo "Triggering Coolify deployment..."
-
-          curl --fail --show-error --silent \
-                --request POST \
-                --header "Authorization: Bearer $COOLIFY_TOKEN" \
-                --header "Content-Type: application/json" \
-                "$COOLIFY_URL/api/v1/deploy?uuid=$COOLIFY_APP_UUID"
-
-          echo "Coolify accepted the deployment request."
+          set -euo pipefail
+  
+          curl --fail-with-body --show-error --silent \
+            --request POST \
+            --header "Authorization: Bearer $COOLIFY_TOKEN" \
+            "$COOLIFY_URL/api/v1/deploy?uuid=$COOLIFY_APP_UUID_QA&force=true"
