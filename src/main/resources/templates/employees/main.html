@@ -613,6 +613,20 @@
         <p th:if="${employeeCreationAllowed == false}"
            th:text="${employeeCreationBlockedReason}"
            class="w-full text-xs font-semibold text-red-700 dark:text-red-400 text-right"></p>
+        <button type="button" id="exportCancelBtn" onclick="cancelExportMode()"
+                style="display:none;"
+                class="items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors whitespace-nowrap">
+            <span class="material-icons-round text-sm">close</span>
+            <span>Cancel</span>
+        </button>
+        <button type="button" id="exportCsvBtn" onclick="handleExportClick()"
+                class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors whitespace-nowrap"
+                title="Select employees and export them to CSV">
+            <span class="material-icons-round text-sm">download</span>
+            <span id="exportCsvLabel">Export CSV</span>
+            <span id="exportCsvCount"
+                  style="display:none; align-items:center; justify-content:center; min-width:20px; height:20px; padding:0 6px; border-radius:9999px; background:#2563eb; color:#fff; font-size:0.7rem; font-weight:700;"></span>
+        </button>
         <button type="button" id="dupAcctSortBtn" onclick="toggleDuplicateAccountSort()"
                 class="dup-acct-btn"
                 title="Show employees that share the same account number, grouped together">
@@ -689,6 +703,11 @@
             <table class="w-full">
                 <thead class="bg-gray-50 dark:bg-gray-750">
                 <tr>
+                    <th class="select-col px-4 md:px-6 py-3 text-left" style="width:1%;">
+                        <input type="checkbox" id="employeeSelectAll"
+                               class="h-4 w-4 rounded border-gray-300 text-blue-600 cursor-pointer"
+                               title="Select all employees currently shown" aria-label="Select all employees currently shown">
+                    </th>
                     <th class="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee</th>
                     <th class="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email / Phone</th>
                     <th class="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
@@ -713,6 +732,10 @@
                         data-job-grade-id=${employee.jobStep != null ? employee.jobStep.jobGrade.id : ''},
                         data-job-step-id=${employee.jobStep != null ? employee.jobStep.id : ''},
                         data-pay-group-id=${employee.payGroup != null ? employee.payGroup.id : ''},
+                        data-department-name=${employee.department != null ? employee.department.name : ''},
+                        data-job-grade-name=${employee.jobStep != null ? employee.jobStep.jobGrade.name : ''},
+                        data-job-step-name=${employee.jobStep != null ? employee.jobStep.name : ''},
+                        data-pay-group-name=${employee.payGroup != null ? employee.payGroup.name : ''},
                         data-manager-id=${managerMap != null and managerMap.containsKey(employee.id) ? managerMap.get(employee.id) : ''},
                         data-employment-status=${employee.employmentStatus},
                         data-nin-number=${employee.ninNumber},
@@ -737,6 +760,11 @@
                     "
                     th:onclick="'viewEmployee(' + ${employee.id} + ')'">
 
+                    <td class="select-col px-4 md:px-6 py-4" onclick="event.stopPropagation()">
+                        <input type="checkbox"
+                               class="employee-select h-4 w-4 rounded border-gray-300 text-blue-600 cursor-pointer"
+                               aria-label="Select employee">
+                    </td>
                     <td class="px-4 md:px-6 py-4">
                         <div class="flex items-center">
                             <div class="avatar-placeholder bg-blue-100 text-blue-600"
@@ -802,7 +830,7 @@
 
                 <!-- Empty State -->
                 <tr th:if="${employees == null or #lists.isEmpty(employees)}">
-                    <td colspan="7" class="px-6 py-16 text-center">
+                    <td colspan="8" class="px-6 py-16 text-center">
                         <div class="flex flex-col items-center justify-center space-y-4">
                             <div class="w-16 h-16 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -3618,6 +3646,10 @@ function confirmToggleVisibility() {
         .dark tr.acct-dup-group-row td { background: rgba(127,29,29,.2); color: #fca5a5; }
         .acct-dup-num { font-family: 'DM Mono', monospace; letter-spacing: 0.05em; }
         .acct-dup-chip { margin-top: 2px; font-size: 0.7rem; color: #b91c1c; }
+
+        /* Selection (tick) column is hidden until the user starts an export */
+        .select-col { display: none; }
+        body.export-mode .select-col { display: table-cell; }
         .dark .acct-dup-chip { color: #fca5a5; }
     </style>
     <script>
@@ -3817,7 +3849,7 @@ function confirmToggleVisibility() {
                     const tr = document.createElement('tr');
                     tr.className = 'acct-dup-group-row';
                     const td = document.createElement('td');
-                    td.colSpan = 7;
+                    td.colSpan = 8;
                     td.style.borderLeft = '4px solid ' + color;
                     td.innerHTML = '<span class="material-icons-round" style="font-size:14px;vertical-align:text-bottom">content_copy</span> ' +
                         'Account No. <span class="acct-dup-num">' + key + '</span> &mdash; shared by ' + rows.length + ' employees';
@@ -3827,7 +3859,7 @@ function confirmToggleVisibility() {
 
                     rows.forEach(function (row) {
                         dupRowSet.add(row);
-                        if (row.cells[0]) row.cells[0].style.borderLeft = '4px solid ' + color;
+                        if (row.cells[1]) row.cells[1].style.borderLeft = '4px solid ' + color;
                         const holder = row.querySelector('td .ml-4');
                         if (holder) {
                             const chip = document.createElement('div');
@@ -3848,7 +3880,7 @@ function confirmToggleVisibility() {
                 groupHeaders.forEach(function (g) { if (g.tr.parentNode) g.tr.parentNode.removeChild(g.tr); });
                 const tbody = origOrder.length ? origOrder[0].parentNode : null;
                 origOrder.forEach(function (row) {
-                    if (row.cells[0]) row.cells[0].style.borderLeft = '';
+                    if (row.cells[1]) row.cells[1].style.borderLeft = '';
                     const chip = row.querySelector('.acct-dup-chip');
                     if (chip && chip.parentNode) chip.parentNode.removeChild(chip);
                     if (tbody) tbody.appendChild(row);        // restores the original order
@@ -3905,6 +3937,276 @@ function confirmToggleVisibility() {
             };
 
             refreshCountBadge();
+        })();
+        /*]]>*/
+    </script>
+
+    <!-- ========== EXPORT EMPLOYEES TO CSV ========== -->
+    <div id="exportEmployeesModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4 modal-transition"
+         onclick="if(event.target === this) closeModal('exportEmployeesModal')">
+        <div class="bg-white dark:bg-gray-800 w-full max-w-lg max-h-[90vh] rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col">
+            <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+                <h3 class="text-base font-semibold">Export Employees to CSV</h3>
+                <p id="exportSelectedCount" class="text-xs text-gray-500 dark:text-gray-400 mt-0.5"></p>
+            </div>
+
+            <div class="p-5 space-y-5 overflow-y-auto">
+                <div class="flex items-center justify-between">
+                    <p class="text-sm font-medium">Choose the information to export</p>
+                    <div class="flex items-center gap-3 text-xs font-semibold">
+                        <button type="button" onclick="exportSetAllFields(true)"  class="text-blue-600 hover:text-blue-700">Select all</button>
+                        <button type="button" onclick="exportSetAllFields(false)" class="text-gray-500 hover:text-gray-700 dark:text-gray-400">Clear</button>
+                    </div>
+                </div>
+
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Employee details</p>
+                    <div class="grid grid-cols-2 gap-x-4 gap-y-2">
+                        <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" class="export-field h-4 w-4 rounded border-gray-300 text-blue-600" value="id" checked> ID</label>
+                        <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" class="export-field h-4 w-4 rounded border-gray-300 text-blue-600" value="firstName" checked> First Name</label>
+                        <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" class="export-field h-4 w-4 rounded border-gray-300 text-blue-600" value="lastName" checked> Last Name</label>
+                        <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" class="export-field h-4 w-4 rounded border-gray-300 text-blue-600" value="email" checked> Email</label>
+                        <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" class="export-field h-4 w-4 rounded border-gray-300 text-blue-600" value="phone" checked> Phone Number</label>
+                        <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" class="export-field h-4 w-4 rounded border-gray-300 text-blue-600" value="department" checked> Department</label>
+                        <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" class="export-field h-4 w-4 rounded border-gray-300 text-blue-600" value="jobGrade" checked> Job Grade</label>
+                        <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" class="export-field h-4 w-4 rounded border-gray-300 text-blue-600" value="jobStep" checked> Job Step</label>
+                        <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" class="export-field h-4 w-4 rounded border-gray-300 text-blue-600" value="payGroup" checked> Pay Group</label>
+                    </div>
+                </div>
+
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Grouped details</p>
+                    <div class="space-y-2">
+                        <label class="flex items-start gap-3 p-3 border border-gray-200 dark:border-gray-700 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-750">
+                            <input type="checkbox" class="export-field h-4 w-4 mt-0.5 rounded border-gray-300 text-blue-600" value="identity">
+                            <span>
+                                <span class="block text-sm font-medium">Identity</span>
+                                <span class="block text-xs text-gray-500 dark:text-gray-400">TIN, RSA PIN, PFA, NIN, BVN</span>
+                            </span>
+                        </label>
+                        <label class="flex items-start gap-3 p-3 border border-gray-200 dark:border-gray-700 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-750">
+                            <input type="checkbox" class="export-field h-4 w-4 mt-0.5 rounded border-gray-300 text-blue-600" value="nextOfKin">
+                            <span>
+                                <span class="block text-sm font-medium">Next of Kin</span>
+                                <span class="block text-xs text-gray-500 dark:text-gray-400">Full name, phone number, email, residential address</span>
+                            </span>
+                        </label>
+                        <label class="flex items-start gap-3 p-3 border border-gray-200 dark:border-gray-700 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-750">
+                            <input type="checkbox" class="export-field h-4 w-4 mt-0.5 rounded border-gray-300 text-blue-600" value="guarantor">
+                            <span>
+                                <span class="block text-sm font-medium">Guarantor</span>
+                                <span class="block text-xs text-gray-500 dark:text-gray-400">Full name, phone number, email, residential address, NIN</span>
+                            </span>
+                        </label>
+                        <label class="flex items-start gap-3 p-3 border border-gray-200 dark:border-gray-700 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-750">
+                            <input type="checkbox" class="export-field h-4 w-4 mt-0.5 rounded border-gray-300 text-blue-600" value="bank">
+                            <span>
+                                <span class="block text-sm font-medium">Bank Details</span>
+                                <span class="block text-xs text-gray-500 dark:text-gray-400">Account name, bank name, account number</span>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+
+                <p class="text-xs text-gray-500 dark:text-gray-400">Anything not recorded for an employee is left empty in the CSV.</p>
+            </div>
+
+            <div class="px-5 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2 flex-shrink-0">
+                <button type="button" onclick="closeModal('exportEmployeesModal')" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm">
+                    Cancel
+                </button>
+                <button type="button" onclick="exportEmployeesCsv()" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold">
+                    <span class="material-icons-round text-sm">download</span>
+                    Export
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /*<![CDATA[*/
+        (function () {
+            'use strict';
+
+            // Each entry: which checkbox in the modal controls it (field), the CSV header,
+            // and the data-* attribute on the table row it is read from (key).
+            const COLUMNS = [
+                { field: 'id',         header: 'ID',                              key: 'id' },
+                { field: 'firstName',  header: 'First Name',                      key: 'firstName' },
+                { field: 'lastName',   header: 'Last Name',                       key: 'lastName' },
+                { field: 'email',      header: 'Email',                           key: 'email' },
+                { field: 'phone',      header: 'Phone Number',                    key: 'phone' },
+                { field: 'department', header: 'Department',                      key: 'departmentName' },
+                { field: 'jobGrade',   header: 'Job Grade',                       key: 'jobGradeName' },
+                { field: 'jobStep',    header: 'Job Step',                        key: 'jobStepName' },
+                { field: 'payGroup',   header: 'Pay Group',                       key: 'payGroupName' },
+
+                { field: 'identity',   header: 'TIN',                             key: 'tinNumber' },
+                { field: 'identity',   header: 'RSA PIN',                         key: 'rsaPin' },
+                { field: 'identity',   header: 'PFA',                             key: 'pfa' },
+                { field: 'identity',   header: 'NIN',                             key: 'ninNumber' },
+                { field: 'identity',   header: 'BVN',                             key: 'bvnNumber' },
+
+                { field: 'nextOfKin',  header: 'Next of Kin Full Name',           key: 'nokName' },
+                { field: 'nextOfKin',  header: 'Next of Kin Phone Number',        key: 'nokPhone' },
+                { field: 'nextOfKin',  header: 'Next of Kin Email',               key: 'nokEmail' },
+                { field: 'nextOfKin',  header: 'Next of Kin Residential Address', key: 'nokAddress' },
+
+                { field: 'guarantor',  header: 'Guarantor Full Name',             key: 'guarantorName' },
+                { field: 'guarantor',  header: 'Guarantor Phone Number',          key: 'guarantorPhone' },
+                { field: 'guarantor',  header: 'Guarantor Email',                 key: 'guarantorEmail' },
+                { field: 'guarantor',  header: 'Guarantor Residential Address',   key: 'guarantorAddress' },
+                { field: 'guarantor',  header: 'Guarantor NIN',                   key: 'guarantorNin' },
+
+                { field: 'bank',       header: 'Account Name',                    key: 'accountName' },
+                { field: 'bank',       header: 'Bank Name',                       key: 'bankName' },
+                { field: 'bank',       header: 'Account Number',                  key: 'accountNumber' }
+            ];
+
+            // ── Selection ──────────────────────────────────────────────
+            function allRows()      { return Array.prototype.slice.call(document.querySelectorAll('tr.employee-row')); }
+            function rowBox(row)    { return row.querySelector('.employee-select'); }
+            function isShown(row)   { return row.style.display !== 'none'; }
+            function selectedRows() { return allRows().filter(function (r) { const b = rowBox(r); return b && b.checked; }); }
+
+            function refreshSelectionUI() {
+                const shown        = allRows().filter(isShown);
+                const shownChecked = shown.filter(function (r) { return rowBox(r).checked; }).length;
+
+                const master = document.getElementById('employeeSelectAll');
+                if (master) {
+                    master.checked       = shown.length > 0 && shownChecked === shown.length;
+                    master.indeterminate = shownChecked > 0 && shownChecked < shown.length;
+                }
+
+                const total = selectedRows().length;
+                const badge = document.getElementById('exportCsvCount');
+                if (badge) {
+                    badge.textContent = total;
+                    badge.style.display = total ? 'inline-flex' : 'none';
+                }
+            }
+
+            document.addEventListener('change', function (e) {
+                const t = e.target;
+                if (!t) return;
+                if (t.id === 'employeeSelectAll') {
+                    // "Select all" applies to the rows currently shown (respects search / filters)
+                    allRows().filter(isShown).forEach(function (r) { rowBox(r).checked = t.checked; });
+                    refreshSelectionUI();
+                } else if (t.classList && t.classList.contains('employee-select')) {
+                    refreshSelectionUI();
+                }
+            });
+
+            // Rows that get filtered out are deselected, so an export never contains
+            // employees the user cannot see. Wraps (does not modify) applyEmployeeFilters.
+            const _prevApplyEmployeeFilters = window.applyEmployeeFilters;
+            window.applyEmployeeFilters = function () {
+                _prevApplyEmployeeFilters.apply(this, arguments);
+                allRows().forEach(function (r) {
+                    if (!isShown(r)) { const b = rowBox(r); if (b) b.checked = false; }
+                });
+                refreshSelectionUI();
+            };
+
+            // ── Export mode (tick column only visible while exporting) ──
+            let exportMode = false;
+
+            function setExportMode(on) {
+                exportMode = on;
+                document.body.classList.toggle('export-mode', on);
+                const label  = document.getElementById('exportCsvLabel');
+                const cancel = document.getElementById('exportCancelBtn');
+                if (label)  label.textContent = on ? 'Export Selected' : 'Export CSV';
+                if (cancel) cancel.style.display = on ? 'inline-flex' : 'none';
+                if (!on) {
+                    allRows().forEach(function (r) { const b = rowBox(r); if (b) b.checked = false; });
+                }
+                refreshSelectionUI();
+            }
+
+            // First click reveals the tick boxes; once in export mode it opens the field picker
+            window.handleExportClick = function () {
+                if (!exportMode) {
+                    setExportMode(true);
+                    showPiToast('Tick the employees to export, then click "Export Selected".', 'success');
+                    return;
+                }
+                window.openExportModal();
+            };
+
+            window.cancelExportMode = function () { setExportMode(false); };
+
+            // ── Modal ──────────────────────────────────────────────────
+            window.openExportModal = function () {
+                const n = selectedRows().length;
+                if (!n) {
+                    showPiToast('Tick at least one employee first, or use the header checkbox to select all.', 'error');
+                    return;
+                }
+                document.getElementById('exportSelectedCount').textContent =
+                    n + ' employee' + (n !== 1 ? 's' : '') + ' selected';
+                openModal('exportEmployeesModal');
+            };
+
+            window.exportSetAllFields = function (checked) {
+                document.querySelectorAll('#exportEmployeesModal .export-field').forEach(function (c) { c.checked = checked; });
+            };
+
+            // ── CSV ────────────────────────────────────────────────────
+            function csvCell(value, forceQuote) {
+                let s = value == null ? '' : String(value).trim();
+                // Stop spreadsheet apps from running a cell as a formula
+                if (/^[=@]/.test(s) || (/^[+\-]/.test(s) && /[A-Za-z]/.test(s))) s = "'" + s;
+                return (forceQuote || /[",\r\n]/.test(s)) ? '"' + s.replace(/"/g, '""') + '"' : s;
+            }
+
+            function todayStamp() {
+                const d = new Date();
+                const p = function (n) { return String(n).padStart(2, '0'); };
+                return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+            }
+
+            window.exportEmployeesCsv = function () {
+                const chosen = new Set(Array.prototype.map.call(
+                    document.querySelectorAll('#exportEmployeesModal .export-field:checked'),
+                    function (c) { return c.value; }));
+                if (!chosen.size) {
+                    showPiToast('Choose at least one field to export.', 'error');
+                    return;
+                }
+                const rows = selectedRows();
+                if (!rows.length) {
+                    showPiToast('No employees selected.', 'error');
+                    return;
+                }
+
+                const cols  = COLUMNS.filter(function (c) { return chosen.has(c.field); });
+                // Headers are always quoted: a CSV whose first cell is an unquoted "ID" is
+                // mistaken by Excel for a SYLK file, which blanks/breaks that header cell.
+                const lines = [cols.map(function (c) { return csvCell(c.header, true); }).join(',')];
+                rows.forEach(function (row) {
+                    lines.push(cols.map(function (c) { return csvCell(row.dataset[c.key]); }).join(','));
+                });
+
+                // BOM so Excel reads the file as UTF-8
+                const blob = new Blob(['\uFEFF' + lines.join('\r\n') + '\r\n'], { type: 'text/csv;charset=utf-8;' });
+                const url  = URL.createObjectURL(blob);
+                const a    = document.createElement('a');
+                a.href = url;
+                a.download = 'employees_export_' + todayStamp() + '.csv';
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+
+                closeModal('exportEmployeesModal');
+                setExportMode(false);
+                showPiToast('Exported ' + rows.length + ' employee' + (rows.length !== 1 ? 's' : ''), 'success');
+            };
+
+            refreshSelectionUI();
         })();
         /*]]>*/
     </script>
