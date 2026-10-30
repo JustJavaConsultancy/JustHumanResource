@@ -934,11 +934,11 @@
                             <span class="material-icons-round text-blue-200" style="font-size:1.3rem">account_balance</span>
                             <div>
                                 <p style="font-size:0.8rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;opacity:0.7">Bank Details</p>
-                                <p style="font-size:0.7rem;opacity:0.6;margin-top:2px">Provided and managed by you and HR</p>
+                                <p style="font-size:0.7rem;opacity:0.6;margin-top:2px">View only</p>
                             </div>
                         </div>
                         <span class="field-pill" style="background:rgba(255,255,255,0.15);color:white;border:1px solid rgba(255,255,255,0.25)">
-                            <span class="material-icons-round" style="font-size:0.65rem">edit</span> Yours
+                            <span class="material-icons-round" style="font-size:0.65rem">lock</span> View only
                         </span>
                     </div>
                 </div>
@@ -951,12 +951,6 @@
                         <span th:unless="${not #lists.isEmpty(employee.bankDetails)}" class="completion-chip chip-incomplete">
                             <span class="material-icons-round" style="font-size:0.75rem">warning_amber</span> Not set up yet
                         </span>
-                        <button id="editBankBtn" class="edit-btn"
-                                th:classappend="${not #lists.isEmpty(employee.bankDetails)} ? 'edit-btn-ghost' : 'edit-btn-fill'">
-                            <span class="material-icons-round" style="font-size:0.85rem"
-                                  th:text="${not #lists.isEmpty(employee.bankDetails)} ? 'edit' : 'add'">add</span>
-                            <span th:text="${not #lists.isEmpty(employee.bankDetails)} ? 'Edit' : 'Add Bank Details'">Add Bank Details</span>
-                        </button>
                     </div>
 
                     <!-- Display the first active bank detail (assuming only one primary/active) -->
@@ -971,9 +965,16 @@
                         </div>
                         <div class="info-item">
                             <p class="info-label">Account Number</p>
-                            <p class="info-value" style="font-family:'DM Mono',monospace"
-                               th:text="'**** **** ' + ${#strings.substring(employee.bankDetails[0].accountNumber, employee.bankDetails[0].accountNumber.length()-4)}">**** **** 1234</p>
-                            <p class="text-xs mt-0.5" style="color:var(--text-muted)">(last 4 digits shown for security)</p>
+                            <div class="info-value-wrapper">
+                                <p id="accountNumberValue" class="info-value" style="font-family:'DM Mono',monospace"
+                                   th:data-full="${employee.bankDetails[0].accountNumber}"
+                                   th:data-masked="'**** **** ' + ${#strings.substring(employee.bankDetails[0].accountNumber, employee.bankDetails[0].accountNumber.length()-4)}"
+                                   th:text="'**** **** ' + ${#strings.substring(employee.bankDetails[0].accountNumber, employee.bankDetails[0].accountNumber.length()-4)}">**** **** 1234</p>
+                                <button type="button" id="toggleAccountNumber" aria-label="Show account number" aria-pressed="false"
+                                        class="close-btn" style="width:28px;height:28px">
+                                    <span class="material-icons-round" style="font-size:1rem">visibility</span>
+                                </button>
+                            </div>
                         </div>
                         <!-- No account type, sort code, or branch code displayed -->
                     </div>
@@ -994,7 +995,7 @@
 
                     <div class="notice notice-warn mt-4">
                         <span class="material-icons-round" style="font-size:1rem;flex-shrink:0">warning</span>
-                        <span>Bank details are required for salary payments. Please add your details to avoid delays.</span>
+                        <span>Bank details are required for salary payments. Please contact HR to add or update your details.</span>
                     </div>
                 </div>
             </div>
@@ -1003,43 +1004,43 @@
 
     <!-- RECENT ACTIVITY -->
 
-<!--    <div class="card p-5 md:p-6 mt-6">-->
-<!--        <div class="section-header">-->
-<!--            <div class="section-title-group">-->
-<!--                <div class="section-icon blue">-->
-<!--                    <span class="material-icons-round" style="font-size:1.1rem">history</span>-->
-<!--                </div>-->
-<!--                <p class="section-title">Recent Activity</p>-->
-<!--            </div>-->
-<!--            <a href="#" class="text-sm font-semibold text-blue-600 dark:text-blue-400">View All</a>-->
-<!--        </div>-->
-<!--        <div class="space-y-3">-->
-<!--            <div class="flex items-center justify-between p-3 rounded-xl" style="background:var(&#45;&#45;page-bg)">-->
-<!--                <div class="flex items-center gap-3">-->
-<!--                    <div class="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">-->
-<!--                        <span class="material-icons-round text-green-600 dark:text-green-400" style="font-size:0.9rem">check</span>-->
-<!--                    </div>-->
-<!--                    <div>-->
-<!--                        <p class="text-sm font-semibold" style="color:var(&#45;&#45;text-primary)">Leave approved</p>-->
-<!--                        <p class="text-xs mt-0.5" style="color:var(&#45;&#45;text-muted)">Annual PTO · 5 days (21–25 Mar 2025)</p>-->
-<!--                    </div>-->
-<!--                </div>-->
-<!--                <span class="text-xs" style="color:var(&#45;&#45;text-muted)">2 days ago</span>-->
-<!--            </div>-->
-<!--            <div class="flex items-center justify-between p-3 rounded-xl" style="background:var(&#45;&#45;page-bg)">-->
-<!--                <div class="flex items-center gap-3">-->
-<!--                    <div class="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">-->
-<!--                        <span class="material-icons-round text-blue-600 dark:text-blue-400" style="font-size:0.9rem">trending_up</span>-->
-<!--                    </div>-->
-<!--                    <div>-->
-<!--                        <p class="text-sm font-semibold" style="color:var(&#45;&#45;text-primary)">Promotion approved</p>-->
-<!--                        <p class="text-xs mt-0.5" style="color:var(&#45;&#45;text-muted)">Grade 2 → Grade 3 · Step 2</p>-->
-<!--                    </div>-->
-<!--                </div>-->
-<!--                <span class="text-xs" style="color:var(&#45;&#45;text-muted)">01 Jun 2024</span>-->
-<!--            </div>-->
-<!--        </div>-->
-<!--    </div>-->
+    <!--    <div class="card p-5 md:p-6 mt-6">-->
+    <!--        <div class="section-header">-->
+    <!--            <div class="section-title-group">-->
+    <!--                <div class="section-icon blue">-->
+    <!--                    <span class="material-icons-round" style="font-size:1.1rem">history</span>-->
+    <!--                </div>-->
+    <!--                <p class="section-title">Recent Activity</p>-->
+    <!--            </div>-->
+    <!--            <a href="#" class="text-sm font-semibold text-blue-600 dark:text-blue-400">View All</a>-->
+    <!--        </div>-->
+    <!--        <div class="space-y-3">-->
+    <!--            <div class="flex items-center justify-between p-3 rounded-xl" style="background:var(&#45;&#45;page-bg)">-->
+    <!--                <div class="flex items-center gap-3">-->
+    <!--                    <div class="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">-->
+    <!--                        <span class="material-icons-round text-green-600 dark:text-green-400" style="font-size:0.9rem">check</span>-->
+    <!--                    </div>-->
+    <!--                    <div>-->
+    <!--                        <p class="text-sm font-semibold" style="color:var(&#45;&#45;text-primary)">Leave approved</p>-->
+    <!--                        <p class="text-xs mt-0.5" style="color:var(&#45;&#45;text-muted)">Annual PTO · 5 days (21–25 Mar 2025)</p>-->
+    <!--                    </div>-->
+    <!--                </div>-->
+    <!--                <span class="text-xs" style="color:var(&#45;&#45;text-muted)">2 days ago</span>-->
+    <!--            </div>-->
+    <!--            <div class="flex items-center justify-between p-3 rounded-xl" style="background:var(&#45;&#45;page-bg)">-->
+    <!--                <div class="flex items-center gap-3">-->
+    <!--                    <div class="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">-->
+    <!--                        <span class="material-icons-round text-blue-600 dark:text-blue-400" style="font-size:0.9rem">trending_up</span>-->
+    <!--                    </div>-->
+    <!--                    <div>-->
+    <!--                        <p class="text-sm font-semibold" style="color:var(&#45;&#45;text-primary)">Promotion approved</p>-->
+    <!--                        <p class="text-xs mt-0.5" style="color:var(&#45;&#45;text-muted)">Grade 2 → Grade 3 · Step 2</p>-->
+    <!--                    </div>-->
+    <!--                </div>-->
+    <!--                <span class="text-xs" style="color:var(&#45;&#45;text-muted)">01 Jun 2024</span>-->
+    <!--            </div>-->
+    <!--        </div>-->
+    <!--    </div>-->
 
 
 
@@ -1204,79 +1205,6 @@
         </div>
     </div>
 
-    <!-- ========== UPDATED BANK DETAILS MODAL ========== -->
-    <div id="editBankModal" class="modal-overlay">
-        <div class="modal-container">
-            <div class="modal-header">
-                <div>
-                    <p class="modal-title">Bank Details</p>
-                    <p class="modal-subtitle">All fields are provided and managed by you</p>
-                </div>
-                <button class="close-btn close-modal"><span class="material-icons-round" style="font-size:1rem">close</span></button>
-            </div>
-
-            <!-- Form now submits to /update/bank-info -->
-            <form th:action="@{/update/bank-info}" method="post">
-                <div class="modal-body space-y-4">
-                    <div class="notice notice-warn">
-                        <span class="material-icons-round" style="font-size:1rem;flex-shrink:0">account_balance</span>
-                        <span>Your salary will be paid to this account. Ensure all details are accurate before saving.</span>
-                    </div>
-
-                    <!-- Employee ID (hidden) -->
-                    <input type="hidden" name="id" th:value="${employee.id}" />
-
-                    <!-- Account Name (formerly Account Holder) -->
-                    <div class="form-group">
-                        <label class="form-label">Account Name *</label>
-                        <input type="text"
-                               name="accountName"
-                               th:value="${not #lists.isEmpty(employee.bankDetails) ? employee.bankDetails[0].accountName : ''}"
-                               class="form-input"
-                               placeholder="Full name as on bank account"
-                               required>
-                    </div>
-
-                    <!-- Bank Name -->
-                    <div class="form-group">
-                        <label class="form-label">Bank Name *</label>
-                        <input type="text"
-                               name="bankName"
-                               th:value="${not #lists.isEmpty(employee.bankDetails) ? employee.bankDetails[0].bankName : ''}"
-                               class="form-input"
-                               placeholder="e.g. First Bank"
-                               required>
-                    </div>
-
-                    <!-- Account Number -->
-                    <div class="form-group">
-                        <label class="form-label">Account Number *</label>
-                        <input type="text"
-                               name="accountNumber"
-                               th:value="${not #lists.isEmpty(employee.bankDetails) ? employee.bankDetails[0].accountNumber : ''}"
-                               maxlength="10"
-                               class="form-input"
-                               placeholder="10-digit NUBAN account number"
-                               style="font-family:'DM Mono',monospace;letter-spacing:0.05em"
-                               required>
-                    </div>
-
-                    <!-- Account Type, Sort Code, Branch Code are removed -->
-
-                    <div class="notice notice-info" style="margin-top:8px">
-                        <span class="material-icons-round" style="font-size:1rem;flex-shrink:0">security</span>
-                        <span>Your bank details are encrypted and used only for salary payments. Only the last 4 digits will be displayed publicly.</span>
-                    </div>
-                </div>
-
-                <div class="modal-footer">
-                    <button type="button" class="edit-btn edit-btn-ghost close-modal">Cancel</button>
-                    <button type="submit" class="edit-btn edit-btn-primary">Save Bank Details</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
     <!-- ─── SCRIPTS ────────────────────────────────────────────── -->
     <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script>
     <script>
@@ -1293,7 +1221,6 @@
         const modals = {
             editPersonalInfo: document.getElementById('editPersonalInfoModal'),
             editEmergency: document.getElementById('editEmergencyModal'),
-            editBank: document.getElementById('editBankModal'),
         };
 
         function openModal(modal) {
@@ -1309,7 +1236,21 @@
         // Open triggers
         document.getElementById('editPersonalInfoBtn').addEventListener('click', () => openModal(modals.editPersonalInfo));
         document.getElementById('editEmergencyBtn').addEventListener('click', () => openModal(modals.editEmergency));
-        document.getElementById('editBankBtn').addEventListener('click', () => openModal(modals.editBank));
+
+        // ── ACCOUNT NUMBER REVEAL (read-only) ────────────────────
+        const toggleAccBtn = document.getElementById('toggleAccountNumber');
+        if (toggleAccBtn) {
+            const accValue = document.getElementById('accountNumberValue');
+            const accIcon = toggleAccBtn.querySelector('.material-icons-round');
+            let accVisible = false;
+            toggleAccBtn.addEventListener('click', () => {
+                accVisible = !accVisible;
+                accValue.textContent = accVisible ? accValue.dataset.full : accValue.dataset.masked;
+                accIcon.textContent = accVisible ? 'visibility_off' : 'visibility';
+                toggleAccBtn.setAttribute('aria-pressed', accVisible);
+                toggleAccBtn.setAttribute('aria-label', accVisible ? 'Hide account number' : 'Show account number');
+            });
+        }
 
         // Close via .close-modal buttons
         document.querySelectorAll('.close-modal').forEach(btn => {

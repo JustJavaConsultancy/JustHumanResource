@@ -609,10 +609,17 @@
     </div>
 
     <!-- Add Employee Button -->
-    <div class="flex flex-col items-end gap-2 mb-4">
+    <div class="flex flex-wrap items-center justify-end gap-3 mb-4">
         <p th:if="${employeeCreationAllowed == false}"
            th:text="${employeeCreationBlockedReason}"
-           class="text-xs font-semibold text-red-700 dark:text-red-400 text-right"></p>
+           class="w-full text-xs font-semibold text-red-700 dark:text-red-400 text-right"></p>
+        <button type="button" id="dupAcctSortBtn" onclick="toggleDuplicateAccountSort()"
+                class="dup-acct-btn"
+                title="Show employees that share the same account number, grouped together">
+            <span class="material-icons-round text-sm">content_copy</span>
+            <span id="dupAcctSortLabel">Sort Duplicate Accounts</span>
+            <span id="dupAcctCount" class="dup-acct-count" style="display:none"></span>
+        </button>
         <button onclick="openModal('addEmployeeModal')"
                 th:disabled="${employeeCreationAllowed == false}"
                 th:classappend="${employeeCreationAllowed == false} ? ' opacity-50 cursor-not-allowed hover:bg-primary-600 hover:shadow-none' : ''"
@@ -2153,6 +2160,12 @@
                     showPiToast('Account Number must be exactly 10 digits', 'error');
                     return false;
                 }
+                // Account numbers must be unique across all employees
+                const addDupOwner = acctFindConflict(accountNumber, null);
+                if (addDupOwner) {
+                    acctReportDuplicate('add', addDupOwner);
+                    return false;
+                }
             }
 
             // ── Intercept with fetch so we can catch the 409 duplicate-email
@@ -2180,8 +2193,11 @@
                     if (response.status === 409) {
                         const data = await response.json();
                         // Show the inline error banner
-                        errorText.textContent = data.message || 'An employee with this email already exists.';
+                        errorText.textContent = data.message || (data.error === 'DUPLICATE_ACCOUNT_NUMBER'
+                            ? 'This account number already belongs to another employee.'
+                            : 'An employee with this email already exists.');
                         errorBanner.classList.remove('hidden');
+                        if (data.error === 'DUPLICATE_ACCOUNT_NUMBER') acctMarkServerDuplicate('add');
                         if (data.error === 'DUPLICATE_EMAIL') {
                             const emailInput = document.getElementById('addEmailInput');
                             emailInput.classList.add('border-red-500', 'ring-1', 'ring-red-500');
@@ -2447,6 +2463,13 @@
                     submitBtn.disabled = false; submitBtn.classList.remove('opacity-50','cursor-not-allowed'); submitBtn.innerHTML = '<span class="material-icons-round text-sm">save</span><span>Update Employee</span>';
                     return;
                 }
+                // Account numbers must be unique across all OTHER employees
+                const editDupOwner = acctFindConflict(editAccountNumber, id);
+                if (editDupOwner) {
+                    acctReportDuplicate('edit', editDupOwner);
+                    submitBtn.disabled = false; submitBtn.classList.remove('opacity-50','cursor-not-allowed'); submitBtn.innerHTML = '<span class="material-icons-round text-sm">save</span><span>Update Employee</span>';
+                    return;
+                }
             }
             const selectedEditGroups = Array.from(
                 document.querySelectorAll('#editEmployeeForm input[name="groups"]:checked')
@@ -2497,7 +2520,10 @@
             .then(async response => {
                 if (response.status === 409) {
                     const data = await response.json();
-                    showPiToast(data.message || 'Duplicate email address — another employee already uses this email.', 'error');
+                    if (data.error === 'DUPLICATE_ACCOUNT_NUMBER') acctMarkServerDuplicate('edit');
+                    showPiToast(data.message || (data.error === 'DUPLICATE_ACCOUNT_NUMBER'
+                        ? 'Duplicate account number — another employee already uses this account number.'
+                        : 'Duplicate email address — another employee already uses this email.'), 'error');
                     submitBtn.disabled = false;
                     submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
                     submitBtn.innerHTML = '<span class="material-icons-round text-sm">save</span><span>Update Employee</span>';
@@ -3233,6 +3259,7 @@
             // ── Validate & build rows ─────────────────────────────────────────
             const rows = [];
             let hasBlockingErrors = false;
+            const acctCtx = acctBuildCsvContext(normHeaders, dataRows);
 
             dataRows.forEach(({ rowNum, cells }) => {
                 const emailRaw = (cells['email'] || '').toLowerCase();
@@ -3272,6 +3299,9 @@
                             errors.push('Account number must be 10 digits');
                     }
                 }
+
+                // Account number must be unique (vs. existing employees and vs. other CSV rows)
+                acctCsvCheck(cells, rowNum, acctCtx).forEach(m => errors.push(m));
 
                 if (errors.length) hasBlockingErrors = true;
                 rows.push({ rowNum, cells, isEdit, errors });
@@ -3556,6 +3586,326 @@ function confirmToggleVisibility() {
             }
         }
 
+        /*]]>*/
+    </script>
+
+    <!-- ========== UNIQUE ACCOUNT NUMBER GUARD + DUPLICATE ACCOUNT SORT ========== -->
+    <style>
+        .dup-acct-btn {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 8px 14px; border-radius: 8px;
+            border: 1px solid #d1d5db; background: #ffffff; color: #374151;
+            font-size: 0.875rem; font-weight: 500; line-height: 1.25rem;
+            cursor: pointer; white-space: nowrap; transition: background-color .15s, border-color .15s, color .15s;
+        }
+        .dup-acct-btn:hover { background: #f9fafb; }
+        .dup-acct-btn.active { background: #fef2f2; border-color: #fca5a5; color: #b91c1c; }
+        .dark .dup-acct-btn { background: #1f2937; border-color: #4b5563; color: #e5e7eb; }
+        .dark .dup-acct-btn:hover { background: #374151; }
+        .dark .dup-acct-btn.active { background: rgba(127,29,29,.25); border-color: #b91c1c; color: #fca5a5; }
+        .dup-acct-count {
+            align-items: center; justify-content: center;
+            min-width: 20px; height: 20px; padding: 0 6px; border-radius: 9999px;
+            background: #dc2626; color: #ffffff; font-size: 0.7rem; font-weight: 700;
+        }
+        .acct-dup-invalid { border-color: #ef4444 !important; box-shadow: 0 0 0 3px rgba(239,68,68,.15) !important; }
+        .acct-dup-hint { display: none; margin-top: 4px; font-size: 0.75rem; color: #dc2626; }
+        .dark .acct-dup-hint { color: #f87171; }
+        tr.acct-dup-group-row td {
+            padding: 8px 16px; font-size: 0.75rem; font-weight: 600;
+            background: #fef2f2; color: #991b1b;
+        }
+        .dark tr.acct-dup-group-row td { background: rgba(127,29,29,.2); color: #fca5a5; }
+        .acct-dup-num { font-family: 'DM Mono', monospace; letter-spacing: 0.05em; }
+        .acct-dup-chip { margin-top: 2px; font-size: 0.7rem; color: #b91c1c; }
+        .dark .acct-dup-chip { color: #fca5a5; }
+    </style>
+    <script>
+        /*<![CDATA[*/
+        (function () {
+            'use strict';
+
+            // ── Helpers ────────────────────────────────────────────────────
+            function norm(v) { return String(v == null ? '' : v).replace(/\D/g, ''); }
+            function allRows() { return Array.prototype.slice.call(document.querySelectorAll('tr.employee-row')); }
+            function rowName(row) {
+                const n = ((row.dataset.firstName || '') + ' ' + (row.dataset.lastName || '')).trim();
+                return n || ('Employee #' + row.dataset.id);
+            }
+            function dupMessage(owner) {
+                return 'Account number ' + owner.account + ' is already used by ' + owner.name +
+                       ' (ID ' + owner.id + '). Each account number can belong to only one employee.';
+            }
+            function goToBankTab(prefix) {
+                const btn = document.querySelector('#' + prefix + 'EmployeeModal .tab-btn[onclick*="\'bank\'"]');
+                if (btn) btn.click();
+            }
+
+            // ── Manual add / edit: find another employee using this number ─
+            // excludeId = the employee being edited (never conflicts with itself)
+            window.acctFindConflict = function (accountNumber, excludeId) {
+                const n = norm(accountNumber);
+                if (n.length !== 10) return null;
+                const rows = allRows();
+                for (let i = 0; i < rows.length; i++) {
+                    const row = rows[i];
+                    if (excludeId != null && excludeId !== '' && String(row.dataset.id) === String(excludeId)) continue;
+                    if (norm(row.dataset.accountNumber) === n) {
+                        return { id: row.dataset.id, name: rowName(row), email: row.dataset.email || '', account: n };
+                    }
+                }
+                return null;
+            };
+
+            window.acctReportDuplicate = function (prefix, owner) {
+                const input = document.getElementById(prefix + 'AccountNumber');
+                const hint  = document.getElementById(prefix + 'AccountDupHint');
+                goToBankTab(prefix);
+                if (input) {
+                    input.classList.add('acct-dup-invalid');
+                    if (typeof shakeElement === 'function') shakeElement(input);
+                }
+                if (hint) { hint.textContent = dupMessage(owner); hint.style.display = 'block'; }
+                showPiToast('Account number ' + owner.account + ' is already used by ' + owner.name, 'error');
+            };
+
+            // Called when the server itself answers 409 DUPLICATE_ACCOUNT_NUMBER
+            window.acctMarkServerDuplicate = function (prefix) {
+                const input = document.getElementById(prefix + 'AccountNumber');
+                const hint  = document.getElementById(prefix + 'AccountDupHint');
+                goToBankTab(prefix);
+                if (input) input.classList.add('acct-dup-invalid');
+                if (hint) {
+                    hint.textContent = 'This account number already belongs to another employee. Each account number can belong to only one employee.';
+                    hint.style.display = 'block';
+                }
+            };
+
+            // ── Live feedback under the Account Number input (add + edit) ──
+            function setupLiveCheck(prefix) {
+                const input = document.getElementById(prefix + 'AccountNumber');
+                const modal = document.getElementById(prefix + 'EmployeeModal');
+                if (!input || !input.parentElement) return;
+
+                const hint = document.createElement('p');
+                hint.id = prefix + 'AccountDupHint';
+                hint.className = 'acct-dup-hint';
+                input.parentElement.insertAdjacentElement('afterend', hint);
+
+                function clear() {
+                    input.classList.remove('acct-dup-invalid');
+                    hint.style.display = 'none';
+                    hint.textContent = '';
+                }
+                function refresh() {
+                    const excludeId = prefix === 'edit'
+                        ? (document.getElementById('editEmployeeId') || {}).value
+                        : null;
+                    const owner = window.acctFindConflict(input.value, excludeId);
+                    if (owner) {
+                        input.classList.add('acct-dup-invalid');
+                        hint.textContent = dupMessage(owner);
+                        hint.style.display = 'block';
+                    } else {
+                        clear();
+                    }
+                }
+                input.addEventListener('input', refresh);
+
+                // Re-evaluate whenever the modal opens, clear when it closes
+                if (modal && window.MutationObserver) {
+                    new MutationObserver(function () {
+                        if (modal.classList.contains('hidden')) clear(); else refresh();
+                    }).observe(modal, { attributes: true, attributeFilter: ['class'] });
+                }
+            }
+            setupLiveCheck('add');
+            setupLiveCheck('edit');
+
+            // ── Bulk CSV upload (create + edit) ────────────────────────────
+            // Builds the lookups once per upload. An existing employee that the CSV is
+            // re-assigning to a new account number "frees" its old number, so legitimate
+            // swaps / re-assignments inside one file are not rejected.
+            window.acctBuildCsvContext = function (normHeaders, dataRows) {
+                const ctx = { enabled: normHeaders.indexOf('accountnumber') !== -1, bySystem: new Map(), inFile: new Map() };
+                if (!ctx.enabled) return ctx;
+
+                const reassignedEmails = new Set();
+                dataRows.forEach(function (r) {
+                    const n = norm(r.cells['accountnumber']);
+                    const email = (r.cells['email'] || '').toLowerCase();
+                    if (n.length === 10 && email) reassignedEmails.add(email);
+                    if (n.length === 10) {
+                        if (!ctx.inFile.has(n)) ctx.inFile.set(n, []);
+                        ctx.inFile.get(n).push({ rowNum: r.rowNum, email: email });
+                    }
+                });
+
+                allRows().forEach(function (row) {
+                    const n = norm(row.dataset.accountNumber);
+                    if (!n) return;
+                    const email = (row.dataset.email || '').toLowerCase();
+                    if (reassignedEmails.has(email)) return;   // this CSV gives it a new number
+                    if (!ctx.bySystem.has(n)) ctx.bySystem.set(n, []);
+                    ctx.bySystem.get(n).push({ id: row.dataset.id, name: rowName(row), email: email });
+                });
+                return ctx;
+            };
+
+            window.acctCsvCheck = function (cells, rowNum, ctx) {
+                if (!ctx || !ctx.enabled) return [];
+                const n = norm(cells['accountnumber']);
+                if (n.length !== 10) return [];          // format errors are reported elsewhere
+                const email = (cells['email'] || '').toLowerCase();
+                const msgs = [];
+
+                const owners = (ctx.bySystem.get(n) || []).filter(function (o) { return !(email && o.email === email); });
+                if (owners.length) {
+                    msgs.push('Account number ' + n + ' already belongs to ' + owners[0].name + ' (ID ' + owners[0].id + ')');
+                }
+                const others = (ctx.inFile.get(n) || []).filter(function (o) {
+                    return o.rowNum !== rowNum && !(email && o.email === email);
+                });
+                if (others.length) {
+                    msgs.push('Duplicate account number ' + n + ' in CSV (also on row ' +
+                        others.map(function (o) { return o.rowNum; }).join(', ') + ')');
+                }
+                return msgs;
+            };
+
+            // ── "Sort Duplicate Accounts" button ───────────────────────────
+            let dupActive = false;
+            let origOrder = [];
+            let groupHeaders = [];       // { tr, rows }
+            let dupRowSet = new Set();
+            const PALETTE = ['#ef4444', '#f59e0b', '#3b82f6', '#8b5cf6', '#10b981', '#ec4899'];
+
+            function duplicateGroups() {
+                const map = new Map();
+                allRows().forEach(function (row) {
+                    const n = norm(row.dataset.accountNumber);
+                    if (!n) return;
+                    if (!map.has(n)) map.set(n, []);
+                    map.get(n).push(row);
+                });
+                Array.from(map.keys()).forEach(function (k) { if (map.get(k).length < 2) map.delete(k); });
+                return map;
+            }
+
+            function refreshCountBadge() {
+                const badge = document.getElementById('dupAcctCount');
+                if (!badge) return;
+                const n = duplicateGroups().size;
+                badge.textContent = n;
+                badge.style.display = n ? 'inline-flex' : 'none';
+            }
+
+            function activate(groups) {
+                const first = document.querySelector('tr.employee-row');
+                const tbody = first.parentNode;
+                origOrder = allRows();
+                dupRowSet = new Set();
+                groupHeaders = [];
+
+                const frag = document.createDocumentFragment();
+                Array.from(groups.keys()).sort().forEach(function (key, gi) {
+                    const rows = groups.get(key).slice().sort(function (a, b) {
+                        return rowName(a).toLowerCase().localeCompare(rowName(b).toLowerCase());
+                    });
+                    const color = PALETTE[gi % PALETTE.length];
+
+                    const tr = document.createElement('tr');
+                    tr.className = 'acct-dup-group-row';
+                    const td = document.createElement('td');
+                    td.colSpan = 7;
+                    td.style.borderLeft = '4px solid ' + color;
+                    td.innerHTML = '<span class="material-icons-round" style="font-size:14px;vertical-align:text-bottom">content_copy</span> ' +
+                        'Account No. <span class="acct-dup-num">' + key + '</span> &mdash; shared by ' + rows.length + ' employees';
+                    tr.appendChild(td);
+                    frag.appendChild(tr);
+                    groupHeaders.push({ tr: tr, rows: rows });
+
+                    rows.forEach(function (row) {
+                        dupRowSet.add(row);
+                        if (row.cells[0]) row.cells[0].style.borderLeft = '4px solid ' + color;
+                        const holder = row.querySelector('td .ml-4');
+                        if (holder) {
+                            const chip = document.createElement('div');
+                            chip.className = 'acct-dup-chip';
+                            const acctName = row.dataset.accountName || '—';
+                            const bank = row.dataset.bankName || '—';
+                            chip.textContent = acctName + ' · ' + bank;
+                            holder.appendChild(chip);
+                        }
+                        frag.appendChild(row);
+                    });
+                });
+                origOrder.forEach(function (row) { if (!dupRowSet.has(row)) frag.appendChild(row); });
+                tbody.appendChild(frag);
+            }
+
+            function deactivate() {
+                groupHeaders.forEach(function (g) { if (g.tr.parentNode) g.tr.parentNode.removeChild(g.tr); });
+                const tbody = origOrder.length ? origOrder[0].parentNode : null;
+                origOrder.forEach(function (row) {
+                    if (row.cells[0]) row.cells[0].style.borderLeft = '';
+                    const chip = row.querySelector('.acct-dup-chip');
+                    if (chip && chip.parentNode) chip.parentNode.removeChild(chip);
+                    if (tbody) tbody.appendChild(row);        // restores the original order
+                });
+                groupHeaders = [];
+                dupRowSet = new Set();
+                origOrder = [];
+            }
+
+            window.toggleDuplicateAccountSort = function () {
+                const btn   = document.getElementById('dupAcctSortBtn');
+                const label = document.getElementById('dupAcctSortLabel');
+                if (dupActive) {
+                    deactivate();
+                    dupActive = false;
+                    if (btn) btn.classList.remove('active');
+                    if (label) label.textContent = 'Sort Duplicate Accounts';
+                    window.applyEmployeeFilters();            // restores normal filter visibility
+                    return;
+                }
+                const groups = duplicateGroups();
+                if (!groups.size) {
+                    showPiToast('No duplicate account numbers found', 'success');
+                    return;
+                }
+                activate(groups);
+                dupActive = true;
+                if (btn) btn.classList.add('active');
+                if (label) label.textContent = 'Show All Employees';
+                window.applyEmployeeFilters();
+            };
+
+            // Keep search / dropdown filters working while duplicate view is on,
+            // WITHOUT modifying the existing applyEmployeeFilters function.
+            const _origApplyEmployeeFilters = window.applyEmployeeFilters;
+            window.applyEmployeeFilters = function () {
+                _origApplyEmployeeFilters.apply(this, arguments);
+                if (!dupActive) return;
+
+                let visible = 0;
+                allRows().forEach(function (row) {
+                    if (!dupRowSet.has(row)) { row.style.display = 'none'; return; }
+                    if (row.style.display !== 'none') visible++;
+                });
+                groupHeaders.forEach(function (g) {
+                    const any = g.rows.some(function (r) { return r.style.display !== 'none'; });
+                    g.tr.style.display = any ? '' : 'none';
+                });
+                const badge = document.getElementById('filterResultCount');
+                if (badge) {
+                    badge.textContent = visible + ' employee' + (visible !== 1 ? 's' : '') + ' with shared account numbers';
+                    badge.classList.remove('hidden');
+                }
+            };
+
+            refreshCountBadge();
+        })();
         /*]]>*/
     </script>
 </main>
