@@ -2,43 +2,196 @@
 <html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout}">
 <head><meta charset="UTF-8"><title>Grouped Approval Paths</title></head>
 <body>
-<main layout:fragment="content" class="space-y-6" id="groupedConfiguration">
+<main layout:fragment="content" id="groupedConfiguration">
     <style>
-        #groupedConfiguration{max-width:1100px;margin:auto;padding:16px}#groupedConfiguration *{box-sizing:border-box}#groupedConfiguration fieldset{min-inline-size:0}#groupedConfiguration h1{font-size:1.6rem;font-weight:700}#groupedConfiguration h2{font-size:1.2rem;font-weight:600}
-        .gc-card{border:1px solid #cbd5e1;border-radius:12px;padding:16px;margin:12px 0;background:#fff;color:#172033}.gc-actions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
-        #groupedConfiguration button,#groupedConfiguration a.gc-button{border:1px solid #64748b;border-radius:6px;padding:8px 12px;background:#eff6ff;color:#172033}
-        #groupedConfiguration input:not([type=checkbox]),#groupedConfiguration select,#groupedConfiguration textarea{border:1px solid #64748b;border-radius:5px;padding:8px;width:100%;margin:4px 0 10px}
-        #groupedConfiguration button:focus-visible,#groupedConfiguration input:focus-visible,#groupedConfiguration select:focus-visible{outline:3px solid #2563eb;outline-offset:2px}
-        #groupedConfiguration button:disabled{opacity:.5}#gcError{color:#991b1b}#groupedConfiguration label{display:block}.gc-member-list{max-height:200px;overflow:auto;border:1px solid #cbd5e1;padding:8px}
-        .gc-preview{white-space:pre-wrap;overflow-wrap:anywhere}.dark .gc-card{background:#1f2937;color:#f1f5f9}
+        /* ---------- Tokens (light + dark) ---------- */
+        #groupedConfiguration{
+            --gc-ink:#172033;--gc-muted:#5b6678;--gc-line:#d5dbe5;--gc-surface:#fff;--gc-tint:#f4f6fa;
+            --gc-accent:#1d4ed8;--gc-accent-ink:#fff;--gc-accent-soft:#e8effd;
+            --gc-danger:#b91c1c;--gc-danger-soft:#fdecec;
+            --gc-ok:#166534;--gc-ok-soft:#e5f5ea;--gc-warn:#854d0e;--gc-warn-soft:#fdf3d8;
+            max-width:960px;margin:0 auto;padding:24px 16px 48px;
+            display:flex;flex-direction:column;gap:20px;
+            color:var(--gc-ink);font-size:.9375rem;line-height:1.5;
+        }
+        .dark #groupedConfiguration{
+            --gc-ink:#e8edf5;--gc-muted:#a3afc2;--gc-line:#334155;--gc-surface:#1b2433;--gc-tint:#232e41;
+            --gc-accent:#6ea0ff;--gc-accent-ink:#0b1220;--gc-accent-soft:#1e2f55;
+            --gc-danger:#fca5a5;--gc-danger-soft:#3b1f24;
+            --gc-ok:#86e0a3;--gc-ok-soft:#173223;--gc-warn:#f5d27a;--gc-warn-soft:#3a2f14;
+        }
+        #groupedConfiguration *{box-sizing:border-box}
+        #groupedConfiguration h1{font-size:1.5rem;font-weight:700;line-height:1.25;margin:0}
+        #groupedConfiguration h2{font-size:1.0625rem;font-weight:700;line-height:1.3;margin:0}
+        #groupedConfiguration h3{font-size:1rem;font-weight:600;line-height:1.3;margin:0}
+        #groupedConfiguration p{margin:0}
+        #groupedConfiguration fieldset{min-inline-size:0}
+
+        /* ---------- Page header ---------- */
+        #groupedConfiguration .gc-back{align-self:flex-start;color:var(--gc-accent);font-weight:600;font-size:.875rem;text-decoration:none}
+        #groupedConfiguration .gc-back:hover{text-decoration:underline}
+        #groupedConfiguration .gc-header{display:flex;flex-direction:column;gap:6px}
+        #groupedConfiguration .gc-lead,#groupedConfiguration .gc-help,#groupedConfiguration .gc-note{color:var(--gc-muted)}
+        #groupedConfiguration .gc-help{font-size:.875rem}
+        #groupedConfiguration .gc-note{font-size:.8125rem;margin-top:12px}
+
+        /* ---------- Status + error ---------- */
+        #gcStatus{padding:10px 14px;border-radius:8px;background:var(--gc-accent-soft);color:var(--gc-ink);font-size:.875rem}
+        #gcError{padding:10px 14px;border-radius:8px;background:var(--gc-danger-soft);color:var(--gc-danger);border:1px solid var(--gc-danger);font-weight:600;font-size:.875rem}
+        #gcError:empty{display:none}
+
+        /* ---------- Cards ---------- */
+        #groupedConfiguration .gc-card{background:var(--gc-surface);border:1px solid var(--gc-line);border-radius:12px;padding:20px}
+        #groupedConfiguration .gc-card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+        #groupedConfiguration .gc-card-head > div{display:flex;flex-direction:column;gap:4px;max-width:62ch}
+
+        /* ---------- Buttons ---------- */
+        #groupedConfiguration .gc-btn{
+            display:inline-flex;align-items:center;justify-content:center;gap:6px;
+            min-height:38px;padding:0 14px;border:1px solid var(--gc-line);border-radius:8px;
+            background:var(--gc-surface);color:var(--gc-ink);
+            font:inherit;font-size:.875rem;font-weight:600;line-height:1.2;
+            cursor:pointer;text-decoration:none;transition:background-color .12s,border-color .12s;
+        }
+        #groupedConfiguration .gc-btn:hover:not(:disabled){background:var(--gc-tint);border-color:var(--gc-muted)}
+        #groupedConfiguration .gc-btn-primary{background:var(--gc-accent);border-color:var(--gc-accent);color:var(--gc-accent-ink)}
+        #groupedConfiguration .gc-btn-primary:hover:not(:disabled){background:var(--gc-accent);border-color:var(--gc-accent);filter:brightness(1.1)}
+        #groupedConfiguration .gc-btn-danger{color:var(--gc-danger);border-color:transparent;background:transparent}
+        #groupedConfiguration .gc-btn-danger:hover:not(:disabled){background:var(--gc-danger-soft);border-color:var(--gc-danger)}
+        #groupedConfiguration .gc-btn-sm{min-height:32px;padding:0 10px;font-size:.8125rem}
+        #groupedConfiguration .gc-btn-dashed{width:100%;border-style:dashed;color:var(--gc-accent);background:transparent}
+        #groupedConfiguration .gc-btn:focus-visible,
+        #groupedConfiguration input:focus-visible,
+        #groupedConfiguration select:focus-visible,
+        #groupedConfiguration textarea:focus-visible,
+        #groupedConfiguration .gc-back:focus-visible{outline:3px solid var(--gc-accent);outline-offset:2px}
+        #groupedConfiguration .gc-btn:disabled{opacity:.5;cursor:not-allowed}
+
+        /* ---------- Form fields ---------- */
+        #groupedConfiguration .gc-field{margin-bottom:14px}
+        #groupedConfiguration .gc-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:0 16px}
+        #groupedConfiguration label{display:block;margin-bottom:4px;font-size:.875rem;font-weight:600}
+        #groupedConfiguration input:not([type=checkbox]),
+        #groupedConfiguration select,
+        #groupedConfiguration textarea{
+            display:block;width:100%;min-height:40px;margin:0;padding:8px 10px;
+            border:1px solid var(--gc-muted);border-radius:8px;
+            background:var(--gc-surface);color:var(--gc-ink);font:inherit;
+        }
+        #groupedConfiguration textarea{resize:vertical}
+        #groupedConfiguration input[type=checkbox]{flex:none;width:18px;height:18px;margin:0;accent-color:var(--gc-accent)}
+
+        /* ---------- Version list ---------- */
+        #groupedConfiguration .gc-version{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 0;border-top:1px solid var(--gc-line)}
+        #groupedConfiguration .gc-version-main{display:flex;flex-direction:column;gap:6px;min-width:0}
+        #groupedConfiguration .gc-version h3{overflow-wrap:anywhere}
+        #groupedConfiguration .gc-meta{display:flex;align-items:center;flex-wrap:wrap;gap:8px;color:var(--gc-muted);font-size:.8125rem}
+        #groupedConfiguration .gc-badge{display:inline-block;padding:2px 9px;border-radius:999px;font-size:.75rem;font-weight:600;line-height:1.5;background:var(--gc-tint);color:var(--gc-muted)}
+        #groupedConfiguration .gc-badge-draft{background:var(--gc-warn-soft);color:var(--gc-warn)}
+        #groupedConfiguration .gc-badge-published{background:var(--gc-accent-soft);color:var(--gc-accent)}
+        #groupedConfiguration .gc-badge-enabled{background:var(--gc-ok-soft);color:var(--gc-ok)}
+        #groupedConfiguration .gc-empty{padding:16px;border:1px dashed var(--gc-line);border-radius:8px;color:var(--gc-muted);text-align:center}
+        #groupedConfiguration .gc-actions{display:flex;gap:8px;flex-wrap:wrap}
+
+        /* ---------- Level editor ---------- */
+        #groupedConfiguration .gc-level{margin:0 0 12px;padding:16px;border:1px solid var(--gc-line);border-radius:10px;background:var(--gc-tint)}
+        #groupedConfiguration .gc-level legend{padding:0 6px;font-size:.9375rem;font-weight:700}
+        #groupedConfiguration .gc-level .gc-help{margin:-4px 0 14px}
+        #groupedConfiguration .gc-member-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:2px;max-height:220px;overflow:auto;padding:4px;border:1px solid var(--gc-line);border-radius:8px;background:var(--gc-surface)}
+        #groupedConfiguration .gc-check{display:flex;align-items:center;gap:10px;margin:0;padding:8px 10px;border-radius:6px;font-weight:400;cursor:pointer;overflow-wrap:anywhere}
+        #groupedConfiguration .gc-check[hidden]{display:none}
+        #groupedConfiguration .gc-check:hover{background:var(--gc-tint)}
+        #groupedConfiguration .gc-check:has(input:checked){background:var(--gc-accent-soft)}
+        #groupedConfiguration .gc-count{margin-top:8px;color:var(--gc-muted);font-size:.8125rem}
+        #groupedConfiguration .gc-level-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px solid var(--gc-line)}
+        #groupedConfiguration .gc-push{margin-left:auto}
+        #groupedConfiguration .gc-form-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;padding-top:16px;border-top:1px solid var(--gc-line)}
+
+        /* ---------- Previews + diagnostics ---------- */
+        #groupedConfiguration .gc-preview{margin:12px 0 0;padding:12px 14px;border:1px solid var(--gc-line);border-radius:8px;background:var(--gc-tint);color:var(--gc-ink);font:inherit;font-size:.875rem;white-space:pre-wrap;overflow-wrap:anywhere}
+        #groupedConfiguration .gc-preview:empty{display:none}
+        #gcDiagnosticsText{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.8125rem;max-height:360px;overflow:auto}
+        #groupedConfiguration .gc-subtle{padding:14px;border-radius:10px;background:var(--gc-tint);margin-bottom:16px}
+
+        /* ---------- Confirmation modal ---------- */
+        #groupedConfiguration .gc-modal{width:min(440px,calc(100% - 32px));margin:auto;padding:0;border:1px solid var(--gc-line);border-radius:12px;background:var(--gc-surface);color:var(--gc-ink);box-shadow:0 12px 40px rgba(15,23,42,.25)}
+        #groupedConfiguration .gc-modal::backdrop{background:rgba(15,23,42,.5)}
+        #groupedConfiguration .gc-modal-body{display:flex;flex-direction:column;gap:12px;padding:20px}
+        #groupedConfiguration .gc-modal p{color:var(--gc-muted)}
+        #groupedConfiguration .gc-modal .gc-preview{margin:0;max-height:220px;overflow:auto}
+        #groupedConfiguration .gc-modal-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:4px}
+        #groupedConfiguration .gc-btn-danger-solid{background:var(--gc-danger);border-color:var(--gc-danger);color:var(--gc-accent-ink)}
+        #groupedConfiguration .gc-btn-danger-solid:hover:not(:disabled){background:var(--gc-danger);border-color:var(--gc-danger);filter:brightness(1.1)}
+
+        @media (max-width:560px){
+            #groupedConfiguration{padding:16px 12px 32px}
+            #groupedConfiguration .gc-card{padding:16px}
+            #groupedConfiguration .gc-version .gc-actions,
+            #groupedConfiguration .gc-form-actions{width:100%}
+            #groupedConfiguration .gc-version .gc-actions .gc-btn,
+            #groupedConfiguration .gc-form-actions .gc-btn{flex:1}
+        }
+        @media (prefers-reduced-motion:reduce){#groupedConfiguration .gc-btn{transition:none}}
     </style>
-    <a href="/requests">Back to Requests</a>
-    <h1>Grouped approval paths</h1>
-    <p>Add multiple approvers per level. Existing sequential, Line Manager and Free Route paths remain available.</p>
+
+    <a class="gc-back" href="/requests">Back to requests</a>
+
+    <header class="gc-header">
+        <h1>Grouped approval paths</h1>
+        <p class="gc-lead">Add multiple approvers per level. Existing sequential, Line Manager and Free Route paths remain available.</p>
+    </header>
+
     <p id="gcStatus" role="status" aria-live="polite">Loading configuration…</p>
     <div id="gcError" role="alert" tabindex="-1"></div>
-    <section class="gc-card"><h2>Versions</h2><div id="gcPaths"></div><button type="button" id="gcNew">New grouped path</button></section>
-    <form id="gcForm" class="gc-card">
-        <h2 id="gcFormTitle">New draft</h2>
-        <label for="gcName">Path name</label><input id="gcName" required maxlength="100">
-        <label for="gcDescription">Description</label><textarea id="gcDescription" maxlength="500" rows="2"></textarea>
+
+    <section class="gc-card" aria-labelledby="gcVersionsTitle">
+        <div class="gc-card-head">
+            <div><h2 id="gcVersionsTitle">Versions</h2><p class="gc-help">Drafts can be edited. Published versions are frozen; clone one to make changes.</p></div>
+            <button type="button" id="gcNew" class="gc-btn gc-btn-primary">New grouped path</button>
+        </div>
+        <div id="gcPaths"></div>
+    </section>
+
+    <form id="gcForm" class="gc-card" aria-labelledby="gcFormTitle">
+        <div class="gc-card-head"><div><h2 id="gcFormTitle">New draft</h2></div></div>
+        <div class="gc-field"><label for="gcName">Path name</label><input id="gcName" required maxlength="100"></div>
+        <div class="gc-field"><label for="gcDescription">Description</label><textarea id="gcDescription" maxlength="500" rows="2"></textarea></div>
         <div id="gcLevels"></div>
-        <div class="gc-actions"><button type="button" id="gcAddLevel">Add level</button><button type="button" id="gcPreview">Preview</button><button type="submit">Save draft</button></div>
-        <p>Publishing freezes this version. Bind a published version separately to a request type; already-submitted requests retain their snapshot.</p>
+        <button type="button" id="gcAddLevel" class="gc-btn gc-btn-dashed">Add level</button>
+        <div class="gc-form-actions">
+            <button type="submit" class="gc-btn gc-btn-primary">Save draft</button>
+            <button type="button" id="gcPreview" class="gc-btn">Preview</button>
+        </div>
+        <p class="gc-note">Publishing freezes this version. Bind a published version separately to a request type; already-submitted requests retain their snapshot.</p>
         <pre id="gcPreviewText" class="gc-preview" aria-live="polite"></pre>
     </form>
-    <section class="gc-card"><h2>Use a published version</h2>
-        <label for="gcType">Request type</label><select id="gcType"></select>
-        <label for="gcVersion">Published grouped path</label><select id="gcVersion"></select>
-        <label for="gcRequester">Requester for effective route preview</label><select id="gcRequester"></select>
-        <button type="button" id="gcEffectivePreview">Preview after excluding requester</button>
-        <pre id="gcEffectivePreviewText" class="gc-preview" aria-live="polite"></pre>
-        <p>This replaces the selected type's route for new requests only. Use the existing Requests configuration to restore a sequential or Line Manager route.</p>
-        <button type="button" id="gcBind">Apply to request type</button>
+
+    <section class="gc-card" aria-labelledby="gcUseTitle">
+        <div class="gc-card-head">
+            <div><h2 id="gcUseTitle">Use a published version</h2>
+                <p class="gc-help">This replaces the selected type's route for new requests only. Use the existing Requests configuration to restore a sequential or Line Manager route.</p></div>
+        </div>
+        <div class="gc-row">
+            <div class="gc-field"><label for="gcType">Request type</label><select id="gcType"></select></div>
+            <div class="gc-field"><label for="gcVersion">Published grouped path</label><select id="gcVersion"></select></div>
+        </div>
+        <div class="gc-subtle">
+            <div class="gc-field"><label for="gcRequester">Requester for effective route preview</label><select id="gcRequester"></select></div>
+            <button type="button" id="gcEffectivePreview" class="gc-btn">Preview after excluding requester</button>
+            <pre id="gcEffectivePreviewText" class="gc-preview" aria-live="polite"></pre>
+        </div>
+        <button type="button" id="gcBind" class="gc-btn gc-btn-primary">Apply to request type</button>
     </section>
-    <section class="gc-card"><h2>Operational checks</h2><p>Read-only sample of up to 100 active cycles and retrying notifications. These checks do not change requests.</p>
-        <button type="button" id="gcDiagnostics">Check workflow health</button><pre id="gcDiagnosticsText" class="gc-preview" aria-live="polite"></pre>
+
+    <section class="gc-card" aria-labelledby="gcChecksTitle">
+        <div class="gc-card-head">
+            <div><h2 id="gcChecksTitle">Operational checks</h2>
+                <p class="gc-help">Read-only sample of up to 100 active cycles and retrying notifications. These checks do not change requests.</p></div>
+            <button type="button" id="gcDiagnostics" class="gc-btn">Check workflow health</button>
+        </div>
+        <pre id="gcDiagnosticsText" class="gc-preview" aria-live="polite"></pre>
     </section>
+
     <script src="/js/grouped-approval-configuration.js" defer></script>
 </main>
 </body></html>

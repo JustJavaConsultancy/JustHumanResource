@@ -26,7 +26,7 @@ public class GroupedApprovalConfigurationService {
     private final EmployeeService employeeService;
     private final AuthenticationManager auth;
 
-    @Value("${app.requests.grouped-approval.enabled:false}")
+    @Value("${app.requests.grouped-approval.enabled:true}")
     private boolean enabled;
 
     public boolean isEnabled() { return enabled; }
