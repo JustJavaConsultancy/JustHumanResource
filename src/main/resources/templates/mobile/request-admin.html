@@ -26,6 +26,8 @@
 </head>
 <body>
 <section layout:fragment="content">
+<a href="/requests/grouped-approval-paths" class="request-secondary-btn" style="display:inline-block;padding:10px">Configure grouped approval paths</a>
+
 
     <!-- Header -->
     <div class="bg-blue-900 rounded-xl p-4 mb-4 text-white">
@@ -230,7 +232,7 @@
                 <div class="border border-gray-200 rounded-xl p-3 mb-2 space-y-2">
                     <div>
                         <p class="font-semibold text-sm">${t.name}</p>
-                        <p class="text-xs text-gray-400">${t.code}</p>
+                        <p class="text-xs text-gray-400">${t.code}${t.groupedApprovalPathVersionId ? ' — Grouped version #' + t.groupedApprovalPathVersionId + ' configured. Saving here replaces it.' : ''}</p>
                     </div>
                     <div class="grid grid-cols-[1fr_1fr_auto] gap-2 items-center">
                         <select data-route-type="${t.code}" class="ra-select text-xs" onchange="syncRoutePathState('${t.code}')">
@@ -292,6 +294,7 @@
         }
 
         async function saveRequestTypeRoute(code) {
+            if (types.find(t => t.code === code)?.groupedApprovalPathVersionId && !confirm('Replace the grouped path for new requests? Already submitted requests retain their route.')) return;
             const routeType = document.querySelector(`[data-route-type="${code}"]`).value;
             const pathId    = document.querySelector(`[data-route-path="${code}"]`).value;
             if (routeType === 'CUSTOM' && !pathId) return alert('Select a custom approval path.');

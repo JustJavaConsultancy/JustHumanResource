@@ -75,6 +75,7 @@ public class Oauth2SecurityConfig {
                             authorize.requestMatchers("/mobile/biometric/bootstrap").permitAll();
                             authorize.requestMatchers("/mobile/auth/refresh").permitAll();
                             authorize.requestMatchers("/mobile/auth/session/login").permitAll();
+                            authorize.requestMatchers("/api/grouped-approval-paths/**", "/api/requests/grouped-approvals/**").authenticated();
                             authorize.requestMatchers("/api/**").permitAll();
                             authorize.anyRequest().authenticated();
                         }

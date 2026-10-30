@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout}">
+<head><meta charset="UTF-8"><title>Grouped Approval Paths</title></head>
+<body>
+<main layout:fragment="content" class="space-y-6" id="groupedConfiguration">
+    <style>
+        #groupedConfiguration{max-width:1100px;margin:auto;padding:16px}#groupedConfiguration *{box-sizing:border-box}#groupedConfiguration fieldset{min-inline-size:0}#groupedConfiguration h1{font-size:1.6rem;font-weight:700}#groupedConfiguration h2{font-size:1.2rem;font-weight:600}
+        .gc-card{border:1px solid #cbd5e1;border-radius:12px;padding:16px;margin:12px 0;background:#fff;color:#172033}.gc-actions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+        #groupedConfiguration button,#groupedConfiguration a.gc-button{border:1px solid #64748b;border-radius:6px;padding:8px 12px;background:#eff6ff;color:#172033}
+        #groupedConfiguration input:not([type=checkbox]),#groupedConfiguration select,#groupedConfiguration textarea{border:1px solid #64748b;border-radius:5px;padding:8px;width:100%;margin:4px 0 10px}
+        #groupedConfiguration button:focus-visible,#groupedConfiguration input:focus-visible,#groupedConfiguration select:focus-visible{outline:3px solid #2563eb;outline-offset:2px}
+        #groupedConfiguration button:disabled{opacity:.5}#gcError{color:#991b1b}#groupedConfiguration label{display:block}.gc-member-list{max-height:200px;overflow:auto;border:1px solid #cbd5e1;padding:8px}
+        .gc-preview{white-space:pre-wrap;overflow-wrap:anywhere}.dark .gc-card{background:#1f2937;color:#f1f5f9}
+    </style>
+    <a href="/requests">Back to Requests</a>
+    <h1>Grouped approval paths</h1>
+    <p>Add multiple approvers per level. Existing sequential, Line Manager and Free Route paths remain available.</p>
+    <p id="gcStatus" role="status" aria-live="polite">Loading configuration…</p>
+    <div id="gcError" role="alert" tabindex="-1"></div>
+    <section class="gc-card"><h2>Versions</h2><div id="gcPaths"></div><button type="button" id="gcNew">New grouped path</button></section>
+    <form id="gcForm" class="gc-card">
+        <h2 id="gcFormTitle">New draft</h2>
+        <label for="gcName">Path name</label><input id="gcName" required maxlength="100">
+        <label for="gcDescription">Description</label><textarea id="gcDescription" maxlength="500" rows="2"></textarea>
+        <div id="gcLevels"></div>
+        <div class="gc-actions"><button type="button" id="gcAddLevel">Add level</button><button type="button" id="gcPreview">Preview</button><button type="submit">Save draft</button></div>
+        <p>Publishing freezes this version. Bind a published version separately to a request type; already-submitted requests retain their snapshot.</p>
+        <pre id="gcPreviewText" class="gc-preview" aria-live="polite"></pre>
+    </form>
+    <section class="gc-card"><h2>Use a published version</h2>
+        <label for="gcType">Request type</label><select id="gcType"></select>
+        <label for="gcVersion">Published grouped path</label><select id="gcVersion"></select>
+        <label for="gcRequester">Requester for effective route preview</label><select id="gcRequester"></select>
+        <button type="button" id="gcEffectivePreview">Preview after excluding requester</button>
+        <pre id="gcEffectivePreviewText" class="gc-preview" aria-live="polite"></pre>
+        <p>This replaces the selected type's route for new requests only. Use the existing Requests configuration to restore a sequential or Line Manager route.</p>
+        <button type="button" id="gcBind">Apply to request type</button>
+    </section>
+    <section class="gc-card"><h2>Operational checks</h2><p>Read-only sample of up to 100 active cycles and retrying notifications. These checks do not change requests.</p>
+        <button type="button" id="gcDiagnostics">Check workflow health</button><pre id="gcDiagnosticsText" class="gc-preview" aria-live="polite"></pre>
+    </section>
+    <script src="/js/grouped-approval-configuration.js" defer></script>
+</main>
+</body></html>
