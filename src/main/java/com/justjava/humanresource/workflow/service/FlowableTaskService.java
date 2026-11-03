@@ -1,5 +1,6 @@
 package com.justjava.humanresource.workflow.service;
 
+import com.justjava.humanresource.finance.FinanceLockApprovalGuard;
 import com.justjava.humanresource.workflow.dto.FlowableTaskDTO;
 import lombok.RequiredArgsConstructor;
 import org.flowable.engine.HistoryService;
@@ -27,6 +28,9 @@ public class FlowableTaskService {
     private final RuntimeService runtimeService;
     @Autowired
     private HistoryService historyService;
+    // STAGE 1 (D4): central check so only finance officers can decide the payroll period-close lock.
+    @Autowired
+    private FinanceLockApprovalGuard financeLockApprovalGuard;
 
     /* =====================================================
        GET TASKS BY ASSIGNEE
@@ -231,6 +235,8 @@ public class FlowableTaskService {
         if (task == null) {
             throw new IllegalStateException("Task not found: " + taskId);
         }
+
+        financeLockApprovalGuard.assertMayDecide(task);
 
         if (variables != null && !variables.isEmpty()) {
 
