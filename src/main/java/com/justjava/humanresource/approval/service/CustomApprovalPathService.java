@@ -108,6 +108,7 @@ public class CustomApprovalPathService {
         } else {
             type.setCustomApprovalPathId(null);
         }
+        type.setGroupedApprovalPathVersionId(null);
         type.setApprovalRouteType(routeType);
         return requestTypeRepository.save(type);
     }

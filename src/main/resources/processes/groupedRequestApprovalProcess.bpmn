@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:flowable="http://flowable.org/bpmn" targetNamespace="http://justjava.com/request/grouped">
+  <process id="groupedRequestApprovalProcess" name="Grouped Request Approval" isExecutable="true">
+    <startEvent id="start"/>
+    <serviceTask id="activateLevel" name="Activate approval level" flowable:expression="${groupedApprovalService.activate(execution)}"/>
+    <userTask id="groupApprovalTask" name="Request group approval" flowable:assignee="${groupAssignment.employeeId}">
+      <extensionElements>
+        <flowable:taskListener event="create" expression="${groupedApprovalService.taskCreated(task)}"/>
+        <flowable:taskListener event="complete" expression="${groupedApprovalService.taskCompleting(task)}"/>
+      </extensionElements>
+      <multiInstanceLoopCharacteristics isSequential="false" flowable:collection="groupAssignments" flowable:elementVariable="groupAssignment">
+        <completionCondition xsi:type="tFormalExpression"><![CDATA[${groupLevelResolved}]]></completionCondition>
+      </multiInstanceLoopCharacteristics>
+    </userTask>
+    <serviceTask id="advanceLevel" name="Resolve level or finalize request" flowable:expression="${groupedApprovalService.advance(execution)}"/>
+    <exclusiveGateway id="moreLevels"/>
+    <endEvent id="end"/>
+    <sequenceFlow id="startToActivate" sourceRef="start" targetRef="activateLevel"/>
+    <sequenceFlow id="activateToTasks" sourceRef="activateLevel" targetRef="groupApprovalTask"/>
+    <sequenceFlow id="tasksToAdvance" sourceRef="groupApprovalTask" targetRef="advanceLevel"/>
+    <sequenceFlow id="advanceToGateway" sourceRef="advanceLevel" targetRef="moreLevels"/>
+    <sequenceFlow id="nextLevel" sourceRef="moreLevels" targetRef="activateLevel"><conditionExpression xsi:type="tFormalExpression"><![CDATA[${groupMore}]]></conditionExpression></sequenceFlow>
+    <sequenceFlow id="completed" sourceRef="moreLevels" targetRef="end"><conditionExpression xsi:type="tFormalExpression"><![CDATA[${!groupMore}]]></conditionExpression></sequenceFlow>
+  </process>
+</definitions>

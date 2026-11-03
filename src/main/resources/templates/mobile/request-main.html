@@ -355,7 +355,10 @@
                     item.approvalRequired ? '<span class="mr-badge mr-badge-warning">Approval required</span>' : '',
                     item.financeForwardRecipient ? '<span class="mr-badge mr-badge-success">Finance-forward recipient</span>' : ''
                 ].filter(Boolean).join(' ');
-                const taskActions = (item.approvalTasks || []).map(task => `
+                const taskActions = (item.approvalTasks || []).map(task => task.groupedApproval ? `
+                    <div class="text-xs">${mrEscape(task.approvalLevelLabel)}</div>
+                    <a class="text-primary font-semibold" href="${mrPageBase}/${encodeURIComponent(r.id)}">Review grouped approval</a>
+                ` : `
                     <button type="button" onclick="event.stopPropagation(); openApprovalSheet('${mrEscape(task.taskId)}','approve')" class="text-xs py-2 px-3 rounded-lg bg-green-600 text-white font-semibold">Approve</button>
                     <button type="button" onclick="event.stopPropagation(); openApprovalSheet('${mrEscape(task.taskId)}','reject')" class="text-xs py-2 px-3 rounded-lg bg-red-600 text-white font-semibold">Reject</button>
                     <button type="button" onclick="event.stopPropagation(); openApprovalSheet('${mrEscape(task.taskId)}','return')" class="text-xs py-2 px-3 rounded-lg bg-orange-600 text-white font-semibold">Return</button>

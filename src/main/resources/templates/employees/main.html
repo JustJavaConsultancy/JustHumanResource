@@ -609,10 +609,31 @@
     </div>
 
     <!-- Add Employee Button -->
-    <div class="flex flex-col items-end gap-2 mb-4">
+    <div class="flex flex-wrap items-center justify-end gap-3 mb-4">
         <p th:if="${employeeCreationAllowed == false}"
            th:text="${employeeCreationBlockedReason}"
-           class="text-xs font-semibold text-red-700 dark:text-red-400 text-right"></p>
+           class="w-full text-xs font-semibold text-red-700 dark:text-red-400 text-right"></p>
+        <button type="button" id="exportCancelBtn" onclick="cancelExportMode()"
+                style="display:none;"
+                class="items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors whitespace-nowrap">
+            <span class="material-icons-round text-sm">close</span>
+            <span>Cancel</span>
+        </button>
+        <button type="button" id="exportCsvBtn" onclick="handleExportClick()"
+                class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors whitespace-nowrap"
+                title="Select employees and export them to CSV">
+            <span class="material-icons-round text-sm">download</span>
+            <span id="exportCsvLabel">Export CSV</span>
+            <span id="exportCsvCount"
+                  style="display:none; align-items:center; justify-content:center; min-width:20px; height:20px; padding:0 6px; border-radius:9999px; background:#2563eb; color:#fff; font-size:0.7rem; font-weight:700;"></span>
+        </button>
+        <button type="button" id="dupAcctSortBtn" onclick="toggleDuplicateAccountSort()"
+                class="dup-acct-btn"
+                title="Show employees that share the same account number, grouped together">
+            <span class="material-icons-round text-sm">content_copy</span>
+            <span id="dupAcctSortLabel">Sort Duplicate Accounts</span>
+            <span id="dupAcctCount" class="dup-acct-count" style="display:none"></span>
+        </button>
         <button onclick="openModal('addEmployeeModal')"
                 th:disabled="${employeeCreationAllowed == false}"
                 th:classappend="${employeeCreationAllowed == false} ? ' opacity-50 cursor-not-allowed hover:bg-primary-600 hover:shadow-none' : ''"
@@ -682,6 +703,11 @@
             <table class="w-full">
                 <thead class="bg-gray-50 dark:bg-gray-750">
                 <tr>
+                    <th class="select-col px-4 md:px-6 py-3 text-left" style="width:1%;">
+                        <input type="checkbox" id="employeeSelectAll"
+                               class="h-4 w-4 rounded border-gray-300 text-blue-600 cursor-pointer"
+                               title="Select all employees currently shown" aria-label="Select all employees currently shown">
+                    </th>
                     <th class="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee</th>
                     <th class="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email / Phone</th>
                     <th class="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
@@ -706,6 +732,10 @@
                         data-job-grade-id=${employee.jobStep != null ? employee.jobStep.jobGrade.id : ''},
                         data-job-step-id=${employee.jobStep != null ? employee.jobStep.id : ''},
                         data-pay-group-id=${employee.payGroup != null ? employee.payGroup.id : ''},
+                        data-department-name=${employee.department != null ? employee.department.name : ''},
+                        data-job-grade-name=${employee.jobStep != null ? employee.jobStep.jobGrade.name : ''},
+                        data-job-step-name=${employee.jobStep != null ? employee.jobStep.name : ''},
+                        data-pay-group-name=${employee.payGroup != null ? employee.payGroup.name : ''},
                         data-manager-id=${managerMap != null and managerMap.containsKey(employee.id) ? managerMap.get(employee.id) : ''},
                         data-employment-status=${employee.employmentStatus},
                         data-nin-number=${employee.ninNumber},
@@ -730,6 +760,11 @@
                     "
                     th:onclick="'viewEmployee(' + ${employee.id} + ')'">
 
+                    <td class="select-col px-4 md:px-6 py-4" onclick="event.stopPropagation()">
+                        <input type="checkbox"
+                               class="employee-select h-4 w-4 rounded border-gray-300 text-blue-600 cursor-pointer"
+                               aria-label="Select employee">
+                    </td>
                     <td class="px-4 md:px-6 py-4">
                         <div class="flex items-center">
                             <div class="avatar-placeholder bg-blue-100 text-blue-600"
@@ -795,7 +830,7 @@
 
                 <!-- Empty State -->
                 <tr th:if="${employees == null or #lists.isEmpty(employees)}">
-                    <td colspan="7" class="px-6 py-16 text-center">
+                    <td colspan="8" class="px-6 py-16 text-center">
                         <div class="flex flex-col items-center justify-center space-y-4">
                             <div class="w-16 h-16 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -2153,6 +2188,12 @@
                     showPiToast('Account Number must be exactly 10 digits', 'error');
                     return false;
                 }
+                // Account numbers must be unique across all employees
+                const addDupOwner = acctFindConflict(accountNumber, null);
+                if (addDupOwner) {
+                    acctReportDuplicate('add', addDupOwner);
+                    return false;
+                }
             }
 
             // ── Intercept with fetch so we can catch the 409 duplicate-email
@@ -2180,8 +2221,11 @@
                     if (response.status === 409) {
                         const data = await response.json();
                         // Show the inline error banner
-                        errorText.textContent = data.message || 'An employee with this email already exists.';
+                        errorText.textContent = data.message || (data.error === 'DUPLICATE_ACCOUNT_NUMBER'
+                            ? 'This account number already belongs to another employee.'
+                            : 'An employee with this email already exists.');
                         errorBanner.classList.remove('hidden');
+                        if (data.error === 'DUPLICATE_ACCOUNT_NUMBER') acctMarkServerDuplicate('add');
                         if (data.error === 'DUPLICATE_EMAIL') {
                             const emailInput = document.getElementById('addEmailInput');
                             emailInput.classList.add('border-red-500', 'ring-1', 'ring-red-500');
@@ -2447,6 +2491,13 @@
                     submitBtn.disabled = false; submitBtn.classList.remove('opacity-50','cursor-not-allowed'); submitBtn.innerHTML = '<span class="material-icons-round text-sm">save</span><span>Update Employee</span>';
                     return;
                 }
+                // Account numbers must be unique across all OTHER employees
+                const editDupOwner = acctFindConflict(editAccountNumber, id);
+                if (editDupOwner) {
+                    acctReportDuplicate('edit', editDupOwner);
+                    submitBtn.disabled = false; submitBtn.classList.remove('opacity-50','cursor-not-allowed'); submitBtn.innerHTML = '<span class="material-icons-round text-sm">save</span><span>Update Employee</span>';
+                    return;
+                }
             }
             const selectedEditGroups = Array.from(
                 document.querySelectorAll('#editEmployeeForm input[name="groups"]:checked')
@@ -2497,7 +2548,10 @@
             .then(async response => {
                 if (response.status === 409) {
                     const data = await response.json();
-                    showPiToast(data.message || 'Duplicate email address — another employee already uses this email.', 'error');
+                    if (data.error === 'DUPLICATE_ACCOUNT_NUMBER') acctMarkServerDuplicate('edit');
+                    showPiToast(data.message || (data.error === 'DUPLICATE_ACCOUNT_NUMBER'
+                        ? 'Duplicate account number — another employee already uses this account number.'
+                        : 'Duplicate email address — another employee already uses this email.'), 'error');
                     submitBtn.disabled = false;
                     submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
                     submitBtn.innerHTML = '<span class="material-icons-round text-sm">save</span><span>Update Employee</span>';
@@ -3233,6 +3287,7 @@
             // ── Validate & build rows ─────────────────────────────────────────
             const rows = [];
             let hasBlockingErrors = false;
+            const acctCtx = acctBuildCsvContext(normHeaders, dataRows);
 
             dataRows.forEach(({ rowNum, cells }) => {
                 const emailRaw = (cells['email'] || '').toLowerCase();
@@ -3272,6 +3327,9 @@
                             errors.push('Account number must be 10 digits');
                     }
                 }
+
+                // Account number must be unique (vs. existing employees and vs. other CSV rows)
+                acctCsvCheck(cells, rowNum, acctCtx).forEach(m => errors.push(m));
 
                 if (errors.length) hasBlockingErrors = true;
                 rows.push({ rowNum, cells, isEdit, errors });
@@ -3556,6 +3614,600 @@ function confirmToggleVisibility() {
             }
         }
 
+        /*]]>*/
+    </script>
+
+    <!-- ========== UNIQUE ACCOUNT NUMBER GUARD + DUPLICATE ACCOUNT SORT ========== -->
+    <style>
+        .dup-acct-btn {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 8px 14px; border-radius: 8px;
+            border: 1px solid #d1d5db; background: #ffffff; color: #374151;
+            font-size: 0.875rem; font-weight: 500; line-height: 1.25rem;
+            cursor: pointer; white-space: nowrap; transition: background-color .15s, border-color .15s, color .15s;
+        }
+        .dup-acct-btn:hover { background: #f9fafb; }
+        .dup-acct-btn.active { background: #fef2f2; border-color: #fca5a5; color: #b91c1c; }
+        .dark .dup-acct-btn { background: #1f2937; border-color: #4b5563; color: #e5e7eb; }
+        .dark .dup-acct-btn:hover { background: #374151; }
+        .dark .dup-acct-btn.active { background: rgba(127,29,29,.25); border-color: #b91c1c; color: #fca5a5; }
+        .dup-acct-count {
+            align-items: center; justify-content: center;
+            min-width: 20px; height: 20px; padding: 0 6px; border-radius: 9999px;
+            background: #dc2626; color: #ffffff; font-size: 0.7rem; font-weight: 700;
+        }
+        .acct-dup-invalid { border-color: #ef4444 !important; box-shadow: 0 0 0 3px rgba(239,68,68,.15) !important; }
+        .acct-dup-hint { display: none; margin-top: 4px; font-size: 0.75rem; color: #dc2626; }
+        .dark .acct-dup-hint { color: #f87171; }
+        tr.acct-dup-group-row td {
+            padding: 8px 16px; font-size: 0.75rem; font-weight: 600;
+            background: #fef2f2; color: #991b1b;
+        }
+        .dark tr.acct-dup-group-row td { background: rgba(127,29,29,.2); color: #fca5a5; }
+        .acct-dup-num { font-family: 'DM Mono', monospace; letter-spacing: 0.05em; }
+        .acct-dup-chip { margin-top: 2px; font-size: 0.7rem; color: #b91c1c; }
+
+        /* Selection (tick) column is hidden until the user starts an export */
+        .select-col { display: none; }
+        body.export-mode .select-col { display: table-cell; }
+        .dark .acct-dup-chip { color: #fca5a5; }
+    </style>
+    <script>
+        /*<![CDATA[*/
+        (function () {
+            'use strict';
+
+            // ── Helpers ────────────────────────────────────────────────────
+            function norm(v) { return String(v == null ? '' : v).replace(/\D/g, ''); }
+            function allRows() { return Array.prototype.slice.call(document.querySelectorAll('tr.employee-row')); }
+            function rowName(row) {
+                const n = ((row.dataset.firstName || '') + ' ' + (row.dataset.lastName || '')).trim();
+                return n || ('Employee #' + row.dataset.id);
+            }
+            function dupMessage(owner) {
+                return 'Account number ' + owner.account + ' is already used by ' + owner.name +
+                       ' (ID ' + owner.id + '). Each account number can belong to only one employee.';
+            }
+            function goToBankTab(prefix) {
+                const btn = document.querySelector('#' + prefix + 'EmployeeModal .tab-btn[onclick*="\'bank\'"]');
+                if (btn) btn.click();
+            }
+
+            // ── Manual add / edit: find another employee using this number ─
+            // excludeId = the employee being edited (never conflicts with itself)
+            window.acctFindConflict = function (accountNumber, excludeId) {
+                const n = norm(accountNumber);
+                if (n.length !== 10) return null;
+                const rows = allRows();
+                for (let i = 0; i < rows.length; i++) {
+                    const row = rows[i];
+                    if (excludeId != null && excludeId !== '' && String(row.dataset.id) === String(excludeId)) continue;
+                    if (norm(row.dataset.accountNumber) === n) {
+                        return { id: row.dataset.id, name: rowName(row), email: row.dataset.email || '', account: n };
+                    }
+                }
+                return null;
+            };
+
+            window.acctReportDuplicate = function (prefix, owner) {
+                const input = document.getElementById(prefix + 'AccountNumber');
+                const hint  = document.getElementById(prefix + 'AccountDupHint');
+                goToBankTab(prefix);
+                if (input) {
+                    input.classList.add('acct-dup-invalid');
+                    if (typeof shakeElement === 'function') shakeElement(input);
+                }
+                if (hint) { hint.textContent = dupMessage(owner); hint.style.display = 'block'; }
+                showPiToast('Account number ' + owner.account + ' is already used by ' + owner.name, 'error');
+            };
+
+            // Called when the server itself answers 409 DUPLICATE_ACCOUNT_NUMBER
+            window.acctMarkServerDuplicate = function (prefix) {
+                const input = document.getElementById(prefix + 'AccountNumber');
+                const hint  = document.getElementById(prefix + 'AccountDupHint');
+                goToBankTab(prefix);
+                if (input) input.classList.add('acct-dup-invalid');
+                if (hint) {
+                    hint.textContent = 'This account number already belongs to another employee. Each account number can belong to only one employee.';
+                    hint.style.display = 'block';
+                }
+            };
+
+            // ── Live feedback under the Account Number input (add + edit) ──
+            function setupLiveCheck(prefix) {
+                const input = document.getElementById(prefix + 'AccountNumber');
+                const modal = document.getElementById(prefix + 'EmployeeModal');
+                if (!input || !input.parentElement) return;
+
+                const hint = document.createElement('p');
+                hint.id = prefix + 'AccountDupHint';
+                hint.className = 'acct-dup-hint';
+                input.parentElement.insertAdjacentElement('afterend', hint);
+
+                function clear() {
+                    input.classList.remove('acct-dup-invalid');
+                    hint.style.display = 'none';
+                    hint.textContent = '';
+                }
+                function refresh() {
+                    const excludeId = prefix === 'edit'
+                        ? (document.getElementById('editEmployeeId') || {}).value
+                        : null;
+                    const owner = window.acctFindConflict(input.value, excludeId);
+                    if (owner) {
+                        input.classList.add('acct-dup-invalid');
+                        hint.textContent = dupMessage(owner);
+                        hint.style.display = 'block';
+                    } else {
+                        clear();
+                    }
+                }
+                input.addEventListener('input', refresh);
+
+                // Re-evaluate whenever the modal opens, clear when it closes
+                if (modal && window.MutationObserver) {
+                    new MutationObserver(function () {
+                        if (modal.classList.contains('hidden')) clear(); else refresh();
+                    }).observe(modal, { attributes: true, attributeFilter: ['class'] });
+                }
+            }
+            setupLiveCheck('add');
+            setupLiveCheck('edit');
+
+            // ── Bulk CSV upload (create + edit) ────────────────────────────
+            // Builds the lookups once per upload. An existing employee that the CSV is
+            // re-assigning to a new account number "frees" its old number, so legitimate
+            // swaps / re-assignments inside one file are not rejected.
+            window.acctBuildCsvContext = function (normHeaders, dataRows) {
+                const ctx = { enabled: normHeaders.indexOf('accountnumber') !== -1, bySystem: new Map(), inFile: new Map() };
+                if (!ctx.enabled) return ctx;
+
+                const reassignedEmails = new Set();
+                dataRows.forEach(function (r) {
+                    const n = norm(r.cells['accountnumber']);
+                    const email = (r.cells['email'] || '').toLowerCase();
+                    if (n.length === 10 && email) reassignedEmails.add(email);
+                    if (n.length === 10) {
+                        if (!ctx.inFile.has(n)) ctx.inFile.set(n, []);
+                        ctx.inFile.get(n).push({ rowNum: r.rowNum, email: email });
+                    }
+                });
+
+                allRows().forEach(function (row) {
+                    const n = norm(row.dataset.accountNumber);
+                    if (!n) return;
+                    const email = (row.dataset.email || '').toLowerCase();
+                    if (reassignedEmails.has(email)) return;   // this CSV gives it a new number
+                    if (!ctx.bySystem.has(n)) ctx.bySystem.set(n, []);
+                    ctx.bySystem.get(n).push({ id: row.dataset.id, name: rowName(row), email: email });
+                });
+                return ctx;
+            };
+
+            window.acctCsvCheck = function (cells, rowNum, ctx) {
+                if (!ctx || !ctx.enabled) return [];
+                const n = norm(cells['accountnumber']);
+                if (n.length !== 10) return [];          // format errors are reported elsewhere
+                const email = (cells['email'] || '').toLowerCase();
+                const msgs = [];
+
+                const owners = (ctx.bySystem.get(n) || []).filter(function (o) { return !(email && o.email === email); });
+                if (owners.length) {
+                    msgs.push('Account number ' + n + ' already belongs to ' + owners[0].name + ' (ID ' + owners[0].id + ')');
+                }
+                const others = (ctx.inFile.get(n) || []).filter(function (o) {
+                    return o.rowNum !== rowNum && !(email && o.email === email);
+                });
+                if (others.length) {
+                    msgs.push('Duplicate account number ' + n + ' in CSV (also on row ' +
+                        others.map(function (o) { return o.rowNum; }).join(', ') + ')');
+                }
+                return msgs;
+            };
+
+            // ── "Sort Duplicate Accounts" button ───────────────────────────
+            let dupActive = false;
+            let origOrder = [];
+            let groupHeaders = [];       // { tr, rows }
+            let dupRowSet = new Set();
+            const PALETTE = ['#ef4444', '#f59e0b', '#3b82f6', '#8b5cf6', '#10b981', '#ec4899'];
+
+            function duplicateGroups() {
+                const map = new Map();
+                allRows().forEach(function (row) {
+                    const n = norm(row.dataset.accountNumber);
+                    if (!n) return;
+                    if (!map.has(n)) map.set(n, []);
+                    map.get(n).push(row);
+                });
+                Array.from(map.keys()).forEach(function (k) { if (map.get(k).length < 2) map.delete(k); });
+                return map;
+            }
+
+            function refreshCountBadge() {
+                const badge = document.getElementById('dupAcctCount');
+                if (!badge) return;
+                const n = duplicateGroups().size;
+                badge.textContent = n;
+                badge.style.display = n ? 'inline-flex' : 'none';
+            }
+
+            function activate(groups) {
+                const first = document.querySelector('tr.employee-row');
+                const tbody = first.parentNode;
+                origOrder = allRows();
+                dupRowSet = new Set();
+                groupHeaders = [];
+
+                const frag = document.createDocumentFragment();
+                Array.from(groups.keys()).sort().forEach(function (key, gi) {
+                    const rows = groups.get(key).slice().sort(function (a, b) {
+                        return rowName(a).toLowerCase().localeCompare(rowName(b).toLowerCase());
+                    });
+                    const color = PALETTE[gi % PALETTE.length];
+
+                    const tr = document.createElement('tr');
+                    tr.className = 'acct-dup-group-row';
+                    const td = document.createElement('td');
+                    td.colSpan = 8;
+                    td.style.borderLeft = '4px solid ' + color;
+                    td.innerHTML = '<span class="material-icons-round" style="font-size:14px;vertical-align:text-bottom">content_copy</span> ' +
+                        'Account No. <span class="acct-dup-num">' + key + '</span> &mdash; shared by ' + rows.length + ' employees';
+                    tr.appendChild(td);
+                    frag.appendChild(tr);
+                    groupHeaders.push({ tr: tr, rows: rows });
+
+                    rows.forEach(function (row) {
+                        dupRowSet.add(row);
+                        if (row.cells[1]) row.cells[1].style.borderLeft = '4px solid ' + color;
+                        const holder = row.querySelector('td .ml-4');
+                        if (holder) {
+                            const chip = document.createElement('div');
+                            chip.className = 'acct-dup-chip';
+                            const acctName = row.dataset.accountName || '—';
+                            const bank = row.dataset.bankName || '—';
+                            chip.textContent = acctName + ' · ' + bank;
+                            holder.appendChild(chip);
+                        }
+                        frag.appendChild(row);
+                    });
+                });
+                origOrder.forEach(function (row) { if (!dupRowSet.has(row)) frag.appendChild(row); });
+                tbody.appendChild(frag);
+            }
+
+            function deactivate() {
+                groupHeaders.forEach(function (g) { if (g.tr.parentNode) g.tr.parentNode.removeChild(g.tr); });
+                const tbody = origOrder.length ? origOrder[0].parentNode : null;
+                origOrder.forEach(function (row) {
+                    if (row.cells[1]) row.cells[1].style.borderLeft = '';
+                    const chip = row.querySelector('.acct-dup-chip');
+                    if (chip && chip.parentNode) chip.parentNode.removeChild(chip);
+                    if (tbody) tbody.appendChild(row);        // restores the original order
+                });
+                groupHeaders = [];
+                dupRowSet = new Set();
+                origOrder = [];
+            }
+
+            window.toggleDuplicateAccountSort = function () {
+                const btn   = document.getElementById('dupAcctSortBtn');
+                const label = document.getElementById('dupAcctSortLabel');
+                if (dupActive) {
+                    deactivate();
+                    dupActive = false;
+                    if (btn) btn.classList.remove('active');
+                    if (label) label.textContent = 'Sort Duplicate Accounts';
+                    window.applyEmployeeFilters();            // restores normal filter visibility
+                    return;
+                }
+                const groups = duplicateGroups();
+                if (!groups.size) {
+                    showPiToast('No duplicate account numbers found', 'success');
+                    return;
+                }
+                activate(groups);
+                dupActive = true;
+                if (btn) btn.classList.add('active');
+                if (label) label.textContent = 'Show All Employees';
+                window.applyEmployeeFilters();
+            };
+
+            // Keep search / dropdown filters working while duplicate view is on,
+            // WITHOUT modifying the existing applyEmployeeFilters function.
+            const _origApplyEmployeeFilters = window.applyEmployeeFilters;
+            window.applyEmployeeFilters = function () {
+                _origApplyEmployeeFilters.apply(this, arguments);
+                if (!dupActive) return;
+
+                let visible = 0;
+                allRows().forEach(function (row) {
+                    if (!dupRowSet.has(row)) { row.style.display = 'none'; return; }
+                    if (row.style.display !== 'none') visible++;
+                });
+                groupHeaders.forEach(function (g) {
+                    const any = g.rows.some(function (r) { return r.style.display !== 'none'; });
+                    g.tr.style.display = any ? '' : 'none';
+                });
+                const badge = document.getElementById('filterResultCount');
+                if (badge) {
+                    badge.textContent = visible + ' employee' + (visible !== 1 ? 's' : '') + ' with shared account numbers';
+                    badge.classList.remove('hidden');
+                }
+            };
+
+            refreshCountBadge();
+        })();
+        /*]]>*/
+    </script>
+
+    <!-- ========== EXPORT EMPLOYEES TO CSV ========== -->
+    <div id="exportEmployeesModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4 modal-transition"
+         onclick="if(event.target === this) closeModal('exportEmployeesModal')">
+        <div class="bg-white dark:bg-gray-800 w-full max-w-lg max-h-[90vh] rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col">
+            <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+                <h3 class="text-base font-semibold">Export Employees to CSV</h3>
+                <p id="exportSelectedCount" class="text-xs text-gray-500 dark:text-gray-400 mt-0.5"></p>
+            </div>
+
+            <div class="p-5 space-y-5 overflow-y-auto">
+                <div class="flex items-center justify-between">
+                    <p class="text-sm font-medium">Choose the information to export</p>
+                    <div class="flex items-center gap-3 text-xs font-semibold">
+                        <button type="button" onclick="exportSetAllFields(true)"  class="text-blue-600 hover:text-blue-700">Select all</button>
+                        <button type="button" onclick="exportSetAllFields(false)" class="text-gray-500 hover:text-gray-700 dark:text-gray-400">Clear</button>
+                    </div>
+                </div>
+
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Employee details</p>
+                    <div class="grid grid-cols-2 gap-x-4 gap-y-2">
+                        <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" class="export-field h-4 w-4 rounded border-gray-300 text-blue-600" value="id" checked> ID</label>
+                        <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" class="export-field h-4 w-4 rounded border-gray-300 text-blue-600" value="firstName" checked> First Name</label>
+                        <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" class="export-field h-4 w-4 rounded border-gray-300 text-blue-600" value="lastName" checked> Last Name</label>
+                        <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" class="export-field h-4 w-4 rounded border-gray-300 text-blue-600" value="email" checked> Email</label>
+                        <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" class="export-field h-4 w-4 rounded border-gray-300 text-blue-600" value="phone" checked> Phone Number</label>
+                        <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" class="export-field h-4 w-4 rounded border-gray-300 text-blue-600" value="department" checked> Department</label>
+                        <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" class="export-field h-4 w-4 rounded border-gray-300 text-blue-600" value="jobGrade" checked> Job Grade</label>
+                        <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" class="export-field h-4 w-4 rounded border-gray-300 text-blue-600" value="jobStep" checked> Job Step</label>
+                        <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" class="export-field h-4 w-4 rounded border-gray-300 text-blue-600" value="payGroup" checked> Pay Group</label>
+                    </div>
+                </div>
+
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Grouped details</p>
+                    <div class="space-y-2">
+                        <label class="flex items-start gap-3 p-3 border border-gray-200 dark:border-gray-700 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-750">
+                            <input type="checkbox" class="export-field h-4 w-4 mt-0.5 rounded border-gray-300 text-blue-600" value="identity">
+                            <span>
+                                <span class="block text-sm font-medium">Identity</span>
+                                <span class="block text-xs text-gray-500 dark:text-gray-400">TIN, RSA PIN, PFA, NIN, BVN</span>
+                            </span>
+                        </label>
+                        <label class="flex items-start gap-3 p-3 border border-gray-200 dark:border-gray-700 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-750">
+                            <input type="checkbox" class="export-field h-4 w-4 mt-0.5 rounded border-gray-300 text-blue-600" value="nextOfKin">
+                            <span>
+                                <span class="block text-sm font-medium">Next of Kin</span>
+                                <span class="block text-xs text-gray-500 dark:text-gray-400">Full name, phone number, email, residential address</span>
+                            </span>
+                        </label>
+                        <label class="flex items-start gap-3 p-3 border border-gray-200 dark:border-gray-700 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-750">
+                            <input type="checkbox" class="export-field h-4 w-4 mt-0.5 rounded border-gray-300 text-blue-600" value="guarantor">
+                            <span>
+                                <span class="block text-sm font-medium">Guarantor</span>
+                                <span class="block text-xs text-gray-500 dark:text-gray-400">Full name, phone number, email, residential address, NIN</span>
+                            </span>
+                        </label>
+                        <label class="flex items-start gap-3 p-3 border border-gray-200 dark:border-gray-700 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-750">
+                            <input type="checkbox" class="export-field h-4 w-4 mt-0.5 rounded border-gray-300 text-blue-600" value="bank">
+                            <span>
+                                <span class="block text-sm font-medium">Bank Details</span>
+                                <span class="block text-xs text-gray-500 dark:text-gray-400">Account name, bank name, account number</span>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+
+                <p class="text-xs text-gray-500 dark:text-gray-400">Anything not recorded for an employee is left empty in the CSV.</p>
+            </div>
+
+            <div class="px-5 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2 flex-shrink-0">
+                <button type="button" onclick="closeModal('exportEmployeesModal')" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm">
+                    Cancel
+                </button>
+                <button type="button" onclick="exportEmployeesCsv()" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold">
+                    <span class="material-icons-round text-sm">download</span>
+                    Export
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /*<![CDATA[*/
+        (function () {
+            'use strict';
+
+            // Each entry: which checkbox in the modal controls it (field), the CSV header,
+            // and the data-* attribute on the table row it is read from (key).
+            const COLUMNS = [
+                { field: 'id',         header: 'ID',                              key: 'id' },
+                { field: 'firstName',  header: 'First Name',                      key: 'firstName' },
+                { field: 'lastName',   header: 'Last Name',                       key: 'lastName' },
+                { field: 'email',      header: 'Email',                           key: 'email' },
+                { field: 'phone',      header: 'Phone Number',                    key: 'phone' },
+                { field: 'department', header: 'Department',                      key: 'departmentName' },
+                { field: 'jobGrade',   header: 'Job Grade',                       key: 'jobGradeName' },
+                { field: 'jobStep',    header: 'Job Step',                        key: 'jobStepName' },
+                { field: 'payGroup',   header: 'Pay Group',                       key: 'payGroupName' },
+
+                { field: 'identity',   header: 'TIN',                             key: 'tinNumber' },
+                { field: 'identity',   header: 'RSA PIN',                         key: 'rsaPin' },
+                { field: 'identity',   header: 'PFA',                             key: 'pfa' },
+                { field: 'identity',   header: 'NIN',                             key: 'ninNumber' },
+                { field: 'identity',   header: 'BVN',                             key: 'bvnNumber' },
+
+                { field: 'nextOfKin',  header: 'Next of Kin Full Name',           key: 'nokName' },
+                { field: 'nextOfKin',  header: 'Next of Kin Phone Number',        key: 'nokPhone' },
+                { field: 'nextOfKin',  header: 'Next of Kin Email',               key: 'nokEmail' },
+                { field: 'nextOfKin',  header: 'Next of Kin Residential Address', key: 'nokAddress' },
+
+                { field: 'guarantor',  header: 'Guarantor Full Name',             key: 'guarantorName' },
+                { field: 'guarantor',  header: 'Guarantor Phone Number',          key: 'guarantorPhone' },
+                { field: 'guarantor',  header: 'Guarantor Email',                 key: 'guarantorEmail' },
+                { field: 'guarantor',  header: 'Guarantor Residential Address',   key: 'guarantorAddress' },
+                { field: 'guarantor',  header: 'Guarantor NIN',                   key: 'guarantorNin' },
+
+                { field: 'bank',       header: 'Account Name',                    key: 'accountName' },
+                { field: 'bank',       header: 'Bank Name',                       key: 'bankName' },
+                { field: 'bank',       header: 'Account Number',                  key: 'accountNumber' }
+            ];
+
+            // ── Selection ──────────────────────────────────────────────
+            function allRows()      { return Array.prototype.slice.call(document.querySelectorAll('tr.employee-row')); }
+            function rowBox(row)    { return row.querySelector('.employee-select'); }
+            function isShown(row)   { return row.style.display !== 'none'; }
+            function selectedRows() { return allRows().filter(function (r) { const b = rowBox(r); return b && b.checked; }); }
+
+            function refreshSelectionUI() {
+                const shown        = allRows().filter(isShown);
+                const shownChecked = shown.filter(function (r) { return rowBox(r).checked; }).length;
+
+                const master = document.getElementById('employeeSelectAll');
+                if (master) {
+                    master.checked       = shown.length > 0 && shownChecked === shown.length;
+                    master.indeterminate = shownChecked > 0 && shownChecked < shown.length;
+                }
+
+                const total = selectedRows().length;
+                const badge = document.getElementById('exportCsvCount');
+                if (badge) {
+                    badge.textContent = total;
+                    badge.style.display = total ? 'inline-flex' : 'none';
+                }
+            }
+
+            document.addEventListener('change', function (e) {
+                const t = e.target;
+                if (!t) return;
+                if (t.id === 'employeeSelectAll') {
+                    // "Select all" applies to the rows currently shown (respects search / filters)
+                    allRows().filter(isShown).forEach(function (r) { rowBox(r).checked = t.checked; });
+                    refreshSelectionUI();
+                } else if (t.classList && t.classList.contains('employee-select')) {
+                    refreshSelectionUI();
+                }
+            });
+
+            // Rows that get filtered out are deselected, so an export never contains
+            // employees the user cannot see. Wraps (does not modify) applyEmployeeFilters.
+            const _prevApplyEmployeeFilters = window.applyEmployeeFilters;
+            window.applyEmployeeFilters = function () {
+                _prevApplyEmployeeFilters.apply(this, arguments);
+                allRows().forEach(function (r) {
+                    if (!isShown(r)) { const b = rowBox(r); if (b) b.checked = false; }
+                });
+                refreshSelectionUI();
+            };
+
+            // ── Export mode (tick column only visible while exporting) ──
+            let exportMode = false;
+
+            function setExportMode(on) {
+                exportMode = on;
+                document.body.classList.toggle('export-mode', on);
+                const label  = document.getElementById('exportCsvLabel');
+                const cancel = document.getElementById('exportCancelBtn');
+                if (label)  label.textContent = on ? 'Export Selected' : 'Export CSV';
+                if (cancel) cancel.style.display = on ? 'inline-flex' : 'none';
+                if (!on) {
+                    allRows().forEach(function (r) { const b = rowBox(r); if (b) b.checked = false; });
+                }
+                refreshSelectionUI();
+            }
+
+            // First click reveals the tick boxes; once in export mode it opens the field picker
+            window.handleExportClick = function () {
+                if (!exportMode) {
+                    setExportMode(true);
+                    showPiToast('Tick the employees to export, then click "Export Selected".', 'success');
+                    return;
+                }
+                window.openExportModal();
+            };
+
+            window.cancelExportMode = function () { setExportMode(false); };
+
+            // ── Modal ──────────────────────────────────────────────────
+            window.openExportModal = function () {
+                const n = selectedRows().length;
+                if (!n) {
+                    showPiToast('Tick at least one employee first, or use the header checkbox to select all.', 'error');
+                    return;
+                }
+                document.getElementById('exportSelectedCount').textContent =
+                    n + ' employee' + (n !== 1 ? 's' : '') + ' selected';
+                openModal('exportEmployeesModal');
+            };
+
+            window.exportSetAllFields = function (checked) {
+                document.querySelectorAll('#exportEmployeesModal .export-field').forEach(function (c) { c.checked = checked; });
+            };
+
+            // ── CSV ────────────────────────────────────────────────────
+            function csvCell(value, forceQuote) {
+                let s = value == null ? '' : String(value).trim();
+                // Stop spreadsheet apps from running a cell as a formula
+                if (/^[=@]/.test(s) || (/^[+\-]/.test(s) && /[A-Za-z]/.test(s))) s = "'" + s;
+                return (forceQuote || /[",\r\n]/.test(s)) ? '"' + s.replace(/"/g, '""') + '"' : s;
+            }
+
+            function todayStamp() {
+                const d = new Date();
+                const p = function (n) { return String(n).padStart(2, '0'); };
+                return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+            }
+
+            window.exportEmployeesCsv = function () {
+                const chosen = new Set(Array.prototype.map.call(
+                    document.querySelectorAll('#exportEmployeesModal .export-field:checked'),
+                    function (c) { return c.value; }));
+                if (!chosen.size) {
+                    showPiToast('Choose at least one field to export.', 'error');
+                    return;
+                }
+                const rows = selectedRows();
+                if (!rows.length) {
+                    showPiToast('No employees selected.', 'error');
+                    return;
+                }
+
+                const cols  = COLUMNS.filter(function (c) { return chosen.has(c.field); });
+                // Headers are always quoted: a CSV whose first cell is an unquoted "ID" is
+                // mistaken by Excel for a SYLK file, which blanks/breaks that header cell.
+                const lines = [cols.map(function (c) { return csvCell(c.header, true); }).join(',')];
+                rows.forEach(function (row) {
+                    lines.push(cols.map(function (c) { return csvCell(row.dataset[c.key]); }).join(','));
+                });
+
+                // BOM so Excel reads the file as UTF-8
+                const blob = new Blob(['\uFEFF' + lines.join('\r\n') + '\r\n'], { type: 'text/csv;charset=utf-8;' });
+                const url  = URL.createObjectURL(blob);
+                const a    = document.createElement('a');
+                a.href = url;
+                a.download = 'employees_export_' + todayStamp() + '.csv';
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+
+                closeModal('exportEmployeesModal');
+                setExportMode(false);
+                showPiToast('Exported ' + rows.length + ' employee' + (rows.length !== 1 ? 's' : ''), 'success');
+            };
+
+            refreshSelectionUI();
+        })();
         /*]]>*/
     </script>
 </main>

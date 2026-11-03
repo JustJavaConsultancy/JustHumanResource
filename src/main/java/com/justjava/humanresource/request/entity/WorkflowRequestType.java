@@ -15,6 +15,7 @@ public class WorkflowRequestType extends BaseEntity {
     @Column(nullable=false) private boolean requiresApproval = true;
     @Enumerated(EnumType.STRING) @Column(nullable=false, length=30) private ApprovalRouteType approvalRouteType = ApprovalRouteType.LINE_MANAGER;
     private Long customApprovalPathId;
+    private Long groupedApprovalPathVersionId;
     @Column(nullable=false) private boolean requiresAttachment;
     @Column(nullable=false) private boolean supportsItems;
     @Column(nullable=false, length=100) private String processDefinitionKey = "genericRequestApprovalProcess";

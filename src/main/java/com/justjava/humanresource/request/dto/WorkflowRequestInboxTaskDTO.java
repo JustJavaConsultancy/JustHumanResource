@@ -12,4 +12,6 @@ public class WorkflowRequestInboxTaskDTO {
     private String taskId;
     private String taskName;
     private LocalDateTime createdTime;
+    private boolean groupedApproval;
+    private String approvalLevelLabel;
 }

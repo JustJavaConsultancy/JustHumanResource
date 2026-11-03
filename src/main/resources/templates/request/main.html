@@ -38,6 +38,8 @@
 </head>
 <body>
 <main layout:fragment="content" class="request-page space-y-6">
+<a href="/requests/grouped-approval-paths" class="request-secondary-btn" style="display:inline-block;padding:10px">Configure grouped approval paths</a>
+
     <div class="request-hero flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div class="flex items-start gap-4">
             <span class="request-icon bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-200">
@@ -222,7 +224,7 @@
                 <div class="request-line-row grid grid-cols-1 gap-2 lg:grid-cols-[1fr_160px_1fr_auto]">
                     <div>
                         <p class="font-semibold">${type.name}</p>
-                        <p class="text-xs text-gray-500">${type.code}</p>
+                        <p class="text-xs text-gray-500">${type.code}${type.groupedApprovalPathVersionId ? " — Grouped version #" + type.groupedApprovalPathVersionId + " configured. Saving here replaces it." : ""}</p>
                     </div>
                     <select data-route-type="${type.code}" class="request-control" onchange="syncRoutePathState('${type.code}')">
                         <option value="LINE_MANAGER" ${type.approvalRouteType !== 'CUSTOM' ? 'selected' : ''}>Line Manager</option>
@@ -282,6 +284,7 @@
         }
 
         async function saveRequestTypeRoute(code) {
+            if (types.find(t => t.code === code)?.groupedApprovalPathVersionId && !confirm('Replace the grouped path for new requests? Already submitted requests retain their route.')) return;
             const routeType = document.querySelector(`[data-route-type="${code}"]`).value;
             const pathId = document.querySelector(`[data-route-path="${code}"]`).value;
             if (routeType === 'CUSTOM' && !pathId) return showError('Select a custom approval path.');

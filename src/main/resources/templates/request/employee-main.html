@@ -744,7 +744,10 @@
                     item.approvalRequired ? '<span class="request-badge request-badge-warning">Approval required</span>' : '',
                     item.financeForwardRecipient ? '<span class="request-badge request-badge-success">Finance-forward recipient</span>' : ''
                 ].filter(Boolean).join(' ');
-                const taskActions = (item.approvalTasks || []).map(task => `
+                const taskActions = (item.approvalTasks || []).map(task => task.groupedApproval ? `
+                    <span class="block text-xs whitespace-normal">${escapeHtml(task.approvalLevelLabel)}</span>
+                    <a class="text-primary-600 hover:underline" href="${pageBase}/${r.id}">Review grouped approval</a>
+                ` : `
                     <button onclick="openApprovalModal('${escapeHtml(task.taskId)}','approve')" class="rounded bg-green-600 px-2 py-1 text-xs text-white">Approve</button>
                     <button onclick="openApprovalModal('${escapeHtml(task.taskId)}','reject')" class="rounded bg-red-600 px-2 py-1 text-xs text-white">Reject</button>
                     <button onclick="openApprovalModal('${escapeHtml(task.taskId)}','return')" class="rounded bg-orange-600 px-2 py-1 text-xs text-white">Return</button>

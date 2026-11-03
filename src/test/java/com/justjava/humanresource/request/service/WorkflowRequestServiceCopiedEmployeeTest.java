@@ -53,6 +53,7 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class WorkflowRequestServiceCopiedEmployeeTest {
 
+    @Mock private com.justjava.humanresource.request.grouped.GroupedApprovalService groupedApprovals;
     @Mock private WorkflowRequestRepository requestRepository;
     @Mock private WorkflowRequestTypeRepository typeRepository;
     @Mock private WorkflowRequestItemRepository itemRepository;
@@ -103,6 +104,57 @@ class WorkflowRequestServiceCopiedEmployeeTest {
     }
 
     @Test
+    void financeApprovalSupersedesGroupedAssignmentsBeforeFinalizing() {
+        WorkflowRequest r = request(10L,2L,RequestStatus.IN_APPROVAL);
+        when(auth.isFinancialOfficer()).thenReturn(true);
+        when(requestRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(r));
+        when(requestRepository.save(r)).thenReturn(r);
+        when(financeActionRepository.saveAndFlush(any())).thenAnswer(invocation -> {
+            WorkflowRequestFinanceAction action = invocation.getArgument(0); action.setId(90L); return action;
+        });
+        service.financeApprove(10L,"Approved by Finance");
+        verify(groupedApprovals).supersede(10L,1L,"Finance override: APPROVE");
+        verify(handler).afterApproved(r);
+        assertEquals(RequestStatus.APPROVED,r.getStatus());
+        assertTrue(r.isFinanceDecisionConsumed());
+    }
+
+    @Test
+    void requesterCancellationAlsoRetiresGroupedAssignments() {
+        WorkflowRequest r = request(10L,1L,RequestStatus.IN_APPROVAL);
+        when(requestRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(r));
+        when(requestRepository.save(r)).thenReturn(r);
+        service.cancel(10L);
+        verify(groupedApprovals).supersede(10L,1L,"Cancelled by requester");
+        assertEquals(RequestStatus.CANCELLED,r.getStatus());
+    }
+
+    @Test
+    void automaticApprovalRemainsAutomaticEvenIfAnUnusedGroupedReferenceExists() {
+        WorkflowRequest r = request(10L,1L,RequestStatus.DRAFT);
+        WorkflowRequestType type = new WorkflowRequestType(); type.setCode("GENERAL_REQUEST");
+        type.setRequiresApproval(false); type.setGroupedApprovalPathVersionId(99L);
+        when(groupedApprovals.pinnedVersion(10L)).thenReturn(null);
+        when(requestRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(r));
+        when(typeRepository.findByCode("GENERAL_REQUEST")).thenReturn(Optional.of(type));
+        when(requestRepository.save(r)).thenReturn(r);
+        service.submit(10L);
+        verify(groupedApprovals,never()).start(any(),any());
+        verify(handler).afterApproved(r);
+        assertEquals(RequestStatus.APPROVED,r.getStatus());
+    }
+
+    @Test
+    void groupedMemberCanViewOnlyAfterTheirTaskHasBeenActivated() {
+        WorkflowRequest r = request(10L,2L,RequestStatus.IN_APPROVAL);
+        when(requestRepository.findById(10L)).thenReturn(Optional.of(r));
+        when(groupedApprovals.mayView(10L,1L)).thenReturn(true);
+        assertEquals(r,service.visible(10L));
+        when(groupedApprovals.mayView(10L,1L)).thenReturn(false);
+        assertThrows(IllegalStateException.class,() -> service.visible(10L));
+    }
+
+    @Test
     void employeeInboxDeduplicatesRequestsAndCombinesCurrentRoles() {
         WorkflowRequest owned = request(10L, 1L, RequestStatus.IN_APPROVAL);
         WorkflowRequest copied = request(20L, 2L, RequestStatus.IN_APPROVAL);
@@ -126,6 +178,7 @@ class WorkflowRequestServiceCopiedEmployeeTest {
                 .thenReturn(List.of(copiedMembership, overlapMembership));
         when(typeRepository.findByEnabledTrueOrderByName()).thenReturn(List.of());
         when(taskService.getTasksForAssigneeAcrossProcesses(any(), any())).thenReturn(List.of(task));
+        when(groupedApprovals.inboxLabel("task-30")).thenReturn("Level 1: Review — ALL — 1 of 3 approvals received");
         when(requestRepository.findByFinanceOverrideRecipientIdOrderByCreatedAtDesc(1L))
                 .thenReturn(List.of(copiedAndAssigned));
         when(requestRepository.findAllById(anyCollection()))
@@ -152,6 +205,8 @@ class WorkflowRequestServiceCopiedEmployeeTest {
                 .orElseThrow();
         assertTrue(overlapItem.isCopied());
         assertTrue(overlapItem.isApprovalRequired());
+        assertTrue(overlapItem.getApprovalTasks().getFirst().isGroupedApproval());
+        assertTrue(overlapItem.getApprovalTasks().getFirst().getApprovalLevelLabel().contains("1 of 3"));
         assertTrue(overlapItem.isFinanceForwardRecipient());
         assertEquals(1, overlapItem.getApprovalTasks().size());
     }
