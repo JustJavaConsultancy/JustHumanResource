@@ -1,37 +1,81 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{${fundingLayout}}">
 <head><meta charset="UTF-8"><title>Funding Request</title></head>
-<body><main layout:fragment="content" id="fundingFormPage" style="max-width:850px;margin:auto;padding:16px">
+<body><main layout:fragment="content" id="fundingFormPage" class="mm-page">
  <link rel="stylesheet" href="/css/request-monetary.css">
- <a id="fundingBack" href="/employee/requests">Back to requests</a>
- <h1>Cash Advance / Fund Request</h1>
- <p>Approval-only requests. Approval does not transfer money or settle an advance.</p>
- <p id="fundingStatus" role="status" aria-live="polite">Loading...</p><p id="fundingError" role="alert" tabindex="-1"></p>
+
+ <a id="fundingBack" class="mm-back" href="/employee/requests"><span aria-hidden="true">&larr;</span> Back to requests</a>
+
+ <header class="mm-header">
+  <h1>Cash Advance / Fund Request</h1>
+  <p class="mm-lead">Approval-only requests. Approval does not transfer money or settle an advance.</p>
+ </header>
+
+ <p id="fundingStatus" class="mm-alert mm-alert-info" role="status" aria-live="polite">Loading...</p>
+ <p id="fundingError" class="mm-alert mm-alert-error" role="alert" tabindex="-1"></p>
+
  <form id="fundingForm" class="money-card">
-  <label for="fundingType">Request type</label><select id="fundingType" required></select>
-  <label for="fundingTitle">Title</label><input id="fundingTitle" required maxlength="200">
-  <label for="fundingPriority">Priority</label><select id="fundingPriority"><option>NORMAL</option><option>LOW</option><option>HIGH</option><option>URGENT</option></select>
-  <label for="fundingDescription">Additional description</label><textarea id="fundingDescription" maxlength="10000" rows="2"></textarea>
-  <label for="fundingAmount">Amount</label><input id="fundingAmount" type="number" inputmode="decimal" step="0.01" min="0.01" max="99999999999999999.99" required>
-  <label for="fundingCurrency">Currency</label><select id="fundingCurrency" required aria-describedby="fundingCurrencyHint"></select><p id="fundingCurrencyHint"></p>
-  <label for="fundingPurpose">Business purpose</label><textarea id="fundingPurpose" rows="3" maxlength="2000" required></textarea>
-  <label for="fundingCostCenter">Cost centre reference</label><input id="fundingCostCenter" maxlength="100" required>
-  <p>Record the business cost centre reference. This form does not check or reserve a budget.</p>
-  <label for="fundingRequired">Required date</label><input id="fundingRequired" type="date" required>
-  <fieldset id="fundingAdvance"><legend>Cash Advance dates</legend>
-   <label for="fundingStart">Expense start date</label><input id="fundingStart" type="date">
-   <label for="fundingEnd">Expense end date</label><input id="fundingEnd" type="date">
-   <label for="fundingDue">Settlement due date</label><input id="fundingDue" type="date">
-   <p>Required date &lt;= expense start &lt;= expense end &lt;= settlement due date. Settlement tracking is a later feature.</p>
+
+  <section class="mm-section">
+   <h2>Request details</h2>
+   <div class="mm-grid">
+    <div class="mm-field"><label for="fundingType">Request type</label><select id="fundingType" required></select></div>
+    <div class="mm-field"><label for="fundingPriority">Priority</label><select id="fundingPriority"><option>NORMAL</option><option>LOW</option><option>HIGH</option><option>URGENT</option></select></div>
+    <div class="mm-field mm-span-2"><label for="fundingTitle">Title</label><input id="fundingTitle" required maxlength="200" placeholder="Short summary of what you need"></div>
+    <div class="mm-field mm-span-2"><label for="fundingDescription">Additional description</label><textarea id="fundingDescription" maxlength="10000" rows="2" placeholder="Optional extra context for approvers"></textarea></div>
+   </div>
+  </section>
+
+  <section class="mm-section">
+   <h2>Amount and purpose</h2>
+   <div class="mm-grid">
+    <div class="mm-field"><label for="fundingAmount">Amount</label><input id="fundingAmount" type="number" inputmode="decimal" step="0.01" min="0.01" max="99999999999999999.99" required placeholder="0.00"></div>
+    <div class="mm-field"><label for="fundingCurrency">Currency</label><select id="fundingCurrency" required aria-describedby="fundingCurrencyHint"></select><p id="fundingCurrencyHint" class="mm-hint"></p></div>
+    <div class="mm-field mm-span-2"><label for="fundingPurpose">Business purpose</label><textarea id="fundingPurpose" rows="3" maxlength="2000" required placeholder="Why is this money needed?"></textarea></div>
+    <div class="mm-field"><label for="fundingCostCenter">Cost centre reference</label><input id="fundingCostCenter" maxlength="100" required><p class="mm-hint">Record the business cost centre reference. This form does not check or reserve a budget.</p></div>
+    <div class="mm-field"><label for="fundingRequired">Required date</label><input id="fundingRequired" type="date" required></div>
+   </div>
+  </section>
+
+  <fieldset id="fundingAdvance" class="mm-fieldset"><legend>Cash Advance dates</legend>
+   <div class="mm-grid mm-grid-3">
+    <div class="mm-field"><label for="fundingStart">Expense start date</label><input id="fundingStart" type="date"></div>
+    <div class="mm-field"><label for="fundingEnd">Expense end date</label><input id="fundingEnd" type="date"></div>
+    <div class="mm-field"><label for="fundingDue">Settlement due date</label><input id="fundingDue" type="date"></div>
+   </div>
+   <p class="mm-hint">Required date &lt;= expense start &lt;= expense end &lt;= settlement due date. Settlement tracking is a later feature.</p>
   </fieldset>
-  <fieldset id="fundingFund"><legend>Fund Request beneficiary</legend>
-   <label for="fundingBeneficiary">Employee beneficiary</label><select id="fundingBeneficiary"></select>
-   <p>Fund Requests are header-only. External beneficiaries and bank account details are not collected here.</p>
+
+  <fieldset id="fundingFund" class="mm-fieldset"><legend>Fund Request beneficiary</legend>
+   <div class="mm-field"><label for="fundingBeneficiary">Employee beneficiary</label><select id="fundingBeneficiary"></select></div>
+   <p class="mm-hint">Fund Requests are header-only. External beneficiaries and bank account details are not collected here.</p>
   </fieldset>
-  <label for="fundingAttachment">Supporting document</label><input id="fundingAttachment" type="file">
-  <p id="fundingDocuments">Save a draft before uploading. Supporting documentation is required on submission unless the request type is configured otherwise.</p>
-  <div class="money-actions"><button type="submit">Save draft / changes</button><button type="button" id="fundingUpload">Upload document</button><button type="button" id="fundingPreview">Preview approval route</button><button type="button" id="fundingSubmit">Submit saved request</button></div>
+
+  <section class="mm-section">
+   <h2>Supporting document</h2>
+   <div class="mm-field">
+    <label for="fundingAttachment">Choose a file</label>
+    <div class="mm-upload">
+     <input id="fundingAttachment" type="file">
+     <button type="button" id="fundingUpload" class="btn btn-secondary">Upload document</button>
+    </div>
+    <p id="fundingDocuments" class="mm-hint">Save a draft before uploading. Supporting documentation is required on submission unless the request type is configured otherwise.</p>
+   </div>
+  </section>
+
+  <div class="mm-actionbar">
+   <button type="submit" class="btn btn-primary">Save draft / changes</button>
+   <button type="button" id="fundingPreview" class="btn btn-secondary">Preview approval route</button>
+   <span class="mm-actionbar-spacer"></span>
+   <button type="button" id="fundingSubmit" class="btn btn-success">Submit saved request</button>
+  </div>
  </form>
- <section class="money-card"><h2>Route preview</h2><p>Preview uses saved values. Save changes first; submission validates the route again. Free Route and Finance are separate existing authorized actions.</p><pre id="fundingPreviewText" aria-live="polite"></pre></section>
+
+ <section class="money-card">
+  <h2>Route preview</h2>
+  <p class="mm-card-desc">Preview uses saved values. Save changes first; submission validates the route again. Free Route and Finance are separate existing authorized actions.</p>
+  <pre id="fundingPreviewText" class="mm-pre" aria-live="polite"></pre>
+ </section>
+
  <script src="/js/request-funding-form.js" defer></script>
 </main></body></html>

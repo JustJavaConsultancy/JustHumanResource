@@ -21,7 +21,7 @@ public class MonetaryPolicyService {
  private final WorkflowRequestTypeRepository types;
  private final GroupedApprovalConfigurationService access;
  private final MonetaryPolicyEventRepository events;
- @Value("${app.requests.monetary-routing.enabled:false}") private boolean enabled;
+ @Value("${app.requests.monetary-routing.enabled:true}") private boolean enabled;
  public boolean isEnabled(){return enabled;}
  public void requireEnabled(){if(!enabled)throw conflict("New monetary-routed submissions are disabled. Existing approvals remain available.");}
  public static boolean supports(RequestType type){return type==RequestType.EXPENSE_REIMBURSEMENT||FundingRequestService.supports(type);}

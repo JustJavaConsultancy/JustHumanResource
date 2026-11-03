@@ -15,7 +15,7 @@ public class FundingRequestService {
     private final CashAdvanceDetailRepository advances;
     private final FundRequestDetailRepository funds;
     private final GroupedApprovalConfigurationService employees;
-    @Value("${app.requests.funding.enabled:false}") private boolean enabled;
+    @Value("${app.requests.funding.enabled:true}") private boolean enabled;
     public boolean isEnabled() {return enabled;}
     public static boolean supports(RequestType type) {return type==RequestType.CASH_ADVANCE||type==RequestType.FUND_REQUEST;}
     public void requireEnabled(RequestType type) {

@@ -1,5 +1,43 @@
 (() => {
  'use strict';
+ // ---- Small confirmation modal (replaces window.confirm). Resolves true on confirm, false on cancel/Escape/backdrop. ----
+ let activeModal=null,modalSeq=0;
+ function modalEl(tag,className,text){const n=document.createElement(tag);if(className)n.className=className;if(text!=null)n.textContent=text;return n;}
+ function confirmModal(options){
+  const o=Object.assign({title:'Are you sure?',message:'',details:'',confirmLabel:'Confirm',cancelLabel:'Cancel',tone:'primary'},options);
+  if(activeModal)activeModal(false);
+  return new Promise(resolve=>{
+   const opener=document.activeElement,danger=o.tone==='danger',uid='mmModal'+(++modalSeq);
+   let done=false,pressedOnBackdrop=false;
+   const overlay=modalEl('div','mm-overlay'),dialog=modalEl('div','mm-dialog'+(o.details?' mm-dialog-wide':''));
+   dialog.setAttribute('role',danger?'alertdialog':'dialog');dialog.setAttribute('aria-modal','true');dialog.setAttribute('aria-labelledby',uid+'Title');
+   if(o.message)dialog.setAttribute('aria-describedby',uid+'Message');
+   const body=modalEl('div','mm-dialog-body'),icon=modalEl('div','mm-dialog-icon'+(danger?' mm-dialog-icon-danger':''),danger?'!':'?');icon.setAttribute('aria-hidden','true');
+   const text=modalEl('div','mm-dialog-text'),title=modalEl('h2','mm-dialog-title',o.title);title.id=uid+'Title';text.append(title);
+   if(o.message){const message=modalEl('p','mm-dialog-message',o.message);message.id=uid+'Message';text.append(message);}
+   if(o.details)text.append(modalEl('pre','mm-dialog-details',o.details));
+   body.append(icon,text);
+   const footer=modalEl('div','mm-dialog-footer'),cancel=modalEl('button','btn btn-secondary',o.cancelLabel),ok=modalEl('button','btn '+(danger?'btn-danger':'btn-primary'),o.confirmLabel);
+   cancel.type='button';ok.type='button';footer.append(cancel,ok);dialog.append(body,footer);overlay.append(dialog);
+   function finish(result){
+    if(done)return;done=true;
+    document.removeEventListener('keydown',onKey,true);overlay.remove();document.documentElement.classList.remove('mm-modal-open');activeModal=null;
+    if(opener&&opener.isConnected&&typeof opener.focus==='function')opener.focus();
+    resolve(result);
+   }
+   function onKey(event){
+    if(event.key==='Escape'){event.preventDefault();event.stopPropagation();finish(false);return;}
+    if(event.key==='Tab'){const order=[cancel,ok],index=order.indexOf(document.activeElement);event.preventDefault();
+     if(event.shiftKey)order[index<=0?order.length-1:index-1].focus();else order[index===-1||index===order.length-1?0:index+1].focus();}
+   }
+   cancel.onclick=()=>finish(false);ok.onclick=()=>finish(true);
+   overlay.addEventListener('mousedown',event=>{pressedOnBackdrop=event.target===overlay;});
+   overlay.addEventListener('click',event=>{if(event.target===overlay&&pressedOnBackdrop)finish(false);});
+   document.addEventListener('keydown',onKey,true);
+   document.body.append(overlay);document.documentElement.classList.add('mm-modal-open');activeModal=finish;
+   (danger?cancel:ok).focus(); // destructive dialogs start on Cancel so a stray Enter cannot confirm
+  });
+ }
  const api='/api/request-monetary', byId=id=>document.getElementById(id);
  const mobile=location.pathname.startsWith('/mobile/'), base=mobile?'/mobile/requests':'/employee/requests';
  let id=location.pathname.match(/\/funding\/(\d+)\/edit/)?.[1], editRevision=0, savedRevision=0, busy=false, uploaded=0, savedHeader={}, available=true;
@@ -41,7 +79,7 @@
   await json(`/api/requests/${id}/attachments`,{method:'POST',body:data});uploaded++;byId('fundingAttachment').value='';byId('fundingDocuments').textContent=`${uploaded} supporting document(s) uploaded in this session. Existing documents are visible on the request detail page.`;
  });
  byId('fundingPreview').onclick=()=>run(async()=>{requireSaved();const revision=editRevision;const result=await json(`${api}/requests/${id}/preview`);if(revision!==editRevision){byId('fundingPreviewText').textContent='Preview is out of date. Save changes and preview again.';return;}let levels='';if(result.resolvedRoute){try{levels='\n'+JSON.parse(result.resolvedRoute).map(l=>`${l.name} (${l.policy}): ${(l.members||[]).map(m=>m.name).join(', ')}`).join('\n');}catch(_){}}byId('fundingPreviewText').textContent=result.monetary?`${result.currency} ${result.amount}: ${result.policy} (revision ${result.policyVersion}). From ${result.lowerBound} inclusive to ${result.upperBound}. ${result.routeLabel||(result.target==='GROUPED'?'Grouped approval path':'Line Manager chain')}. Final routing is checked on submission.${levels}`:result.message;});
- byId('fundingSubmit').onclick=()=>run(async()=>{requireSaved();if(!confirm('Submit the saved request for approval? Approval does not initiate payment.'))return;
+ byId('fundingSubmit').onclick=()=>run(async()=>{requireSaved();if(!await confirmModal({title:'Submit for approval?',message:'The saved request will be sent into its approval route. Approval does not initiate payment.',confirmLabel:'Submit request',cancelLabel:'Cancel'}))return;
   const controls=[...byId('fundingForm').querySelectorAll('input,select,textarea')].map(c=>[c,c.disabled]);controls.forEach(([c])=>c.disabled=true);try{await json(`${api}/requests/${id}/submit`,{method:'POST'});savedRevision=editRevision;location.href=`${base}/${id}`;}finally{controls.forEach(([c,disabled])=>c.disabled=disabled);}
  });
  byId('fundingForm').addEventListener('change',event=>{if(event.target.type!=='file')edited();});
