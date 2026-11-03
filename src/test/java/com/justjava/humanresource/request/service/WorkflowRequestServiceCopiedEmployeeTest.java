@@ -54,6 +54,8 @@ import static org.mockito.Mockito.when;
 class WorkflowRequestServiceCopiedEmployeeTest {
 
     @Mock private com.justjava.humanresource.request.grouped.GroupedApprovalService groupedApprovals;
+    @Mock private com.justjava.humanresource.request.monetary.MonetaryRoutingService monetaryRouting;
+    @Mock private com.justjava.humanresource.request.monetary.FundingRequestService fundingRequests;
     @Mock private WorkflowRequestRepository requestRepository;
     @Mock private WorkflowRequestTypeRepository typeRepository;
     @Mock private WorkflowRequestItemRepository itemRepository;
@@ -94,6 +96,7 @@ class WorkflowRequestServiceCopiedEmployeeTest {
 
     @BeforeEach
     void setUp() {
+        lenient().when(requestRepository.findByIdForUpdate(anyLong())).thenAnswer(inv -> requestRepository.findById(inv.getArgument(0)));
         requester = new Employee();
         requester.setId(1L);
         lenient().when(auth.get("email")).thenReturn("requester@example.test");
@@ -480,6 +483,30 @@ class WorkflowRequestServiceCopiedEmployeeTest {
         verify(recommendationRepository, never()).save(any(WorkflowRequestRecommendation.class));
     }
 
+    @Test void monetaryGroupedSubmissionUsesSelectedPathAndRecordsSnapshot() {
+        var r=request(10L,1L,RequestStatus.DRAFT);var type=new WorkflowRequestType();
+        when(requestRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(r));when(typeRepository.findByCode("GENERAL_REQUEST")).thenReturn(Optional.of(type));when(requestRepository.save(r)).thenReturn(r);
+        var band=new com.justjava.humanresource.request.monetary.MonetaryBand();band.setTarget("GROUPED");band.setGroupedVersionId(31L);
+        var selection=new com.justjava.humanresource.request.monetary.MonetaryRoutingService.Selection(null,band,null,List.of(),"[]",1);
+        when(monetaryRouting.select(r,type)).thenReturn(Optional.of(selection));when(groupedApprovals.startSelectedRoute(r,31L)).thenReturn(r);
+        service.submit(10L);verify(groupedApprovals).startSelectedRoute(r,31L);verify(monetaryRouting).record(r,selection);verify(groupedApprovals,never()).pinnedVersion(anyLong());
+    }
+
+    @Test void failedMonetarySelectionStartsNoWorkflowOrFinanceNotice() {
+        var r=request(10L,1L,RequestStatus.DRAFT);var type=new WorkflowRequestType();
+        when(requestRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(r));when(typeRepository.findByCode("GENERAL_REQUEST")).thenReturn(Optional.of(type));
+        when(monetaryRouting.select(r,type)).thenThrow(new IllegalArgumentException("No binding"));
+        assertThrows(IllegalArgumentException.class,()->service.submit(10L));assertEquals(RequestStatus.DRAFT,r.getStatus());verify(financeRequestEmailService,never()).enqueueInitialSubmission(any());verify(requestRepository,never()).save(any());
+    }
+
+    @Test void previewCapabilityReusesNormalSubmissionOwnershipAndFreeRouteRules() {
+        var r=request(10L,1L,RequestStatus.DRAFT);assertTrue(service.canSubmitNormally(r));
+        r.setRequesterEmployeeId(2L);org.junit.jupiter.api.Assertions.assertFalse(service.canSubmitNormally(r));
+        r.setRequesterEmployeeId(1L);r.setStatus(RequestStatus.RETURNED_FOR_CORRECTION);assertTrue(service.canSubmitNormally(r));
+        r.setApprovalRouteType(com.justjava.humanresource.approval.enums.ApprovalRouteType.FREE_ROUTE);org.junit.jupiter.api.Assertions.assertFalse(service.canSubmitNormally(r));
+        r.setStatus(RequestStatus.APPROVED);org.junit.jupiter.api.Assertions.assertFalse(service.canSubmitNormally(r));
+    }
+
     private Employee setCurrentActor(Long employeeId, String email) {
         Employee actor = new Employee();
         actor.setId(employeeId);
@@ -501,5 +528,24 @@ class WorkflowRequestServiceCopiedEmployeeTest {
         request.setRequestType(RequestType.GENERAL_REQUEST);
         request.setStatus(status);
         return request;
+    }
+
+    @Test
+    void previewCapabilityUsesNormalSubmissionOwnershipStatusAndFreeRouteRules() {
+        var request = new WorkflowRequest();
+        request.setRequesterEmployeeId(1L);
+        request.setStatus(RequestStatus.DRAFT);
+        assertTrue(service.canSubmitNormally(request));
+        request.setRequesterEmployeeId(2L);
+        assertEquals(false, service.canSubmitNormally(request));
+        request.setRequesterEmployeeId(1L);
+        request.setStatus(RequestStatus.RETURNED_FOR_CORRECTION);
+        request.setApprovalRouteType(com.justjava.humanresource.approval.enums.ApprovalRouteType.LINE_MANAGER);
+        assertTrue(service.canSubmitNormally(request));
+        request.setApprovalRouteType(com.justjava.humanresource.approval.enums.ApprovalRouteType.FREE_ROUTE);
+        assertEquals(false, service.canSubmitNormally(request));
+        request.setStatus(RequestStatus.APPROVED);
+        assertEquals(false, service.canSubmitNormally(request));
+        verify(runtimeService, never()).startProcessInstanceByKey(any(String.class), any(String.class), any(Map.class));
     }
 }

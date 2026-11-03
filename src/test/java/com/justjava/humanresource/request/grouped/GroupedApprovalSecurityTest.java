@@ -29,6 +29,8 @@ class GroupedApprovalSecurityTest {
         @GetMapping("/api/requests/grouped-approvals/csrf") Map<String,String> token(CsrfToken token) { return Map.of("token",token.getToken()); }
         @PostMapping("/api/requests/grouped-approvals/decisions") void decide() {}
         @PostMapping("/api/grouped-approval-paths") void configure() {}
+        @PostMapping("/api/request-monetary/funding") void funding() {}
+        @GetMapping("/api/request-monetary/options") Map<String,String> options(){return Map.of();}
     }
     @BeforeEach void start() {
         context = new AnnotationConfigWebApplicationContext(); context.setServletContext(new MockServletContext());
@@ -42,6 +44,11 @@ class GroupedApprovalSecurityTest {
     @Test void authenticatedMutationRequiresCsrf() throws Exception {
         mvc.perform(post("/api/requests/grouped-approvals/decisions").with(user("approver"))).andExpect(status().isForbidden());
         mvc.perform(post("/api/grouped-approval-paths").with(user("admin"))).andExpect(status().isForbidden());
+    }
+    @Test void monetaryEndpointsRequireSessionAndCsrf() throws Exception {
+        mvc.perform(get("/api/request-monetary/options")).andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/request-monetary/funding").with(user("employee"))).andExpect(status().isForbidden());
+        mvc.perform(post("/api/request-monetary/funding").with(user("employee")).with(csrf().asHeader())).andExpect(status().isOk());
     }
     @Test void authenticatedTokenCanSubmitAndGetMaterializesCookie() throws Exception {
         // Materialize the real repository cookie before Spring Security's csrf() test helper installs its mock repository.

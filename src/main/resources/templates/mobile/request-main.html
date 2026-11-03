@@ -43,6 +43,8 @@
 </head>
 <body>
 <main layout:fragment="content" class="px-4 pb-24 pt-2 space-y-4">
+<a href="/mobile/requests/funding/new" class="request-secondary-btn" style="display:inline-block;padding:10px">New Cash Advance / Fund Request</a>
+
 
     <!-- Header -->
     <div class="flex items-start justify-between">
@@ -286,7 +288,7 @@
 
         function renderTypeOptions() {
             const opts = mrTypes.map(t => `<option value="${mrEscape(t.code)}">${mrEscape(t.name)}</option>`).join('');
-            document.getElementById('requestType').innerHTML = opts;
+            document.getElementById('requestType').innerHTML = mrTypes.filter(t => !['CASH_ADVANCE','FUND_REQUEST'].includes(t.code)).map(t => `<option value="${mrEscape(t.code)}">${mrEscape(t.name)}</option>`).join('');
             document.getElementById('mrTypeFilter').innerHTML = '<option value="">All types</option>' + opts;
             updateTypeFields();
         }
@@ -539,6 +541,7 @@
                 document.getElementById('requestSheetBackdrop').classList.remove('hidden');
                 document.getElementById('requestSheet').classList.remove('hidden');
                 const data = await mrJson(`${mrApi}/${id}/edit`);
+                if (data.canEdit && ['CASH_ADVANCE','FUND_REQUEST'].includes(data.requestType)) { location.href = `/mobile/requests/funding/${id}/edit`; return; }
                 if (!data.canEdit) { closeRequestSheet(); showToast('This request can no longer be edited.'); return; }
                 await fillRequestForm(data);
             } catch (e) { showError(e.message); }

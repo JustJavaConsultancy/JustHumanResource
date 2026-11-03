@@ -56,6 +56,7 @@ public class GroupedApprovalController {
     public void bind(@PathVariable String code, @Valid @RequestBody Binding binding) {
         configuration.requireAdministrator(); configuration.requireEnabled(); configuration.published(binding.pathVersionId());
         var type = requestTypes.findByCode(code.toUpperCase(java.util.Locale.ROOT)).orElseThrow();
+        if(type.isMonetaryRoutingEnabled())throw new IllegalArgumentException("Switch to fixed routing in the monetary policy editor first.");
         if (!type.isRequiresApproval()) throw new IllegalArgumentException("This request type does not require approval.");
         type.setApprovalRouteType(ApprovalRouteType.CUSTOM); type.setCustomApprovalPathId(null);
         type.setGroupedApprovalPathVersionId(binding.pathVersionId()); requestTypes.save(type);

@@ -40,11 +40,14 @@ import java.util.*;
 @Service @RequiredArgsConstructor
 public class WorkflowRequestService {
  private final com.justjava.humanresource.request.grouped.GroupedApprovalService groupedApprovals;
+ private final com.justjava.humanresource.request.monetary.MonetaryRoutingService monetaryRouting;
+ private final com.justjava.humanresource.request.monetary.FundingRequestService fundingRequests;
  private final WorkflowRequestRepository requestRepository; private final WorkflowRequestTypeRepository typeRepository; private final WorkflowRequestItemRepository itemRepository; private final WorkflowRequestAttachmentRepository attachmentRepository; private final WorkflowRequestApprovalStepRepository stepRepository; private final WorkflowRequestCommentRepository commentRepository; private final WorkflowRequestActivityRepository activityRepository; private final StaffRequisitionDetailRepository staffRepository; private final FileRequestDetailRepository fileRepository; private final AssetRequestDetailRepository assetRepository; private final ExpenseReimbursementDetailRepository expenseRepository; private final ExpenseReimbursementItemRepository expenseItemRepository; private final WorkflowRequestHandlerRegistry handlers; private final RequestNumberService numberService; private final WorkflowRequestActivityService activityService; private final EmployeeService employeeService; private final AuthenticationManager auth; private final ApprovalRouteResolverFactory routeFactory; private final RuntimeService runtimeService; private final FlowableTaskService taskService; private final TaskService flowableTaskService; private final FamAssetLookupService famAssetLookupService; private final DepartmentRepository departmentRepository; private final JobGradeRepository jobGradeRepository; private final EmployeeRepository employeeRepository; private final RequestEmailService requestEmailService; private final AfterCommitExecutor afterCommitExecutor; private final WorkflowRequestFreeRouteEventRepository freeRouteEventRepository; private final WorkflowRequestFinanceActionRepository financeActionRepository; private final WorkflowRequestCopiedEmployeeRepository copiedEmployeeRepository; private final WorkflowRequestRecommendationRepository recommendationRepository; private final com.justjava.humanresource.utils.FinanceRequestEmailService financeRequestEmailService;
  @Transactional
  public WorkflowRequest createDraft(CreateWorkflowRequestCommand command) {
   Employee actor = currentEmployee();
   WorkflowRequestType config = type(command.getRequestType());
+  fundingRequests.requireEnabled(command.getRequestType());
   handlers.get(command.getRequestType()).validate(command);
   List<Long> copiedEmployeeIds = validateCopiedEmployeeIds(command.getCopiedEmployeeIds(), actor.getId());
 
@@ -67,7 +70,49 @@ public class WorkflowRequestService {
   return request;
  }
  @Transactional public WorkflowRequest createAndSubmit(CreateWorkflowRequestCommand command){WorkflowRequest r=createDraft(command);return submit(r.getId());}
- @Transactional public WorkflowRequest submit(Long id){WorkflowRequest r=requestRepository.findByIdForUpdate(id).orElseThrow();if(!r.getRequesterEmployeeId().equals(currentEmployee().getId()))throw new IllegalStateException("You do not own this request.");if(!canSubmit(r,r.getRequesterEmployeeId()))throw new IllegalStateException("This request cannot be submitted on this route.");clearLegacyFinanceReturnDecision(r);WorkflowRequestType config=type(r.getRequestType());if(config.isRequiresAttachment()&&attachmentRepository.countByWorkflowRequestId(id)==0)throw new IllegalStateException("An attachment is required before submission.");if(config.isSupportsItems()&&itemRepository.countByWorkflowRequestId(id)==0)throw new IllegalStateException("At least one item is required before submission.");handlers.get(r.getRequestType()).beforeSubmit(r);boolean firstSubmission=r.getSubmittedAt()==null;r.setStatus(RequestStatus.SUBMITTED);r.setSubmittedAt(LocalDateTime.now());r=requestRepository.save(r);if(firstSubmission)financeRequestEmailService.enqueueInitialSubmission(r);Long pinnedGroupedVersion=groupedApprovals.pinnedVersion(id);if(pinnedGroupedVersion!=null||(config.isRequiresApproval()&&config.getGroupedApprovalPathVersionId()!=null)){return groupedApprovals.start(r,pinnedGroupedVersion!=null?pinnedGroupedVersion:config.getGroupedApprovalPathVersionId());}if(!config.isRequiresApproval()){r.setStatus(RequestStatus.APPROVED);r.setApprovedAt(LocalDateTime.now());handlers.get(r.getRequestType()).afterApproved(r);activityService.record(id,RequestActivityType.APPROVED,"Request automatically approved",r.getRequesterEmployeeId());WorkflowRequest saved=requestRepository.save(r);afterCommitExecutor.runAfterCommit(()->requestEmailService.notifyRequestApproved(saved));return saved;}ApprovalRouteType routeType=config.getApprovalRouteType()==null?ApprovalRouteType.LINE_MANAGER:config.getApprovalRouteType();if(routeType==ApprovalRouteType.CUSTOM&&config.getCustomApprovalPathId()==null)throw new IllegalStateException("A custom approval path must be selected for this request type.");r.setApprovalRouteType(routeType);ApprovalContext context=ApprovalContext.builder().moduleType(ApprovalModuleType.REQUEST).routeType(routeType).requesterEmployeeId(r.getRequesterEmployeeId()).moduleRefId(r.getId()).requestTypeCode(r.getRequestType().name()).customApprovalPathId(config.getCustomApprovalPathId()).build();List<ApproverRef> route=routeFactory.getResolver(context).resolveApprovers(context);if(route.isEmpty())throw new IllegalStateException("No approval route is configured for this requester.");List<String> approvers=route.stream().map(a->String.valueOf(a.getEmployeeId())).toList();r.setCurrentApprovalLevel(1);r.setTotalApprovalLevels(approvers.size());r.setStatus(RequestStatus.IN_APPROVAL);r=requestRepository.save(r);Map<String,Object> vars=new HashMap<>(handlers.get(r.getRequestType()).buildWorkflowVariables(r));vars.put("workflowRequestId",r.getId());vars.put("requestType",r.getRequestType().name());vars.put("requesterEmployeeId",r.getRequesterEmployeeId());vars.put("approvalRouteType",routeType.name());vars.put("customApprovalPathId",config.getCustomApprovalPathId());vars.put("approverIds",approvers);vars.put("totalLevels",approvers.size());var pi=runtimeService.startProcessInstanceByKey(config.getProcessDefinitionKey(),"REQUEST_"+r.getId(),vars);r.setWorkflowInstanceId(pi.getProcessInstanceId());activityService.record(id,RequestActivityType.SUBMITTED,"Request submitted for approval",r.getRequesterEmployeeId());WorkflowRequest saved=requestRepository.save(r);Long firstApproverId=route.get(0).getEmployeeId();afterCommitExecutor.runAfterCommit(()->{requestEmailService.notifyRequestSubmitted(saved,firstApproverId);requestEmailService.notifyPendingApproval(saved,firstApproverId);});return saved;}
+ @Transactional
+ public WorkflowRequest submit(Long id) {
+  WorkflowRequest r=requestRepository.findByIdForUpdate(id).orElseThrow();
+  if(!r.getRequesterEmployeeId().equals(currentEmployee().getId()))throw new IllegalStateException("You do not own this request.");
+  if(!canSubmit(r,r.getRequesterEmployeeId()))throw new IllegalStateException("This request cannot be submitted on this route.");
+  clearLegacyFinanceReturnDecision(r);WorkflowRequestType config=type(r.getRequestType());
+  if(config.isRequiresAttachment()&&attachmentRepository.countByWorkflowRequestId(id)==0)throw new IllegalStateException("An attachment is required before submission.");
+  if(config.isSupportsItems()&&itemRepository.countByWorkflowRequestId(id)==0)throw new IllegalStateException("At least one item is required before submission.");
+  handlers.get(r.getRequestType()).beforeSubmit(r);
+  var selection=monetaryRouting.select(r,config);
+  boolean firstSubmission=r.getSubmittedAt()==null;r.setStatus(RequestStatus.SUBMITTED);r.setSubmittedAt(LocalDateTime.now());r=requestRepository.save(r);
+  if(firstSubmission)financeRequestEmailService.enqueueInitialSubmission(r);
+  if(selection.isPresent()) {
+   var selected=selection.get();
+   WorkflowRequest result="GROUPED".equals(selected.band().getTarget())
+           ?groupedApprovals.startSelectedRoute(r,selected.band().getGroupedVersionId())
+           :startSequential(r,config,selected.approvers(),ApprovalRouteType.LINE_MANAGER,true);
+   monetaryRouting.record(result,selected);return result;
+  }
+  Long pinnedGroupedVersion=groupedApprovals.pinnedVersion(id);
+  if(pinnedGroupedVersion!=null||(config.isRequiresApproval()&&config.getGroupedApprovalPathVersionId()!=null))return groupedApprovals.start(r,pinnedGroupedVersion!=null?pinnedGroupedVersion:config.getGroupedApprovalPathVersionId());
+  if(!config.isRequiresApproval()) {
+   r.setStatus(RequestStatus.APPROVED);r.setApprovedAt(LocalDateTime.now());handlers.get(r.getRequestType()).afterApproved(r);
+   activityService.record(id,RequestActivityType.APPROVED,"Request automatically approved",r.getRequesterEmployeeId());
+   WorkflowRequest saved=requestRepository.save(r);afterCommitExecutor.runAfterCommit(()->requestEmailService.notifyRequestApproved(saved));return saved;
+  }
+  ApprovalRouteType routeType=config.getApprovalRouteType()==null?ApprovalRouteType.LINE_MANAGER:config.getApprovalRouteType();
+  if(routeType==ApprovalRouteType.CUSTOM&&config.getCustomApprovalPathId()==null)throw new IllegalStateException("A custom approval path must be selected for this request type.");
+  ApprovalContext context=ApprovalContext.builder().moduleType(ApprovalModuleType.REQUEST).routeType(routeType).requesterEmployeeId(r.getRequesterEmployeeId()).moduleRefId(r.getId()).requestTypeCode(r.getRequestType().name()).customApprovalPathId(config.getCustomApprovalPathId()).build();
+  return startSequential(r,config,routeFactory.getResolver(context).resolveApprovers(context),routeType,false);
+ }
+ private WorkflowRequest startSequential(WorkflowRequest r,WorkflowRequestType config,List<ApproverRef> route,ApprovalRouteType routeType,boolean monetary) {
+  if(route.isEmpty())throw new IllegalStateException("No approval route is configured for this requester.");
+  List<String> approvers=route.stream().map(a->String.valueOf(a.getEmployeeId())).toList();
+  r.setApprovalRouteType(routeType);r.setCurrentApprovalLevel(1);r.setTotalApprovalLevels(approvers.size());r.setStatus(RequestStatus.IN_APPROVAL);r=requestRepository.save(r);
+  Map<String,Object> vars=new HashMap<>(handlers.get(r.getRequestType()).buildWorkflowVariables(r));
+  vars.put("workflowRequestId",r.getId());vars.put("requestType",r.getRequestType().name());vars.put("requesterEmployeeId",r.getRequesterEmployeeId());
+  vars.put("approvalRouteType",routeType.name());vars.put("customApprovalPathId",monetary?null:config.getCustomApprovalPathId());vars.put("approverIds",approvers);vars.put("totalLevels",approvers.size());
+  var pi=runtimeService.startProcessInstanceByKey(monetary?"genericRequestApprovalProcess":config.getProcessDefinitionKey(),"REQUEST_"+r.getId(),vars);
+  r.setWorkflowInstanceId(pi.getProcessInstanceId());activityService.record(r.getId(),RequestActivityType.SUBMITTED,"Request submitted for approval",r.getRequesterEmployeeId());
+  WorkflowRequest saved=requestRepository.save(r);Long firstApproverId=route.getFirst().getEmployeeId();
+  afterCommitExecutor.runAfterCommit(()->{requestEmailService.notifyRequestSubmitted(saved,firstApproverId);requestEmailService.notifyPendingApproval(saved,firstApproverId);});return saved;
+ }
  @Transactional public WorkflowRequest sendFreeRoute(Long id,Long toEmployeeId,String comment){WorkflowRequest r=owned(id);if(!canSendFreeRoute(r,r.getRequesterEmployeeId()))throw new IllegalStateException("This request cannot be sent through Free Route.");if(r.getWorkflowInstanceId()!=null)throw new IllegalStateException("This request already has an active approval process.");WorkflowRequestType config=type(r.getRequestType());if(config.isRequiresAttachment()&&attachmentRepository.countByWorkflowRequestId(id)==0)throw new IllegalStateException("An attachment is required before submission.");if(config.isSupportsItems()&&itemRepository.countByWorkflowRequestId(id)==0)throw new IllegalStateException("At least one item is required before submission.");handlers.get(r.getRequestType()).beforeSubmit(r);if(toEmployeeId==null)throw new IllegalArgumentException("A recipient employee must be selected.");Employee actor=currentEmployee();if(toEmployeeId.equals(r.getRequesterEmployeeId()))throw new IllegalArgumentException("You cannot send a request to the original requester.");if(toEmployeeId.equals(actor.getId()))throw new IllegalArgumentException("You cannot send a request to yourself.");requireSelectableFreeRouteEmployee(toEmployeeId);boolean firstSend=r.getSubmittedAt()==null;LocalDateTime now=LocalDateTime.now();r.setApprovalRouteType(ApprovalRouteType.FREE_ROUTE);r.setStatus(RequestStatus.IN_APPROVAL);if(r.getSubmittedAt()==null)r.setSubmittedAt(now);r.setCurrentApprovalLevel(1);r.setTotalApprovalLevels(1);r.setFreeRouteCurrentApproverEmployeeId(toEmployeeId);if(r.getFreeRouteStartedAt()==null)r.setFreeRouteStartedAt(now);r=requestRepository.save(r);if(firstSend)financeRequestEmailService.enqueueInitialSubmission(r);Map<String,Object> vars=new HashMap<>(handlers.get(r.getRequestType()).buildWorkflowVariables(r));vars.put("workflowRequestId",r.getId());vars.put("requestType",r.getRequestType().name());vars.put("requesterEmployeeId",r.getRequesterEmployeeId());vars.put("approvalRouteType",ApprovalRouteType.FREE_ROUTE.name());vars.put("approverIds",List.of(String.valueOf(toEmployeeId)));vars.put("totalLevels",1);var pi=runtimeService.startProcessInstanceByKey(config.getProcessDefinitionKey(),"REQUEST_"+r.getId(),vars);r.setWorkflowInstanceId(pi.getProcessInstanceId());WorkflowRequest saved=requestRepository.save(r);WorkflowRequestFreeRouteEvent event=new WorkflowRequestFreeRouteEvent();event.setWorkflowRequestId(id);event.setEventType(FreeRouteEventType.SENT);event.setFromEmployeeId(actor.getId());event.setToEmployeeId(toEmployeeId);event.setComment(comment==null||comment.isBlank()?null:comment.trim());freeRouteEventRepository.save(event);activityService.record(id,RequestActivityType.FREE_ROUTE_SENT,"Request sent by Free Route to employee id: "+toEmployeeId,actor.getId());afterCommitExecutor.runAfterCommit(()->{requestEmailService.notifyRequestSubmitted(saved,toEmployeeId);requestEmailService.notifyPendingApproval(saved,toEmployeeId);});return saved;}
  @Transactional public WorkflowRequest forwardFreeRoute(String taskId,Long toEmployeeId,String comment){if(taskId==null||taskId.isBlank())throw new IllegalArgumentException("Task id is required.");Employee actor=currentEmployee();if(!taskService.isTaskAssignedTo(taskId,String.valueOf(actor.getId())))throw new IllegalStateException("Task is not assigned to current user.");Task task=flowableTaskService.createTaskQuery().taskId(taskId).singleResult();if(task==null)throw new IllegalStateException("Task not found: "+taskId);Object rawId=runtimeService.getVariable(task.getProcessInstanceId(),"workflowRequestId");if(rawId==null)throw new IllegalStateException("Task is not linked to a workflow request.");Long requestId=rawId instanceof Number?((Number)rawId).longValue():Long.valueOf(String.valueOf(rawId));WorkflowRequest r=requestRepository.findById(requestId).orElseThrow(()->new IllegalArgumentException("Request not found."));if(r.getStatus()!=RequestStatus.IN_APPROVAL)throw new IllegalStateException("Only requests in approval can be forwarded.");if(r.getApprovalRouteType()!=ApprovalRouteType.FREE_ROUTE)throw new IllegalStateException("Only Free Route requests can be forwarded.");if(!actor.getId().equals(r.getFreeRouteCurrentApproverEmployeeId()))throw new IllegalStateException("Only the current assigned approver can forward this request.");if(toEmployeeId==null)throw new IllegalArgumentException("A recipient employee must be selected.");if(toEmployeeId.equals(r.getRequesterEmployeeId()))throw new IllegalArgumentException("You cannot forward a request to the original requester.");if(toEmployeeId.equals(actor.getId()))throw new IllegalArgumentException("You cannot forward a request to yourself.");requireSelectableFreeRouteEmployee(toEmployeeId);List<WorkflowRequestApprovalStep> steps=stepRepository.findByWorkflowRequestIdOrderBySequenceNo(r.getId());WorkflowRequestApprovalStep currentStep=steps.stream().filter(s->s.getSequenceNo().equals(r.getCurrentApprovalLevel())).findFirst().or(()->steps.stream().filter(s->s.getDecision()==ApprovalDecision.PENDING).reduce((a,b)->b)).orElseThrow(()->new IllegalStateException("No pending approval step found for this request."));int nextSequence=steps.stream().mapToInt(WorkflowRequestApprovalStep::getSequenceNo).max().orElse(0)+1;LocalDateTime now=LocalDateTime.now();currentStep.setDecision(ApprovalDecision.DELEGATED);currentStep.setComments(comment);currentStep.setDecisionAt(now);currentStep.setFlowableTaskId(taskId);currentStep.setForwardedToEmployeeId(toEmployeeId);currentStep.setForwardedAt(now);stepRepository.save(currentStep);WorkflowRequestApprovalStep nextStep=new WorkflowRequestApprovalStep();nextStep.setWorkflowRequestId(r.getId());nextStep.setSequenceNo(nextSequence);nextStep.setApproverEmployeeId(toEmployeeId);nextStep.setDecision(ApprovalDecision.PENDING);stepRepository.save(nextStep);r.setCurrentApprovalLevel(nextSequence);r.setTotalApprovalLevels(nextSequence);r.setFreeRouteCurrentApproverEmployeeId(toEmployeeId);r.setFreeRouteLastForwardedAt(now);WorkflowRequest saved=requestRepository.save(r);flowableTaskService.setAssignee(taskId,String.valueOf(toEmployeeId));Map<String,Object> vars=new HashMap<>();vars.put("currentLevel",nextSequence);vars.put("approvalSequenceBase",0);vars.put("currentApproverId",String.valueOf(toEmployeeId));vars.put("approverIds",List.of(String.valueOf(toEmployeeId)));vars.put("hasMoreApprovers",false);vars.put("totalLevels",1);runtimeService.setVariables(task.getProcessInstanceId(),vars);runtimeService.removeVariables(task.getProcessInstanceId(),List.of("approvalDecision","approvalComment","approvalActorId","flowableTaskId"));WorkflowRequestFreeRouteEvent event=new WorkflowRequestFreeRouteEvent();event.setWorkflowRequestId(r.getId());event.setEventType(FreeRouteEventType.FORWARDED);event.setFromEmployeeId(actor.getId());event.setToEmployeeId(toEmployeeId);event.setComment(comment==null||comment.isBlank()?null:comment.trim());freeRouteEventRepository.save(event);activityService.record(r.getId(),RequestActivityType.FREE_ROUTE_FORWARDED,"Request forwarded by Free Route from employee "+actor.getId()+" to employee "+toEmployeeId,actor.getId());afterCommitExecutor.runAfterCommit(()->{requestEmailService.notifyRequestMovedToApprover(saved,toEmployeeId);requestEmailService.notifyPendingApproval(saved,toEmployeeId);});return saved;}
  @Transactional(readOnly=true) public List<WorkflowRequest> myRequests(){return requestRepository.findByRequesterEmployeeIdOrderByCreatedAtDesc(currentEmployee().getId());}
@@ -156,6 +201,7 @@ public class WorkflowRequestService {
    case FILE_REQUEST->fileRepository.findByWorkflowRequestId(id).orElse(null);
    case ASSET_REQUEST->assetRepository.findByWorkflowRequestId(id).orElse(null);
    case EXPENSE_REIMBURSEMENT->expenseReimbursementDetail(id);
+   case CASH_ADVANCE,FUND_REQUEST->fundingRequests.detail(r);
    case GENERAL_REQUEST->null;
   };
   List<WorkflowRequestComment> comments=commentRepository.findByWorkflowRequestIdOrderByCreatedAt(id);
@@ -186,6 +232,7 @@ public class WorkflowRequestService {
   return WorkflowRequestDetailDTO.builder()
           .request(r)
           .typeDetails(typed)
+          .monetaryRoutingHistory(monetaryRouting.history(id))
           .items(itemRepository.findByWorkflowRequestIdOrderById(id))
           .attachments(attachmentRepository.findByWorkflowRequestIdOrderByCreatedAt(id))
           .approvalSteps(stepRepository.findByWorkflowRequestIdOrderBySequenceNo(id))
@@ -301,6 +348,7 @@ public class WorkflowRequestService {
  private WorkflowRequest owned(Long id){WorkflowRequest r=requestRepository.findById(id).orElseThrow(()->new IllegalArgumentException("Request not found."));if(!r.getRequesterEmployeeId().equals(currentEmployee().getId()))throw new IllegalStateException("You do not own this request.");return r;}
  private boolean isEditableStatus(WorkflowRequest request){return request.getStatus()==RequestStatus.DRAFT||request.getStatus()==RequestStatus.RETURNED_FOR_CORRECTION;}
  private boolean wasFreeRoute(WorkflowRequest request){return request.getApprovalRouteType()==ApprovalRouteType.FREE_ROUTE;}
+ @Transactional(readOnly=true) public boolean canSubmitNormally(WorkflowRequest request){return canSubmit(request,currentEmployee().getId());}
  private boolean canSubmit(WorkflowRequest request,Long actorEmployeeId){if(!request.getRequesterEmployeeId().equals(actorEmployeeId))return false;if(request.getStatus()==RequestStatus.DRAFT)return true;if(request.getStatus()==RequestStatus.RETURNED_FOR_CORRECTION)return !wasFreeRoute(request);return false;}
  private boolean canSendFreeRoute(WorkflowRequest request,Long actorEmployeeId){if(!request.getRequesterEmployeeId().equals(actorEmployeeId))return false;if(request.getStatus()==RequestStatus.DRAFT)return true;if(request.getStatus()==RequestStatus.RETURNED_FOR_CORRECTION)return wasFreeRoute(request);return false;}
  private boolean canEdit(WorkflowRequest request,Long actorEmployeeId){return isEditableStatus(request)&&(canSubmit(request,actorEmployeeId)||canSendFreeRoute(request,actorEmployeeId));}
@@ -497,6 +545,7 @@ public class WorkflowRequestService {
     }).toList());
     return p;
    }).orElse(null);
+   case CASH_ADVANCE,FUND_REQUEST -> { }
    case GENERAL_REQUEST -> { }
   }
 
@@ -534,6 +583,8 @@ public class WorkflowRequestService {
           .fileRequest(filePayload)
           .assetRequest(assetPayload)
           .expenseReimbursement(expensePayload)
+          .cashAdvance(r.getRequestType()==RequestType.CASH_ADVANCE?fundingRequests.edit(r).getCashAdvance():null)
+          .fundRequest(r.getRequestType()==RequestType.FUND_REQUEST?fundingRequests.edit(r).getFundRequest():null)
           .items(items)
           .copiedEmployeeIds(copiedEmployeeOptions.stream().map(RequestLookupOption::value).toList())
           .copiedEmployeeOptions(copiedEmployeeOptions)
@@ -542,7 +593,7 @@ public class WorkflowRequestService {
 
  @Transactional
  public WorkflowRequest updateEditableRequest(Long id, CreateWorkflowRequestCommand command) {
-  WorkflowRequest r = owned(id);
+  WorkflowRequest r = requestRepository.findByIdForUpdate(id).orElseThrow();
   Employee actor = currentEmployee();
   if (!canEdit(r, actor.getId())) {
    throw new IllegalStateException("This request cannot be edited.");
@@ -562,6 +613,7 @@ public class WorkflowRequestService {
            command.getCopiedEmployeeIds(), actor.getId(), existingCopiedEmployeeIds);
   }
 
+  monetaryRouting.validateCurrencyEdit(r,command);
   r.setTitle(command.getTitle().trim());
   r.setDescription(command.getDescription());
   r.setPriority(command.getPriority() == null ? RequestPriority.NORMAL : command.getPriority());

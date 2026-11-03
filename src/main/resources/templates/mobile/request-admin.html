@@ -26,6 +26,8 @@
 </head>
 <body>
 <section layout:fragment="content">
+<a href="/requests/monetary-policies" class="request-secondary-btn" style="display:inline-block;padding:10px">Monetary policies and funding types</a>
+
 <a href="/requests/grouped-approval-paths" class="request-secondary-btn" style="display:inline-block;padding:10px">Configure grouped approval paths</a>
 
 
@@ -294,6 +296,7 @@
         }
 
         async function saveRequestTypeRoute(code) {
+            if (types.find(t => t.code === code)?.monetaryRoutingEnabled) { alert('Switch to fixed routing in Monetary policies before changing this route.'); return; }
             if (types.find(t => t.code === code)?.groupedApprovalPathVersionId && !confirm('Replace the grouped path for new requests? Already submitted requests retain their route.')) return;
             const routeType = document.querySelector(`[data-route-type="${code}"]`).value;
             const pathId    = document.querySelector(`[data-route-path="${code}"]`).value;

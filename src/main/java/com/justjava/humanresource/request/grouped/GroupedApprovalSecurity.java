@@ -13,7 +13,7 @@ import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 public class GroupedApprovalSecurity {
     @Bean @Order(1)
     SecurityFilterChain groupedApprovalSecurityFilterChain(HttpSecurity http) throws Exception {
-        http.securityMatcher("/api/grouped-approval-paths/**", "/api/requests/grouped-approvals/**")
+        http.securityMatcher("/api/grouped-approval-paths/**", "/api/requests/grouped-approvals/**", "/api/request-monetary/**")
                 .authorizeHttpRequests(a -> a.anyRequest().authenticated())
                 .csrf(c -> c.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                         .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler()))

@@ -107,6 +107,19 @@ public class ExpenseReimbursementRequestHandler implements WorkflowRequestTypeHa
         }
     }
 
+    public java.util.Optional<com.justjava.humanresource.request.monetary.RequestMonetaryContext> monetaryContext(WorkflowRequest request) {
+        var detail=detailRepository.findByWorkflowRequestId(request.getId()).orElseThrow();
+        var items=itemRepository.findByWorkflowRequestIdOrderByExpenseDateAscIdAsc(request.getId());
+        BigDecimal total=BigDecimal.ZERO;
+        for(var item:items) {
+            if(!detail.getCurrency().equalsIgnoreCase(item.getCurrency())) throw new IllegalArgumentException("Expense currencies do not agree.");
+            com.justjava.humanresource.request.monetary.MonetaryValues.amount(item.getAmount(),item.getCurrency(),false);
+            total=total.add(item.getAmount());
+        }
+        if(total.compareTo(detail.getTotalClaimAmount())!=0) throw new IllegalArgumentException("Saved expense total does not match expense lines.");
+        return java.util.Optional.of(new com.justjava.humanresource.request.monetary.RequestMonetaryContext(total,detail.getCurrency()));
+    }
+
     public Map<String, Object> buildWorkflowVariables(WorkflowRequest request) {
         return detailRepository.findByWorkflowRequestId(request.getId())
                 .map(detail -> Map.<String, Object>of(

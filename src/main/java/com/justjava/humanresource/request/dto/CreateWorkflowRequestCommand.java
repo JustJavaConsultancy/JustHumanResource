@@ -20,6 +20,8 @@ public class CreateWorkflowRequestCommand {
  @Valid private FileRequestPayload fileRequest;
  @Valid private AssetRequestPayload assetRequest;
  @Valid private ExpenseReimbursementPayload expenseReimbursement;
+ @Valid private CashAdvancePayload cashAdvance;
+ @Valid private FundRequestPayload fundRequest;
  @Valid private List<Item> items = new ArrayList<>();
  @Size(max = 50)
  private List<@NotNull @Positive Long> copiedEmployeeIds;
@@ -28,5 +30,8 @@ public class CreateWorkflowRequestCommand {
  @Data public static class FileRequestPayload { @NotNull private FileCategory fileCategory; @NotNull private FileConfidentialityLevel confidentialityLevel; @NotNull private FileAccessType requestedAccessType; private boolean retentionRequired; @NotBlank private String purpose; }
  @Data public static class AssetRequestPayload { private String costCenter; @NotNull @FutureOrPresent private LocalDate requiredDate; @NotBlank private String businessJustification; }
  @Data public static class ExpenseReimbursementPayload { @NotNull private LocalDate expenseStartDate; @NotNull private LocalDate expenseEndDate; @NotBlank private String businessPurpose; @NotNull private ExpensePaymentMethod paymentMethod; @NotBlank @Size(min=3,max=3) private String currency; @Valid @NotEmpty private List<ExpenseItemPayload> expenseItems = new ArrayList<>(); }
+ @Data public static class FundingPayload { @NotNull @DecimalMin("0.01") @com.fasterxml.jackson.annotation.JsonFormat(shape=com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING) private BigDecimal amount; @NotBlank @Size(min=3,max=3) private String currency; @NotBlank @Size(max=2000) private String purpose; @NotBlank @Size(max=100) private String costCenter; @NotNull @FutureOrPresent private LocalDate requiredDate; }
+ @Data @lombok.EqualsAndHashCode(callSuper=true) public static class CashAdvancePayload extends FundingPayload { @NotNull private LocalDate expenseStartDate; @NotNull private LocalDate expenseEndDate; @NotNull private LocalDate settlementDueDate; }
+ @Data @lombok.EqualsAndHashCode(callSuper=true) public static class FundRequestPayload extends FundingPayload { @NotNull private Long beneficiaryEmployeeId; }
  @Data public static class ExpenseItemPayload { @NotNull private ExpenseCategory expenseCategory; @NotNull private LocalDate expenseDate; @NotBlank private String description; private String vendorName; @NotNull @DecimalMin("0.01") private BigDecimal amount; private String remarks; }
 }

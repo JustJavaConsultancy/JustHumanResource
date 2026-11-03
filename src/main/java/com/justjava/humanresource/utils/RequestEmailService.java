@@ -296,6 +296,8 @@ public class RequestEmailService {
             case ASSET_REQUEST -> "Asset Request";
             case EXPENSE_REIMBURSEMENT -> "Expense Reimbursement";
             case GENERAL_REQUEST -> "General Request";
+            case CASH_ADVANCE -> "Cash Advance";
+            case FUND_REQUEST -> "Fund Request";
         };
         return label.toLowerCase(Locale.ROOT).endsWith("request")
                 ? label

@@ -92,6 +92,7 @@ public class CustomApprovalPathService {
         requireHrAdmin();
         WorkflowRequestType type = requestTypeRepository.findByCode(code.toUpperCase())
                 .orElseThrow(() -> new IllegalArgumentException("Request type not found."));
+        if(type.isMonetaryRoutingEnabled())throw new IllegalArgumentException("Switch to fixed routing in the monetary policy editor before changing this route.");
         ApprovalRouteType routeType = command.getApprovalRouteType();
         if (routeType == ApprovalRouteType.CUSTOM) {
             if (command.getCustomApprovalPathId() == null) {

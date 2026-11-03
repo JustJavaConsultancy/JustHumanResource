@@ -39,13 +39,22 @@ public class GroupedApprovalService {
 
     @Transactional
     public WorkflowRequest start(WorkflowRequest request, Long configuredVersionId) {
+        return startInternal(request,configuredVersionId,false);
+    }
+
+    @Transactional
+    public WorkflowRequest startSelectedRoute(WorkflowRequest request,Long configuredVersionId) {
+        return startInternal(request,configuredVersionId,true);
+    }
+
+    private WorkflowRequest startInternal(WorkflowRequest request,Long configuredVersionId,boolean selectedByMonetaryPolicy) {
         configuration.requireEnabled();
         WorkflowRequest locked = requests.findByIdForUpdate(request.getId()).orElseThrow();
         if (locked.getWorkflowInstanceId() != null && runtime.createProcessInstanceQuery()
                 .processInstanceId(locked.getWorkflowInstanceId()).count() > 0) throw conflict("This request already has an active approval process.");
         List<GroupedApprovalCycle> prior = cycles.findByRequestIdOrderByCycleNo(locked.getId());
         if (prior.stream().anyMatch(c -> "ACTIVE".equals(c.getState()))) throw conflict("An approval cycle is already active.");
-        Long versionId = prior.isEmpty() ? configuredVersionId : prior.getLast().getPathVersionId();
+        Long versionId = prior.isEmpty() || selectedByMonetaryPolicy ? configuredVersionId : prior.getLast().getPathVersionId();
         var version = configuration.published(versionId);
         var definitions = configuration.effectiveLevels(versionId, locked.getRequesterEmployeeId());
         GroupedApprovalCycle cycle = new GroupedApprovalCycle();

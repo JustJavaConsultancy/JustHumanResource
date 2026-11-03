@@ -5,10 +5,17 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
-@RestControllerAdvice(assignableTypes={GroupedApprovalController.class, GroupedRequestApprovalController.class})
+@RestControllerAdvice(assignableTypes={GroupedApprovalController.class, GroupedRequestApprovalController.class,com.justjava.humanresource.request.monetary.MonetaryRequestController.class})
 public class GroupedApprovalErrors {
     @ExceptionHandler(ResponseStatusException.class)
     ProblemDetail status(ResponseStatusException error) { return ProblemDetail.forStatusAndDetail(error.getStatusCode(), error.getReason() == null ? "Operation unavailable." : error.getReason()); }
+    @ExceptionHandler(IllegalStateException.class)
+    ProblemDetail unavailable(IllegalStateException error) { return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, error.getMessage()); }
+    @ExceptionHandler(org.springframework.web.bind.MethodArgumentNotValidException.class)
+    ProblemDetail validation(org.springframework.web.bind.MethodArgumentNotValidException error) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, error.getBindingResult().getFieldErrors().stream()
+                .map(e -> e.getField()+": "+e.getDefaultMessage()).collect(java.util.stream.Collectors.joining("; ")));
+    }
     @ExceptionHandler(IllegalArgumentException.class)
     ProblemDetail invalid(IllegalArgumentException error) { return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, error.getMessage()); }
     @ExceptionHandler(AccessDeniedException.class)

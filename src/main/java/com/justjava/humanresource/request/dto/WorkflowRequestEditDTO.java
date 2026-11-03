@@ -31,6 +31,8 @@ public class WorkflowRequestEditDTO {
     CreateWorkflowRequestCommand.FileRequestPayload fileRequest;
     CreateWorkflowRequestCommand.AssetRequestPayload assetRequest;
     CreateWorkflowRequestCommand.ExpenseReimbursementPayload expenseReimbursement;
+    CreateWorkflowRequestCommand.CashAdvancePayload cashAdvance;
+    CreateWorkflowRequestCommand.FundRequestPayload fundRequest;
     List<CreateWorkflowRequestCommand.Item> items;
     List<Long> copiedEmployeeIds;
     List<RequestLookupOption> copiedEmployeeOptions;

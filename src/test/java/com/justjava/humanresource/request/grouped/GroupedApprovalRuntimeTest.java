@@ -194,6 +194,15 @@ class GroupedApprovalRuntimeTest {
         assertThat(requests.findById(request.getId()).orElseThrow().getStatus()).isEqualTo(RequestStatus.IN_APPROVAL);
     }
 
+    @Test void monetaryReselectionCanStartADifferentGroupedVersionAfterReturn() {
+        var request = start(ApprovalPolicy.ALL, false);
+        service.decide(task(request,11),"RETURN","Correct amount",11L);
+        var returned = requests.findById(request.getId()).orElseThrow();
+        var resumed = service.startSelectedRoute(returned,999L);
+        assertThat(count(resumed)).isEqualTo(3);
+        assertThat(cycles.findByRequestIdOrderByCycleNo(request.getId())).extracting(GroupedApprovalCycle::getPathVersionId).containsExactly(100L,999L);
+    }
+
     @Test void returnedRequestStartsNewCyclePinnedToOriginalVersion() {
         var request = start(ApprovalPolicy.ALL, false);
         service.decide(task(request,11),"RETURN","Correct details",11L);
