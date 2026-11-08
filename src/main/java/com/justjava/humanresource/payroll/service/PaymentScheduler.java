@@ -1,13 +1,12 @@
 package com.justjava.humanresource.payroll.service;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+
 @Component
 @RequiredArgsConstructor
-@EnableScheduling
 public class PaymentScheduler {
     private final PaymentRetryService retryService;
     private final PayrollPaymentService paymentService;

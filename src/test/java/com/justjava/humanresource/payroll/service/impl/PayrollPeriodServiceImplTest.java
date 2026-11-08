@@ -1,25 +1,23 @@
 package com.justjava.humanresource.payroll.service.impl;
 
+import com.justjava.humanresource.hr.repository.EmployeeRepository;
 import com.justjava.humanresource.payroll.entity.PayrollPeriod;
 import com.justjava.humanresource.payroll.enums.PayrollPeriodStatus;
-import com.justjava.humanresource.payroll.repositories.PaySlipRepository;
 import com.justjava.humanresource.payroll.repositories.PayrollPeriodRepository;
 import com.justjava.humanresource.payroll.repositories.PayrollRunRepository;
-import com.justjava.humanresource.hr.repository.EmployeeRepository;
-import org.flowable.engine.RuntimeService;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-
+import com.justjava.humanresource.payroll.repositories.PaySlipRepository;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-
+import org.flowable.engine.RuntimeService;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.Mock;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -27,6 +25,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
+
+
 
 @ExtendWith(MockitoExtension.class)
 class PayrollPeriodServiceImplTest {
@@ -124,6 +125,13 @@ class PayrollPeriodServiceImplTest {
         when(payrollRunRepository.countByEmployee_Department_Company_IdAndPayrollDateBetween(
                 1L, LocalDate.of(2026, 7, 11), YearMonth.of(2026, 7).atEndOfMonth()))
                 .thenReturn(0L);
+        when(payrollPeriodRepository.save(any(PayrollPeriod.class))).thenAnswer(invocation -> {
+            PayrollPeriod savedPeriod = invocation.getArgument(0);
+            if (savedPeriod.getId() == null) {
+                savedPeriod.setId(11L);
+            }
+            return savedPeriod;
+        });
 
         service.closeAndOpenNext(1L, actualEnd);
 
@@ -144,7 +152,8 @@ class PayrollPeriodServiceImplTest {
         assertEquals(PayrollPeriodStatus.OPEN, next.getStatus());
 
         verify(runtimeService).startProcessInstanceByKey(
-                eq("payrollCarryForwardProcess"),
+                eq("batchPayrollProcess"),
+                eq("BATCH_PERIOD_11"),
                 any(Map.class)
         );
     }

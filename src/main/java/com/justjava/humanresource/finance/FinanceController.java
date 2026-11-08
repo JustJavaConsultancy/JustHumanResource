@@ -1,17 +1,23 @@
 package com.justjava.humanresource.finance;
 
 import com.justjava.humanresource.payroll.dto.PayrollJournalEntryDTO;
-import com.justjava.humanresource.payroll.entity.PayrollAccountingSettings;
 import com.justjava.humanresource.payroll.dto.PayrollLockChangeReportDTO;
+import com.justjava.humanresource.payroll.entity.PayrollAccountingSettings;
 import com.justjava.humanresource.payroll.entity.PaySlipDTO;
 import com.justjava.humanresource.payroll.report.dto.PayrollSummaryDTO;
 import com.justjava.humanresource.payroll.repositories.PayrollAccountingSettingsRepository;
+import com.justjava.humanresource.payroll.service.impl.PaySlipServiceImpl;
 import com.justjava.humanresource.payroll.service.PayrollJournalService;
 import com.justjava.humanresource.payroll.service.PayrollLockChangeService;
 import com.justjava.humanresource.payroll.service.PayrollRunService;
-import com.justjava.humanresource.payroll.service.impl.PaySlipServiceImpl;
 import com.justjava.humanresource.workflow.dto.FlowableTaskDTO;
 import com.justjava.humanresource.workflow.service.FlowableTaskService;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import org.flowable.engine.history.HistoricProcessInstance;
 import org.flowable.task.api.history.HistoricTaskInstance;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,12 +32,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
+
 
 @Controller
 public class FinanceController {
@@ -142,7 +143,12 @@ public class FinanceController {
             return "redirect:/finance/lockApproval";
         }
 
-        flowableTaskService.completeTask(taskId, Map.of("approved", true));
+        try {
+            flowableTaskService.completeTask(taskId, Map.of("approved", true));
+        } catch (IllegalStateException exception) {
+            redirectAttributes.addFlashAttribute(
+                    "lockApprovalBlockedMessage", exception.getMessage());
+        }
         return "redirect:/finance/lockApproval";
     }
     @PostMapping("/reject/lock")

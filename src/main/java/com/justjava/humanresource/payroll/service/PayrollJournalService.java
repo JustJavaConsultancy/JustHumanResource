@@ -1,6 +1,7 @@
 package com.justjava.humanresource.payroll.service;
 
 import com.justjava.humanresource.core.enums.PayrollRunStatus;
+import com.justjava.humanresource.integration.inbound.payroll.config.IntegrationPayrollProperties;
 import com.justjava.humanresource.payroll.dto.PayrollJournalEntryDTO;
 import com.justjava.humanresource.payroll.entity.Allowance;
 import com.justjava.humanresource.payroll.entity.Deduction;
@@ -25,23 +26,25 @@ import com.justjava.humanresource.payroll.service.diagnostics.PayrollJournalImba
 import com.justjava.humanresource.payroll.service.diagnostics.PayrollRunDiagnosticSummary;
 import com.justjava.humanresource.payroll.statutory.entity.PensionScheme;
 import com.justjava.humanresource.payroll.statutory.repositories.PensionSchemeRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Comparator;
+import java.util.function.Function;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Function;
 import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+
 
 @Service
 @RequiredArgsConstructor
@@ -61,6 +64,8 @@ public class PayrollJournalService {
     private final AllowanceRepository allowanceRepository;
     private final DeductionRepository deductionRepository;
     private final PensionSchemeRepository pensionSchemeRepository;
+    @Autowired
+    private IntegrationPayrollProperties integrationPayrollProperties;
 
     @Transactional
     public void generatePaymentClearingEntries(
@@ -317,6 +322,12 @@ public class PayrollJournalService {
 
     @Transactional
     public byte[] exportPeriodCsv(Long companyId, Long periodId, String exportedBy) {
+        if (integrationPayrollProperties.isEnabled()
+                && integrationPayrollProperties.getCompanyId() != null
+                && integrationPayrollProperties.getCompanyId().equals(companyId)) {
+            throw new IllegalStateException(
+                    "CSV export is disabled while payroll accounting integration is enabled.");
+        }
         PayrollJournalBatch batch = batchRepository.findByCompanyIdAndPayrollPeriodId(companyId, periodId)
                 .orElseThrow(() -> new IllegalStateException("Journal batch not found for period."));
 

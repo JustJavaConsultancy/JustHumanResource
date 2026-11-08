@@ -1,7 +1,6 @@
 package com.justjava.humanresource.payroll.workflow.impl;
 
 import com.justjava.humanresource.core.enums.PayrollRunStatus;
-
 import com.justjava.humanresource.core.enums.RecordStatus;
 import com.justjava.humanresource.core.exception.ResourceNotFoundException;
 import com.justjava.humanresource.hr.entity.Employee;
@@ -9,16 +8,18 @@ import com.justjava.humanresource.hr.entity.EmployeePositionHistory;
 import com.justjava.humanresource.hr.entity.JobStep;
 import com.justjava.humanresource.hr.entity.PayGroup;
 import com.justjava.humanresource.hr.repository.EmployeeRepository;
+import com.justjava.humanresource.integration.inbound.payroll.service.PayrollAccountingChangeDetector;
 import com.justjava.humanresource.kpi.entity.KpiMeasurement;
 import com.justjava.humanresource.kpi.service.KpiMeasurementService;
 import com.justjava.humanresource.loan.service.LoanPayrollDeductionService;
 import com.justjava.humanresource.loan.service.LoanPayrollDisbursementService;
-import com.justjava.humanresource.payroll.calculation.PayGroupResolutionService;
 import com.justjava.humanresource.payroll.calculation.dto.ResolvedPayComponents;
+import com.justjava.humanresource.payroll.calculation.PayGroupResolutionService;
 import com.justjava.humanresource.payroll.entity.*;
 import com.justjava.humanresource.payroll.enums.PayComponentType;
 import com.justjava.humanresource.payroll.enums.PayrollRunType;
 import com.justjava.humanresource.payroll.repositories.PayrollLineItemRepository;
+import com.justjava.humanresource.payroll.repositories.PayrollPeriodRepository;
 import com.justjava.humanresource.payroll.repositories.PayrollRunRepository;
 import com.justjava.humanresource.payroll.service.EmployeePositionHistoryService;
 import com.justjava.humanresource.payroll.service.PayrollAuditService;
@@ -30,22 +31,23 @@ import com.justjava.humanresource.payroll.statutory.repositories.PensionSchemeRe
 import com.justjava.humanresource.payroll.statutory.service.PayeCalculatorService;
 import com.justjava.humanresource.payroll.statutory.service.PensionCalculatorService;
 import com.justjava.humanresource.payroll.workflow.PayrollOrchestrationService;
-import lombok.RequiredArgsConstructor;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.format.DateTimeFormatter;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+import java.time.YearMonth;
+import java.util.List;
+import java.util.Optional;
+import javax.script.ScriptEngine;
+import javax.script.ScriptEngineManager;
 import lombok.extern.slf4j.Slf4j;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.justjava.humanresource.payroll.repositories.PayrollPeriodRepository;
-import javax.script.ScriptEngine;
-import javax.script.ScriptEngineManager;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.time.LocalDate;
-import java.time.YearMonth;
-import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
-import java.util.List;
-import java.util.Optional;
+
+
 
 @Slf4j
 @Service
@@ -63,6 +65,7 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
     private final EmployeePositionHistoryService employeePositionHistoryService;
     private final PayrollPeriodService payrollPeriodService;
     private final PayrollPeriodRepository payrollPeriodRepository;
+    private final PayrollAccountingChangeDetector payrollAccountingChangeDetector;
     private final KpiMeasurementService kpiMeasurementService;
     private final PayrollRunKpiSnapshotService payrollRunKpiSnapshotService;
     private final PayrollAuditService payrollAuditService;
@@ -847,6 +850,11 @@ public class PayrollOrchestrationServiceImpl implements PayrollOrchestrationServ
 
         run.setStatus(PayrollRunStatus.POSTED);
         payrollRunRepository.save(run);
+        payrollAccountingChangeDetector.detect(
+                run.getId(),
+                run.getEmployee().getDepartment().getCompany().getId(),
+                run.getPeriodStart(),
+                run.getPeriodEnd());
 
         payrollAuditService.log(
                 "PayrollRun",

@@ -5,42 +5,44 @@ import com.justjava.humanresource.core.enums.RecordStatus;
 import com.justjava.humanresource.hr.entity.Department;
 import com.justjava.humanresource.hr.entity.Employee;
 import com.justjava.humanresource.hr.repository.EmployeeRepository;
+import com.justjava.humanresource.integration.inbound.payroll.service.PayrollAccountingChangeDetector;
 import com.justjava.humanresource.orgStructure.entity.Company;
 import com.justjava.humanresource.payroll.dto.HistoricalPayrollAdjustmentCommand;
 import com.justjava.humanresource.payroll.dto.HistoricalPayrollAdjustmentLineCommand;
 import com.justjava.humanresource.payroll.dto.HistoricalPayrollPayItemDTO;
 import com.justjava.humanresource.payroll.dto.PayrollOriginalVsAdjustedDTO;
 import com.justjava.humanresource.payroll.dto.PayrollVersionHistoryDTO;
-import com.justjava.humanresource.payroll.entity.PaySlip;
 import com.justjava.humanresource.payroll.entity.PayrollLineItem;
 import com.justjava.humanresource.payroll.entity.PayrollPeriod;
 import com.justjava.humanresource.payroll.entity.PayrollRun;
+import com.justjava.humanresource.payroll.entity.PaySlip;
 import com.justjava.humanresource.payroll.enums.PayComponentType;
 import com.justjava.humanresource.payroll.enums.PayrollPeriodStatus;
 import com.justjava.humanresource.payroll.enums.PayrollRunType;
-import com.justjava.humanresource.payroll.repositories.PaySlipRepository;
 import com.justjava.humanresource.payroll.repositories.PayrollLineItemRepository;
 import com.justjava.humanresource.payroll.repositories.PayrollPeriodRepository;
 import com.justjava.humanresource.payroll.repositories.PayrollRunRepository;
+import com.justjava.humanresource.payroll.repositories.PaySlipRepository;
 import com.justjava.humanresource.payroll.service.PayrollAuditService;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
-
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.Mock;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
+
+
 
 @ExtendWith(MockitoExtension.class)
 class HistoricalPayrollAdjustmentServiceImplTest {
@@ -56,6 +58,8 @@ class HistoricalPayrollAdjustmentServiceImplTest {
     @Mock
     private PaySlipRepository paySlipRepository;
     @Mock
+    private PayrollAccountingChangeDetector payrollAccountingChangeDetector;
+    @Mock
     private PayrollAuditService payrollAuditService;
 
     private HistoricalPayrollAdjustmentServiceImpl service;
@@ -68,6 +72,7 @@ class HistoricalPayrollAdjustmentServiceImplTest {
                 payrollRunRepository,
                 payrollLineItemRepository,
                 paySlipRepository,
+                payrollAccountingChangeDetector,
                 payrollAuditService
         );
     }
@@ -101,6 +106,8 @@ class HistoricalPayrollAdjustmentServiceImplTest {
         assertEquals(11L, result.getPayrollRunId());
         assertEquals(2, result.getVersionNumber());
         assertEquals(PayrollRunType.AMENDMENT, result.getRunType());
+        verify(payrollAccountingChangeDetector).detect(
+                11L, period.getCompanyId(), original.getPeriodStart(), original.getPeriodEnd());
 
         ArgumentCaptor<PayrollRun> runCaptor = ArgumentCaptor.forClass(PayrollRun.class);
         verify(payrollRunRepository).save(runCaptor.capture());

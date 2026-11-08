@@ -1,17 +1,19 @@
 package com.justjava.humanresource.payroll.workflow.delegates;
 
+import com.justjava.humanresource.integration.inbound.payroll.service.PayrollAccountingUndoGuard;
 import com.justjava.humanresource.payroll.entity.PayrollPeriod;
 import com.justjava.humanresource.payroll.enums.PayrollPeriodStatus;
-import com.justjava.humanresource.payroll.repositories.PaySlipRepository;
 import com.justjava.humanresource.payroll.repositories.PayrollJournalBatchRepository;
 import com.justjava.humanresource.payroll.repositories.PayrollJournalEntryRepository;
 import com.justjava.humanresource.payroll.repositories.PayrollPeriodRepository;
-import lombok.RequiredArgsConstructor;
+import com.justjava.humanresource.payroll.repositories.PaySlipRepository;
 import lombok.extern.slf4j.Slf4j;
+import lombok.RequiredArgsConstructor;
 import org.flowable.engine.delegate.DelegateExecution;
 import org.flowable.engine.delegate.JavaDelegate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+
 
 @Slf4j
 @Component("reverseLockDelegate")
@@ -22,6 +24,7 @@ public class ReverseLockDelegate implements JavaDelegate {
     private final PayrollJournalEntryRepository journalRepository;
     private final PayrollJournalBatchRepository batchRepository;
     private final PaySlipRepository paySlipRepository;
+    private final PayrollAccountingUndoGuard accountingUndoGuard;
 
     @Override
     @Transactional
@@ -29,6 +32,7 @@ public class ReverseLockDelegate implements JavaDelegate {
 
         Long periodId = (Long) execution.getVariable("periodId");
         Long companyId = (Long) execution.getVariable("companyId");
+        accountingUndoGuard.assertCanReopen(periodId);
 
         log.info("Reversing lock and cleaning up for period {} and company {}", periodId, companyId);
 

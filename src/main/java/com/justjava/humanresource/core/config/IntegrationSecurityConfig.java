@@ -1,13 +1,17 @@
 package com.justjava.humanresource.core.config;
 
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.authorization.AuthorizationDecision;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.CsrfConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
 import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.OAuth2TokenValidator;
@@ -17,9 +21,10 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.security.web.SecurityFilterChain;
 
-import java.util.List;
+
 
 /**
  * STAGE 1 (D3): bearer-token security for service-to-service calls.
@@ -39,6 +44,9 @@ public class IntegrationSecurityConfig {
     @Value("${integration.security.audience:humanresource-api}")
     private String requiredAudience;
 
+    @Value("${integration.payroll-accounting.allowed-client-id:${integration.security.allowed-client-id:jjeip-humanresource}}")
+    private String allowedClientId;
+
     @Bean
     @Order(2)
     public SecurityFilterChain integrationSecurityFilterChain(HttpSecurity http,
@@ -46,9 +54,30 @@ public class IntegrationSecurityConfig {
         http.securityMatcher(INTEGRATION_PATH)
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .csrf(CsrfConfigurer::disable)
-                .authorizeHttpRequests(authorize -> authorize.anyRequest().authenticated())
+                .authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers(HttpMethod.GET, "/api/integrations/payroll-journals/**")
+                        .access((authentication, context) ->
+                                new AuthorizationDecision(hasAllowedClient(authentication.get())
+                                        && hasScope(authentication.get(), "payroll-journal:read")))
+                        .requestMatchers(HttpMethod.POST, "/api/integrations/payroll-journals/*/status")
+                        .access((authentication, context) ->
+                                new AuthorizationDecision(hasAllowedClient(authentication.get())
+                                        && hasScope(authentication.get(), "payroll-status:write")))
+                        .anyRequest()
+                        .access((authentication, context) ->
+                                new AuthorizationDecision(hasAllowedClient(authentication.get()))))
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.decoder(integrationJwtDecoder)));
         return http.build();
+    }
+
+    private boolean hasAllowedClient(Authentication authentication) {
+        return authentication instanceof JwtAuthenticationToken jwtAuthentication
+                && allowedClientId.equals(jwtAuthentication.getToken().getClaimAsString("azp"));
+    }
+
+    private boolean hasScope(Authentication authentication, String requiredScope) {
+        return authentication.getAuthorities().stream()
+                .anyMatch(authority -> ("SCOPE_" + requiredScope).equals(authority.getAuthority()));
     }
 
     @Bean

@@ -7,6 +7,18 @@ spring:
     hikari:
       connection-timeout: 30000
       maximum-pool-size: 10
+  rabbitmq:
+    host: ${RABBITMQ_HOST:swallow-01.lmq.cloudamqp.com}
+    port: ${RABBITMQ_PORT:5671}
+    username: ${RABBITMQ_USERNAME:mxrolnyk}
+    password: ${RABBITMQ_PASSWORD:}
+    virtual-host: ${RABBITMQ_VHOST:mxrolnyk}
+    ssl:
+      enabled: ${RABBITMQ_SSL_ENABLED:true}
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    template:
+      mandatory: true
   jpa:
     hibernate:
       ddl-auto: update
@@ -120,6 +132,8 @@ paystack:
     key: pk_test_9cb18abce49813849f0720e1eb9faafe13ffccf4
 
 app:
+  scheduling:
+    enabled: ${APP_SCHEDULING_ENABLED:true}
   mail:
     from: ${MAIL_FROM:}
   kpi:
@@ -129,6 +143,19 @@ payroll:
   payment:
     enable-transfer: ${ENABLE_TRANSFER:false}
 
+integration:
+  payroll-accounting:
+    enabled: ${INTEGRATION_PAYROLL_ACCOUNTING_ENABLED:false}
+    company-id: ${INTEGRATION_PAYROLL_ACCOUNTING_COMPANY_ID:}
+    allowed-client-id: ${INTEGRATION_PAYROLL_ACCOUNTING_ALLOWED_CLIENT_ID:jjeip-humanresource}
+    exchange: ${INTEGRATION_PAYROLL_ACCOUNTING_EXCHANGE:justjava.business.events}
+    routing-key: ${INTEGRATION_PAYROLL_ACCOUNTING_ROUTING_KEY:justhr.payroll.finalised}
+    relay-interval: ${INTEGRATION_PAYROLL_ACCOUNTING_RELAY_INTERVAL:5000}
+    batch-size: ${INTEGRATION_PAYROLL_ACCOUNTING_BATCH_SIZE:20}
+    max-attempts: ${INTEGRATION_PAYROLL_ACCOUNTING_MAX_ATTEMPTS:8}
+    backoff-base-ms: ${INTEGRATION_PAYROLL_ACCOUNTING_BACKOFF_BASE_MS:1000}
+    backoff-cap-ms: ${INTEGRATION_PAYROLL_ACCOUNTING_BACKOFF_CAP_MS:300000}
+    confirm-timeout-ms: ${INTEGRATION_PAYROLL_ACCOUNTING_CONFIRM_TIMEOUT_MS:10000}
 
 
 fam:

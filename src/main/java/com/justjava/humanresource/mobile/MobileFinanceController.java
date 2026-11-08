@@ -3,11 +3,15 @@ package com.justjava.humanresource.mobile;
 import com.justjava.humanresource.payroll.dto.PayrollJournalEntryDTO;
 import com.justjava.humanresource.payroll.entity.PaySlipDTO;
 import com.justjava.humanresource.payroll.report.dto.PayrollSummaryDTO;
+import com.justjava.humanresource.payroll.service.impl.PaySlipServiceImpl;
 import com.justjava.humanresource.payroll.service.PayrollJournalService;
 import com.justjava.humanresource.payroll.service.PayrollRunService;
-import com.justjava.humanresource.payroll.service.impl.PaySlipServiceImpl;
 import com.justjava.humanresource.workflow.dto.FlowableTaskDTO;
 import com.justjava.humanresource.workflow.service.FlowableTaskService;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
 import org.flowable.task.api.history.HistoricTaskInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -16,11 +20,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.util.List;
-import java.util.Map;
+
 
 @Controller
 @RequestMapping("/mobile/finance")
@@ -74,8 +76,15 @@ public class MobileFinanceController {
     }
 
     @PostMapping("/approve/lock")
-    public String approveLock(@RequestParam String taskId) {
-        flowableTaskService.completeTask(taskId, Map.of("approved", true));
+    public String approveLock(
+            @RequestParam String taskId,
+            RedirectAttributes redirectAttributes) {
+        try {
+            flowableTaskService.completeTask(taskId, Map.of("approved", true));
+        } catch (IllegalStateException exception) {
+            redirectAttributes.addFlashAttribute(
+                    "lockApprovalBlockedMessage", exception.getMessage());
+        }
         return "redirect:/mobile/finance/lockApproval";
     }
 

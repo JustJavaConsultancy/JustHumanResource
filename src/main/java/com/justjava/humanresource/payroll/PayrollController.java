@@ -1,41 +1,47 @@
 package com.justjava.humanresource.payroll;
 
 import com.justjava.humanresource.core.config.AuthenticationManager;
+import com.justjava.humanresource.core.enums.PayrollRunStatus;
 import com.justjava.humanresource.hr.dto.CreatePayGroupCommand;
 import com.justjava.humanresource.hr.entity.Employee;
 import com.justjava.humanresource.hr.entity.PayGroup;
 import com.justjava.humanresource.hr.service.JobHrEmployeeAccessService;
 import com.justjava.humanresource.hr.service.SetupService;
+import com.justjava.humanresource.integration.inbound.payroll.config.IntegrationPayrollProperties;
+import com.justjava.humanresource.integration.inbound.payroll.service.PayrollAccountingPanelService;
 import com.justjava.humanresource.onboarding.service.EmployeeOnboardingService;
+import com.justjava.humanresource.payroll.dto.AllowanceGroupReportDTO;
+import com.justjava.humanresource.payroll.dto.AllowanceReportLineDTO;
+import com.justjava.humanresource.payroll.dto.EmployeeGroupedReportDTO;
+import com.justjava.humanresource.payroll.dto.EmployeeReportItemDTO;
+import com.justjava.humanresource.payroll.dto.FutureEmployeeAllowanceDTO;
 import com.justjava.humanresource.payroll.dto.PastPayslipEmailRequest;
+import com.justjava.humanresource.payroll.dto.PayePensionGroupDTO;
+import com.justjava.humanresource.payroll.dto.PayePensionLineDTO;
 import com.justjava.humanresource.payroll.dto.PayslipEmailRequest;
 import com.justjava.humanresource.payroll.dto.PayslipEmailResponse;
 import com.justjava.humanresource.payroll.entity.*;
-import com.justjava.humanresource.payroll.service.PayGroupService;
-import com.justjava.humanresource.payroll.service.PaySlipService;
-import com.justjava.humanresource.payroll.service.PayrollPeriodService;
-import com.justjava.humanresource.payroll.service.PayrollSetupService;
-import com.justjava.humanresource.utils.PaySlipEmailService;
-import com.justjava.humanresource.payroll.dto.EmployeeGroupedReportDTO;
-import com.justjava.humanresource.payroll.dto.EmployeeReportItemDTO;
-import com.justjava.humanresource.payroll.dto.AllowanceGroupReportDTO;
-import com.justjava.humanresource.payroll.dto.AllowanceReportLineDTO;
 import com.justjava.humanresource.payroll.enums.EmployeeGroupBy;
 import com.justjava.humanresource.payroll.report.services.ReportingService;
-import com.justjava.humanresource.core.enums.PayrollRunStatus;
-import com.justjava.humanresource.payroll.dto.FutureEmployeeAllowanceDTO;
-import com.justjava.humanresource.payroll.dto.PayePensionGroupDTO;
-import com.justjava.humanresource.payroll.dto.PayePensionLineDTO;
-
-import java.math.RoundingMode;
-import java.util.Comparator;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-
+import com.justjava.humanresource.payroll.service.PayGroupService;
+import com.justjava.humanresource.payroll.service.PayrollPeriodService;
+import com.justjava.humanresource.payroll.service.PayrollSetupService;
+import com.justjava.humanresource.payroll.service.PaySlipService;
+import com.justjava.humanresource.utils.PaySlipEmailService;
 import com.justjava.humanresource.workflow.dto.FlowableTaskDTO;
 import com.justjava.humanresource.workflow.service.FlowableTaskService;
-
-
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDate;
+import java.time.YearMonth;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -44,14 +50,11 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.YearMonth;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.stream.Collectors;
-import java.util.Set;
+
+
+
+
+
 
 @Controller
 public class PayrollController {
@@ -72,6 +75,12 @@ public class PayrollController {
 
     @Autowired
     private AuthenticationManager authenticationManager;
+
+    @Autowired
+    private IntegrationPayrollProperties integrationPayrollProperties;
+
+    @Autowired
+    private PayrollAccountingPanelService payrollAccountingPanelService;
 
     @Autowired
     private EmployeeOnboardingService employeeOnboardingService;
@@ -116,9 +125,28 @@ public class PayrollController {
         model.addAttribute("deductions", deductions.size());
         model.addAttribute("taxReliefs", taxReliefs.size());
         model.addAttribute("payGroups", payGroups.size());
+        model.addAttribute("accountingIntegrationEnabled", integrationPayrollProperties.isEnabled());
+        model.addAttribute("canAcknowledgeAccountingAlerts", authenticationManager.isFinancialOfficer());
+        if (integrationPayrollProperties.isEnabled()) {
+            model.addAttribute("accountingPanel", payrollAccountingPanelService.panel());
+        }
         model.addAttribute("title", "Payroll Management");
         model.addAttribute("subTitle", "Manage employee payroll, salary details, and payment history");
         return "payroll/main";
+    }
+
+    @PostMapping("/payroll/integration-alerts/{alertId}/acknowledge")
+    public String acknowledgeAccountingAlert(
+            @PathVariable Long alertId,
+            RedirectAttributes redirectAttributes) {
+        if (!authenticationManager.isFinancialOfficer()) {
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "Financial officer access is required.");
+        }
+        String actor = String.valueOf(authenticationManager.get("sub"));
+        payrollAccountingPanelService.acknowledge(alertId, actor);
+        redirectAttributes.addFlashAttribute("successMessage", "Accounting alert acknowledged.");
+        return "redirect:/payroll";
     }
 
     @GetMapping("/payroll/historical-adjustments")

@@ -14,16 +14,19 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.BadJwtException;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
-import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
-
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+
 
 /**
  * STAGE 1 tests for the JustHR integration security chain (D3).
@@ -67,6 +70,44 @@ class IntegrationSecurityTest {
     }
 
     @Test
+    void wrongAudience_isRejectedWith401() throws Exception {
+        when(jwtDecoder.decode("wrong-audience")).thenThrow(new BadJwtException("wrong audience"));
+
+        mockMvc.perform(get("/api/integrations/whoami")
+                        .header("Authorization", "Bearer wrong-audience"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void wrongClient_isForbiddenOnEveryIntegrationRoute() throws Exception {
+        mockMvc.perform(get("/api/integrations/whoami")
+                        .with(jwt().jwt(j -> j.claim("azp", "other-client"))))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/api/integrations/payroll-journals/PAY-2026-10-57")
+                        .with(jwt().jwt(j -> j
+                                .claim("azp", "other-client")
+                                .claim("scope", "payroll-journal:read"))))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void missingReadScope_isForbidden() throws Exception {
+        mockMvc.perform(get("/api/integrations/payroll-journals/PAY-2026-10-57")
+                        .with(jwt().jwt(j -> j.claim("azp", "jjeip-humanresource"))))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void missingStatusWriteScope_isForbidden() throws Exception {
+        mockMvc.perform(post("/api/integrations/payroll-journals/PAY-2026-10-57/status")
+                        .contentType(APPLICATION_JSON)
+                        .content("{}")
+                        .with(jwt().jwt(j -> j.claim("azp", "jjeip-humanresource"))))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void validToken_returnsClientIdAndScopes() throws Exception {
         mockMvc.perform(get("/api/integrations/whoami")
                         .with(jwt().jwt(j -> j
@@ -75,6 +116,23 @@ class IntegrationSecurityTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.clientId").value("jjeip-humanresource"))
                 .andExpect(jsonPath("$.scopes[0]").value("payroll-status:write"));
+    }
+
+    @Test
+    void correctTokenPassesJournalReadAndStatusWriteAuthorization() throws Exception {
+        mockMvc.perform(get("/api/integrations/payroll-journals/PAY-2026-10-57")
+                        .with(jwt().jwt(j -> j
+                                .claim("azp", "jjeip-humanresource")
+                                .claim("scope", "payroll-journal:read"))))
+                .andExpect(status().isNotFound());
+
+        mockMvc.perform(post("/api/integrations/payroll-journals/PAY-2026-10-57/status")
+                        .contentType(APPLICATION_JSON)
+                        .content("{}")
+                        .with(jwt().jwt(j -> j
+                                .claim("azp", "jjeip-humanresource")
+                                .claim("scope", "payroll-status:write"))))
+                .andExpect(status().isNotFound());
     }
 
     @Test

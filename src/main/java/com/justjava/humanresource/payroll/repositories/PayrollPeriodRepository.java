@@ -2,11 +2,15 @@ package com.justjava.humanresource.payroll.repositories;
 
 import com.justjava.humanresource.payroll.entity.PayrollPeriod;
 import com.justjava.humanresource.payroll.enums.PayrollPeriodStatus;
-import org.springframework.data.jpa.repository.JpaRepository;
-
+import jakarta.persistence.LockModeType;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.repository.query.Param;
+
+
 
 public interface PayrollPeriodRepository
         extends JpaRepository<PayrollPeriod, Long> {
@@ -19,6 +23,10 @@ public interface PayrollPeriodRepository
             Long companyId,
             PayrollPeriodStatus status
     );
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @org.springframework.data.jpa.repository.Query("SELECT p FROM PayrollPeriod p WHERE p.id = :periodId")
+    Optional<PayrollPeriod> findByIdForUpdate(@Param("periodId") Long periodId);
 
     boolean existsByCompanyIdAndStatus(
             Long companyId,

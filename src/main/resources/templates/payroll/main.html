@@ -99,6 +99,42 @@
         </div>
     </div>
 
+    <section th:if="${accountingIntegrationEnabled}"
+             class="mb-8 rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <h2 class="mb-4 text-lg font-semibold text-gray-800 dark:text-gray-100">Accounting integration</h2>
+        <div th:if="${#lists.isEmpty(accountingPanel.snapshots())}" class="text-sm text-gray-500 dark:text-gray-400">
+            No accounting journals have been created yet.
+        </div>
+        <div th:each="snapshot : ${accountingPanel.snapshots()}"
+             class="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 py-3 last:border-0 dark:border-gray-700">
+            <div>
+                <span class="font-medium text-gray-800 dark:text-gray-100" th:text="${snapshot.journalReference()}">PAY-2026-10-57</span>
+                <span class="badge badge-info ml-2" th:text="${snapshot.status()}">Pending</span>
+                <p class="text-sm text-gray-500 dark:text-gray-400"
+                   th:text="${#temporals.format(snapshot.periodStart(), 'dd MMM yyyy') + ' - ' + #temporals.format(snapshot.periodEnd(), 'dd MMM yyyy')}">
+                    Period range
+                </p>
+            </div>
+            <time class="text-sm text-gray-500 dark:text-gray-400"
+                  th:datetime="${snapshot.statusChangedAt()}"
+                  th:text="${#temporals.format(snapshot.statusChangedAt(), 'dd MMM yyyy HH:mm')}">Last changed</time>
+        </div>
+        <div th:if="${!#lists.isEmpty(accountingPanel.alerts())}" class="mt-4 border-t border-gray-200 pt-4 dark:border-gray-700">
+            <h3 class="mb-2 font-medium text-gray-800 dark:text-gray-100">Open alerts</h3>
+            <div th:each="alert : ${accountingPanel.alerts()}"
+                 class="flex flex-wrap items-center justify-between gap-3 py-2">
+                <p class="text-sm text-gray-700 dark:text-gray-300" th:text="${alert.message}">Accounting alert</p>
+                <form th:if="${canAcknowledgeAccountingAlerts and alert.type.name() == 'PAYROLL_CHANGED_AFTER_SEND'}"
+                      th:action="@{/payroll/integration-alerts/{id}/acknowledge(id=${alert.id})}" method="post">
+                    <button type="submit"
+                            class="rounded-lg bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700">
+                        Acknowledge
+                    </button>
+                </form>
+            </div>
+        </div>
+    </section>
+
     <!-- Stats Cards -->
     <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
 

@@ -4,39 +4,41 @@ import com.justjava.humanresource.core.enums.PayrollRunStatus;
 import com.justjava.humanresource.core.exception.ResourceNotFoundException;
 import com.justjava.humanresource.hr.entity.Employee;
 import com.justjava.humanresource.hr.repository.EmployeeRepository;
+import com.justjava.humanresource.integration.inbound.payroll.service.PayrollAccountingChangeDetector;
 import com.justjava.humanresource.payroll.dto.HistoricalPayrollAdjustmentCommand;
 import com.justjava.humanresource.payroll.dto.HistoricalPayrollAdjustmentLineCommand;
 import com.justjava.humanresource.payroll.dto.HistoricalPayrollPayItemDTO;
 import com.justjava.humanresource.payroll.dto.PayrollLineItemDifferenceDTO;
 import com.justjava.humanresource.payroll.dto.PayrollOriginalVsAdjustedDTO;
 import com.justjava.humanresource.payroll.dto.PayrollVersionHistoryDTO;
-import com.justjava.humanresource.payroll.entity.PaySlip;
 import com.justjava.humanresource.payroll.entity.PayrollLineItem;
 import com.justjava.humanresource.payroll.entity.PayrollPeriod;
 import com.justjava.humanresource.payroll.entity.PayrollRun;
+import com.justjava.humanresource.payroll.entity.PaySlip;
 import com.justjava.humanresource.payroll.enums.PayComponentType;
 import com.justjava.humanresource.payroll.enums.PayrollPeriodStatus;
 import com.justjava.humanresource.payroll.enums.PayrollRunType;
-import com.justjava.humanresource.payroll.repositories.PaySlipRepository;
 import com.justjava.humanresource.payroll.repositories.PayrollLineItemRepository;
 import com.justjava.humanresource.payroll.repositories.PayrollPeriodRepository;
 import com.justjava.humanresource.payroll.repositories.PayrollRunRepository;
+import com.justjava.humanresource.payroll.repositories.PaySlipRepository;
 import com.justjava.humanresource.payroll.service.HistoricalPayrollAdjustmentService;
 import com.justjava.humanresource.payroll.service.PayrollAuditService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.HashSet;
 import java.util.Set;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+
 
 @Service
 @RequiredArgsConstructor
@@ -50,6 +52,7 @@ public class HistoricalPayrollAdjustmentServiceImpl implements HistoricalPayroll
     private final PayrollRunRepository payrollRunRepository;
     private final PayrollLineItemRepository payrollLineItemRepository;
     private final PaySlipRepository paySlipRepository;
+    private final PayrollAccountingChangeDetector payrollAccountingChangeDetector;
     private final PayrollAuditService payrollAuditService;
 
     @Override
@@ -115,6 +118,8 @@ public class HistoricalPayrollAdjustmentServiceImpl implements HistoricalPayroll
         copyYtdSnapshot(amendment, latest);
 
         PayrollRun saved = payrollRunRepository.save(amendment);
+        payrollAccountingChangeDetector.detect(
+                saved.getId(), period.getCompanyId(), saved.getPeriodStart(), saved.getPeriodEnd());
         for (PayrollLineItem proposed : proposedLines) {
             payrollLineItemRepository.save(copyLineForRun(proposed, saved, employee));
         }
