@@ -175,9 +175,11 @@ public class GroupedApprovalService {
             runtime.setVariable(task.getProcessInstanceId(), "groupLevelResolved", true);
         }
         // No shared decision/actor/comment variables: only authoritative level resolution crosses the process boundary.
+        boolean recommendation = "APPROVE".equals(action) && "Recommend".equals(approvalActionLabel(taskId));
         tasks.complete(taskId);
         requests.flush();
-        String message = !resolved ? "Your approval was recorded; other approvals are still required."
+        String message = recommendation ? (!resolved ? "Your recommendation was recorded; other recommendations are still required." : "Request recommended; the next level is active.")
+                : !resolved ? "Your approval was recorded; other approvals are still required."
                 : request.getStatus() == RequestStatus.APPROVED ? "Request approved."
                 : "APPROVED".equals(outcome) ? "Level approved; the next level is active."
                 : "REJECTED".equals(outcome) ? "Request rejected." : "Request returned for correction.";
@@ -287,6 +289,16 @@ public class GroupedApprovalService {
     }
 
     @Transactional(readOnly=true)
+    public String approvalActionLabel(String taskId) {
+        return assignments.findByTaskId(taskId).map(assignment -> {
+            var level = levels.findById(assignment.getLevelId()).orElseThrow();
+            boolean more = levels.findByCycleIdOrderByOrdinal(level.getCycleId()).stream()
+                    .anyMatch(next -> next.getOrdinal() > level.getOrdinal());
+            return more ? "Recommend" : "Approve";
+        }).orElse(null);
+    }
+
+    @Transactional(readOnly=true)
     public String inboxLabel(String taskId) {
         return assignments.findByTaskId(taskId).map(assignment -> {
             var level = levels.findById(assignment.getLevelId()).orElseThrow();
@@ -303,6 +315,7 @@ public class GroupedApprovalService {
                 levels.findByCycleIdOrderByOrdinal(c.getId()).stream().map(l -> {
                     var members = assignments.findByLevelIdOrderById(l.getId());
                     return new LevelView(l.getOrdinal(), l.getName(), l.getPolicy(), l.getState(),
+                            levels.findByCycleIdOrderByOrdinal(c.getId()).stream().anyMatch(next -> next.getOrdinal() > l.getOrdinal()) ? "Recommend" : "Approve",
                             members.stream().filter(a -> "APPROVED".equals(a.getState())).count(), members.size(),
                             members.stream().map(a -> new MemberView(a.getEmployeeName(), a.getState(), a.getDecidedAt(),
                                     includeComments || a.getEmployeeId().equals(viewerId) ? a.getComment() : null, a.getSupersessionReason(),
@@ -327,6 +340,6 @@ public class GroupedApprovalService {
     private ResponseStatusException conflict(String text) { return new ResponseStatusException(HttpStatus.CONFLICT, text); }
     public record DecisionResult(String assignmentOutcome, String levelOutcome, RequestStatus requestStatus, String message) {}
     public record CycleView(int cycleNo, String pathName, String state, List<LevelView> levels) {}
-    public record LevelView(int ordinal, String name, ApprovalPolicy policy, String state, long approvedCount, int memberCount, List<MemberView> members) {}
+    public record LevelView(int ordinal, String name, ApprovalPolicy policy, String state, String approvalActionLabel, long approvedCount, int memberCount, List<MemberView> members) {}
     public record MemberView(String name, String state, LocalDateTime decidedAt, String comment, String supersessionReason, String taskId) {}
 }

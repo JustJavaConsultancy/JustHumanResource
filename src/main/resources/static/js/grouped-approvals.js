@@ -63,7 +63,7 @@
             ${member.comment ? `<p class="gl-comment">${escape(member.comment)}</p>` : ''}
             ${member.supersessionReason ? `<p class="gl-meta">${escape(member.supersessionReason)}</p>` : ''}
             ${member.taskId ? `<div class="grouped-actions">${Object.entries(ACTIONS).map(([action, a]) =>
-                `<button type="button" class="gl-btn ${a.cls}" data-task="${escape(member.taskId)}" data-action="${action}">${a.text}</button>`).join('')}</div>` : ''}
+                `<button type="button" class="gl-btn ${a.cls}" data-task="${escape(member.taskId)}" data-action="${action}">${action === 'APPROVE' ? escape(level.approvalActionLabel || 'Approve') : a.text}</button>`).join('')}</div>` : ''}
         </li>`;
     }
     function levelBlock(level) {
@@ -140,10 +140,10 @@
             : action === 'RETURN' ? 'This returns the request for correction and closes other pending approval tasks.'
             : level.policy === 'ANY_ONE' ? 'This resolves the level and closes other pending tasks. The next level will start, or the request will be approved if this is the final level.'
             : 'Your approval will be recorded. The level advances only when everyone has approved.';
-        dialog.innerHTML = `<form><h2 id="groupedDecisionTitle">${action === 'RETURN' ? 'Return for correction' : action === 'APPROVE' ? 'Approve' : 'Reject'}</h2>
+        dialog.innerHTML = `<form><h2 id="groupedDecisionTitle">${action === 'RETURN' ? 'Return for correction' : action === 'APPROVE' ? escape(level.approvalActionLabel || 'Approve') : 'Reject'}</h2>
             <p class="gl-dialog-text">${effect}</p><label for="groupedComment">Comment ${action === 'APPROVE' ? '(optional)' : '(required)'}</label>
             <textarea id="groupedComment" rows="4" maxlength="2000" ${action !== 'APPROVE' ? 'required' : ''}></textarea>
-            <p role="alert" class="grouped-error"></p><div class="grouped-actions"><button type="button" class="gl-btn gl-btn-secondary" data-cancel>Cancel</button><button type="submit" class="gl-btn ${(ACTIONS[action] || ACTIONS.APPROVE).cls}">Confirm decision</button></div></form>`;
+            <p role="alert" class="grouped-error"></p><div class="grouped-actions"><button type="button" class="gl-btn gl-btn-secondary" data-cancel>Cancel</button><button type="submit" class="gl-btn ${(ACTIONS[action] || ACTIONS.APPROVE).cls}">${action === 'APPROVE' ? escape(level.approvalActionLabel || 'Approve') : 'Confirm decision'}</button></div></form>`;
         dialog.setAttribute('aria-labelledby', 'groupedDecisionTitle'); document.body.append(dialog);
         const close = () => { dialog.close(); dialog.remove(); const opener = panel.querySelector(`[data-task="${CSS.escape(taskId)}"]`); if (opener) opener.focus(); };
         dialog.querySelector('[data-cancel]').onclick = close;

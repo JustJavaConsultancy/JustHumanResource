@@ -361,7 +361,7 @@
                     <div class="text-xs">${mrEscape(task.approvalLevelLabel)}</div>
                     <a class="text-primary font-semibold" href="${mrPageBase}/${encodeURIComponent(r.id)}">Review grouped approval</a>
                 ` : `
-                    <button type="button" onclick="event.stopPropagation(); openApprovalSheet('${mrEscape(task.taskId)}','approve')" class="text-xs py-2 px-3 rounded-lg bg-green-600 text-white font-semibold">Approve</button>
+                    <button type="button" onclick="event.stopPropagation(); openApprovalSheet('${mrEscape(task.taskId)}','approve')" class="text-xs py-2 px-3 rounded-lg bg-green-600 text-white font-semibold">${task.approvalActionLabel || 'Approve'}</button>
                     <button type="button" onclick="event.stopPropagation(); openApprovalSheet('${mrEscape(task.taskId)}','reject')" class="text-xs py-2 px-3 rounded-lg bg-red-600 text-white font-semibold">Reject</button>
                     <button type="button" onclick="event.stopPropagation(); openApprovalSheet('${mrEscape(task.taskId)}','return')" class="text-xs py-2 px-3 rounded-lg bg-orange-600 text-white font-semibold">Return</button>
                 `).join('');
@@ -702,8 +702,10 @@
         // Approval sheet
         let approvalState = null;
         function openApprovalSheet(taskId, action) {
-            approvalState = { taskId, action };
-            const titles = { approve: 'Approve Request', reject: 'Reject Request', return: 'Return Request' };
+            const task = mrRequests.flatMap(item => item.approvalTasks || []).find(t => t.taskId === taskId);
+            const actionLabel = task?.approvalActionLabel || 'Approve';
+            approvalState = { taskId, action, actionLabel };
+            const titles = { approve: `${actionLabel} Request`, reject: 'Reject Request', return: 'Return Request' };
             const labels = { approve: 'Comment (optional)', reject: 'Comment (required)', return: 'Comment (required)' };
             document.getElementById('approvalSheetTitle').textContent = titles[action];
             document.getElementById('approvalSheetLabel').textContent = labels[action];
@@ -723,14 +725,14 @@
         }
         async function submitApprovalSheet() {
             if (!approvalState) return;
-            const { taskId, action } = approvalState;
+            const { taskId, action, actionLabel } = approvalState;
             const comment = document.getElementById('approvalSheetComment').value.trim();
             const errEl = document.getElementById('approvalSheetError');
             if (action !== 'approve' && !comment) { errEl.textContent = 'A comment is required.'; errEl.classList.remove('hidden'); return; }
             try {
                 await mrJson(`${mrApi}/approvals/${action}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({taskId, comment}) });
                 closeApprovalSheet();
-                showToast(`Request ${action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : 'returned'}.`);
+                showToast(`Request ${action === 'approve' ? (actionLabel === 'Recommend' ? 'recommended' : 'approved') : action === 'reject' ? 'rejected' : 'returned'}.`);
                 await loadData();
             } catch (e) { errEl.textContent = e.message || String(e); errEl.classList.remove('hidden'); }
         }

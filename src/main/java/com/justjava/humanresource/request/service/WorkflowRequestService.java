@@ -156,6 +156,7 @@ public class WorkflowRequestService {
                    .createdTime(task.getCreatedTime())
                    .groupedApproval(groupedLabel!=null)
                    .approvalLevelLabel(groupedLabel)
+                   .approvalActionLabel(approvalActionLabel(task))
                    .build());
   }
   return requestsById.values().stream()
@@ -180,6 +181,15 @@ public class WorkflowRequestService {
           })
           .toList();
  }
+ private String approvalActionLabel(FlowableTaskDTO task){
+  String grouped = groupedApprovals.approvalActionLabel(task.getTaskId());
+  if(grouped != null)return grouped;
+  // Use this process instance's route, not historical steps from earlier submissions.
+  Object current = runtimeService.getVariable(task.getProcessInstanceId(), "currentLevel");
+  Object approvers = runtimeService.getVariable(task.getProcessInstanceId(), "approverIds");
+  return current instanceof Number level && approvers instanceof List<?> route && level.intValue() < route.size()
+          ? "Recommend" : "Approve";
+ }
  private Long taskWorkflowRequestId(FlowableTaskDTO task){
   if(task.getVariables()==null)return null;
   Object rawRequestId=task.getVariables().get("workflowRequestId");
@@ -190,7 +200,7 @@ public class WorkflowRequestService {
  @Transactional(readOnly=true) public List<WorkflowRequest> allRequests(){requireHrAdmin();return requestRepository.findAllByOrderByCreatedAtDesc();}
  @Transactional(readOnly=true) public List<WorkflowRequest> financeRequests(){requireFinance();return requestRepository.findAllByOrderByCreatedAtDesc();}
  @Transactional(readOnly=true) public WorkflowRequest requireFinanceRead(Long id){requireFinance();return requestRepository.findById(id).orElseThrow(()->new IllegalArgumentException("Request not found."));}
- @Transactional(readOnly=true) public List<FlowableTaskDTO> pendingTasks(){Employee e=currentEmployee();return taskService.getTasksForAssigneeAcrossProcesses(String.valueOf(e.getId()),requestProcessKeys());}
+ @Transactional(readOnly=true) public List<FlowableTaskDTO> pendingTasks(){Employee e=currentEmployee();return taskService.getTasksForAssigneeAcrossProcesses(String.valueOf(e.getId()),requestProcessKeys()).stream().peek(task -> task.setApprovalActionLabel(approvalActionLabel(task))).toList();}
  @Transactional(readOnly=true) public Map<String,Object> context(){Employee e=currentEmployee();return Map.of("employeeId",e.getId(),"hrAdmin",isHrAdmin(),"canCreate",true);}
  @Transactional(readOnly=true) public WorkflowRequestDetailDTO details(Long id){return buildDetails(visible(id),isHrAdmin());}
  @Transactional(readOnly=true) public WorkflowRequestDetailDTO financeDetails(Long id){return buildDetails(requireFinanceRead(id),false);}

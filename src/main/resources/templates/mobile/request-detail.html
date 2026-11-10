@@ -291,8 +291,9 @@
 
         let rdApprovalState = null;
         function rdOpenApproval(taskId, action) {
-            rdApprovalState = { taskId, action };
-            const titles = { approve: 'Approve Request', reject: 'Reject Request', return: 'Return Request' };
+            const actionLabel = rdTasks.find(t => t.taskId === taskId)?.approvalActionLabel || 'Approve';
+            rdApprovalState = { taskId, action, actionLabel };
+            const titles = { approve: `${actionLabel} Request`, reject: 'Reject Request', return: 'Return Request' };
             const labels = { approve: 'Comment (optional)', reject: 'Comment (required)', return: 'Comment (required)' };
             const styles = { approve: 'rd-success', reject: 'rd-danger', return: 'rd-warning' };
             document.getElementById('rdApprovalTitle').textContent = titles[action];
@@ -312,7 +313,7 @@
         }
         async function rdSubmitApproval() {
             if (!rdApprovalState) return;
-            const { taskId, action } = rdApprovalState;
+            const { taskId, action, actionLabel } = rdApprovalState;
             const comment = document.getElementById('rdApprovalComment').value.trim();
             const err = document.getElementById('rdApprovalError');
             if (action !== 'approve' && !comment) { err.textContent = 'A comment is required.'; err.classList.remove('hidden'); return; }
@@ -323,7 +324,7 @@
                     await rdJson(`${rdApi}/approvals/${action}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({taskId, comment}) });
                 }
                 rdCloseApproval();
-                rdShowToast(`Request ${action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : 'returned'}.`);
+                rdShowToast(`Request ${action === 'approve' ? (actionLabel === 'Recommend' ? 'recommended' : 'approved') : action === 'reject' ? 'rejected' : 'returned'}.`);
                 await rdLoad();
             } catch (e) { err.textContent = e.message; err.classList.remove('hidden'); }
         }
@@ -611,7 +612,7 @@
                 btns.push(`<button onclick="rdOpenApproval('${RD_FINANCE_FORWARD}','return')" class="rd-warning">Return</button>`);
             }
             if (task) {
-                btns.push(`<button onclick="rdOpenApproval('${rdEsc(task.taskId)}','approve')" class="rd-success">Approve</button>`);
+                btns.push(`<button onclick="rdOpenApproval('${rdEsc(task.taskId)}','approve')" class="rd-success">${task.approvalActionLabel || 'Approve'}</button>`);
                 btns.push(`<button onclick="rdOpenApproval('${rdEsc(task.taskId)}','reject')" class="rd-danger">Reject</button>`);
                 btns.push(`<button onclick="rdOpenApproval('${rdEsc(task.taskId)}','return')" class="rd-warning">Return</button>`);
                 if (r.approvalRouteType === 'FREE_ROUTE') btns.push(`<button onclick="rdOpenFree('forward','${rdEsc(task.taskId)}')" class="rd-secondary">Forward</button>`);

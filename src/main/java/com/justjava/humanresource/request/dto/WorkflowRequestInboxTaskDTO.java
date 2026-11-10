@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 public class WorkflowRequestInboxTaskDTO {
 
     private String taskId;
+    private String approvalActionLabel;
     private String taskName;
     private LocalDateTime createdTime;
     private boolean groupedApproval;

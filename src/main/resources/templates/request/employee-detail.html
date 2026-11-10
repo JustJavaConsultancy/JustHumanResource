@@ -297,8 +297,9 @@
 
         let approvalModalState = null;
         function openApprovalModal(taskId, action) {
-            approvalModalState = { taskId, action };
-            const titles = { approve: 'Approve Request', reject: 'Reject Request', return: 'Return Request' };
+            const actionLabel = tasks.find(t => t.taskId === taskId)?.approvalActionLabel || 'Approve';
+            approvalModalState = { taskId, action, actionLabel };
+            const titles = { approve: `${actionLabel} Request`, reject: 'Reject Request', return: 'Return Request' };
             const labels = { approve: 'Comment (optional)', reject: 'Comment (required)', return: 'Comment (required)' };
             const buttonClasses = { approve: 'request-success-btn', reject: 'request-danger-btn', return: 'request-warning-btn' };
             document.getElementById('approvalModalTitle').textContent = titles[action] || 'Confirm';
@@ -319,7 +320,7 @@
 
         async function submitApprovalModal() {
             if (!approvalModalState) return;
-            const { taskId, action } = approvalModalState;
+            const { taskId, action, actionLabel } = approvalModalState;
             const comment = document.getElementById('approvalModalComment').value.trim();
             const errorEl = document.getElementById('approvalModalError');
             if (action !== 'approve' && !comment) {
@@ -334,7 +335,7 @@
                     await json(`${api}/approvals/${action}`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({taskId, comment})});
                 }
                 closeApprovalModal();
-                showToast(`Request ${action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : 'returned'}.`, 'success');
+                showToast(`Request ${action === 'approve' ? (actionLabel === 'Recommend' ? 'recommended' : 'approved') : action === 'reject' ? 'rejected' : 'returned'}.`, 'success');
                 await load();
             } catch (e) {
                 errorEl.textContent = e.message;
@@ -710,7 +711,7 @@
                 actions.push(`<button onclick="openApprovalModal('${FINANCE_FORWARD}','return')" class="request-warning-btn">Return</button>`);
             }
             if (task) {
-                actions.push(`<button onclick="openApprovalModal('${task.taskId}','approve')" class="request-success-btn">Approve</button>`);
+                actions.push(`<button onclick="openApprovalModal('${task.taskId}','approve')" class="request-success-btn">${task.approvalActionLabel || 'Approve'}</button>`);
                 actions.push(`<button onclick="openApprovalModal('${task.taskId}','reject')" class="request-danger-btn">Reject</button>`);
                 actions.push(`<button onclick="openApprovalModal('${task.taskId}','return')" class="request-warning-btn">Return</button>`);
                 if (r.approvalRouteType === 'FREE_ROUTE') actions.push(`<button onclick="openFreeRouteModal('forward','${task.taskId}')" class="request-secondary-btn">Forward</button>`);

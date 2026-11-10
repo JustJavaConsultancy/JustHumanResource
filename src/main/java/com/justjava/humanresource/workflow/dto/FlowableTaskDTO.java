@@ -9,6 +9,7 @@ import java.util.Map;
 public class FlowableTaskDTO {
 
     private String taskId;
+    private String approvalActionLabel;
     private String taskName;
     private String taskDefinitionKey;
     private String processInstanceId;
