@@ -10,6 +10,7 @@ import com.justjava.humanresource.hr.entity.JobGrade;
 import com.justjava.humanresource.hr.entity.JobStep;
 import com.justjava.humanresource.hr.entity.PayGroup;
 import com.justjava.humanresource.hr.repository.DepartmentRepository;
+import com.justjava.humanresource.hr.repository.EmployeeRepository;
 import com.justjava.humanresource.hr.repository.JobGradeRepository;
 import com.justjava.humanresource.hr.repository.JobStepRepository;
 import com.justjava.humanresource.hr.repository.PayGroupRepository;
@@ -25,7 +26,10 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -36,6 +40,7 @@ public class SetupServiceImpl implements SetupService {
     @PersistenceContext
     private EntityManager entityManager;
     private final DepartmentRepository departmentRepository;
+    private final EmployeeRepository employeeRepository;
     private final JobGradeRepository jobGradeRepository;
     private final JobStepRepository jobStepRepository;
     private final PayGroupRepository payGroupRepository;
@@ -222,17 +227,16 @@ public class SetupServiceImpl implements SetupService {
         jobGrade.setDepartment(department);
         jobGradeRepository.save(jobGrade);
 
-        List<JobStep> existingSteps = new ArrayList<>(jobStepRepository.findByJobGrade(jobGrade));
+        Map<Long, JobStep> existingStepsById = new HashMap<>();
+        for (JobStep step : jobStepRepository.findByJobGrade(jobGrade)) {
+            existingStepsById.put(step.getId(), step);
+        }
         List<CreateJobGradeWithStepsCommand.JobStepCommand> incomingSteps = command.getSteps();
 
         List<JobStep> resultSteps = new ArrayList<>();
-        // ✅ Track only updated (existing) steps that need recalculation.
-        // New steps have no employees so recalculating them is a no-op that
-        // still triggers the duplicate-key collision on other employees.
         List<Long> stepIdsToRecalculate = new ArrayList<>();
 
-        for (int i = 0; i < incomingSteps.size(); i++) {
-            CreateJobGradeWithStepsCommand.JobStepCommand stepCmd = incomingSteps.get(i);
+        for (CreateJobGradeWithStepsCommand.JobStepCommand stepCmd : incomingSteps) {
             BigDecimal divisor = stepCmd.isAnnual() ? BigDecimal.valueOf(12) : BigDecimal.ONE;
 
             BigDecimal basic = stepCmd.getBasicSalary() != null
@@ -240,18 +244,27 @@ public class SetupServiceImpl implements SetupService {
             BigDecimal gross = stepCmd.getGrossSalary() != null
                     ? stepCmd.getGrossSalary().divide(divisor, 5, RoundingMode.HALF_UP) : null;
 
-            if (i < existingSteps.size()) {
-                // Updating an existing step — employees may be on it, recalculate
-                JobStep existing = existingSteps.get(i);
+            if (stepCmd.getId() != null) {
+                JobStep existing = existingStepsById.remove(stepCmd.getId());
+                if (existing == null) {
+                    throw new IllegalArgumentException(
+                            "JobStep " + stepCmd.getId() + " does not belong to this grade or was submitted twice");
+                }
+
+                boolean payChanged = !sameAmount(existing.getBasicSalary(), basic)
+                        || !sameAmount(existing.getGrossSalary(), gross);
+                boolean departmentChanged = existing.getDepartment() == null
+                        || !Objects.equals(existing.getDepartment().getId(), department.getId());
                 existing.setName(stepCmd.getStepName());
                 existing.setBasicSalary(basic);
                 existing.setGrossSalary(gross);
                 existing.setDepartment(department);
                 JobStep saved = jobStepRepository.save(existing);
                 resultSteps.add(saved);
-                stepIdsToRecalculate.add(saved.getId()); // ← only existing steps
+                if (payChanged || departmentChanged) {
+                    stepIdsToRecalculate.add(saved.getId());
+                }
             } else {
-                // Brand new step — no employees on it yet, skip recalculation
                 JobStep newStep = new JobStep();
                 newStep.setName(stepCmd.getStepName());
                 newStep.setBasicSalary(basic);
@@ -260,28 +273,20 @@ public class SetupServiceImpl implements SetupService {
                 newStep.setJobGrade(jobGrade);
                 JobStep saved = jobStepRepository.save(newStep);
                 resultSteps.add(saved);
-                // ✅ Do NOT add to stepIdsToRecalculate — new step has no employees
             }
         }
 
-        // Handle surplus steps (grade had more steps than incoming)
-        if (existingSteps.size() > incomingSteps.size()) {
-            List<JobStep> toRemove = existingSteps.subList(incomingSteps.size(), existingSteps.size());
-            for (JobStep surplus : toRemove) {
-                try {
-                    Long stepId = surplus.getId();
-                    jobStepRepository.delete(surplus);
-                    jobStepRepository.flush();
-                    payrollChangeOrchestrator.recalculateForJobStep(stepId, LocalDate.now());
-                } catch (Exception e) {
-                    surplus.setJobGrade(null);
-                    jobStepRepository.save(surplus);
-                    payrollChangeOrchestrator.recalculateForJobStep(surplus.getId(), LocalDate.now());
-                }
+        for (JobStep removedStep : existingStepsById.values()) {
+            if (!employeeRepository.findByJobStep_Id(removedStep.getId()).isEmpty()) {
+                throw new IllegalArgumentException(
+                        "Cannot remove job step " + removedStep.getName()
+                                + " while employees are assigned to it");
             }
+            // Retain the step row for position history and other historical references.
+            removedStep.setJobGrade(null);
+            jobStepRepository.save(removedStep);
         }
 
-        // ✅ Only recalculate for existing steps that were updated (not new ones)
         for (Long stepId : stepIdsToRecalculate) {
             payrollChangeOrchestrator.recalculateForJobStep(stepId, LocalDate.now());
         }
@@ -298,5 +303,9 @@ public class SetupServiceImpl implements SetupService {
                                 .build())
                         .toList())
                 .build();
+    }
+
+    private boolean sameAmount(BigDecimal left, BigDecimal right) {
+        return left == null ? right == null : right != null && left.compareTo(right) == 0;
     }
 }

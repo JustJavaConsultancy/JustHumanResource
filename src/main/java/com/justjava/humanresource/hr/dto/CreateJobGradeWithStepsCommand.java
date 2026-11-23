@@ -19,6 +19,7 @@ public class CreateJobGradeWithStepsCommand {
     @Getter
     @Setter
     public static class JobStepCommand {
+        private Long id;
         private String stepName;
         private BigDecimal basicSalary;
         private BigDecimal grossSalary;
